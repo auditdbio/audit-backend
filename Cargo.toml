@@ -1,0 +1,8 @@
+[workspace]
+
+members = [
+    "auditors",
+    "audits",
+    "customers",
+    "users"
+]
