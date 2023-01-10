@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  users:
+    build:
+      context: ./
+      dockerfile: ./users/Dockerfile
+    ports:
+      - 3001:3001
+    environment:
+      MONGOURI: mongodb://database/users
+      RUST_LOG: actix
+  auditors:
+    build:
+      context: ./
+      dockerfile: ./auditors/Dockerfile
+    ports:
+      - 3002:3002
+    environment:
+      MONGOURI: mongodb://database/auditors
+      RUST_LOG: actix
+  database:
+    image: mongo:4.0-xenial
+    ports:
+      - 27017:27017
+    volumes:
+      - users:/data/db
+
+volumes:
+  users:

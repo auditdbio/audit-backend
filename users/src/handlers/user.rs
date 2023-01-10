@@ -1,8 +1,16 @@
 use actix_web::{HttpRequest, post, HttpResponse, patch, delete, get, web::{self, Json}};
 use mongodb::bson::{doc, oid::ObjectId};
 use serde::{Serialize, Deserialize};
+use utoipa::openapi::security::HttpAuthScheme;
 
-use crate::{utils::Role, repositories::{user::{UserRepository, UserModel}, token::TokenRepository}, internal_error};
+use crate::{utils::Role, repositories::{user::{UserRepository, UserModel}, token::TokenRepository}, error::{Result, OutsideError}, handlers::auth::verify_token};
+
+fn to_json<T>(val: T) ->  Result<web::Json<T>> {
+    Ok(web::Json(val))
+}
+
+
+
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PostUserRequest {
@@ -12,26 +20,38 @@ pub struct PostUserRequest {
     requested_role: Role,
 }
 
-// QUESTION: should I immediately login?
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PostUserResponse {
+    id: String,
+    name: String,
+    email: String,
+}
+
+#[utoipa::path(
+    params(
+        ("data" = PostUserRequest,)
+    ),
+    responses(
+        (status = 200, description = "Authorized user's token", body = PostUserResponse)
+    )
+)]
 #[post("/api/users")]
 pub async fn post_user(
-    req: HttpRequest, 
     Json(data): web::Json<PostUserRequest>,
     repo: web::Data<UserRepository>,
-) -> HttpResponse {
-    let user = UserModel {
-        id: None,
-        email: data.email,
-        password: data.password,
-        name: data.name,
+) -> Result<web::Json<PostUserResponse>> {
+    let user = UserModel::new(data.email, data.password, data.name);
+
+    if !repo.create(&user).await?  {
+        Err(OutsideError::NotUniqueEmail)?;
     };
 
-    let Some(user) = internal_error!(repo.create(user).await) else {
-        return HttpResponse::BadRequest().body("Error: Email is not unique");
-    };
-
-    HttpResponse::Ok().json(doc!{"id": user.id, "name": user.name, "email": user.email, "status": "Active"}) // Is status always active?
+    to_json(PostUserResponse { id: user.id.to_hex(), name: user.name, email: user.email })
 }
+
+
+
+
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PatchUserRequest {
@@ -40,21 +60,30 @@ pub struct PatchUserRequest {
     password: Option<String>,
 }
 
+
+#[utoipa::path(
+    params(
+        ("data" = PatchUserRequest,)
+    ),
+    responses(
+        (status = 200)
+    )
+)]
 #[patch("/api/users")]
 pub async fn patch_user(
     req: HttpRequest,
     Json(data): web::Json<PatchUserRequest>,
     users_repo: web::Data<UserRepository>,
     tokens_repo: web::Data<TokenRepository>,
-) -> HttpResponse {
-    let Ok((_, claims)) = internal_error!(super::auth::verify_token(&req, &tokens_repo).await) else {
-        return HttpResponse::Unauthorized().finish(); //TODO: error description
+) -> Result<HttpResponse> {
+    let Ok((_, session)) = verify_token(&req, &tokens_repo).await? else {
+        return Ok(HttpResponse::Unauthorized().finish()); //TODO: error description
     };
 
-    let user_id = ObjectId::parse_str(&claims.user_id).unwrap();
+    let user_id = ObjectId::parse_str(&session.user_id).unwrap();
 
-    let Some(mut user) = internal_error!(users_repo.find(user_id).await) else {
-        return HttpResponse::ExpectationFailed().body("Error: User not found");
+    let Some(mut user) = users_repo.find(user_id).await? else {
+        return Ok(HttpResponse::ExpectationFailed().body("Error: User not found"));
     };
 
     if let Some(new_name) = data.name {
@@ -69,34 +98,38 @@ pub async fn patch_user(
         user.password = new_password;
     }
 
-    if &user.email != &claims.email && internal_error!(users_repo.find_by_email(&user.email).await).is_some() {
-        return HttpResponse::BadRequest().body("Error: this email is already taken");
+    if &user.email != &session.email && users_repo.find_by_email(&user.email).await?.is_some() {
+        return Ok(HttpResponse::BadRequest().body("Error: this email is already taken"));
     }  
 
-    internal_error!(users_repo.delete(user_id).await);
+    users_repo.delete(user_id).await?;
 
-    internal_error!(users_repo.create(user).await).unwrap();
+    users_repo.create(&user).await?;
 
-    HttpResponse::Ok().finish()
+    Ok(HttpResponse::Ok().finish())
 }
 
-
+#[utoipa::path(
+    responses(
+        (status = 200, description = "Authorized user's token", body = String)
+    )
+)]
 #[delete("/api/users")]
 pub async fn delete_user(
     req: HttpRequest,
     users_repo: web::Data<UserRepository>,
     tokens_repo: web::Data<TokenRepository>,
-) -> HttpResponse {
-    let Ok((_, claims)) = internal_error!(super::auth::verify_token(&req, &tokens_repo).await) else {
-        return HttpResponse::Unauthorized().finish(); //TODO: error description
+) -> Result<HttpResponse> {
+    let Ok((_, session)) = verify_token(&req, &tokens_repo).await? else {
+        return Ok(HttpResponse::Unauthorized().finish()); //TODO: error description
     };
 
-    let user_id = ObjectId::parse_str(&claims.user_id).unwrap();
+    let user_id = ObjectId::parse_str(&session.user_id).unwrap();
 
-    if internal_error!(users_repo.delete(user_id).await).is_none() {
-        return HttpResponse::BadRequest().body("Error: User not found");
+    if users_repo.delete(user_id).await?.is_none() {
+        return Ok(HttpResponse::BadRequest().body("Error: User not found"));
     }
-    HttpResponse::Ok().finish()
+    Ok(HttpResponse::Ok().finish())
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -105,23 +138,35 @@ pub struct GetUsersRequest {
     limit: u32,
 }
 
-#[get("/api/users/{email}")]
-pub async fn get_users(Json(data): web::Json<GetUsersRequest>, repo: web::Data<UserRepository>) -> HttpResponse {
-    let users = internal_error!(repo.users(data.page, data.limit).await);
+#[utoipa::path(
+    responses(
+        (status = 200, description = "Authorized user's token", body = String)
+    )
+)]
+#[get("/api/users/")]
+pub async fn get_users(Json(data): web::Json<GetUsersRequest>, repo: web::Data<UserRepository>) -> Result<HttpResponse> {
+    let users = repo.users((data.page - 1) * data.limit, data.limit).await?;
+    
     let users = users.into_iter().map(|user| doc!{"name": user.name, "email": user.email}).collect::<Vec<_>>();
-    HttpResponse::Ok().json(doc!{"data": users, "hasNextPage": true, "page": data.page, "limit": data.limit})
+    
+    Ok(HttpResponse::Ok().json(doc!{"data": users, "hasNextPage": true, "page": data.page, "limit": data.limit}))
 }
 
+#[utoipa::path(
+    responses(
+        (status = 200, description = "Authorized user's token", body = String)
+    )
+)]
 #[get("/api/users/{email}")]
 pub async fn get_user(
     email: web::Path<(String,)>,
     repo: web::Data<UserRepository>,
-) -> HttpResponse {
+) -> Result<HttpResponse> {
     let (email, ) = email.into_inner();
 
-    let Some(user) = internal_error!(repo.find_by_email(&email).await) else {
-        return HttpResponse::BadRequest().body("Error: User not found");
+    let Some(user) = repo.find_by_email(&email).await? else {
+        return Ok(HttpResponse::BadRequest().body("Error: User not found"));
     };
 
-    HttpResponse::Ok().json(doc!{"id": user.id, "name": user.name, "email": user.email, "status": "Active"}) // Is status always active?
+    Ok(HttpResponse::Ok().json(doc!{"id": user.id, "name": user.name, "email": user.email}))
 }

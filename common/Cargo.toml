@@ -1,17 +1,18 @@
 [package]
-name = "auditors"
+name = "common"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 actix-web = "4.2.1"
 serde = "1.0.152"
-futures = "0.3.25"
+jsonwebtoken = "8"
+awc = "3.0.1"
+reqwest = { version = "0.11", features = ["json"] }
+utoipa = { version = "2", features = ["actix_extras"] }
 derive_more = "0.99.17"
-env_logger = "0.10.0"
-common = {path = "../common"}
+
+
 
 [dependencies.mongodb]
 version = "2.3.1"
