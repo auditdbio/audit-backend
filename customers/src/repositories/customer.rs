@@ -1,8 +1,5 @@
-use std::collections::HashMap;
-
 use common::entities::customer::Customer;
-use mongodb::{Collection, bson::{oid::ObjectId, doc}, Client, error::Result as MongoResult};
-use serde::{Serialize, Deserialize};
+use mongodb::{Collection, bson::{oid::ObjectId, doc}, Client};
 
 use crate::error::Result;
 
@@ -15,6 +12,8 @@ impl CustomerRepository {
     const DATABASE: &'static str = "Customers";
     const COLLECTION: &'static str = "Customers";
 
+    // 
+    #[allow(dead_code)]
     pub async fn new(uri: String) -> Self {
         let client = Client::with_uri_str(uri).await.unwrap();
         let db = client.database(Self::DATABASE);
