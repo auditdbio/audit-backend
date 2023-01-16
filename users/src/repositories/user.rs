@@ -1,6 +1,5 @@
 use common::entities::user::User;
 use mongodb::{Collection, bson::{oid::ObjectId, doc}, Client, options::FindOptions};
-use serde::{Serialize, Deserialize};
 use crate::error::Result;
 use futures::stream::StreamExt;
 
@@ -13,6 +12,8 @@ impl UserRepository {
     const DATABASE: &'static str = "Users";
     const COLLECTION: &'static str = "Users";
 
+
+    #[allow(dead_code)] // is says that this function is not used, but it is used in main.rs
     pub async fn new(uri: String) -> Self {
         let client = Client::with_uri_str(uri).await.unwrap();
         let db = client.database(Self::DATABASE);

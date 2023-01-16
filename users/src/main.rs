@@ -1,4 +1,3 @@
-#[macro_use]
 extern crate lazy_static;
 
 mod error;
@@ -14,8 +13,6 @@ use actix_web::{middleware, HttpServer, App, web};
 use handlers::{user::{post_user, patch_user, delete_user, get_users, get_user}, auth::{login, restore, verify}};
 use repositories::{user::UserRepository, token::TokenRepository};
 pub use utils::prelude;
-use utoipa::OpenApi;
-
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -38,7 +35,7 @@ async fn main() -> std::io::Result<()> {
             .service(restore)
             .service(verify)
     })
-    .bind(("127.0.0.1", 3001))?
+    .bind(("0.0.0.0", 3001))?
     .run()
     .await
 }

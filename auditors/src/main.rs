@@ -25,7 +25,7 @@ async fn main() -> std::io::Result<()> {
             .service(get_auditors)
 
     })
-    .bind(("0.0.0.0", 3002))?
+    .bind(("0.0.0.0", 3004))?
     .run()
     .await
 }

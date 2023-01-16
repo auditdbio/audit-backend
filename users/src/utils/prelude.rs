@@ -1,8 +1,6 @@
 use common::inner_error::InnerError;
 use jsonwebtoken::errors::ErrorKind;
 
-use crate::error::Error;
-
 pub trait IsSignatureError {
     type Res;
     fn is_signature(self) -> <Self as IsSignatureError>::Res;

@@ -1,12 +1,11 @@
-use mongodb::{Collection, Client, error::Result, bson::oid::ObjectId};
+use common::entities::audit_request::AuditRequest;
+use mongodb::{Collection, Client, error::Result};
 use serde::{Serialize, Deserialize};
 
 
-use super::audit_request::AuditRequestModel;
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ClosedRequestModel {
-    pub request: AuditRequestModel,
+    pub request: AuditRequest,
     pub declined: bool,
 }
 

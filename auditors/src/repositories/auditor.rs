@@ -25,6 +25,7 @@ impl AuditorRepository {
     const DATABASE: &'static str = "Auditors";
     const COLLECTION: &'static str = "Auditors";
 
+    #[allow(dead_code)] // is says that this function is not used, but it is used in main.rs
     pub async fn new(uri: String) -> Self {
         let client = Client::with_uri_str(uri).await.unwrap();
         let db = client.database(Self::DATABASE);
@@ -33,7 +34,7 @@ impl AuditorRepository {
     }
 
     pub async fn create(&self, auditor: &AuditorModel) -> Result<bool> {
-        let exited_auditor = self.find(auditor.user_id).await?;
+        let exited_auditor = self.find(&auditor.user_id).await?;
 
         if exited_auditor.is_some() {
             return Ok(false);
@@ -43,7 +44,7 @@ impl AuditorRepository {
         Ok(true)
     }
 
-    pub async fn find(&self, user_id: ObjectId) -> Result<Option<AuditorModel>> {
+    pub async fn find(&self, user_id: &ObjectId) -> Result<Option<AuditorModel>> {
         Ok(self.inner.find_one(doc!{"user_id": user_id}, None).await?)
     }
 

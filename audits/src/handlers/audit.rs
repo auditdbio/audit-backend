@@ -1,12 +1,9 @@
-use std::collections::HashMap;
-
-use actix_web::{HttpRequest, HttpResponse, post, patch, delete, get, web::{self, Json}};
-use common::{auth_session::get_auth_session, entities::audit::{Audit, Issue}};
-use mongodb::bson::oid::ObjectId;
+use actix_web::{HttpRequest, HttpResponse, delete, get, web::{self, Json}};
+use common::{auth_session::get_auth_session};
 use serde::{Serialize, Deserialize};
 use utoipa::ToSchema;
 
-use crate::{error::{Result, Error}, repositories::audit::AuditRepo};
+use crate::{error::Result, repositories::audit::AuditRepo};
 
 use super::parse_id;
 

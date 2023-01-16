@@ -24,7 +24,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(token_repo.clone()))
 
     })
-    .bind(("127.0.0.1", 3001))?
+    .bind(("0.0.0.0", 3003))?
     .run()
     .await
 }

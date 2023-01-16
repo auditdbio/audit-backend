@@ -139,8 +139,8 @@ pub async fn delete_project(req: HttpRequest, repo: web::Data<ProjectRepository>
 pub async fn get_project(req: HttpRequest, repo: web::Data<ProjectRepository>) -> Result<HttpResponse> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
-    let Some(Project) = repo.find(session.user_id()).await? else {
+    let Some(project) = repo.find(session.user_id()).await? else {
         return Ok(HttpResponse::BadRequest().finish()); // TODO: Error: project not found
     };
-    Ok(HttpResponse::Ok().json(Project))
+    Ok(HttpResponse::Ok().json(project))
 }

@@ -1,12 +1,12 @@
-use std::{collections::HashMap, str::FromStr};
+use std::{collections::HashMap};
 
 use actix_web::{HttpRequest, HttpResponse, post, patch, delete, get, web::{self, Json}};
 use common::{auth_session::get_auth_session, entities::{role::Role, audit_request::AuditRequest}};
 use mongodb::bson::oid::ObjectId;
 use serde::{Serialize, Deserialize};
 
-use crate::{repositories::audit_request::{AuditRequestRepo, AuditRequestModel}, handlers::parse_id};
-use crate::error::{Result, Error};
+use crate::{repositories::audit_request::{AuditRequestRepo}, handlers::parse_id};
+use crate::error::{Result};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PostAuditRequestRequest {
@@ -22,9 +22,9 @@ pub struct PostAuditRequestRequest {
 
 #[post("/api/audits/requests")]
 pub async fn post_audit_request(req: HttpRequest, Json(data): web::Json<PostAuditRequestRequest>, repo: web::Data<AuditRequestRepo>) -> Result<HttpResponse> {
-    let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
+    let _session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
-    let audit_request = AuditRequestModel {
+    let audit_request = AuditRequest {
         id: ObjectId::new(),
         opener: data.opener,
         auditor_id: parse_id(&data.auditor_id)?,
@@ -46,6 +46,7 @@ pub struct GetAuditRequestsRequest {
     pub role: Role,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct GetAuditRequestsResponse {
     pub audits: Vec<AuditRequest>,
 }
@@ -59,7 +60,7 @@ pub async fn get_audit_request(req: HttpRequest, web::Json(data): web::Json<GetA
         Role::Customer => repo.find_by_customer(session.user_id()).await?,
     };
 
-    Ok(HttpResponse::Ok().finish())
+    Ok(HttpResponse::Ok().json(GetAuditRequestsResponse { audits: results }))
 }
 
 #[derive(Debug, Serialize, Deserialize)]

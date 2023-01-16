@@ -52,7 +52,11 @@ pub async fn post_auditor(req: HttpRequest, Json(data): web::Json<PostAuditorReq
 pub async fn get_auditor(req: HttpRequest, repo: web::Data<AuditorRepository>) -> Result<HttpResponse> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
-    todo!()
+    let Some(auditor) = repo.find(&session.user_id()).await? else {
+        return Ok(HttpResponse::BadRequest().finish());
+    };
+
+    Ok(HttpResponse::Ok().json(auditor))
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -76,7 +80,7 @@ pub struct PatchAuditorRequest {
 pub async fn patch_auditor(req: HttpRequest, web::Json(data): web::Json<PatchAuditorRequest>, repo: web::Data<AuditorRepository>) -> Result<HttpResponse> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
-    let Some(mut auditor ) = repo.find(session.user_id()).await? else {
+    let Some(mut auditor ) = repo.find(&session.user_id()).await? else {
         return Ok(HttpResponse::BadRequest().body("Error: no auditor instance for this user"));
     };
 

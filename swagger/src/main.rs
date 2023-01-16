@@ -1,8 +1,7 @@
 use std::{error::Error, net::Ipv4Addr};
 
-use actix_web::{middleware::Logger, web, App, HttpServer};
-use customers::PostCustomerRequest;
-use utoipa::{OpenApi, Modify, openapi::security::{SecurityScheme, HttpBuilder, HttpAuthScheme}, ToSchema};
+use actix_web::{middleware::Logger, App, HttpServer};
+use utoipa::{OpenApi, Modify, openapi::security::{SecurityScheme, HttpBuilder, HttpAuthScheme}};
 use utoipa_swagger_ui::{SwaggerUi, Url};
 
 pub struct SecurityAddon;
@@ -106,7 +105,7 @@ async fn main() -> Result<(), impl Error> {
                 ),
             ]))
     })
-    .bind((Ipv4Addr::UNSPECIFIED, 8080))?
+    .bind((Ipv4Addr::UNSPECIFIED, 4001))?
     .run()
     .await
 }

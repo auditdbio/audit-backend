@@ -1,13 +1,12 @@
 use std::result;
 
 use actix_web::{HttpResponse, HttpRequest, post, get, web::{self, Json}};
-use chrono::{Utc, Duration};
+use chrono::{Utc};
 use common::auth_session::{AuthSession, jwt_from_header};
 use mongodb::bson::doc;
 use serde::{Serialize, Deserialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
-use lazy_static::lazy_static;
 use common::ruleset::Ruleset;
 
 use crate::{repositories::{user::UserRepository, token::{TokenRepository, TokenModel}}, utils::jwt::{self, create}, error::{Result, Error, OuterError}, ruleset::Login, constants::MAX_DURATION};

@@ -1,6 +1,6 @@
 use mongodb::bson::oid::ObjectId;
 use serde::{Serialize, Deserialize};
-use utoipa::{ToSchema, openapi::{Schema, Object, ObjectBuilder, SchemaType}};
+use utoipa::{ToSchema, openapi::{Schema, ObjectBuilder, SchemaType}};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct User {

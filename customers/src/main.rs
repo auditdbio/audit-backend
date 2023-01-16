@@ -31,7 +31,7 @@ async fn main() -> std::io::Result<()> {
             .service(patch_project)
             .service(delete_project)
     })
-    .bind(("127.0.0.1", 3001))?
+    .bind(("0.0.0.0", 3002))?
     .run()
     .await
 }

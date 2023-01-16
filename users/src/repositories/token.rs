@@ -20,6 +20,7 @@ impl TokenRepository {
     const COLLECTION: &'static str = "Tokens";
 
 
+    #[allow(dead_code)] // is says that this function is not used, but it is used in main.rs
     pub async fn new(uri: String) -> Self {
         let client = Client::with_uri_str(uri).await.unwrap();
         let db = client.database(Self::DATABASE);
@@ -40,6 +41,7 @@ impl TokenRepository {
         Ok(self.inner.find_one_and_delete(doc!{"token": token}, None).await?)
     }
 
+    #[allow(dead_code)]
     pub async fn find_by_user(&self, user_id: ObjectId) -> Result<Option<TokenModel>> {
         Ok(self.inner.find_one(doc!{"user_id": user_id}, None).await?)
     }

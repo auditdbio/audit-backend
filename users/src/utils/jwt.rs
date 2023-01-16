@@ -3,7 +3,6 @@ use crate::prelude::*;
 
 use common::auth_session::AuthSession;
 use jsonwebtoken::{encode, Header, EncodingKey, decode, Validation, TokenData, DecodingKey};
-use serde::{Serialize, Deserialize};
 
 static SECRET: &'static str = "TODO: I will do this later";
 

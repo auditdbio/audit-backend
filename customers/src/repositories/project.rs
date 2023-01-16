@@ -1,7 +1,4 @@
-use std::collections::HashMap;
-
-use mongodb::{Collection, bson::{oid::ObjectId, doc}, Client, error::Result as MongoResult};
-use serde::{Serialize, Deserialize};
+use mongodb::{Collection, bson::{oid::ObjectId, doc}, Client};
 use common::entities::project::Project;
 
 use crate::error::Result;
@@ -15,6 +12,7 @@ impl ProjectRepository {
     const DATABASE: &'static str = "Customers";
     const COLLECTION: &'static str = "Projects";
 
+    #[allow(dead_code)] // is says that this function is not used, but it is used in main.rs
     pub async fn new(uri: String) -> Self {
         let client = Client::with_uri_str(uri).await.unwrap();
         let db = client.database(Self::DATABASE);

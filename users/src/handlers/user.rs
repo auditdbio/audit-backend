@@ -6,10 +6,6 @@ use utoipa::ToSchema;
 
 use crate::{repositories::{user::{UserRepository}, token::TokenRepository}, error::{Result, Error, OuterError}, handlers::auth::verify_token};
 
-fn to_json<T>(val: T) ->  Result<web::Json<T>> {
-    Ok(web::Json(val))
-}
-
 
 
 

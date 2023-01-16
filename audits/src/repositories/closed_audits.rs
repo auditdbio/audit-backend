@@ -1,7 +1,5 @@
 use common::entities::audit::Audit;
-use futures::StreamExt;
-use mongodb::{Collection, Client, error::Result, bson::{doc, DateTime, oid::ObjectId, Bson}};
-use serde::{Serialize, Deserialize};
+use mongodb::{Collection, Client, error::Result};
 
 #[derive(Debug, Clone)]
 pub struct AuditRepo {
