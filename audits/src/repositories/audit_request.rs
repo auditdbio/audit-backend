@@ -1,16 +1,19 @@
+use std::collections::HashMap;
+
+use common::entities::role::Role;
 use mongodb::{Collection, Client, error::Result, bson::{oid::ObjectId, doc, Document}};
 use serde::{Serialize, Deserialize};
-use futures::stream::{StreamExt, TryStreamExt};
+use futures::stream::{StreamExt};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AuditRequestModel {
     pub id: ObjectId,
     pub opener: Role,
-    pub auditor_email: String,
-    pub customer_email: String,
-    pub project_id: String,
-    pub auditor_contacts: Vec<String>,
-    pub customer_contacts: Vec<String>,
+    pub auditor_id: ObjectId,
+    pub customer_id: ObjectId,
+    pub project_id: ObjectId,
+    pub auditor_contacts: HashMap<String, String>,
+    pub customer_contacts: HashMap<String, String>,
     pub comment: Option<String>,
     pub price: Option<String>,
 }
@@ -48,30 +51,30 @@ impl AuditRequestRepo {
         Ok(result) 
     }
 
-    pub async fn requests_by_customer(&self, email: &str) -> Result<Vec<AuditRequestModel>> {
-        self.requests_by(doc! {"customer_email": email}).await
+    pub async fn find_by_customer(&self, id: ObjectId) -> Result<Vec<AuditRequestModel>> {
+        self.requests_by(doc! {"customer_id": id}).await
     }
     
-    pub async fn requests_by_auditor(&self, email: &str) -> Result<Vec<AuditRequestModel>> {
-        self.requests_by(doc! {"auditor_email": email}).await
+    pub async fn find_by_auditor(&self, id: ObjectId) -> Result<Vec<AuditRequestModel>> {
+        self.requests_by(doc! {"auditor_id": id}).await
     }
 
-    pub async fn requests_by_project(&self, project_id: &str) -> Result<Vec<AuditRequestModel>> {
+    pub async fn find_by_project(&self, project_id: &str) -> Result<Vec<AuditRequestModel>> {
         self.requests_by(doc! {"project_id": project_id}).await
     }
     
-    pub async fn request(&self, uuid: &str) -> Result<AuditRequestModel> {
-        let res = self.inner.find_one(doc! {"uuid": uuid}, None).await?;
-        Ok(res.unwrap())
+    pub async fn find(&self, id: &ObjectId) -> Result<Option<AuditRequestModel>> {
+        let res = self.inner.find_one(doc! {"id": id}, None).await?;
+        Ok(res)
     }
 
     pub async fn update(&self, new_audit: &AuditRequestModel) -> Result<()> {
-        let _old_audit = self.remove(&new_audit.uuid).await?.unwrap();
+        let _old_audit = self.delete(&new_audit.id).await?.unwrap();
         self.create(new_audit).await?;
         Ok(())
     }
 
-    pub async fn remove(&self, uuid: &str) -> Result<Option<AuditRequestModel>> {
-        Ok(self.inner.find_one_and_delete(doc! {"uuid": uuid}, None).await?)
+    pub async fn delete(&self, id: &ObjectId) -> Result<Option<AuditRequestModel>> {
+        Ok(self.inner.find_one_and_delete(doc! {"id": id}, None).await?)
     }
 }

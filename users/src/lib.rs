@@ -3,6 +3,7 @@ mod error;
 mod repositories;
 mod ruleset;
 mod utils;
+mod constants;
 
 pub use utils::prelude;
 

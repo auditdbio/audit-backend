@@ -1,7 +1,7 @@
 use crate::error::Result;
 use crate::prelude::*;
 
-use common::AuthSession;
+use common::auth_session::AuthSession;
 use jsonwebtoken::{encode, Header, EncodingKey, decode, Validation, TokenData, DecodingKey};
 use serde::{Serialize, Deserialize};
 

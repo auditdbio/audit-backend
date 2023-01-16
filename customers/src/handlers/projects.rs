@@ -1,14 +1,17 @@
 use std::collections::HashMap;
 
 use actix_web::{HttpRequest, HttpResponse, post, patch, delete, get, web::{self, Json}};
-use common::get_auth_session;
+use common::{auth_session::get_auth_session, entities::project::Project};
 use mongodb::bson::oid::ObjectId;
 use serde::{Serialize, Deserialize};
+use utoipa::ToSchema;
 
-use crate::{error::Result, repositories::{customer::CustomerRepository, project::{ProjectModel, ProjectRepository}}};
+use crate::{error::{Result, Error, OuterError}, repositories::{project::ProjectRepository}};
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PostCustomerRequest {
+
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct PostProjectRequest {
     name: String,
     description: String,
     git_url: String,
@@ -17,11 +20,23 @@ pub struct PostCustomerRequest {
     status: String,
 }
 
+#[utoipa::path(
+    params(
+        ("data" = PostProjectRequest,)
+    ),
+    responses(
+        (status = 200, body = Project)
+    )
+)]
 #[post("/api/projects")]
-pub async fn post_project(req: HttpRequest, Json(data): web::Json<PostCustomerRequest>, repo: web::Data<ProjectRepository>) -> Result<HttpResponse> {
+pub async fn post_project(
+    req: HttpRequest, 
+    Json(data): web::Json<PostProjectRequest>, 
+    repo: web::Data<ProjectRepository>
+) -> Result<web::Json<Project>> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
-    let project = ProjectModel {
+    let project = Project {
         id: ObjectId::new(),
         customer_id: session.user_id(),
         description: data.description,
@@ -32,15 +47,13 @@ pub async fn post_project(req: HttpRequest, Json(data): web::Json<PostCustomerRe
         tags: data.tags,
     };
 
-    if !repo.create(project).await? {
-        return Ok(HttpResponse::BadRequest().finish()); // TODO: Error: customer entity already exits
-    }
+    repo.create(&project).await?;
 
-    Ok(HttpResponse::Ok().finish())
+    Ok(web::Json(project))
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PatchcustomerRequest {
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct PatchProjectRequest {
     project_id: String,
     name: Option<String>,
     description: Option<String>,
@@ -50,12 +63,24 @@ pub struct PatchcustomerRequest {
     status: Option<String>,
 }
 
+#[utoipa::path(
+    params(
+        ("data" = PatchProjectRequest,)
+    ),
+    responses(
+        (status = 200, body = Project)
+    )
+)]
 #[patch("/api/projects")]
-pub async fn patch_project(req: HttpRequest, web::Json(data): web::Json<PatchcustomerRequest>, repo: web::Data<ProjectRepository>) -> Result<HttpResponse> {
+pub async fn patch_project(
+    req: HttpRequest, 
+    web::Json(data): web::Json<PatchProjectRequest>, 
+    repo: web::Data<ProjectRepository>
+) -> Result<web::Json<Project>> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
     let Some(mut project) = repo.delete(session.user_id()).await? else {
-        return Ok(HttpResponse::BadRequest().finish()); // TODO: Error: project not found
+        return Err(Error::Outer(OuterError::ProjectNotFound))
     };
 
     if let Some(name) = data.name {
@@ -82,15 +107,20 @@ pub async fn patch_project(req: HttpRequest, web::Json(data): web::Json<Patchcus
         project.status = status;
     }
 
-
     repo.delete(session.user_id()).await.unwrap();
-    repo.create(project).await?;
+    repo.create(&project).await?;
 
-    Ok(HttpResponse::Ok().finish())
+    Ok(web::Json(project))
 }
 
+
+#[utoipa::path(
+    responses(
+        (status = 200, body = Project)
+    )
+)]
 #[delete("/api/projects")]
-pub async fn delete_project(req: HttpRequest, repo: web::Data<CustomerRepository>) -> Result<HttpResponse> {
+pub async fn delete_project(req: HttpRequest, repo: web::Data<ProjectRepository>) -> Result<HttpResponse> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
     let Some(project) = repo.delete(session.user_id()).await? else {
@@ -100,12 +130,17 @@ pub async fn delete_project(req: HttpRequest, repo: web::Data<CustomerRepository
     Ok(HttpResponse::Ok().json(project))
 }
 
+#[utoipa::path(
+    responses(
+        (status = 200, body = Project)
+    )
+)]
 #[get("/api/projects/project")]
-pub async fn get_project(req: HttpRequest, repo: web::Data<CustomerRepository>) -> Result<HttpResponse> {
+pub async fn get_project(req: HttpRequest, repo: web::Data<ProjectRepository>) -> Result<HttpResponse> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
-    let Some(customer) = repo.find(session.user_id()).await? else {
+    let Some(Project) = repo.find(session.user_id()).await? else {
         return Ok(HttpResponse::BadRequest().finish()); // TODO: Error: project not found
     };
-    Ok(HttpResponse::Ok().json(customer))
+    Ok(HttpResponse::Ok().json(Project))
 }

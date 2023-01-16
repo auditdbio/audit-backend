@@ -11,7 +11,7 @@ awc = "3.0.1"
 reqwest = { version = "0.11", features = ["json"] }
 utoipa = { version = "2", features = ["actix_extras"] }
 derive_more = "0.99.17"
-
+chrono = {version = "0.4", features = ["serde"]}
 
 
 [dependencies.mongodb]

@@ -423,6 +423,8 @@ dependencies = [
  "futures",
  "mongodb",
  "serde",
+ "utoipa",
+ "utoipa-swagger-ui",
 ]
 
 [[package]]
@@ -430,12 +432,16 @@ name = "audits"
 version = "0.1.0"
 dependencies = [
  "actix-web",
+ "chrono",
  "common",
  "derive_more",
  "env_logger",
+ "futures",
  "log",
  "mongodb",
  "serde",
+ "utoipa",
+ "utoipa-swagger-ui",
 ]
 
 [[package]]
@@ -628,6 +634,7 @@ version = "0.1.0"
 dependencies = [
  "actix-web",
  "awc",
+ "chrono",
  "derive_more",
  "jsonwebtoken",
  "mongodb",
@@ -736,6 +743,8 @@ dependencies = [
  "log",
  "mongodb",
  "serde",
+ "utoipa",
+ "utoipa-swagger-ui",
 ]
 
 [[package]]

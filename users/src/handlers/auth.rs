@@ -2,7 +2,7 @@ use std::result;
 
 use actix_web::{HttpResponse, HttpRequest, post, get, web::{self, Json}};
 use chrono::{Utc, Duration};
-use common::{AuthSession, jwt_from_header};
+use common::auth_session::{AuthSession, jwt_from_header};
 use mongodb::bson::doc;
 use serde::{Serialize, Deserialize};
 use utoipa::ToSchema;
@@ -10,7 +10,7 @@ use uuid::Uuid;
 use lazy_static::lazy_static;
 use common::ruleset::Ruleset;
 
-use crate::{repositories::{user::UserRepository, token::{TokenRepository, TokenModel}}, utils::jwt::{self, create}, error::Result, ruleset::Login};
+use crate::{repositories::{user::UserRepository, token::{TokenRepository, TokenModel}}, utils::jwt::{self, create}, error::{Result, Error, OuterError}, ruleset::Login, constants::MAX_DURATION};
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct LoginRequest {
@@ -18,8 +18,9 @@ pub struct LoginRequest {
     pub password: String,
 }
 
-lazy_static! {
-    static ref MAX_DURATION: Duration = Duration::days(1);
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct LoginResponse {
+    token: String,
 }
 
 #[utoipa::path(
@@ -27,7 +28,7 @@ lazy_static! {
         content = LoginRequest
     ),
     responses(
-        (status = 200, description = "Authorizes the user and return his token", body = String)
+        (status = 200, description = "Authorizes the user and return his token", body = LoginResponse)
     )
 )]
 #[post("/api/auth/login")]
@@ -35,13 +36,13 @@ pub async fn login(
     Json(data): web::Json<LoginRequest>,
     users_repo: web::Data<UserRepository>,
     tokens_repo: web::Data<TokenRepository>,
-) -> Result<HttpResponse> {
+) -> Result<web::Json<LoginResponse>> {
     let Some(user) = users_repo.find_by_email(&data.email).await? else {
-        return Ok(HttpResponse::BadRequest().body("User not found"));
+        return Err(Error::Outer(OuterError::UserNotFound));
     };
 
     if Login::request_access(&data, &user ) {
-        return Ok(HttpResponse::BadRequest().body("Passwords doesn't match"));
+        return Err(Error::Outer(OuterError::PasswordsDoesntMatch));
     }
 
     let token = TokenModel {
@@ -53,14 +54,15 @@ pub async fn login(
    tokens_repo.create(&token).await?;
 
     let session = AuthSession {
-        email: user.email,
         user_id: user.id.to_hex(),
         token: token.token,
     };
 
-    let jwt = jwt::create(session)?;
+    let response =  LoginResponse {
+        token: jwt::create(session)?,
+    };
 
-    Ok(HttpResponse::Ok().body(jwt))
+    Ok(web::Json(response))
 }
 
 
@@ -88,23 +90,26 @@ pub(super) async fn verify_token(
     return Ok(Ok((token, session)))
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RestoreResponse {
+    token: String,
+}
 
 #[utoipa::path(
     security(
         ("BearerAuth" = []),
     ),
     responses(
-        (status = 200, description = "New authorization token, but old became expired", body = String)
+        (status = 200, description = "New authorization token, but old became expired", body = RestoreResponse)
     )
 )]
 #[post("/api/auth/restore")]
 pub async fn restore(
     req: HttpRequest,
     repo: web::Data<TokenRepository>,
-) -> Result<HttpResponse> {
-    let (mut token, session) = match verify_token(&req, &repo).await? {
-        Ok(res) => res,
-        Err(s) => return Ok(HttpResponse::Unauthorized().body(s)),
+) -> Result<web::Json<RestoreResponse>> {
+    let Ok((mut token, session)) = verify_token(&req, &repo).await? else {
+        return Err(Error::Outer(OuterError::UserNotFound));
     };
 
     repo.delete(&token.token).await?.unwrap();
@@ -115,14 +120,15 @@ pub async fn restore(
     repo.create(&token).await?;
 
     let session = AuthSession {
-        email: session.email,
         user_id: session.user_id,
         token: token.token,
     };
 
-    let jwt = create(session)?;
+    let response = RestoreResponse {
+        token: create(session)?,
+    };
 
-    Ok(HttpResponse::Ok().json(doc!{ "token": jwt }))
+    Ok(web::Json(response))
 }
 
 

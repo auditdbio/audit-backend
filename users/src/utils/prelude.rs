@@ -1,6 +1,7 @@
+use common::inner_error::InnerError;
 use jsonwebtoken::errors::ErrorKind;
 
-use crate::error::InsideError;
+use crate::error::Error;
 
 pub trait IsSignatureError {
     type Res;
@@ -14,7 +15,7 @@ impl<T> IsSignatureError for Result<T, jsonwebtoken::errors::Error> {
         match self {
             Ok(ok) => Ok(Some(ok)),
             Err(err) if err.kind() == &ErrorKind::InvalidSignature => Ok(None),
-            Err(err) => Err(crate::error::Error::Inside(InsideError::Jwt(err))),
+            Err(err) => Err(crate::error::Error::Inner(InnerError::Jwt(err))),
         }
     }
 }

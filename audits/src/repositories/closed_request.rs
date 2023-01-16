@@ -17,7 +17,7 @@ pub struct ClosedRequestRepo {
 
 impl ClosedRequestRepo {
     const DATABASE: &'static str = "Audits";
-    const COLLECTION: &'static str = "Closed";
+    const COLLECTION: &'static str = "ClosedRequests";
 
     
     pub async fn new(uri: String) -> Self {

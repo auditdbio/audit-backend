@@ -6,15 +6,24 @@ use derive_more::{Display, Error};
 #[derive(Debug, Display, Error)]
 pub enum Error {
     Inner(InnerError),
-    Outer(OutsideError),
+    Outer(OuterError),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, Display, Error)]
-pub enum OutsideError {
+pub enum OuterError {
     #[display(fmt = "Email is not unique")]
-    NotUniqueEmail
+    NotUniqueEmail,
+    #[display(fmt = "Email is not unique")]
+    UserNotFound,
+    #[display(fmt = "Email is not unique")]
+    PasswordsDoesntMatch,
+    #[display(fmt = "Failed to authorize")]
+    AuthFailure,
+    #[display(fmt = "You are not authorized")]
+    Unauthorized,
+
 }
 
 impl From<error::Error> for Error {
@@ -29,8 +38,8 @@ impl From<InnerError> for Error {
     }
 }
 
-impl From<OutsideError> for Error {
-    fn from(value: OutsideError) -> Self {
+impl From<OuterError> for Error {
+    fn from(value: OuterError) -> Self {
         Error::Outer(value)   
     }
 }

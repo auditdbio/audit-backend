@@ -32,7 +32,7 @@ impl AuditorRepository {
         Self { inner }
     }
 
-    pub async fn create(&self, auditor: AuditorModel) -> Result<bool> {
+    pub async fn create(&self, auditor: &AuditorModel) -> Result<bool> {
         let exited_auditor = self.find(auditor.user_id).await?;
 
         if exited_auditor.is_some() {

@@ -1,7 +1,8 @@
 use std::{error::Error, net::Ipv4Addr};
 
 use actix_web::{middleware::Logger, web, App, HttpServer};
-use utoipa::{OpenApi, Modify, openapi::security::{SecurityScheme, HttpBuilder, HttpAuthScheme}};
+use customers::PostCustomerRequest;
+use utoipa::{OpenApi, Modify, openapi::security::{SecurityScheme, HttpBuilder, HttpAuthScheme}, ToSchema};
 use utoipa_swagger_ui::{SwaggerUi, Url};
 
 pub struct SecurityAddon;
@@ -33,14 +34,59 @@ async fn main() -> Result<(), impl Error> {
             users::get_user,
             users::get_users,
         ),
-        modifiers(&SecurityAddon),
         components(schemas(
             users::LoginRequest,
-            common::AuthSession
+            users::LoginResponse,
+            users::RestoreResponse,
+            users::PostUserRequest,
+            users::PatchUserRequest,
+            users::GetUsersRequest,
+            common::entities::user::User,
+            common::auth_session::AuthSession
         ))
     )]
     struct UsersServiceDoc;
 
+    #[derive(OpenApi)]
+    #[openapi(
+        paths(
+            customers::post_customer,
+            customers::get_customer,
+            customers::patch_customer,
+            customers::delete_customer,
+            customers::post_project,
+            customers::patch_project,
+            customers::delete_project,
+            customers::get_project,
+        ),
+        components(schemas(
+            customers::PostCustomerRequest,
+            customers::PatchCustomerRequest,
+            customers::PostProjectRequest,
+            customers::PatchProjectRequest,
+            common::entities::customer::Customer
+        ))
+    )]
+    struct CustomersServiceDoc;
+
+
+    #[derive(OpenApi)]
+    #[openapi(
+        paths(
+            auditors::post_auditor,
+            auditors::get_auditor,
+            auditors::patch_auditor,
+            auditors::delete_auditor,
+            auditors::get_auditors,
+        ),
+        components(schemas(
+            auditors::PostAuditorRequest,
+            auditors::PatchAuditorRequest,
+            auditors::AllAuditorsRequest,
+            common::entities::auditor::Auditor,
+        ))
+    )]
+    struct AuditorsServiceDoc;
 
     HttpServer::new(move || {
         App::new()
@@ -49,6 +95,14 @@ async fn main() -> Result<(), impl Error> {
                 (
                     Url::new("users", "/api-doc/openapi1.json"),
                     UsersServiceDoc::openapi(),
+                ),
+                (
+                    Url::new("customers", "/api-doc/openapi2.json"),
+                    CustomersServiceDoc::openapi(),
+                ),
+                (
+                    Url::new("auditors", "/api-doc/openapi3.json"),
+                    AuditorsServiceDoc::openapi(),
                 ),
             ]))
     })

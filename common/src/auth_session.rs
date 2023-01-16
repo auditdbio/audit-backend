@@ -6,7 +6,6 @@ use std::error::Error;
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct AuthSession {
-    pub email: String,
     pub user_id: String,
     pub token: String,
 }

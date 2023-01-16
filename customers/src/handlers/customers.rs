@@ -1,13 +1,13 @@
-use std::{collections::HashMap, str::FromStr};
+use std::{collections::HashMap};
 
 use actix_web::{HttpRequest, HttpResponse, post, patch, delete, get, web::{self, Json}};
-use common::get_auth_session;
-use mongodb::bson::oid::ObjectId;
+use common::{auth_session::get_auth_session, entities::customer::Customer};
 use serde::{Serialize, Deserialize};
+use utoipa::ToSchema;
 
-use crate::{error::Result, repositories::customer::{CustomerRepository, CustomerModel}};
+use crate::{error::Result, repositories::customer::{CustomerRepository}};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PostCustomerRequest {
     first_name: String,
     last_name: String,
@@ -16,12 +16,20 @@ pub struct PostCustomerRequest {
     contacts: HashMap<String, String>,
 }
 
+#[utoipa::path(
+    request_body(
+        content = PostCustomerRequest
+    ),
+    responses(
+        (status = 200)
+    )
+)]
 #[post("/api/customer")]
 pub async fn post_customer(req: HttpRequest, Json(data): web::Json<PostCustomerRequest>, repo: web::Data<CustomerRepository>) -> Result<HttpResponse> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
-    let customer = CustomerModel {
-        user_id: session.user_id(), // TODO: remove unwrap
+    let customer = Customer {
+        user_id: session.user_id(),
         first_name: data.first_name,
         last_name: data.last_name,
         about: data.about,
@@ -36,6 +44,11 @@ pub async fn post_customer(req: HttpRequest, Json(data): web::Json<PostCustomerR
     Ok(HttpResponse::Ok().finish())
 }
 
+#[utoipa::path(
+    responses(
+        (status = 200, body = Customer)
+    )
+)]
 #[get("/api/customer")]
 pub async fn get_customer(req: HttpRequest, repo: web::Data<CustomerRepository>) -> Result<HttpResponse> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
@@ -46,7 +59,7 @@ pub async fn get_customer(req: HttpRequest, repo: web::Data<CustomerRepository>)
     Ok(HttpResponse::Ok().json(customer))
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PatchCustomerRequest {
     first_name: Option<String>,
     last_name: Option<String>,
@@ -55,6 +68,14 @@ pub struct PatchCustomerRequest {
     contacts: Option<HashMap<String, String>>,
 }
 
+#[utoipa::path(
+    request_body(
+        content = PatchCustomerRequest
+    ),
+    responses(
+        (status = 200, body = Customer)
+    )
+)]
 #[patch("/api/customer")]
 pub async fn patch_customer(req: HttpRequest, web::Json(data): web::Json<PatchCustomerRequest>, repo: web::Data<CustomerRepository>) -> Result<HttpResponse> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
@@ -92,6 +113,14 @@ pub async fn patch_customer(req: HttpRequest, web::Json(data): web::Json<PatchCu
     Ok(HttpResponse::Ok().finish())
 }
 
+#[utoipa::path(
+    request_body(
+        content = CustomerRepository
+    ),
+    responses(
+        (status = 200, body = Customer)
+    )
+)]
 #[delete("/api/customer")]
 pub async fn delete_customer(req: HttpRequest, repo: web::Data<CustomerRepository>) -> Result<HttpResponse> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
@@ -101,5 +130,3 @@ pub async fn delete_customer(req: HttpRequest, repo: web::Data<CustomerRepositor
     };
     Ok(HttpResponse::Ok().json(customer))
 }
-
-
