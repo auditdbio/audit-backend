@@ -1,16 +1,20 @@
 use std::env;
 
-use actix_web::{HttpServer, App, middleware, web};
-use handlers::auditor::{post_auditor, get_auditor, patch_auditor, delete_auditor, get_auditors};
+use actix_web::{middleware, web, App, HttpServer};
+use handlers::auditor::{delete_auditor, get_auditor, get_auditors, patch_auditor, post_auditor};
 use repositories::auditor::AuditorRepository;
 
+mod error;
 pub mod handlers;
 mod repositories;
-mod error;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    #[cfg(test)]
     let mongo_uri = env::var("MONGOURI").unwrap();
+
+    #[cfg(not(test))]
+    let mongo_uri = env::var("MONGOURI_TEST").unwrap();
     env_logger::init();
 
     let auditor_repo = AuditorRepository::new(mongo_uri.clone()).await;
@@ -23,10 +27,8 @@ async fn main() -> std::io::Result<()> {
             .service(patch_auditor)
             .service(delete_auditor)
             .service(get_auditors)
-
     })
     .bind(("0.0.0.0", 3004))?
     .run()
     .await
 }
-

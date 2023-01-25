@@ -1,5 +1,8 @@
-use mongodb::{Collection, bson::{oid::ObjectId, doc}, Client};
 use common::entities::project::Project;
+use mongodb::{
+    bson::{doc, oid::ObjectId},
+    Client, Collection,
+};
 
 use crate::error::Result;
 
@@ -25,11 +28,14 @@ impl ProjectRepository {
         Ok(true)
     }
 
-    pub async fn find(&self, id: ObjectId) -> Result<Option<Project>> {
-        Ok(self.inner.find_one(doc!{"id": id}, None).await?)
+    pub async fn find(&self, id: &ObjectId) -> Result<Option<Project>> {
+        Ok(self.inner.find_one(doc! {"id": id}, None).await?)
     }
 
     pub async fn delete(&self, id: ObjectId) -> Result<Option<Project>> {
-        Ok(self.inner.find_one_and_delete(doc!{"id": id}, None).await?)
+        Ok(self
+            .inner
+            .find_one_and_delete(doc! {"id": id}, None)
+            .await?)
     }
 }

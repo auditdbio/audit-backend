@@ -1,15 +1,28 @@
 use std::result;
 
-use actix_web::{HttpResponse, HttpRequest, post, get, web::{self, Json}};
-use chrono::{Utc};
-use common::auth_session::{AuthSession, jwt_from_header};
+use actix_web::{
+    get, post,
+    web::{self, Json},
+    HttpRequest, HttpResponse,
+};
+use chrono::Utc;
+use common::auth_session::{jwt_from_header, AuthSession};
+use common::ruleset::Ruleset;
 use mongodb::bson::doc;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
-use common::ruleset::Ruleset;
 
-use crate::{repositories::{user::UserRepository, token::{TokenRepository, TokenModel}}, utils::jwt::{self, create}, error::{Result, Error, OuterError}, ruleset::Login, constants::MAX_DURATION};
+use crate::{
+    constants::MAX_DURATION,
+    error::{Error, OuterError, Result},
+    repositories::{
+        token::{TokenModel, TokenRepository},
+        user::UserRepository,
+    },
+    ruleset::Login,
+    utils::jwt::{self, create},
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct LoginRequest {
@@ -40,7 +53,7 @@ pub async fn login(
         return Err(Error::Outer(OuterError::UserNotFound));
     };
 
-    if Login::request_access(&data, &user ) {
+    if Login::request_access(&data, &user) {
         return Err(Error::Outer(OuterError::PasswordsDoesntMatch));
     }
 
@@ -50,20 +63,19 @@ pub async fn login(
         user_id: user.id,
     };
 
-   tokens_repo.create(&token).await?;
+    tokens_repo.create(&token).await?;
 
     let session = AuthSession {
         user_id: user.id.to_hex(),
         token: token.token,
     };
 
-    let response =  LoginResponse {
+    let response = LoginResponse {
         token: jwt::create(session)?,
     };
 
     Ok(web::Json(response))
 }
-
 
 pub(super) async fn verify_token(
     req: &HttpRequest,
@@ -83,10 +95,10 @@ pub(super) async fn verify_token(
     let token_duration = Utc::now().naive_utc() - token.created;
 
     if token_duration > *MAX_DURATION {
-        return Ok(Err("Error: Token expired".to_string()))
+        return Ok(Err("Error: Token expired".to_string()));
     }
 
-    return Ok(Ok((token, session)))
+    return Ok(Ok((token, session)));
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -130,17 +142,13 @@ pub async fn restore(
     Ok(web::Json(response))
 }
 
-
 #[utoipa::path(
     responses(
         (status = 200, description = "Get authenticated user's data", body = Option<AuthSession>)
     )
 )]
 #[get("/api/auth/verify")]
-pub async fn verify(
-    req: HttpRequest,
-    repo: web::Data<TokenRepository>,
-) -> Result<HttpResponse> {
+pub async fn verify(req: HttpRequest, repo: web::Data<TokenRepository>) -> Result<HttpResponse> {
     let res = verify_token(&req, &repo)
         .await?
         .ok()

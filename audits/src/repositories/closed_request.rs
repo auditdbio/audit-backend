@@ -1,7 +1,6 @@
 use common::entities::audit_request::AuditRequest;
-use mongodb::{Collection, Client, error::Result};
-use serde::{Serialize, Deserialize};
-
+use mongodb::{error::Result, Client, Collection};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ClosedRequestModel {
@@ -18,7 +17,6 @@ impl ClosedRequestRepo {
     const DATABASE: &'static str = "Audits";
     const COLLECTION: &'static str = "ClosedRequests";
 
-    
     pub async fn new(uri: String) -> Self {
         let client = Client::with_uri_str(uri).await.unwrap();
         let db = client.database(Self::DATABASE);

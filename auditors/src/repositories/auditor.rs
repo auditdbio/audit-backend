@@ -1,8 +1,12 @@
 use std::collections::HashMap;
 
-use mongodb::{Collection, bson::{oid::ObjectId, doc}, Client, error::Result as MongoResult};
-use serde::{Serialize, Deserialize};
 use futures::stream::StreamExt;
+use mongodb::{
+    bson::{doc, oid::ObjectId},
+    error::Result as MongoResult,
+    Client, Collection,
+};
+use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
 
@@ -45,15 +49,18 @@ impl AuditorRepository {
     }
 
     pub async fn find(&self, user_id: &ObjectId) -> Result<Option<AuditorModel>> {
-        Ok(self.inner.find_one(doc!{"user_id": user_id}, None).await?)
+        Ok(self.inner.find_one(doc! {"user_id": user_id}, None).await?)
     }
 
     pub async fn delete(&self, user_id: ObjectId) -> Result<Option<AuditorModel>> {
-        Ok(self.inner.find_one_and_delete(doc!{"user_id": user_id}, None).await?)
+        Ok(self
+            .inner
+            .find_one_and_delete(doc! {"user_id": user_id}, None)
+            .await?)
     }
 
     pub async fn request_with_tags(&self, tags: Vec<String>) -> Result<Vec<AuditorModel>> {
-        let filter = doc!{
+        let filter = doc! {
             "tags": doc!{
                 "$elemMatch": doc!{"$in": tags}
             }

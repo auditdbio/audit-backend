@@ -1,5 +1,8 @@
 use common::entities::customer::Customer;
-use mongodb::{Collection, bson::{oid::ObjectId, doc}, Client};
+use mongodb::{
+    bson::{doc, oid::ObjectId},
+    Client, Collection,
+};
 
 use crate::error::Result;
 
@@ -12,7 +15,6 @@ impl CustomerRepository {
     const DATABASE: &'static str = "Customers";
     const COLLECTION: &'static str = "Customers";
 
-    // 
     #[allow(dead_code)]
     pub async fn new(uri: String) -> Self {
         let client = Client::with_uri_str(uri).await.unwrap();
@@ -30,14 +32,16 @@ impl CustomerRepository {
 
         self.inner.insert_one(customer, None).await?;
         Ok(true)
-
     }
 
     pub async fn find(&self, user_id: ObjectId) -> Result<Option<Customer>> {
-        Ok(self.inner.find_one(doc!{"user_id": user_id}, None).await?)
+        Ok(self.inner.find_one(doc! {"user_id": user_id}, None).await?)
     }
 
     pub async fn delete(&self, user_id: ObjectId) -> Result<Option<Customer>> {
-        Ok(self.inner.find_one_and_delete(doc!{"user_id": user_id}, None).await?)
+        Ok(self
+            .inner
+            .find_one_and_delete(doc! {"user_id": user_id}, None)
+            .await?)
     }
 }

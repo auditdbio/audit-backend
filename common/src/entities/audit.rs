@@ -1,7 +1,14 @@
+use std::collections::HashMap;
+
 use chrono::NaiveDateTime;
 use mongodb::bson::oid::ObjectId;
-use serde::{Serialize, Deserialize};
-use utoipa::{openapi::{Schema, ObjectBuilder, SchemaType}, ToSchema};
+use serde::{Deserialize, Serialize};
+use utoipa::{
+    openapi::{ObjectBuilder, Schema, SchemaType},
+    ToSchema,
+};
+
+use super::view::{Source, View};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Message {
@@ -11,7 +18,13 @@ pub struct Message {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Issue {
-    messages: Vec<Message>
+    messages: Vec<Message>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum Visibility {
+    Public,
+    Private,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -20,11 +33,25 @@ pub struct Audit {
     pub customer_id: ObjectId,
     pub auditor_id: ObjectId,
     pub project_id: ObjectId,
-    pub terms: String,
     pub status: String,
     pub last_modified: NaiveDateTime,
-    pub issues: Vec<Issue>,
-    pub visibility: Vec<ObjectId>,
+    pub auditor_contacts: HashMap<String, String>,
+    pub customer_contacts: HashMap<String, String>,
+    pub price: String,
+    pub comment: String,
+    pub visibility: Visibility,
+}
+
+impl Audit {
+    pub fn to_view(self, name: String) -> View {
+        View {
+            id: self.id,
+            name,
+            description: self.comment,
+            last_modified: self.last_modified,
+            source: Source::Audit,
+        }
+    }
 }
 
 impl ToSchema for Audit {
@@ -32,21 +59,45 @@ impl ToSchema for Audit {
         ObjectBuilder::new()
             .property("id", ObjectBuilder::new().schema_type(SchemaType::String))
             .required("id")
-            .property("customer_id", ObjectBuilder::new().schema_type(SchemaType::String))
+            .property(
+                "customer_id",
+                ObjectBuilder::new().schema_type(SchemaType::String),
+            )
             .required("customer_id")
-            .property("auditor_id", ObjectBuilder::new().schema_type(SchemaType::String))
+            .property(
+                "auditor_id",
+                ObjectBuilder::new().schema_type(SchemaType::String),
+            )
             .required("auditor_id")
-            .property("project_id", ObjectBuilder::new().schema_type(SchemaType::String))
+            .property(
+                "project_id",
+                ObjectBuilder::new().schema_type(SchemaType::String),
+            )
             .required("project_id")
-            .property("terms", ObjectBuilder::new().schema_type(SchemaType::String))
+            .property(
+                "terms",
+                ObjectBuilder::new().schema_type(SchemaType::String),
+            )
             .required("terms")
-            .property("status", ObjectBuilder::new().schema_type(SchemaType::Object))
+            .property(
+                "status",
+                ObjectBuilder::new().schema_type(SchemaType::Object),
+            )
             .required("status")
-            .property("last_modified", ObjectBuilder::new().schema_type(SchemaType::String))
+            .property(
+                "last_modified",
+                ObjectBuilder::new().schema_type(SchemaType::String),
+            )
             .required("last_modified")
-            .property("issues", ObjectBuilder::new().schema_type(SchemaType::Array))
+            .property(
+                "issues",
+                ObjectBuilder::new().schema_type(SchemaType::Array),
+            )
             .required("issues")
-            .property("visibility", ObjectBuilder::new().schema_type(SchemaType::Array))
+            .property(
+                "visibility",
+                ObjectBuilder::new().schema_type(SchemaType::Array),
+            )
             .required("visibility")
             .into()
     }

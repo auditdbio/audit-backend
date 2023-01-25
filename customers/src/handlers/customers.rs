@@ -1,11 +1,15 @@
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
-use actix_web::{HttpRequest, HttpResponse, post, patch, delete, get, web::{self, Json}};
+use actix_web::{
+    delete, get, patch, post,
+    web::{self, Json},
+    HttpRequest, HttpResponse,
+};
 use common::{auth_session::get_auth_session, entities::customer::Customer};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::{error::Result, repositories::customer::{CustomerRepository}};
+use crate::{error::Result, repositories::customer::CustomerRepository};
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PostCustomerRequest {
@@ -25,7 +29,11 @@ pub struct PostCustomerRequest {
     )
 )]
 #[post("/api/customer")]
-pub async fn post_customer(req: HttpRequest, Json(data): web::Json<PostCustomerRequest>, repo: web::Data<CustomerRepository>) -> Result<HttpResponse> {
+pub async fn post_customer(
+    req: HttpRequest,
+    Json(data): web::Json<PostCustomerRequest>,
+    repo: web::Data<CustomerRepository>,
+) -> Result<HttpResponse> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
     let customer = Customer {
@@ -50,7 +58,10 @@ pub async fn post_customer(req: HttpRequest, Json(data): web::Json<PostCustomerR
     )
 )]
 #[get("/api/customer")]
-pub async fn get_customer(req: HttpRequest, repo: web::Data<CustomerRepository>) -> Result<HttpResponse> {
+pub async fn get_customer(
+    req: HttpRequest,
+    repo: web::Data<CustomerRepository>,
+) -> Result<HttpResponse> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
     let Some(customer) = repo.find(session.user_id()).await? else {
@@ -77,14 +88,16 @@ pub struct PatchCustomerRequest {
     )
 )]
 #[patch("/api/customer")]
-pub async fn patch_customer(req: HttpRequest, web::Json(data): web::Json<PatchCustomerRequest>, repo: web::Data<CustomerRepository>) -> Result<HttpResponse> {
+pub async fn patch_customer(
+    req: HttpRequest,
+    web::Json(data): web::Json<PatchCustomerRequest>,
+    repo: web::Data<CustomerRepository>,
+) -> Result<HttpResponse> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
     let Some(mut customer) = repo.find(session.user_id()).await? else {
         return Ok(HttpResponse::BadRequest().finish());
     };
-
-
 
     if let Some(first_name) = data.first_name {
         customer.first_name = first_name;
@@ -100,9 +113,8 @@ pub async fn patch_customer(req: HttpRequest, web::Json(data): web::Json<PatchCu
 
     if let Some(company) = data.company {
         customer.company = company;
-
     }
-    
+
     if let Some(contacts) = data.contacts {
         customer.contacts = contacts;
     }
@@ -122,7 +134,10 @@ pub async fn patch_customer(req: HttpRequest, web::Json(data): web::Json<PatchCu
     )
 )]
 #[delete("/api/customer")]
-pub async fn delete_customer(req: HttpRequest, repo: web::Data<CustomerRepository>) -> Result<HttpResponse> {
+pub async fn delete_customer(
+    req: HttpRequest,
+    repo: web::Data<CustomerRepository>,
+) -> Result<HttpResponse> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
     let Some(customer) = repo.delete(session.user_id()).await? else {

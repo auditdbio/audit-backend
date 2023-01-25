@@ -1,7 +1,10 @@
-use actix_web::{ResponseError, HttpResponse, http::{header::ContentType, StatusCode}};
+use actix_web::{
+    http::{header::ContentType, StatusCode},
+    HttpResponse, ResponseError,
+};
 use common::inner_error::InnerError;
-use mongodb::error;
 use derive_more::{Display, Error};
+use mongodb::error;
 
 #[derive(Debug, Display, Error)]
 pub enum Error {
@@ -23,7 +26,6 @@ pub enum OuterError {
     AuthFailure,
     #[display(fmt = "You are not authorized")]
     Unauthorized,
-
 }
 
 impl From<error::Error> for Error {
@@ -40,7 +42,7 @@ impl From<InnerError> for Error {
 
 impl From<OuterError> for Error {
     fn from(value: OuterError) -> Self {
-        Error::Outer(value)   
+        Error::Outer(value)
     }
 }
 

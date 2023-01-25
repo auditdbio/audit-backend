@@ -13,6 +13,7 @@ env_logger = "0.10.0"
 log = "0.4.17"
 futures = "0.3.25"
 chrono = "0.4.23"
+awc = "3.0.1"
 utoipa = { version = "2", features = ["actix_extras"] }
 utoipa-swagger-ui = { version = "3", features = ["actix-web"] }
 common = {path = "../common"}

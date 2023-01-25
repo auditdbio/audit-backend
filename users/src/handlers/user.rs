@@ -1,14 +1,18 @@
-use actix_web::{HttpRequest, post, HttpResponse, patch, delete, get, web::{self, Json}};
+use actix_web::{
+    delete, get, patch, post,
+    web::{self, Json},
+    HttpRequest, HttpResponse,
+};
 use common::entities::user::User;
 use mongodb::bson::{doc, oid::ObjectId};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::{repositories::{user::{UserRepository}, token::TokenRepository}, error::{Result, Error, OuterError}, handlers::auth::verify_token};
-
-
-
-
+use crate::{
+    error::{Error, OuterError, Result},
+    handlers::auth::verify_token,
+    repositories::{token::TokenRepository, user::UserRepository},
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PostUserRequest {
@@ -37,16 +41,12 @@ pub async fn post_user(
         password: data.password,
     };
 
-    if !repo.create(&user).await?  {
+    if !repo.create(&user).await? {
         Err(Error::Outer(OuterError::NotUniqueEmail))?;
     };
 
     return Ok(web::Json(user));
 }
-
-
-
-
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PatchUserRequest {
@@ -89,10 +89,9 @@ pub async fn patch_user(
     }
 
     if let Some(email) = data.email {
-
         if &user.email != &email && users_repo.find_by_email(&user.email).await?.is_some() {
             return Err(Error::Outer(OuterError::NotUniqueEmail));
-        }  
+        }
     }
 
     users_repo.delete(user_id).await?;
@@ -138,12 +137,19 @@ pub struct GetUsersRequest {
     )
 )]
 #[get("/api/users/")]
-pub async fn get_users(Json(data): web::Json<GetUsersRequest>, repo: web::Data<UserRepository>) -> Result<HttpResponse> {
+pub async fn get_users(
+    Json(data): web::Json<GetUsersRequest>,
+    repo: web::Data<UserRepository>,
+) -> Result<HttpResponse> {
     let users = repo.users((data.page - 1) * data.limit, data.limit).await?;
-    
-    let users = users.into_iter().map(|user| doc!{"name": user.name, "email": user.email}).collect::<Vec<_>>();
-    
-    Ok(HttpResponse::Ok().json(doc!{"data": users, "hasNextPage": true, "page": data.page, "limit": data.limit}))
+
+    let users = users
+        .into_iter()
+        .map(|user| doc! {"name": user.name, "email": user.email})
+        .collect::<Vec<_>>();
+
+    Ok(HttpResponse::Ok()
+        .json(doc! {"data": users, "hasNextPage": true, "page": data.page, "limit": data.limit}))
 }
 
 #[utoipa::path(
@@ -156,11 +162,11 @@ pub async fn get_user(
     email: web::Path<(String,)>,
     repo: web::Data<UserRepository>,
 ) -> Result<HttpResponse> {
-    let (email, ) = email.into_inner();
+    let (email,) = email.into_inner();
 
     let Some(user) = repo.find_by_email(&email).await? else {
         return Ok(HttpResponse::BadRequest().body("Error: User not found"));
     };
 
-    Ok(HttpResponse::Ok().json(doc!{"id": user.id, "name": user.name, "email": user.email}))
+    Ok(HttpResponse::Ok().json(doc! {"id": user.id, "name": user.name, "email": user.email}))
 }

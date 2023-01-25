@@ -1,11 +1,18 @@
 use std::collections::HashMap;
 
-use actix_web::{HttpRequest, HttpResponse, post, patch, delete, get, web::{self, Json}};
+use actix_web::{
+    delete, get, patch, post,
+    web::{self, Json},
+    HttpRequest, HttpResponse,
+};
 use common::auth_session::get_auth_session;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::{repositories::auditor::{AuditorRepository, AuditorModel}, error::Result};
+use crate::{
+    error::Result,
+    repositories::auditor::{AuditorModel, AuditorRepository},
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PostAuditorRequest {
@@ -25,7 +32,11 @@ pub struct PostAuditorRequest {
     )
 )]
 #[post("/api/auditors")]
-pub async fn post_auditor(req: HttpRequest, Json(data): web::Json<PostAuditorRequest>, repo: web::Data<AuditorRepository>) -> Result<HttpResponse> {
+pub async fn post_auditor(
+    req: HttpRequest,
+    Json(data): web::Json<PostAuditorRequest>,
+    repo: web::Data<AuditorRepository>,
+) -> Result<HttpResponse> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
     let auditor = AuditorModel {
@@ -49,7 +60,10 @@ pub async fn post_auditor(req: HttpRequest, Json(data): web::Json<PostAuditorReq
     )
 )]
 #[get("/api/auditors")]
-pub async fn get_auditor(req: HttpRequest, repo: web::Data<AuditorRepository>) -> Result<HttpResponse> {
+pub async fn get_auditor(
+    req: HttpRequest,
+    repo: web::Data<AuditorRepository>,
+) -> Result<HttpResponse> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
     let Some(auditor) = repo.find(&session.user_id()).await? else {
@@ -77,7 +91,11 @@ pub struct PatchAuditorRequest {
     )
 )]
 #[patch("/api/auditors")]
-pub async fn patch_auditor(req: HttpRequest, web::Json(data): web::Json<PatchAuditorRequest>, repo: web::Data<AuditorRepository>) -> Result<HttpResponse> {
+pub async fn patch_auditor(
+    req: HttpRequest,
+    web::Json(data): web::Json<PatchAuditorRequest>,
+    repo: web::Data<AuditorRepository>,
+) -> Result<HttpResponse> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
     let Some(mut auditor ) = repo.find(&session.user_id()).await? else {
@@ -113,7 +131,10 @@ pub async fn patch_auditor(req: HttpRequest, web::Json(data): web::Json<PatchAud
     )
 )]
 #[delete("/api/auditors")]
-pub async fn delete_auditor(req: HttpRequest, repo: web::Data<AuditorRepository>) -> Result<HttpResponse> {
+pub async fn delete_auditor(
+    req: HttpRequest,
+    repo: web::Data<AuditorRepository>,
+) -> Result<HttpResponse> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
     let Some(auditor) = repo.delete(session.user_id()).await? else {

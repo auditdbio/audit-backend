@@ -1,4 +1,4 @@
-use common::{ruleset::Ruleset, entities::user::User};
+use common::{entities::user::User, ruleset::Ruleset};
 
 use crate::handlers::auth::LoginRequest;
 

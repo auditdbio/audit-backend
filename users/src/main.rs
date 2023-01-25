@@ -1,22 +1,29 @@
 extern crate lazy_static;
 
+pub mod constants;
 mod error;
 mod handlers;
 mod repositories;
-mod utils;
 mod ruleset;
-pub mod constants;
+mod utils;
 
 use std::env;
 
-use actix_web::{middleware, HttpServer, App, web};
-use handlers::{user::{post_user, patch_user, delete_user, get_users, get_user}, auth::{login, restore, verify}};
-use repositories::{user::UserRepository, token::TokenRepository};
+use actix_web::{middleware, web, App, HttpServer};
+use handlers::{
+    auth::{login, restore, verify},
+    user::{delete_user, get_user, get_users, patch_user, post_user},
+};
+use repositories::{token::TokenRepository, user::UserRepository};
 pub use utils::prelude;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    #[cfg(test)]
     let mongo_uri = env::var("MONGOURI").unwrap();
+
+    #[cfg(not(test))]
+    let mongo_uri = env::var("MONGOURI_TEST").unwrap();
     env_logger::init();
 
     let user_repo = UserRepository::new(mongo_uri.clone()).await;

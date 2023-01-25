@@ -1,7 +1,10 @@
-use actix_web::{ResponseError, HttpResponse, http::{header::ContentType, StatusCode}};
+use actix_web::{
+    http::{header::ContentType, StatusCode},
+    HttpResponse, ResponseError,
+};
 use common::inner_error::InnerError;
-use mongodb::error;
 use derive_more::{Display, Error};
+use mongodb::error;
 
 #[derive(Debug, Display, Error)]
 pub enum Error {
@@ -14,8 +17,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug, Display, Error)]
 pub enum OuterError {
     #[display(fmt = "Project not found")]
-    ProjectNotFound
-
+    ProjectNotFound,
 }
 
 impl From<error::Error> for Error {
@@ -32,7 +34,7 @@ impl From<InnerError> for Error {
 
 impl From<OuterError> for Error {
     fn from(value: OuterError) -> Self {
-        Error::Outer(value)   
+        Error::Outer(value)
     }
 }
 

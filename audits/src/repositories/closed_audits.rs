@@ -1,16 +1,15 @@
 use common::entities::audit::Audit;
-use mongodb::{Collection, Client, error::Result};
+use mongodb::{error::Result, Client, Collection};
 
 #[derive(Debug, Clone)]
-pub struct AuditRepo {
+pub struct ClosedAuditRepo {
     inner: Collection<Audit>,
 }
 
-impl AuditRepo {
+impl ClosedAuditRepo {
     const DATABASE: &'static str = "Audits";
     const COLLECTION: &'static str = "ClosedAudits";
 
-    
     pub async fn new(uri: String) -> Self {
         let client = Client::with_uri_str(uri).await.unwrap();
         let db = client.database(Self::DATABASE);

@@ -1,7 +1,10 @@
 use std::{error::Error, net::Ipv4Addr};
 
 use actix_web::{middleware::Logger, App, HttpServer};
-use utoipa::{OpenApi, Modify, openapi::security::{SecurityScheme, HttpBuilder, HttpAuthScheme}};
+use utoipa::{
+    openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme},
+    Modify, OpenApi,
+};
 use utoipa_swagger_ui::{SwaggerUi, Url};
 
 pub struct SecurityAddon;
@@ -11,7 +14,12 @@ impl Modify for SecurityAddon {
         if let Some(components) = openapi.components.as_mut() {
             components.add_security_scheme(
                 "http",
-                SecurityScheme::Http(HttpBuilder::new().scheme(HttpAuthScheme::Bearer).bearer_format("JWT").build()),
+                SecurityScheme::Http(
+                    HttpBuilder::new()
+                        .scheme(HttpAuthScheme::Bearer)
+                        .bearer_format("JWT")
+                        .build(),
+                ),
             )
         }
     }
@@ -68,7 +76,6 @@ async fn main() -> Result<(), impl Error> {
     )]
     struct CustomersServiceDoc;
 
-
     #[derive(OpenApi)]
     #[openapi(
         paths(
@@ -105,7 +112,7 @@ async fn main() -> Result<(), impl Error> {
                 ),
             ]))
     })
-    .bind((Ipv4Addr::UNSPECIFIED, 4001))?
+    .bind((Ipv4Addr::UNSPECIFIED, 8080))?
     .run()
     .await
 }

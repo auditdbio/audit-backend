@@ -1,25 +1,62 @@
 version: "3.8"
 
 services:
-  backedend:
+  users:
     build:
       context: ./
-      dockerfile: ./Dockerfile
+      dockerfile: ./users/Dockerfile
     ports:
       - 3001:3001
-      - 3002:3002
-      - 3003:3003
-      - 3004:3004
+    environment:
+      MONGOURI: mongodb://database/backend
+      MONGOURI_TEST: mongodb://database/test
+      RUST_LOG: actix
+  swagger:
+    build:
+      context: ./
+      dockerfile: ./swagger/Dockerfile
+    ports:
       - 4001:4001
     environment:
       MONGOURI: mongodb://database/backend
+      MONGOURI_TEST: mongodb://database/test
+      RUST_LOG: actix
+  customers:
+    build:
+      context: ./
+      dockerfile: ./customers/Dockerfile
+    ports:
+      - 3002:3002
+    environment:
+      MONGOURI: mongodb://database/backend
+      MONGOURI_TEST: mongodb://database/test
+      RUST_LOG: actix
+  audits:
+    build:
+      context: ./
+      dockerfile: ./audits/Dockerfile
+    ports:
+      - 3003:3003
+    environment:
+      MONGOURI: mongodb://database/backend
+      MONGOURI_TEST: mongodb://database/test
+      RUST_LOG: actix
+  auditors:
+    build:
+      context: ./
+      dockerfile: ./auditors/Dockerfile
+    ports:
+      - 3004:3004
+    environment:
+      MONGOURI: mongodb://database/backend
+      MONGOURI_TEST: mongodb://database/test
       RUST_LOG: actix
   database:
     image: mongo:4.0-xenial
     ports:
       - 27017:27017
     volumes:
-      - backend:/data/db
+      - database:/data/db
 
 volumes:
-  backend:
+  database:

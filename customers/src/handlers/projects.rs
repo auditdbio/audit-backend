@@ -1,14 +1,19 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
-use actix_web::{HttpRequest, HttpResponse, post, patch, delete, get, web::{self, Json}};
+use actix_web::{
+    delete, get, patch, post,
+    web::{self, Json},
+    HttpRequest, HttpResponse,
+};
 use common::{auth_session::get_auth_session, entities::project::Project};
 use mongodb::bson::oid::ObjectId;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::{error::{Result, Error, OuterError}, repositories::{project::ProjectRepository}};
-
-
+use crate::{
+    error::{Error, OuterError, Result},
+    repositories::project::ProjectRepository,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PostProjectRequest {
@@ -30,9 +35,9 @@ pub struct PostProjectRequest {
 )]
 #[post("/api/projects")]
 pub async fn post_project(
-    req: HttpRequest, 
-    Json(data): web::Json<PostProjectRequest>, 
-    repo: web::Data<ProjectRepository>
+    req: HttpRequest,
+    Json(data): web::Json<PostProjectRequest>,
+    repo: web::Data<ProjectRepository>,
 ) -> Result<web::Json<Project>> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
@@ -73,9 +78,9 @@ pub struct PatchProjectRequest {
 )]
 #[patch("/api/projects")]
 pub async fn patch_project(
-    req: HttpRequest, 
-    web::Json(data): web::Json<PatchProjectRequest>, 
-    repo: web::Data<ProjectRepository>
+    req: HttpRequest,
+    web::Json(data): web::Json<PatchProjectRequest>,
+    repo: web::Data<ProjectRepository>,
 ) -> Result<web::Json<Project>> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
@@ -113,14 +118,16 @@ pub async fn patch_project(
     Ok(web::Json(project))
 }
 
-
 #[utoipa::path(
     responses(
         (status = 200, body = Project)
     )
 )]
 #[delete("/api/projects")]
-pub async fn delete_project(req: HttpRequest, repo: web::Data<ProjectRepository>) -> Result<HttpResponse> {
+pub async fn delete_project(
+    req: HttpRequest,
+    repo: web::Data<ProjectRepository>,
+) -> Result<HttpResponse> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
     let Some(project) = repo.delete(session.user_id()).await? else {
@@ -135,11 +142,15 @@ pub async fn delete_project(req: HttpRequest, repo: web::Data<ProjectRepository>
         (status = 200, body = Project)
     )
 )]
-#[get("/api/projects/project")]
-pub async fn get_project(req: HttpRequest, repo: web::Data<ProjectRepository>) -> Result<HttpResponse> {
+#[get("/api/projects/project/{id}")]
+pub async fn get_project(
+    req: HttpRequest,
+    id: web::Path<ObjectId>,
+    repo: web::Data<ProjectRepository>,
+) -> Result<HttpResponse> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
-    let Some(project) = repo.find(session.user_id()).await? else {
+    let Some(project) = repo.find(&id).await? else {
         return Ok(HttpResponse::BadRequest().finish()); // TODO: Error: project not found
     };
     Ok(HttpResponse::Ok().json(project))
