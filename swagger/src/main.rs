@@ -71,7 +71,7 @@ async fn main() -> Result<(), impl Error> {
             customers::PatchCustomerRequest,
             customers::PostProjectRequest,
             customers::PatchProjectRequest,
-            common::entities::customer::Customer
+            common::entities::customer::Customer,
         ))
     )]
     struct CustomersServiceDoc;
@@ -94,6 +94,29 @@ async fn main() -> Result<(), impl Error> {
     )]
     struct AuditorsServiceDoc;
 
+    #[derive(OpenApi)]
+    #[openapi(
+        paths(
+            audits::post_audit,
+            audits::get_audits,
+            audits::delete_audit,
+            audits::get_views,
+            audits::post_audit_request,
+            audits::patch_audit_request,
+            audits::delete_audit_request,
+        ),
+        components(schemas(
+            audits::PostAuditRequestRequest,
+            audits::PatchAuditRequestRequest,
+            audits::GetAuditRequestsResponse,
+            audits::GetViewsResponse,
+            common::entities::audit::Audit,
+            common::entities::audit_request::AuditRequest,
+            common::entities::view::View,
+        ))
+    )]
+    struct AuditsServiceDoc;
+
     HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())
@@ -109,6 +132,10 @@ async fn main() -> Result<(), impl Error> {
                 (
                     Url::new("auditors", "/api-doc/openapi3.json"),
                     AuditorsServiceDoc::openapi(),
+                ),
+                (
+                    Url::new("audits", "/api-doc/openapi4.json"),
+                    AuditsServiceDoc::openapi(),
                 ),
             ]))
     })

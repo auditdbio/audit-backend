@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr};
+use std::{collections::HashMap};
 
 use actix_web::{
     delete, get, patch, post,
@@ -148,7 +148,7 @@ pub async fn get_project(
     id: web::Path<ObjectId>,
     repo: web::Data<ProjectRepository>,
 ) -> Result<HttpResponse> {
-    let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
+    let _session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
     let Some(project) = repo.find(&id).await? else {
         return Ok(HttpResponse::BadRequest().finish()); // TODO: Error: project not found

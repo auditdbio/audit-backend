@@ -6,8 +6,11 @@ use actix_web::{
     HttpRequest, HttpResponse,
 };
 use chrono::Utc;
-use common::{auth_session::{jwt_from_header, AuthSession}, entities::user::User};
 use common::ruleset::Ruleset;
+use common::{
+    auth_session::{jwt_from_header, AuthSession},
+    entities::user::User,
+};
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;

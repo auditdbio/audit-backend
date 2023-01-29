@@ -19,7 +19,6 @@ pub use utils::prelude;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-
     #[cfg(test)]
     let mongo_uri = env::var("MONGOURI").unwrap();
     #[cfg(not(test))]

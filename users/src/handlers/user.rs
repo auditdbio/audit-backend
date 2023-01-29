@@ -188,7 +188,7 @@ pub async fn get_user(
 //                 password: "test".to_string(),
 //             })
 //             .to_request();
-        
+
 //         let mut app = init_service(App::new().configure(crate::configure_service)).await;
 //         let resp = test::call_service(&mut app, req).await;
 //         assert!(resp.status().is_success());

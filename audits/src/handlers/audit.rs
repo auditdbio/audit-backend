@@ -6,24 +6,48 @@ use actix_web::{
 use awc::Client;
 use common::{
     auth_session::get_auth_session,
-    entities::{project::Project, view::View},
+    entities::{audit_request::AuditRequest, project::Project, view::View},
 };
 use mongodb::bson::oid::ObjectId;
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 use crate::{
     contants::CUSTOMERS_SERVICE,
     error::Result,
-    repositories::{audit::AuditRepo, audit_request::AuditRequestRepo, closed_audits::ClosedAuditRepo},
+    repositories::{
+        audit::AuditRepo, audit_request::AuditRequestRepo, closed_audits::ClosedAuditRepo,
+    },
 };
 
+#[utoipa::path(
+    request_body(
+        content = AuditRequest
+    ),
+    responses(
+        (status = 200, body = Audit)
+    )
+)]
+#[get("/api/audit")]
+pub async fn post_audit(
+    req: HttpRequest,
+    request: web::Path<AuditRequest>,
+    repo: web::Data<AuditRepo>,
+) -> Result<HttpResponse> {
+    todo!()
+}
 
 #[utoipa::path(
     responses(
-        (status = 200, body = Auditor)
+        (status = 200, body = Audit)
     )
 )]
 #[get("/api/audit/{id}")]
-pub async fn get_audits(req: HttpRequest, id: web::Path<ObjectId>, repo: web::Data<AuditRepo>) -> Result<HttpResponse> {
+pub async fn get_audits(
+    req: HttpRequest,
+    id: web::Path<ObjectId>,
+    repo: web::Data<AuditRepo>,
+) -> Result<HttpResponse> {
     let _session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
     let audits = repo.find(&id).await?;
@@ -31,10 +55,9 @@ pub async fn get_audits(req: HttpRequest, id: web::Path<ObjectId>, repo: web::Da
     Ok(HttpResponse::Ok().json(audits))
 }
 
-
 #[utoipa::path(
     responses(
-        (status = 200, body = Auditor)
+        (status = 200, body = Audit)
     )
 )]
 #[delete("/api/audit/{id}")]
@@ -42,7 +65,7 @@ pub async fn delete_audit(
     req: HttpRequest,
     id: web::Path<ObjectId>,
     repo: web::Data<AuditRepo>,
-    closed_repo: web::Data<ClosedAuditRepo>
+    closed_repo: web::Data<ClosedAuditRepo>,
 ) -> Result<HttpResponse> {
     let _session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
@@ -55,6 +78,7 @@ pub async fn delete_audit(
     Ok(HttpResponse::Ok().json(audit))
 }
 
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct GetViewsResponse {
     pub views: Vec<View>,
 }
@@ -73,13 +97,12 @@ async fn get_project(client: &Client, project_id: &ObjectId) -> Result<Project> 
     Ok(body)
 }
 
-
 #[utoipa::path(
     responses(
-        (status = 200, body = Auditor)
+        (status = 200, body = GetViewsResponse)
     )
 )]
-#[get("/api/audit/")]
+#[get("/api/audit/views")]
 pub async fn get_views(
     req: HttpRequest,
     request_repo: web::Data<AuditRequestRepo>,

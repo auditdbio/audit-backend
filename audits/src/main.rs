@@ -1,8 +1,8 @@
+pub mod contants;
 pub mod error;
 pub mod handlers;
 pub mod repositories;
 pub mod ruleset;
-pub mod contants;
 
 use std::env;
 

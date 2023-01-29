@@ -12,11 +12,12 @@ use common::{
 };
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 use crate::error::Result;
 use crate::{handlers::parse_id, repositories::audit_request::AuditRequestRepo};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct PostAuditRequestRequest {
     pub opener: Role,
     pub auditor_id: String,
@@ -36,7 +37,7 @@ pub struct PostAuditRequestRequest {
         (status = 200, body = Auditor)
     )
 )]
-#[post("/api/audits/requests")]
+#[post("/api/requests")]
 pub async fn post_audit_request(
     req: HttpRequest,
     Json(data): web::Json<PostAuditRequestRequest>,
@@ -61,13 +62,12 @@ pub async fn post_audit_request(
     Ok(HttpResponse::Ok().finish())
 }
 
-
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct GetAuditRequestsResponse {
     pub audits: Vec<AuditRequest>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct PatchAuditRequestRequest {
     pub id: ObjectId,
     pub auditor_contacts: Option<HashMap<String, String>>,
@@ -84,7 +84,7 @@ pub struct PatchAuditRequestRequest {
         (status = 200, body = Auditor)
     )
 )]
-#[patch("/api/audits/requests")]
+#[patch("/api/requests")]
 pub async fn patch_audit_request(
     req: HttpRequest,
     Json(data): web::Json<PatchAuditRequestRequest>,
@@ -119,13 +119,12 @@ pub async fn patch_audit_request(
     Ok(HttpResponse::Ok().json(audit_request))
 }
 
-
 #[utoipa::path(
     responses(
         (status = 200, body = Auditor)
     )
 )]
-#[delete("/api/audits/requests/{id}")]
+#[delete("/api/requests/{id}")]
 pub async fn delete_audit_request(
     req: HttpRequest,
     id: web::Path<ObjectId>,
@@ -138,4 +137,3 @@ pub async fn delete_audit_request(
     };
     Ok(HttpResponse::Ok().json(request))
 }
-
