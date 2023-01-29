@@ -19,6 +19,8 @@ pub struct PostUserRequest {
     name: String,
     email: String,
     password: String,
+    #[serde(rename = "requestedAccountType")]
+    required_account_type: String,
 }
 
 #[utoipa::path(
@@ -39,6 +41,7 @@ pub async fn post_user(
         name: data.name,
         email: data.email,
         password: data.password,
+        required_account_type: data.required_account_type,
     };
 
     if !repo.create(&user).await? {
@@ -170,3 +173,24 @@ pub async fn get_user(
 
     Ok(HttpResponse::Ok().json(doc! {"id": user.id, "name": user.name, "email": user.email}))
 }
+
+// #[cfg(test)]
+// mod test {
+//     use actix_web::{test::{self, init_service}, App};
+
+//     #[actix_web::test]
+//     async fn test_post_user() {
+//         let req = test::TestRequest::post()
+//             .uri("/api/users")
+//             .set_json(&super::PostUserRequest {
+//                 name: "test".to_string(),
+//                 email: "test@gmail.com".to_string(),
+//                 password: "test".to_string(),
+//             })
+//             .to_request();
+        
+//         let mut app = init_service(App::new().configure(crate::configure_service)).await;
+//         let resp = test::call_service(&mut app, req).await;
+//         assert!(resp.status().is_success());
+//     }
+// }

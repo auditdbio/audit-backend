@@ -1,40 +1,54 @@
 version: "3.8"
 
 services:
-  users:
+  binaries:
     build:
       context: ./
-      dockerfile: ./users/Dockerfile
+      dockerfile: ./Dockerfile
+    volumes:
+      - binaries:/data/binaries
+  users:
+    depends_on:
+      - binaries
+    build: ./users
     ports:
       - 3001:3001
+    volumes:
+      - binaries:/data/binaries
     environment:
       MONGOURI: mongodb://database/backend
       MONGOURI_TEST: mongodb://database/test
       RUST_LOG: actix
   swagger:
-    build:
-      context: ./
-      dockerfile: ./swagger/Dockerfile
+    depends_on:
+      - binaries
+    build: ./swagger
     ports:
       - 4001:4001
+    volumes:
+      - binaries:/data/binaries
     environment:
       MONGOURI: mongodb://database/backend
       MONGOURI_TEST: mongodb://database/test
       RUST_LOG: actix
   customers:
-    build:
-      context: ./
-      dockerfile: ./customers/Dockerfile
+    depends_on:
+      - binaries
+    build: ./customers
     ports:
       - 3002:3002
+    volumes:
+      - binaries:/data/binaries
     environment:
       MONGOURI: mongodb://database/backend
       MONGOURI_TEST: mongodb://database/test
       RUST_LOG: actix
   audits:
-    build:
-      context: ./
-      dockerfile: ./audits/Dockerfile
+    depends_on:
+      - binaries
+    build: ./audits
+    volumes:
+      - binaries:/data/binaries
     ports:
       - 3003:3003
     environment:
@@ -42,11 +56,13 @@ services:
       MONGOURI_TEST: mongodb://database/test
       RUST_LOG: actix
   auditors:
-    build:
-      context: ./
-      dockerfile: ./auditors/Dockerfile
+    depends_on:
+      - binaries
+    build: ./auditors
     ports:
       - 3004:3004
+    volumes:
+      - binaries:/data/binaries
     environment:
       MONGOURI: mongodb://database/backend
       MONGOURI_TEST: mongodb://database/test
@@ -60,3 +76,4 @@ services:
 
 volumes:
   database:
+  binaries:

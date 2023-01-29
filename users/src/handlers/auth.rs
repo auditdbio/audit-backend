@@ -6,7 +6,7 @@ use actix_web::{
     HttpRequest, HttpResponse,
 };
 use chrono::Utc;
-use common::auth_session::{jwt_from_header, AuthSession};
+use common::{auth_session::{jwt_from_header, AuthSession}, entities::user::User};
 use common::ruleset::Ruleset;
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
@@ -33,6 +33,7 @@ pub struct LoginRequest {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct LoginResponse {
     token: String,
+    user: User,
 }
 
 #[utoipa::path(
@@ -72,6 +73,7 @@ pub async fn login(
 
     let response = LoginResponse {
         token: jwt::create(session)?,
+        user,
     };
 
     Ok(web::Json(response))

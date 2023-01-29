@@ -11,6 +11,7 @@ pub struct User {
     pub email: String,
     pub password: String,
     pub name: String,
+    pub required_account_type: String,
 }
 
 impl ToSchema for User {

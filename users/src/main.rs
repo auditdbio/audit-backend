@@ -19,11 +19,12 @@ pub use utils::prelude;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+
     #[cfg(test)]
     let mongo_uri = env::var("MONGOURI").unwrap();
-
     #[cfg(not(test))]
     let mongo_uri = env::var("MONGOURI_TEST").unwrap();
+
     env_logger::init();
 
     let user_repo = UserRepository::new(mongo_uri.clone()).await;
