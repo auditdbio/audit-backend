@@ -1,4 +1,4 @@
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
 use actix_web::{
     delete, get, patch, post,
@@ -8,7 +8,7 @@ use actix_web::{
 use common::{auth_session::get_auth_session, entities::project::Project};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 use crate::{
     error::{Error, OuterError, Result},
@@ -27,7 +27,10 @@ pub struct PostProjectRequest {
 
 #[utoipa::path(
     params(
-        ("data" = PostProjectRequest,)
+        ("Authorization" = String, Header,  description = "Bearer token"),
+    ),
+    request_body(
+        content = PostProjectRequest,
     ),
     responses(
         (status = 200, body = Project)
@@ -70,7 +73,10 @@ pub struct PatchProjectRequest {
 
 #[utoipa::path(
     params(
-        ("data" = PatchProjectRequest,)
+        ("Authorization" = String, Header,  description = "Bearer token"),
+    ),
+    request_body(
+        content = PatchProjectRequest,
     ),
     responses(
         (status = 200, body = Project)
@@ -119,6 +125,9 @@ pub async fn patch_project(
 }
 
 #[utoipa::path(
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+    ),
     responses(
         (status = 200, body = Project)
     )
@@ -138,6 +147,9 @@ pub async fn delete_project(
 }
 
 #[utoipa::path(
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+    ),
     responses(
         (status = 200, body = Project)
     )
@@ -154,4 +166,38 @@ pub async fn get_project(
         return Ok(HttpResponse::BadRequest().finish()); // TODO: Error: project not found
     };
     Ok(HttpResponse::Ok().json(project))
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, IntoParams)]
+pub struct AllProjectsQuery {
+    tags: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct AllProjectsResponse {
+    tags: Vec<Project>,
+}
+
+#[utoipa::path(
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+        AllProjectsQuery,
+    ),
+    responses(
+        (status = 200, body = AllProjectsResponse)
+    )
+)]
+#[get("/api/projects/all/{tags}")]
+pub async fn get_projects(
+    req: HttpRequest,
+    repo: web::Data<ProjectRepository>,
+    query: web::Query<AllProjectsQuery>,
+) -> Result<HttpResponse> {
+    let _session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
+
+    let tags = query.tags.split(",").map(ToString::to_string).collect();
+
+    let projects = repo.request_with_tags(tags).await?;
+
+    Ok(HttpResponse::Ok().json(projects))
 }

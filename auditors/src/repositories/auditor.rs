@@ -1,28 +1,18 @@
 use std::collections::HashMap;
 
+use common::entities::auditor::Auditor;
 use futures::stream::StreamExt;
 use mongodb::{
     bson::{doc, oid::ObjectId},
     error::Result as MongoResult,
     Client, Collection,
 };
-use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AuditorModel {
-    pub user_id: ObjectId,
-    pub first_name: String,
-    pub last_name: String,
-    pub about: String,
-    pub tags: Vec<String>,
-    pub contacts: HashMap<String, String>,
-}
-
 #[derive(Debug, Clone)]
 pub struct AuditorRepository {
-    inner: Collection<AuditorModel>,
+    inner: Collection<Auditor>,
 }
 
 impl AuditorRepository {
@@ -33,11 +23,11 @@ impl AuditorRepository {
     pub async fn new(uri: String) -> Self {
         let client = Client::with_uri_str(uri).await.unwrap();
         let db = client.database(Self::DATABASE);
-        let inner: Collection<AuditorModel> = db.collection(Self::COLLECTION);
+        let inner: Collection<Auditor> = db.collection(Self::COLLECTION);
         Self { inner }
     }
 
-    pub async fn create(&self, auditor: &AuditorModel) -> Result<bool> {
+    pub async fn create(&self, auditor: &Auditor) -> Result<bool> {
         let exited_auditor = self.find(&auditor.user_id).await?;
 
         if exited_auditor.is_some() {
@@ -48,29 +38,29 @@ impl AuditorRepository {
         Ok(true)
     }
 
-    pub async fn find(&self, user_id: &ObjectId) -> Result<Option<AuditorModel>> {
+    pub async fn find(&self, user_id: &ObjectId) -> Result<Option<Auditor>> {
         Ok(self.inner.find_one(doc! {"user_id": user_id}, None).await?)
     }
 
-    pub async fn delete(&self, user_id: ObjectId) -> Result<Option<AuditorModel>> {
+    pub async fn delete(&self, user_id: ObjectId) -> Result<Option<Auditor>> {
         Ok(self
             .inner
             .find_one_and_delete(doc! {"user_id": user_id}, None)
             .await?)
     }
 
-    pub async fn request_with_tags(&self, tags: Vec<String>) -> Result<Vec<AuditorModel>> {
+    pub async fn request_with_tags(&self, tags: Vec<String>) -> Result<Vec<Auditor>> {
         let filter = doc! {
             "tags": doc!{
                 "$elemMatch": doc!{"$in": tags}
             }
         };
 
-        let result: Vec<AuditorModel> = self
+        let result: Vec<Auditor> = self
             .inner
             .find(filter, None)
             .await?
-            .collect::<Vec<MongoResult<AuditorModel>>>()
+            .collect::<Vec<MongoResult<Auditor>>>()
             .await
             .into_iter()
             .collect::<MongoResult<_>>()?;

@@ -88,7 +88,7 @@ async fn main() -> Result<(), impl Error> {
         components(schemas(
             auditors::PostAuditorRequest,
             auditors::PatchAuditorRequest,
-            auditors::AllAuditorsRequest,
+            auditors::AllAuditorsResponse,
             common::entities::auditor::Auditor,
         ))
     )]

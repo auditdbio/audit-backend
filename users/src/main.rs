@@ -9,7 +9,8 @@ mod utils;
 
 use std::env;
 
-use actix_web::{middleware, web, App, HttpServer};
+use actix_cors::Cors;
+use actix_web::{http, middleware, web, App, HttpServer};
 use handlers::{
     auth::{login, restore, verify},
     user::{delete_user, get_user, get_users, patch_user, post_user},
@@ -28,8 +29,14 @@ async fn main() -> std::io::Result<()> {
 
     let user_repo = UserRepository::new(mongo_uri.clone()).await;
     let token_repo = TokenRepository::new(mongo_uri.clone()).await;
+
     HttpServer::new(move || {
+        let cors = Cors::default()
+            .allow_any_origin()
+            .allow_any_header()
+            .allow_any_method();
         App::new()
+            .wrap(cors)
             .wrap(middleware::Logger::default())
             .app_data(web::Data::new(user_repo.clone()))
             .app_data(web::Data::new(token_repo.clone()))

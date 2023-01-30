@@ -1,11 +1,13 @@
 use std::collections::HashMap;
 
 use mongodb::bson::oid::ObjectId;
+use serde::{Deserialize, Serialize};
 use utoipa::{
     openapi::{ObjectBuilder, Schema, SchemaType},
     ToSchema,
 };
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Auditor {
     pub user_id: ObjectId,
     pub first_name: String,

@@ -6,6 +6,7 @@ pub mod ruleset;
 
 use std::env;
 
+use actix_cors::Cors;
 use actix_web::{middleware, web, App, HttpServer};
 use repositories::{audit::AuditRepo, audit_request::AuditRequestRepo};
 
@@ -21,7 +22,12 @@ async fn main() -> std::io::Result<()> {
     let user_repo = AuditRepo::new(mongo_uri.clone()).await;
     let token_repo = AuditRequestRepo::new(mongo_uri.clone()).await;
     HttpServer::new(move || {
+        let cors = Cors::default()
+            .allow_any_origin()
+            .allow_any_header()
+            .allow_any_method();
         App::new()
+            .wrap(cors)
             .wrap(middleware::Logger::default())
             .app_data(web::Data::new(user_repo.clone()))
             .app_data(web::Data::new(token_repo.clone()))

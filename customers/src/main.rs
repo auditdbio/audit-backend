@@ -4,6 +4,7 @@ mod repositories;
 
 use std::env;
 
+use actix_cors::Cors;
 use actix_web::{middleware, web, App, HttpServer};
 use handlers::{
     customers::{delete_customer, get_customer, patch_customer, post_customer},
@@ -23,7 +24,12 @@ async fn main() -> std::io::Result<()> {
     let customer_repo = CustomerRepository::new(mongo_uri.clone()).await;
     let project_repo = ProjectRepository::new(mongo_uri.clone()).await;
     HttpServer::new(move || {
+        let cors = Cors::default()
+            .allow_any_origin()
+            .allow_any_header()
+            .allow_any_method();
         App::new()
+            .wrap(cors)
             .wrap(middleware::Logger::default())
             .app_data(web::Data::new(customer_repo.clone()))
             .app_data(web::Data::new(project_repo.clone()))

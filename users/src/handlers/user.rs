@@ -59,6 +59,9 @@ pub struct PatchUserRequest {
 }
 
 #[utoipa::path(
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+    ),
     request_body(
         content = LoginRequest
     ),
@@ -105,6 +108,9 @@ pub async fn patch_user(
 }
 
 #[utoipa::path(
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+    ),
     responses(
         (status = 200, description = "Authorized user's token", body = User)
     )
@@ -134,25 +140,32 @@ pub struct GetUsersRequest {
     limit: u32,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct GetUsersResponse {
+    data: Vec<User>,
+    has_next_page: bool,
+    page: u32,
+    limit: u32,
+}
+
 #[utoipa::path(
     responses(
-        (status = 200, description = "Authorized user's token", body = String)
+        (status = 200, description = "Authorized user's token", body = GetUsersResponse)
     )
 )]
-#[get("/api/users/")]
+#[get("/api/users")]
 pub async fn get_users(
     Json(data): web::Json<GetUsersRequest>,
     repo: web::Data<UserRepository>,
 ) -> Result<HttpResponse> {
     let users = repo.users((data.page - 1) * data.limit, data.limit).await?;
 
-    let users = users
-        .into_iter()
-        .map(|user| doc! {"name": user.name, "email": user.email})
-        .collect::<Vec<_>>();
-
-    Ok(HttpResponse::Ok()
-        .json(doc! {"data": users, "hasNextPage": true, "page": data.page, "limit": data.limit}))
+    Ok(HttpResponse::Ok().json(GetUsersResponse {
+        data: users,
+        has_next_page: false,
+        page: data.page,
+        limit: data.limit,
+    }))
 }
 
 #[utoipa::path(

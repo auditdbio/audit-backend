@@ -21,6 +21,9 @@ pub struct PostCustomerRequest {
 }
 
 #[utoipa::path(
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+    ),
     request_body(
         content = PostCustomerRequest
     ),
@@ -53,6 +56,9 @@ pub async fn post_customer(
 }
 
 #[utoipa::path(
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+    ),
     responses(
         (status = 200, body = Customer)
     )
@@ -80,6 +86,9 @@ pub struct PatchCustomerRequest {
 }
 
 #[utoipa::path(
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+    ),
     request_body(
         content = PatchCustomerRequest
     ),
@@ -126,6 +135,9 @@ pub async fn patch_customer(
 }
 
 #[utoipa::path(
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+    ),
     request_body(
         content = CustomerRepository
     ),

@@ -5,14 +5,11 @@ use actix_web::{
     web::{self, Json},
     HttpRequest, HttpResponse,
 };
-use common::auth_session::get_auth_session;
+use common::{auth_session::get_auth_session, entities::auditor::Auditor};
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
-use crate::{
-    error::Result,
-    repositories::auditor::{AuditorModel, AuditorRepository},
-};
+use crate::{error::Result, repositories::auditor::AuditorRepository};
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PostAuditorRequest {
@@ -24,6 +21,9 @@ pub struct PostAuditorRequest {
 }
 
 #[utoipa::path(
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+    ),
     request_body(
         content = PostAuditorRequest
     ),
@@ -39,7 +39,7 @@ pub async fn post_auditor(
 ) -> Result<HttpResponse> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
-    let auditor = AuditorModel {
+    let auditor = Auditor {
         user_id: session.user_id(),
         first_name: data.first_name,
         last_name: data.last_name,
@@ -55,6 +55,9 @@ pub async fn post_auditor(
 }
 
 #[utoipa::path(
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+    ),
     responses(
         (status = 200, body = Auditor)
     )
@@ -83,6 +86,9 @@ pub struct PatchAuditorRequest {
 }
 
 #[utoipa::path(
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+    ),
     request_body(
         content = PatchCustomerRequest
     ),
@@ -126,6 +132,9 @@ pub async fn patch_auditor(
 }
 
 #[utoipa::path(
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+    ),
     responses(
         (status = 200, body = Auditor)
     )
@@ -143,24 +152,31 @@ pub async fn delete_auditor(
     Ok(HttpResponse::Ok().json(auditor))
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, IntoParams)]
+pub struct AllAuditorsQuery {
+    tags: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct AllAuditorsRequest {
-    tags: Vec<String>,
+pub struct AllAuditorsResponse {
+    auditors: Vec<Auditor>,
 }
 
 #[utoipa::path(
-    request_body(
-        content = AllAuditorsRequest
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+        AllAuditorsQuery
     ),
     responses(
-        (status = 200, body = Vec<Auditor>)
+        (status = 200, body = AllAuditorsResponse)
     )
 )]
 #[get("/api/auditors/all")]
 pub async fn get_auditors(
-    Json(data): web::Json<AllAuditorsRequest>,
     repo: web::Data<AuditorRepository>,
+    query: web::Query<AllAuditorsQuery>,
 ) -> Result<HttpResponse> {
-    let auditors = repo.request_with_tags(data.tags).await?;
+    let tags = query.tags.split(',').map(ToString::to_string).collect();
+    let auditors = repo.request_with_tags(tags).await?;
     Ok(HttpResponse::Ok().json(auditors))
 }

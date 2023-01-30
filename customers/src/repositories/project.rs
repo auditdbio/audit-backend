@@ -1,6 +1,8 @@
 use common::entities::project::Project;
+use futures::stream::StreamExt;
 use mongodb::{
     bson::{doc, oid::ObjectId},
+    error::Result as MongoResult,
     Client, Collection,
 };
 
@@ -37,5 +39,23 @@ impl ProjectRepository {
             .inner
             .find_one_and_delete(doc! {"id": id}, None)
             .await?)
+    }
+
+    pub async fn request_with_tags(&self, tags: Vec<String>) -> Result<Vec<Project>> {
+        let filter = doc! {
+            "tags": doc!{
+                "$elemMatch": doc!{"$in": tags}
+            }
+        };
+
+        let result: Vec<Project> = self
+            .inner
+            .find(filter, None)
+            .await?
+            .collect::<Vec<MongoResult<Project>>>()
+            .await
+            .into_iter()
+            .collect::<MongoResult<_>>()?;
+        Ok(result)
     }
 }

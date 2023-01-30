@@ -1,7 +1,10 @@
 use chrono::NaiveDateTime;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use utoipa::{ToSchema, openapi::{Schema, ObjectBuilder, SchemaType}};
+use utoipa::{
+    openapi::{ObjectBuilder, Schema, SchemaType},
+    ToSchema,
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Source {
@@ -25,11 +28,20 @@ impl ToSchema for View {
             .required("id")
             .property("name", ObjectBuilder::new().schema_type(SchemaType::String))
             .required("name")
-            .property("source", ObjectBuilder::new().schema_type(SchemaType::String))
+            .property(
+                "source",
+                ObjectBuilder::new().schema_type(SchemaType::String),
+            )
             .required("source")
-            .property("description", ObjectBuilder::new().schema_type(SchemaType::String))
+            .property(
+                "description",
+                ObjectBuilder::new().schema_type(SchemaType::String),
+            )
             .required("description")
-            .property("last_modified", ObjectBuilder::new().schema_type(SchemaType::String))
+            .property(
+                "last_modified",
+                ObjectBuilder::new().schema_type(SchemaType::String),
+            )
             .required("last_modified")
             .into()
     }

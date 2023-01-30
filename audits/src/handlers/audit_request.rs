@@ -30,6 +30,9 @@ pub struct PostAuditRequestRequest {
 }
 
 #[utoipa::path(
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+    ),
     request_body(
         content = PostAuditRequestRequest
     ),
@@ -77,6 +80,9 @@ pub struct PatchAuditRequestRequest {
 }
 
 #[utoipa::path(
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+    ),
     request_body(
         content = PatchAuditRequestRequest
     ),
@@ -120,6 +126,9 @@ pub async fn patch_audit_request(
 }
 
 #[utoipa::path(
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+    ),
     responses(
         (status = 200, body = Auditor)
     )

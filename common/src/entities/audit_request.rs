@@ -79,7 +79,6 @@ impl ToSchema for AuditRequest {
                 "last_modified",
                 ObjectBuilder::new().schema_type(SchemaType::String),
             )
-            .required("last_modified")
             .into()
     }
 }

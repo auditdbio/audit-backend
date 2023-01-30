@@ -112,8 +112,8 @@ pub struct RestoreResponse {
 }
 
 #[utoipa::path(
-    security(
-        ("BearerAuth" = []),
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
     ),
     responses(
         (status = 200, description = "New authorization token, but old became expired", body = RestoreResponse)
@@ -148,6 +148,9 @@ pub async fn restore(
 }
 
 #[utoipa::path(
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+    ),
     responses(
         (status = 200, description = "Get authenticated user's data", body = Option<AuthSession>)
     )

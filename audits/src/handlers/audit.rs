@@ -21,6 +21,9 @@ use crate::{
 };
 
 #[utoipa::path(
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+    ),
     request_body(
         content = AuditRequest
     ),
@@ -38,6 +41,9 @@ pub async fn post_audit(
 }
 
 #[utoipa::path(
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+    ),
     responses(
         (status = 200, body = Audit)
     )
@@ -56,6 +62,9 @@ pub async fn get_audits(
 }
 
 #[utoipa::path(
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+    ),
     responses(
         (status = 200, body = Audit)
     )
@@ -98,6 +107,9 @@ async fn get_project(client: &Client, project_id: &ObjectId) -> Result<Project> 
 }
 
 #[utoipa::path(
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+    ),
     responses(
         (status = 200, body = GetViewsResponse)
     )
