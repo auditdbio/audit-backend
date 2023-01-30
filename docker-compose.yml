@@ -24,7 +24,7 @@ services:
       - binaries
     build: ./swagger
     ports:
-      - 4001:4001
+      - 8080:8080
     volumes:
       - binaries:/data/binaries
     environment:
