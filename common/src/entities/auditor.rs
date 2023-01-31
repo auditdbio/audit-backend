@@ -13,6 +13,7 @@ pub struct Auditor {
     pub first_name: String,
     pub last_name: String,
     pub about: String,
+    pub company: String,
     pub tags: Vec<String>,
     pub contacts: HashMap<String, String>,
 }

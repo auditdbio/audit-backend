@@ -8,7 +8,16 @@ use utoipa::{
     ToSchema,
 };
 
-use super::view::{Source, View};
+use super::{
+    role::Role,
+    view::{Source, View},
+};
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct PriceRange {
+    pub lower_bound: i64,
+    pub upper_bound: i64,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AuditRequest {
@@ -18,9 +27,12 @@ pub struct AuditRequest {
     pub project_id: ObjectId,
     pub auditor_contacts: HashMap<String, String>,
     pub customer_contacts: HashMap<String, String>,
-    pub comment: Option<String>,
-    pub price: Option<String>,
+    pub scope: Vec<String>,
+    pub price: Option<i64>,
+    pub price_range: Option<PriceRange>,
+    pub time_frame: String,
     pub last_modified: NaiveDateTime,
+    pub opener: Role,
 }
 
 impl AuditRequest {
@@ -28,14 +40,13 @@ impl AuditRequest {
         View {
             id: self.id,
             name,
-            description: self.comment.unwrap_or("".to_string()),
             last_modified: self.last_modified,
             source: Source::Request,
         }
     }
 }
 
-impl ToSchema for AuditRequest {
+impl  ToSchema for AuditRequest {
     fn schema() -> Schema {
         ObjectBuilder::new()
             .property("id", ObjectBuilder::new().schema_type(SchemaType::String))
@@ -66,19 +77,25 @@ impl ToSchema for AuditRequest {
             )
             .required("customer_contacts")
             .property(
-                "comment",
-                ObjectBuilder::new().schema_type(SchemaType::String),
+                "scope",
+                ObjectBuilder::new().schema_type(SchemaType::Array),
             )
-            .required("comment")
+            .required("scope")
             .property(
                 "price",
-                ObjectBuilder::new().schema_type(SchemaType::String),
+                ObjectBuilder::new().schema_type(SchemaType::Integer),
             )
             .required("price")
+            .property(
+                "price_range",
+                ObjectBuilder::new().schema_type(SchemaType::Object),
+            )
+            .required("price_range")
             .property(
                 "last_modified",
                 ObjectBuilder::new().schema_type(SchemaType::String),
             )
+            .property("role", ObjectBuilder::new().schema_type(SchemaType::String))
             .into()
     }
 }

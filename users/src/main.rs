@@ -10,7 +10,7 @@ mod utils;
 use std::env;
 
 use actix_cors::Cors;
-use actix_web::{http, middleware, web, App, HttpServer};
+use actix_web::{middleware, web, App, HttpServer};
 use handlers::{
     auth::{login, restore, verify},
     user::{delete_user, get_user, get_users, patch_user, post_user},

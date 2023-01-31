@@ -17,11 +17,10 @@ pub struct View {
     pub id: ObjectId,
     pub name: String,
     pub source: Source,
-    pub description: String,
     pub last_modified: NaiveDateTime,
 }
 
-impl ToSchema for View {
+impl  ToSchema for View {
     fn schema() -> Schema {
         ObjectBuilder::new()
             .property("id", ObjectBuilder::new().schema_type(SchemaType::String))
@@ -33,11 +32,6 @@ impl ToSchema for View {
                 ObjectBuilder::new().schema_type(SchemaType::String),
             )
             .required("source")
-            .property(
-                "description",
-                ObjectBuilder::new().schema_type(SchemaType::String),
-            )
-            .required("description")
             .property(
                 "last_modified",
                 ObjectBuilder::new().schema_type(SchemaType::String),

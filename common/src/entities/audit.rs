@@ -11,35 +11,19 @@ use utoipa::{
 use super::view::{Source, View};
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Message {
-    text: String,
-    sender: ObjectId,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Issue {
-    messages: Vec<Message>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum Visibility {
-    Public,
-    Private,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 pub struct Audit {
     pub id: ObjectId,
     pub customer_id: ObjectId,
     pub auditor_id: ObjectId,
     pub project_id: ObjectId,
     pub status: String,
-    pub last_modified: NaiveDateTime,
     pub auditor_contacts: HashMap<String, String>,
     pub customer_contacts: HashMap<String, String>,
-    pub price: String,
-    pub comment: String,
-    pub visibility: Visibility,
+    pub scope: Vec<String>,
+    pub price: i64,
+    pub report_link: Option<String>,
+    pub time_frame: String,
+    pub last_modified: NaiveDateTime,
 }
 
 impl Audit {
@@ -47,14 +31,13 @@ impl Audit {
         View {
             id: self.id,
             name,
-            description: self.comment,
             last_modified: self.last_modified,
             source: Source::Audit,
         }
     }
 }
 
-impl ToSchema for Audit {
+impl  ToSchema for Audit {
     fn schema() -> Schema {
         ObjectBuilder::new()
             .property("id", ObjectBuilder::new().schema_type(SchemaType::String))
@@ -75,13 +58,37 @@ impl ToSchema for Audit {
             )
             .required("project_id")
             .property(
-                "terms",
+                "auditor_contacts",
+                ObjectBuilder::new().schema_type(SchemaType::Object),
+            )
+            .required("auditor_contacts")
+            .property(
+                "customer_contacts",
+                ObjectBuilder::new().schema_type(SchemaType::Object),
+            )
+            .required("customer_contacts")
+            .property(
+                "scope",
+                ObjectBuilder::new().schema_type(SchemaType::Array),
+            )
+            .required("scope")
+            .property(
+                "price",
+                ObjectBuilder::new().schema_type(SchemaType::Integer),
+            )
+            .required("price")
+            .property(
+                "report_link",
                 ObjectBuilder::new().schema_type(SchemaType::String),
             )
-            .required("terms")
+            .property(
+                "time_frame",
+                ObjectBuilder::new().schema_type(SchemaType::String),
+            )
+            .required("time_frame")
             .property(
                 "status",
-                ObjectBuilder::new().schema_type(SchemaType::Object),
+                ObjectBuilder::new().schema_type(SchemaType::String),
             )
             .required("status")
             .property(
@@ -89,16 +96,6 @@ impl ToSchema for Audit {
                 ObjectBuilder::new().schema_type(SchemaType::String),
             )
             .required("last_modified")
-            .property(
-                "issues",
-                ObjectBuilder::new().schema_type(SchemaType::Array),
-            )
-            .required("issues")
-            .property(
-                "visibility",
-                ObjectBuilder::new().schema_type(SchemaType::Array),
-            )
-            .required("visibility")
             .into()
     }
 }
