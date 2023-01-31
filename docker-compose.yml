@@ -36,7 +36,7 @@ services:
       - binaries
     build: ./customers
     ports:
-      - 3002:3002
+      - 3003:3002
     volumes:
       - binaries:/data/binaries
     environment:
@@ -50,7 +50,7 @@ services:
     volumes:
       - binaries:/data/binaries
     ports:
-      - 3003:3003
+      - 3004:3003
     environment:
       MONGOURI: mongodb://database/backend
       MONGOURI_TEST: mongodb://database/test
@@ -60,7 +60,7 @@ services:
       - binaries
     build: ./auditors
     ports:
-      - 3004:3004
+      - 3002:3004
     volumes:
       - binaries:/data/binaries
     environment:

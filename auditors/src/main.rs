@@ -1,5 +1,6 @@
 use std::env;
 
+use actix_cors::Cors;
 use actix_web::{middleware, web, App, HttpServer};
 use handlers::auditor::{delete_auditor, get_auditor, get_auditors, patch_auditor, post_auditor};
 use repositories::auditor::AuditorRepository;
@@ -19,7 +20,12 @@ async fn main() -> std::io::Result<()> {
 
     let auditor_repo = AuditorRepository::new(mongo_uri.clone()).await;
     HttpServer::new(move || {
+        let cors = Cors::default()
+            .allow_any_origin()
+            .allow_any_header()
+            .allow_any_method();
         App::new()
+            .wrap(cors)
             .wrap(middleware::Logger::default())
             .app_data(web::Data::new(auditor_repo.clone()))
             .service(post_auditor)
