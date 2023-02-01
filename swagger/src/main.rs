@@ -65,12 +65,14 @@ async fn main() -> Result<(), impl Error> {
             customers::patch_project,
             customers::delete_project,
             customers::get_project,
+            customers::get_projects,
         ),
         components(schemas(
             customers::PostCustomerRequest,
             customers::PatchCustomerRequest,
             customers::PostProjectRequest,
             customers::PatchProjectRequest,
+            customers::AllProjectsResponse,
             common::entities::customer::Customer,
         ))
     )]

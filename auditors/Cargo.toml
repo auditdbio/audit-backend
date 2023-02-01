@@ -15,6 +15,7 @@ env_logger = "0.10.0"
 utoipa = { version = "2", features = ["actix_extras"] }
 utoipa-swagger-ui = { version = "3", features = ["actix-web"] }
 common = {path = "../common"}
+log = "0.4.17"
 
 [dependencies.mongodb]
 version = "2.3.1"

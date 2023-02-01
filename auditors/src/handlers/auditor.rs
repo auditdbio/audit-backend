@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use log::debug;
 
 use actix_web::{
     delete, get, patch, post,
@@ -166,7 +167,6 @@ pub struct AllAuditorsResponse {
 
 #[utoipa::path(
     params(
-        ("Authorization" = String, Header,  description = "Bearer token"),
         AllAuditorsQuery
     ),
     responses(
@@ -175,10 +175,25 @@ pub struct AllAuditorsResponse {
 )]
 #[get("/api/auditors/all")]
 pub async fn get_auditors(
+    request: HttpRequest,
     repo: web::Data<AuditorRepository>,
     query: web::Query<AllAuditorsQuery>,
 ) -> Result<HttpResponse> {
+    let _repo = request.app_data::<web::Data<AuditorRepository>>().unwrap();
+    debug!("{:?}", repo);
     let tags = query.tags.split(',').map(ToString::to_string).collect();
     let auditors = repo.request_with_tags(tags).await?;
     Ok(HttpResponse::Ok().json(auditors))
 }
+
+#[get("/api/auditors/test")]
+pub async fn test_query(
+    request: HttpRequest,
+    query: web::Query<AllAuditorsQuery>,
+) -> Result<HttpResponse> {
+    let repo = request.app_data::<web::Data<AuditorRepository>>().unwrap();
+    let tags = query.tags.split(',').map(ToString::to_string).collect();
+    let auditors = repo.request_with_tags(tags).await?;
+    Ok(HttpResponse::Ok().json(auditors))
+}
+

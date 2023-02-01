@@ -10,7 +10,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::{
     error::{Error, OuterError, Result},
-    repositories::project::ProjectRepository,
+    repositories::{project::ProjectRepository, customer::CustomerRepository},
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -171,24 +171,34 @@ pub struct AllProjectsResponse {
 
 #[utoipa::path(
     params(
-        ("Authorization" = String, Header,  description = "Bearer token"),
         AllProjectsQuery,
     ),
     responses(
         (status = 200, body = AllProjectsResponse)
     )
 )]
-#[get("/api/projects/all/{tags}")]
+#[get("/api/projects/all")]
 pub async fn get_projects(
-    req: HttpRequest,
     repo: web::Data<ProjectRepository>,
     query: web::Query<AllProjectsQuery>,
 ) -> Result<HttpResponse> {
-    let _session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
+    // let tags = query.tags.split(",").map(ToString::to_string).collect();
 
-    let tags = query.tags.split(",").map(ToString::to_string).collect();
+    // let projects = repo.request_with_tags(tags).await?;
 
-    let projects = repo.request_with_tags(tags).await?;
-
-    Ok(HttpResponse::Ok().json(projects))
+    // Ok(HttpResponse::Ok().json(projects))
+    Ok(HttpResponse::Ok().finish())
 }
+
+#[get("/api/projects/test")]
+pub async fn test_query(
+    repo: web::Data<ProjectRepository>,
+) -> Result<HttpResponse> {
+    // let tags = query.tags.split(",").map(ToString::to_string).collect();
+
+    // let projects = repo.request_with_tags(tags).await?;
+
+    // Ok(HttpResponse::Ok().json(projects))
+    Ok(HttpResponse::Ok().finish())
+}
+
