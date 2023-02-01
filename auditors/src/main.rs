@@ -12,8 +12,8 @@ mod repositories;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let mongo_uri = env::var("MONGOURI").unwrap();
-
+    let mongo_uri = "mongodb://database/backend".to_string();
+    println!("{:?}", std::any::TypeId::of::<actix_web::web::Data<crate::repositories::auditor::AuditorRepository>>());
     env_logger::init();
 
     let auditor_repo = web::Data::new(AuditorRepository::new(mongo_uri.clone()).await);

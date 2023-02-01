@@ -179,8 +179,10 @@ pub async fn get_auditors( // this work, WHY?
     repo: web::Data<AuditorRepository>,
     query: web::Query<AllAuditorsQuery>,
 ) -> Result<HttpResponse> {
+    println!("{:?}", std::any::TypeId::of::<actix_web::web::Data<crate::repositories::auditor::AuditorRepository>>());
+
     let _repo = request.app_data::<web::Data<AuditorRepository>>().unwrap();
-    debug!("{:?}", repo);
+
     let tags = query.tags.split(',').map(ToString::to_string).collect();
     let auditors = repo.request_with_tags(tags).await?;
     Ok(HttpResponse::Ok().json(auditors))
@@ -191,9 +193,12 @@ pub async fn test_query( // this don't work, WHY?
     request: HttpRequest,
     query: web::Query<AllAuditorsQuery>,
 ) -> Result<HttpResponse> {
-    let repo = request.app_data::<web::Data<AuditorRepository>>().unwrap();
+    println!("{:?}", std::any::TypeId::of::<actix_web::web::Data<crate::repositories::auditor::AuditorRepository>>());
+
+    let repo = request.app_data::<web::Data<AuditorRepository>>();
+
     let tags = query.tags.split(',').map(ToString::to_string).collect();
-    let auditors = repo.request_with_tags(tags).await?;
+    let auditors = repo.unwrap().request_with_tags(tags).await?;
     Ok(HttpResponse::Ok().json(auditors))
 }
 
