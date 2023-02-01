@@ -174,7 +174,7 @@ pub struct AllAuditorsResponse {
     )
 )]
 #[get("/api/auditors/all")]
-pub async fn get_auditors(
+pub async fn get_auditors( // this work, WHY?
     request: HttpRequest,
     repo: web::Data<AuditorRepository>,
     query: web::Query<AllAuditorsQuery>,
@@ -187,7 +187,7 @@ pub async fn get_auditors(
 }
 
 #[get("/api/auditors/test")]
-pub async fn test_query(
+pub async fn test_query( // this don't work, WHY?
     request: HttpRequest,
     query: web::Query<AllAuditorsQuery>,
 ) -> Result<HttpResponse> {
