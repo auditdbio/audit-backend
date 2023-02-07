@@ -979,6 +979,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "files"
+version = "0.1.0"
+dependencies = [
+ "actix-cors",
+ "actix-web",
+ "chrono",
+ "common",
+ "derive_more",
+ "env_logger",
+ "futures",
+ "jsonwebtoken",
+ "lazy_static",
+ "log",
+ "mongodb",
+ "serde",
+ "utoipa",
+ "utoipa-swagger-ui",
+ "uuid 1.2.2",
+]
+
+[[package]]
 name = "flate2"
 version = "1.0.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"

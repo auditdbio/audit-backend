@@ -5,6 +5,7 @@ members = [
     "audits",
     "customers",
     "common",
+    "files",
     "swagger",
     "users"
 ]
