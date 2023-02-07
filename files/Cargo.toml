@@ -1,5 +1,5 @@
 [package]
-name = "auditors"
+name = "files"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,20 +9,20 @@ edition = "2021"
 actix-web = "4.2.1"
 actix-cors = "0.6.4"
 serde = "1.0.152"
-futures = "0.3.25"
+uuid = "1.2.2"
 derive_more = "0.99.17"
+jsonwebtoken = "8"
+chrono = {version = "0.4", features = ["serde"]}
+lazy_static = "1.4.0"
+futures = "0.3.25"
 env_logger = "0.10.0"
+log = "0.4.17"
 utoipa = { version = "2", features = ["actix_extras"] }
 utoipa-swagger-ui = { version = "3", features = ["actix-web"] }
 common = {path = "../common"}
-log = "0.4.17"
+
 
 [dependencies.mongodb]
 version = "2.3.1"
 default-features = false
 features = ["async-std-runtime", "bson-chrono-0_4"]
-
-[env]
-MONGOURI = "mongodb://database/backend"
-MONGOURI_TEST = "mongodb://database/test"
-RUST_LOG = "actix"

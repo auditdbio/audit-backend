@@ -437,6 +437,7 @@ dependencies = [
  "derive_more",
  "env_logger",
  "futures",
+ "log",
  "mongodb",
  "serde",
  "utoipa",
@@ -975,6 +976,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7a407cfaa3385c4ae6b23e84623d48c2798d06e3e6a1878f7f59f17b3f86499"
 dependencies = [
  "instant",
+]
+
+[[package]]
+name = "files"
+version = "0.1.0"
+dependencies = [
+ "actix-cors",
+ "actix-web",
+ "chrono",
+ "common",
+ "derive_more",
+ "env_logger",
+ "futures",
+ "jsonwebtoken",
+ "lazy_static",
+ "log",
+ "mongodb",
+ "serde",
+ "utoipa",
+ "utoipa-swagger-ui",
+ "uuid 1.2.2",
 ]
 
 [[package]]

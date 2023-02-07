@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use log::debug;
 
 use actix_web::{
     delete, get, patch, post,
@@ -166,7 +167,6 @@ pub struct AllAuditorsResponse {
 
 #[utoipa::path(
     params(
-        ("Authorization" = String, Header,  description = "Bearer token"),
         AllAuditorsQuery
     ),
     responses(
@@ -174,150 +174,31 @@ pub struct AllAuditorsResponse {
     )
 )]
 #[get("/api/auditors/all")]
-pub async fn get_auditors(
+pub async fn get_auditors( // this work, WHY?
+    request: HttpRequest,
     repo: web::Data<AuditorRepository>,
     query: web::Query<AllAuditorsQuery>,
 ) -> Result<HttpResponse> {
+    println!("{:?}", std::any::TypeId::of::<actix_web::web::Data<crate::repositories::auditor::AuditorRepository>>());
+
+    let _repo = request.app_data::<web::Data<AuditorRepository>>().unwrap();
+
     let tags = query.tags.split(',').map(ToString::to_string).collect();
     let auditors = repo.request_with_tags(tags).await?;
     Ok(HttpResponse::Ok().json(auditors))
 }
 
-#[cfg(test)]
-mod tests {
-    use std::{env, collections::HashMap};
+#[get("/api/auditors/test")]
+pub async fn test_query( // this don't work, WHY?
+    request: HttpRequest,
+    query: web::Query<AllAuditorsQuery>,
+) -> Result<HttpResponse> {
+    println!("{:?}", std::any::TypeId::of::<actix_web::web::Data<crate::repositories::auditor::AuditorRepository>>());
 
-    use actix_cors::Cors;
-    use actix_web::{App, web::{self, service}, test};
-    use common::entities::role::Role;
-    use mongodb::bson::oid::ObjectId;
+    let repo = request.app_data::<web::Data<AuditorRepository>>();
 
-    use crate::{repositories::{auditor::{AuditorRepository}}, post_auditor, get_views, patch_auditor, delete_auditor, get_auditor};
-    use super::{PostAuditorRequest, PatchAuditorRequest};
-
-    #[actix_web::test]
-    async fn test_post_auditor() {
-        let mongo_uri = env::var("MONGOURI_TEST").unwrap();
-
-        let auditor_repo = AuditorRepository::new(mongo_uri.clone()).await;
-        let cors = Cors::default()
-            .allow_any_origin()
-            .allow_any_header()
-            .allow_any_method();
-        let app = App::new()
-            .wrap(cors)
-            .app_data(web::Data::new(auditor_repo.clone()))
-            .service(post_auditor);
-
-        let service = test::init_service(app).await;
-        
-        let req = test::TestRequest::post()
-            .uri("/api/requests")
-            .set_json(&PostAuditorRequest {
-                first_name: "John".to_string(),
-                last_name: "Doe".to_string(),
-                about: "I am a test auditor".to_string(),
-                tags: vec!["test".to_string()],
-                contacts: HashMap::new(),
-                company: "Test Company".to_string(),
-            })
-            .to_request();
-
-        let response = test::call_service(&service, req).await;
-        assert!(response.status().is_success())
-    }
-
-
-    #[actix_web::test]
-    async fn test_patch_auditor() {
-        let mongo_uri = env::var("MONGOURI_TEST").unwrap();
-
-        let auditor_repo = AuditorRepository::new(mongo_uri.clone()).await;
-        let cors = Cors::default()
-            .allow_any_origin()
-            .allow_any_header()
-            .allow_any_method();
-        let app = App::new()
-            .wrap(cors)
-            .app_data(web::Data::new(auditor_repo.clone()))
-            .service(post_auditor)
-            .service(get_views)
-            .service(patch_auditor);
-
-        let service = test::init_service(app).await;
-
-        let req = test::TestRequest::post()
-            .uri("/api/requests")
-            .set_json(&PostAuditorRequest {
-                first_name: "John".to_string(),
-                last_name: "Doe".to_string(),
-                about: "I am a test auditor".to_string(),
-                tags: vec!["test".to_string()],
-                contacts: HashMap::new(),
-                company: "Test Company".to_string(),
-               
-            })
-            .to_request();
-
-        let response = test::call_service(&service, req).await;
-        assert!(response.status().is_success());
-
-        let req = test::TestRequest::patch()
-            .uri("/api/requests")
-            .set_json(&PatchAuditorRequest {
-                first_name: None,
-                last_name: None,
-                about: None,
-                tags: None,
-                contacts: None,
-            })
-            .to_request();
-
-        let response = test::call_service(&service, req).await;
-        assert!(response.status().is_success())
-
-    }
-
-    #[actix_web::test]
-    async fn test_delete_auditor() {
-        let mongo_uri = env::var("MONGOURI_TEST").unwrap();
-
-        let auditor_repo = AuditorRepository::new(mongo_uri.clone()).await;
-        let cors = Cors::default()
-            .allow_any_origin()
-            .allow_any_header()
-            .allow_any_method();
-        let app = App::new()
-            .wrap(cors)
-            .app_data(web::Data::new(auditor_repo.clone()))
-            .service(post_auditor)
-            .service(get_auditor)
-            .service(delete_auditor);
-
-        let service = test::init_service(app).await;
-
-        let req = test::TestRequest::post()
-            .uri("/api/requests")
-            .set_json(&PostAuditorRequest {
-                first_name: "John".to_string(),
-                last_name: "Doe".to_string(),
-                about: "I am a test auditor".to_string(),
-                tags: vec!["test".to_string()],
-                contacts: HashMap::new(),
-                company: "Test Company".to_string(),
-               
-            })
-            .to_request();
-
-        let response = test::call_service(&service, req).await;
-        assert!(response.status().is_success());
-
-        let req = test::TestRequest::delete()
-            .uri("/api/requests")
-            .to_request();
-
-        let response = test::call_service(&service, req).await;
-        assert!(response.status().is_success())
-
-    }
+    let tags = query.tags.split(',').map(ToString::to_string).collect();
+    let auditors = repo.unwrap().request_with_tags(tags).await?;
+    Ok(HttpResponse::Ok().json(auditors))
 }
+

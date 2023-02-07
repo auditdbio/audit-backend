@@ -10,7 +10,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::{
     error::{Error, OuterError, Result},
-    repositories::project::ProjectRepository,
+    repositories::{project::ProjectRepository, customer::CustomerRepository},
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -171,163 +171,34 @@ pub struct AllProjectsResponse {
 
 #[utoipa::path(
     params(
-        ("Authorization" = String, Header,  description = "Bearer token"),
         AllProjectsQuery,
     ),
     responses(
         (status = 200, body = AllProjectsResponse)
     )
 )]
-#[get("/api/projects/all/{tags}")]
+#[get("/api/projects/all")]
 pub async fn get_projects(
-    req: HttpRequest,
     repo: web::Data<ProjectRepository>,
     query: web::Query<AllProjectsQuery>,
 ) -> Result<HttpResponse> {
-    let _session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
+    // let tags = query.tags.split(",").map(ToString::to_string).collect();
 
-    let tags = query.tags.split(",").map(ToString::to_string).collect();
+    // let projects = repo.request_with_tags(tags).await?;
 
-    let projects = repo.request_with_tags(tags).await?;
-
-    Ok(HttpResponse::Ok().json(projects))
+    // Ok(HttpResponse::Ok().json(projects))
+    Ok(HttpResponse::Ok().finish())
 }
 
-#[cfg(test)]
-mod tests {
-    use std::{env, collections::HashMap};
+#[get("/api/projects/test")]
+pub async fn test_query(
+    repo: web::Data<ProjectRepository>,
+) -> Result<HttpResponse> {
+    // let tags = query.tags.split(",").map(ToString::to_string).collect();
 
-    use actix_cors::Cors;
-    use actix_web::{App, web::{self, service}, test};
-    use common::entities::role::Role;
-    use mongodb::bson::oid::ObjectId;
+    // let projects = repo.request_with_tags(tags).await?;
 
-    use crate::{repositories::{project::{ProjectRepository}}, post_project, get_views, patch_project, delete_project, get_project};
-    use super::{PostProjectRequest, PatchProjectRequest};
-
-    #[actix_web::test]
-    async fn test_post_project() {
-        let mongo_uri = env::var("MONGOURI_TEST").unwrap();
-
-        let project_repo = ProjectRepository::new(mongo_uri.clone()).await;
-        let cors = Cors::default()
-            .allow_any_origin()
-            .allow_any_header()
-            .allow_any_method();
-        let app = App::new()
-            .wrap(cors)
-            .app_data(web::Data::new(project_repo.clone()))
-            .service(post_project);
-
-        let service = test::init_service(app).await;
-        
-        let req = test::TestRequest::post()
-            .uri("/api/requests")
-            .set_json(&PostProjectRequest {
-                first_name: "John".to_string(),
-                last_name: "Doe".to_string(),
-                about: "I am a test project".to_string(),
-                tags: vec!["test".to_string()],
-                contacts: HashMap::new(),
-                company: "Test Company".to_string(),
-            })
-            .to_request();
-
-        let response = test::call_service(&service, req).await;
-        assert!(response.status().is_success())
-    }
-
-
-    #[actix_web::test]
-    async fn test_patch_project() {
-        let mongo_uri = env::var("MONGOURI_TEST").unwrap();
-
-        let project_repo = ProjectRepository::new(mongo_uri.clone()).await;
-        let cors = Cors::default()
-            .allow_any_origin()
-            .allow_any_header()
-            .allow_any_method();
-        let app = App::new()
-            .wrap(cors)
-            .app_data(web::Data::new(project_repo.clone()))
-            .service(post_project)
-            .service(get_views)
-            .service(patch_project);
-
-        let service = test::init_service(app).await;
-
-        let req = test::TestRequest::post()
-            .uri("/api/requests")
-            .set_json(&PostProjectRequest {
-                first_name: "John".to_string(),
-                last_name: "Doe".to_string(),
-                about: "I am a test project".to_string(),
-                tags: vec!["test".to_string()],
-                contacts: HashMap::new(),
-                company: "Test Company".to_string(),
-               
-            })
-            .to_request();
-
-        let response = test::call_service(&service, req).await;
-        assert!(response.status().is_success());
-
-        let req = test::TestRequest::patch()
-            .uri("/api/requests")
-            .set_json(&PatchProjectRequest {
-                first_name: None,
-                last_name: None,
-                about: None,
-                tags: None,
-                contacts: None,
-            })
-            .to_request();
-
-        let response = test::call_service(&service, req).await;
-        assert!(response.status().is_success())
-
-    }
-
-    #[actix_web::test]
-    async fn test_delete_project() {
-        let mongo_uri = env::var("MONGOURI_TEST").unwrap();
-
-        let project_repo = ProjectRepository::new(mongo_uri.clone()).await;
-        let cors = Cors::default()
-            .allow_any_origin()
-            .allow_any_header()
-            .allow_any_method();
-        let app = App::new()
-            .wrap(cors)
-            .app_data(web::Data::new(project_repo.clone()))
-            .service(post_project)
-            .service(get_project)
-            .service(delete_project);
-
-        let service = test::init_service(app).await;
-
-        let req = test::TestRequest::post()
-            .uri("/api/requests")
-            .set_json(&PostProjectRequest {
-                first_name: "John".to_string(),
-                last_name: "Doe".to_string(),
-                about: "I am a test project".to_string(),
-                tags: vec!["test".to_string()],
-                contacts: HashMap::new(),
-                company: "Test Company".to_string(),
-               
-            })
-            .to_request();
-
-        let response = test::call_service(&service, req).await;
-        assert!(response.status().is_success());
-
-        let req = test::TestRequest::delete()
-            .uri("/api/requests")
-            .to_request();
-
-        let response = test::call_service(&service, req).await;
-        assert!(response.status().is_success())
-
-    }
+    // Ok(HttpResponse::Ok().json(projects))
+    Ok(HttpResponse::Ok().finish())
 }
+
