@@ -1,0 +1,26 @@
+name: Deploy to Dev
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - dev
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Deploy Docker
+      uses: wshihadeh/docker-deployment-action@v1
+      with:
+        remote_docker_host: ${{env.ADB_DEV_HOST}}
+        ssh_private_key: ${{env.SSH_PRIVATE_KEY}}
+        ssh_public_key: ${{env.ADB_DEV_PUBLIC_KEY}}
+        deployment_mode: docker-compose
+        copy_stack_file: true
+        deploy_path: /root/apps
+        stack_file_name: docker-compose.yaml
+        args: up -d
