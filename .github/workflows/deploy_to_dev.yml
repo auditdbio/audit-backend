@@ -20,7 +20,7 @@ jobs:
         ssh_private_key: ${{secrets.SSH_PRIVATE_KEY}}
         ssh_public_key: ${{secrets.ADB_DEV_PUBLIC_KEY}}
         deployment_mode: docker-compose
-        copy_stack_file: true
+        copy_stack_file: false
         deploy_path: /root/apps
         stack_file_name: docker-compose.yml
         args: up -d
