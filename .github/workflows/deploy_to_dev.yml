@@ -12,14 +12,13 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-    - run: echo $ADB_DEV_HOST
     
     - name: Deploy Docker
       uses: wshihadeh/docker-deployment-action@v1
       with:
-        remote_docker_host: ${{env.ADB_DEV_HOST}}
-        ssh_private_key: ${{env.SSH_PRIVATE_KEY}}
-        ssh_public_key: ${{env.ADB_DEV_PUBLIC_KEY}}
+        remote_docker_host: ${{secrets.ADB_DEV_HOST}}
+        ssh_private_key: ${{secrets.SSH_PRIVATE_KEY}}
+        ssh_public_key: ${{secrets.ADB_DEV_PUBLIC_KEY}}
         deployment_mode: docker-compose
         copy_stack_file: true
         deploy_path: /root/apps
