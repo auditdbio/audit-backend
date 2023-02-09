@@ -22,5 +22,5 @@ jobs:
         deployment_mode: docker-compose
         copy_stack_file: true
         deploy_path: /root/apps
-        stack_file_name: docker-compose.yaml
+        stack_file_name: docker-compose.yml
         args: up -d
