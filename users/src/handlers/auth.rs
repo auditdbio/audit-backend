@@ -57,7 +57,7 @@ pub async fn login(
         return Err(Error::Outer(OuterError::UserNotFound));
     };
 
-    if Login::request_access(&data, &user) {
+    if !Login::request_access(&data, &user) {
         return Err(Error::Outer(OuterError::PasswordsDoesntMatch));
     }
 

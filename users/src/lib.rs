@@ -1,7 +1,7 @@
 mod constants;
 mod error;
 mod handlers;
-mod repositories;
+pub mod repositories;
 mod ruleset;
 mod utils;
 

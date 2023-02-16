@@ -18,9 +18,9 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum OuterError {
     #[display(fmt = "Email is not unique")]
     NotUniqueEmail,
-    #[display(fmt = "Email is not unique")]
+    #[display(fmt = "User not found")]
     UserNotFound,
-    #[display(fmt = "Email is not unique")]
+    #[display(fmt = "Passwords doesn't match")]
     PasswordsDoesntMatch,
     #[display(fmt = "Failed to authorize")]
     AuthFailure,
@@ -49,9 +49,10 @@ impl From<OuterError> for Error {
 impl ResponseError for Error {
     fn error_response(&self) -> HttpResponse {
         HttpResponse::build(self.status_code())
-            .insert_header(ContentType::html())
+            .insert_header(ContentType::plaintext())
             .body(self.to_string())
     }
+    
 
     fn status_code(&self) -> StatusCode {
         match *self {

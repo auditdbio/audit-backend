@@ -3,7 +3,7 @@ use actix_web::{
     web::{self, Json},
     HttpRequest, HttpResponse,
 };
-use common::entities::user::User;
+use common::{entities::user::User, auth_session::get_auth_session};
 use mongodb::bson::{doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -19,7 +19,6 @@ pub struct PostUserRequest {
     name: String,
     email: String,
     password: String,
-    #[serde(rename = "requestedAccountType")]
     required_account_type: String,
 }
 
@@ -149,6 +148,9 @@ pub struct GetUsersResponse {
 }
 
 #[utoipa::path(
+    request_body(
+        content = GetUsersRequest,
+    ),
     responses(
         (status = 200, description = "Authorized user's token", body = GetUsersResponse)
     )
@@ -169,12 +171,32 @@ pub async fn get_users(
 }
 
 #[utoipa::path(
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+    ),
+    responses(
+        (status = 200, description = "Authorized user's token", body = User)
+    )
+)]
+#[get("/api/users/user")]
+pub async fn get_user(
+    req: HttpRequest,
+    repo: web::Data<UserRepository>,
+) -> Result<HttpResponse> {    
+    let session = get_auth_session(&req).await.unwrap();
+
+    let user = repo.find(session.user_id()).await.unwrap();
+
+    Ok(HttpResponse::Ok().json(user))
+}
+
+#[utoipa::path(
     responses(
         (status = 200, description = "Authorized user's token", body = String)
     )
 )]
 #[get("/api/users/{email}")]
-pub async fn get_user(
+pub async fn get_user_email(
     email: web::Path<(String,)>,
     repo: web::Data<UserRepository>,
 ) -> Result<HttpResponse> {

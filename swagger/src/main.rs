@@ -48,6 +48,7 @@ async fn main() -> Result<(), impl Error> {
             users::PostUserRequest,
             users::PatchUserRequest,
             users::GetUsersRequest,
+            users::GetUsersResponse,
             common::entities::user::User,
             common::auth_session::AuthSession
         ))
