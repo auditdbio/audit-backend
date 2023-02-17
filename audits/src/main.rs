@@ -1,15 +1,9 @@
-pub mod contants;
-pub mod error;
-pub mod handlers;
-pub mod repositories;
-pub mod ruleset;
-
 use std::env;
 
 use actix_cors::Cors;
 use actix_web::{middleware, web, App, HttpServer};
 use audits::{get_audits, post_audit_request, patch_audit_request, delete_audit_request, post_audit, delete_audit, get_views};
-use repositories::{audit::AuditRepo, audit_request::AuditRequestRepo};
+use audits::repositories::{audit::AuditRepo, audit_request::AuditRequestRepo};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

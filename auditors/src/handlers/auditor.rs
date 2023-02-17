@@ -174,31 +174,13 @@ pub struct AllAuditorsResponse {
     )
 )]
 #[get("/api/auditors/all")]
-pub async fn get_auditors( // this work, WHY?
+pub async fn get_auditors(
     request: HttpRequest,
     repo: web::Data<AuditorRepository>,
     query: web::Query<AllAuditorsQuery>,
 ) -> Result<HttpResponse> {
-    println!("{:?}", std::any::TypeId::of::<actix_web::web::Data<crate::repositories::auditor::AuditorRepository>>());
-
-    let _repo = request.app_data::<web::Data<AuditorRepository>>().unwrap();
-
     let tags = query.tags.split(',').map(ToString::to_string).collect();
     let auditors = repo.request_with_tags(tags).await?;
-    Ok(HttpResponse::Ok().json(auditors))
-}
-
-#[get("/api/auditors/test")]
-pub async fn test_query( // this don't work, WHY?
-    request: HttpRequest,
-    query: web::Query<AllAuditorsQuery>,
-) -> Result<HttpResponse> {
-    println!("{:?}", std::any::TypeId::of::<actix_web::web::Data<crate::repositories::auditor::AuditorRepository>>());
-
-    let repo = request.app_data::<web::Data<AuditorRepository>>();
-
-    let tags = query.tags.split(',').map(ToString::to_string).collect();
-    let auditors = repo.unwrap().request_with_tags(tags).await?;
     Ok(HttpResponse::Ok().json(auditors))
 }
 

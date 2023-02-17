@@ -19,12 +19,12 @@ pub struct PostUserRequest {
     name: String,
     email: String,
     password: String,
-    required_account_type: String,
+    current_role: String,
 }
 
 #[utoipa::path(
     request_body(
-        content = LoginRequest
+        content = PostUserRequest
     ),
     responses(
         (status = 200, description = "Authorized user's token", body = User)
@@ -40,7 +40,7 @@ pub async fn post_user(
         name: data.name,
         email: data.email,
         password: data.password,
-        required_account_type: data.required_account_type,
+        current_role: data.current_role,
     };
 
     if !repo.create(&user).await? {

@@ -20,8 +20,9 @@ pub struct View {
     pub last_modified: NaiveDateTime,
 }
 
-impl  ToSchema for View {
-    fn schema() -> Schema {
+impl<'s>  ToSchema<'s> for View {
+    fn schema() -> (&'s str, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>) {
+        ("View",
         ObjectBuilder::new()
             .property("id", ObjectBuilder::new().schema_type(SchemaType::String))
             .required("id")
@@ -38,5 +39,6 @@ impl  ToSchema for View {
             )
             .required("last_modified")
             .into()
+        )
     }
 }

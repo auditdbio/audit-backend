@@ -31,6 +31,9 @@ async fn main() -> Result<(), impl Error> {
 
     #[derive(OpenApi)]
     #[openapi(
+        servers(
+            (url = "http://http://dev.auditdb.io:3001/"),
+        ),
         paths(
             users::login,
             users::restore,
@@ -57,6 +60,9 @@ async fn main() -> Result<(), impl Error> {
 
     #[derive(OpenApi)]
     #[openapi(
+        servers(
+            (url = "http://http://dev.auditdb.io:3003/"),
+        ),
         paths(
             customers::post_customer,
             customers::get_customer,
@@ -81,6 +87,9 @@ async fn main() -> Result<(), impl Error> {
 
     #[derive(OpenApi)]
     #[openapi(
+        servers(
+            (url = "http://http://dev.auditdb.io:3002/"),
+        ),
         paths(
             auditors::post_auditor,
             auditors::get_auditor,
@@ -99,6 +108,9 @@ async fn main() -> Result<(), impl Error> {
 
     #[derive(OpenApi)]
     #[openapi(
+        servers(
+            (url = "http://http://dev.auditdb.io:3004/"),
+        ),
         paths(
             audits::post_audit,
             audits::get_audits,

@@ -37,9 +37,11 @@ impl Audit {
     }
 }
 
-impl  ToSchema for Audit {
-    fn schema() -> Schema {
-        ObjectBuilder::new()
+impl<'s> ToSchema<'s> for Audit {
+    fn schema() -> (&'s str, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>) {
+        (
+            "Audit",
+            ObjectBuilder::new()
             .property("id", ObjectBuilder::new().schema_type(SchemaType::String))
             .required("id")
             .property(
@@ -97,5 +99,6 @@ impl  ToSchema for Audit {
             )
             .required("last_modified")
             .into()
+        )
     }
 }

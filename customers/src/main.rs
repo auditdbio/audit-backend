@@ -1,17 +1,13 @@
-mod error;
-pub mod handlers;
-mod repositories;
-
 use std::env;
 
 use actix_cors::Cors;
 use actix_web::{middleware, web, App, HttpServer};
 use customers::{get_projects, test_query};
-use handlers::{
+use customers::handlers::{
     customers::{delete_customer, get_customer, patch_customer, post_customer},
     projects::{delete_project, get_project, patch_project, post_project},
 };
-use repositories::{customer::CustomerRepository, project::ProjectRepository};
+use customers::repositories::{customer::CustomerRepository, project::ProjectRepository};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

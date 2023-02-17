@@ -13,9 +13,9 @@ pub struct Project {
     pub status: String,
 }
 
-impl  ToSchema for Project {
-    fn schema() -> Schema {
-        ObjectBuilder::new()
+impl<'s>  ToSchema<'s> for Project {
+    fn schema() -> (&'s str, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>) {
+        ("Project", ObjectBuilder::new()
             .property("id", ObjectBuilder::new().schema_type(SchemaType::String))
             .required("id")
             .property("customer_id", ObjectBuilder::new().schema_type(SchemaType::String))
@@ -31,5 +31,6 @@ impl  ToSchema for Project {
             .property("status", ObjectBuilder::new().schema_type(SchemaType::String))
             .required("status")
             .into()
+        )
     }
 }

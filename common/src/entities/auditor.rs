@@ -18,9 +18,9 @@ pub struct Auditor {
     pub contacts: HashMap<String, String>,
 }
 
-impl ToSchema for Auditor {
-    fn schema() -> Schema {
-        ObjectBuilder::new()
+impl<'s> ToSchema<'s> for Auditor {
+    fn schema() -> (&'s str, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>) {
+        ("Auditor", ObjectBuilder::new()
             .property(
                 "user_id",
                 ObjectBuilder::new().schema_type(SchemaType::String),
@@ -49,5 +49,6 @@ impl ToSchema for Auditor {
             )
             .required("contacts")
             .into()
+        )
     }
 }

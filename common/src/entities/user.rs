@@ -11,12 +11,12 @@ pub struct User {
     pub email: String,
     pub password: String,
     pub name: String,
-    pub required_account_type: String,
+    pub current_role: String,
 }
 
-impl ToSchema for User {
-    fn schema() -> Schema {
-        ObjectBuilder::new()
+impl<'s> ToSchema<'s> for User {
+    fn schema() -> (&'s str, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>) {
+        ("User", ObjectBuilder::new()
             .property("id", ObjectBuilder::new().schema_type(SchemaType::String))
             .required("id")
             .property(
@@ -32,5 +32,6 @@ impl ToSchema for User {
             .property("name", ObjectBuilder::new().schema_type(SchemaType::String))
             .required("name")
             .into()
+        )
     }
 }
