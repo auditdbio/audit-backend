@@ -1,61 +1,46 @@
-use common::entities::project::Project;
+use common::{entities::project::Project, repository::TaggableEntityRepository};
 use futures::stream::StreamExt;
-use mongodb::{
-    bson::{doc, oid::ObjectId},
-    error::Result as MongoResult,
-    Client, Collection,
-};
+use mongodb::bson::{oid::ObjectId, Bson};
 
-use crate::error::Result;
+use std::sync::Arc;
 
-#[derive(Debug, Clone)]
-pub struct ProjectRepository {
-    inner: Collection<Project>,
-}
+#[derive(Clone)]
+pub struct ProjectRepo(
+    Arc<dyn TaggableEntityRepository<Project, Error = mongodb::error::Error> + Send + Sync>,
+);
 
-impl ProjectRepository {
-    const DATABASE: &'static str = "Customers";
-    const COLLECTION: &'static str = "Projects";
-
-    #[allow(dead_code)] // is says that this function is not used, but it is used in main.rs
-    pub async fn new(uri: String) -> Self {
-        let client = Client::with_uri_str(uri).await.unwrap();
-        let db = client.database(Self::DATABASE);
-        let inner: Collection<Project> = db.collection(Self::COLLECTION);
-        Self { inner }
+impl ProjectRepo {
+    pub fn new<T>(repo: T) -> Self
+    where
+        T: TaggableEntityRepository<Project, Error = mongodb::error::Error> + Send + Sync + 'static,
+    {
+        Self(Arc::new(repo))
     }
 
-    pub async fn create(&self, project: &Project) -> Result<bool> {
-        self.inner.insert_one(project, None).await?;
-        Ok(true)
+    pub async fn create(&self, user: &Project) -> Result<bool, mongodb::error::Error> {
+        self.0.create(user).await
     }
 
-    pub async fn find(&self, id: &ObjectId) -> Result<Option<Project>> {
-        Ok(self.inner.find_one(doc! {"id": id}, None).await?)
+    pub async fn find(&self, id: ObjectId) -> Result<Option<Project>, mongodb::error::Error> {
+        self.0.find("id", &Bson::ObjectId(id)).await
     }
 
-    pub async fn delete(&self, id: ObjectId) -> Result<Option<Project>> {
-        Ok(self
-            .inner
-            .find_one_and_delete(doc! {"id": id}, None)
-            .await?)
+    pub async fn delete(&self, id: &ObjectId) -> Result<Option<Project>, mongodb::error::Error> {
+        self.0.delete(id).await
     }
 
-    pub async fn request_with_tags(&self, tags: Vec<String>) -> Result<Vec<Project>> {
-        let filter = doc! {
-            "tags": doc!{
-                "$elemMatch": doc!{"$in": tags}
-            }
-        };
+    pub async fn find_all(
+        &self,
+        skip: u32,
+        limit: u32,
+    ) -> Result<Vec<Project>, mongodb::error::Error> {
+        self.0.find_all(skip, limit).await
+    }
 
-        let result: Vec<Project> = self
-            .inner
-            .find(filter, None)
-            .await?
-            .collect::<Vec<MongoResult<Project>>>()
-            .await
-            .into_iter()
-            .collect::<MongoResult<_>>()?;
-        Ok(result)
+    pub async fn find_by_tags(
+        &self,
+        tags: Vec<String>,
+    ) -> Result<Vec<Project>, mongodb::error::Error> {
+        self.0.find_by_tags(tags).await
     }
 }

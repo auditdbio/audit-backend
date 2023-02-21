@@ -12,6 +12,8 @@ reqwest = { version = "0.11", features = ["json"] }
 utoipa = { version = "3.0.2", features = ["actix_extras"] }
 derive_more = "0.99.17"
 chrono = {version = "0.4", features = ["serde"]}
+async-trait = "0.1.64"
+futures = "0.3.17"
 
 
 [dependencies.mongodb]

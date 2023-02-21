@@ -1,69 +1,45 @@
-use std::collections::HashMap;
+use common::{entities::auditor::Auditor, repository::TaggableEntityRepository};
+use mongodb::bson::{oid::ObjectId, Bson};
 
-use common::entities::auditor::Auditor;
-use futures::stream::StreamExt;
-use mongodb::{
-    bson::{doc, oid::ObjectId},
-    error::Result as MongoResult,
-    Client, Collection,
-};
+use std::sync::Arc;
 
-use crate::error::Result;
+#[derive(Clone)]
+pub struct AuditorRepo(
+    Arc<dyn TaggableEntityRepository<Auditor, Error = mongodb::error::Error> + Send + Sync>,
+);
 
-#[derive(Debug, Clone)]
-pub struct AuditorRepository {
-    inner: Collection<Auditor>,
-}
-
-impl AuditorRepository {
-    const DATABASE: &'static str = "Auditors";
-    const COLLECTION: &'static str = "Auditors";
-
-    #[allow(dead_code)] // is says that this function is not used, but it is used in main.rs
-    pub async fn new(uri: String) -> Self {
-        let client = Client::with_uri_str(uri).await.unwrap();
-        let db = client.database(Self::DATABASE);
-        let inner: Collection<Auditor> = db.collection(Self::COLLECTION);
-        Self { inner }
+impl AuditorRepo {
+    pub fn new<T>(repo: T) -> Self
+    where
+        T: TaggableEntityRepository<Auditor, Error = mongodb::error::Error> + Send + Sync + 'static,
+    {
+        Self(Arc::new(repo))
     }
 
-    pub async fn create(&self, auditor: &Auditor) -> Result<bool> {
-        let exited_auditor = self.find(&auditor.user_id).await?;
-
-        if exited_auditor.is_some() {
-            return Ok(false);
-        }
-
-        self.inner.insert_one(auditor, None).await?;
-        Ok(true)
+    pub async fn create(&self, user: &Auditor) -> Result<bool, mongodb::error::Error> {
+        self.0.create(user).await
     }
 
-    pub async fn find(&self, user_id: &ObjectId) -> Result<Option<Auditor>> {
-        Ok(self.inner.find_one(doc! {"user_id": user_id}, None).await?)
+    pub async fn find(&self, id: ObjectId) -> Result<Option<Auditor>, mongodb::error::Error> {
+        self.0.find("user_id", &Bson::ObjectId(id)).await
     }
 
-    pub async fn delete(&self, user_id: ObjectId) -> Result<Option<Auditor>> {
-        Ok(self
-            .inner
-            .find_one_and_delete(doc! {"user_id": user_id}, None)
-            .await?)
+    pub async fn delete(&self, id: &ObjectId) -> Result<Option<Auditor>, mongodb::error::Error> {
+        self.0.delete(id).await
     }
 
-    pub async fn request_with_tags(&self, tags: Vec<String>) -> Result<Vec<Auditor>> {
-        let filter = doc! {
-            "tags": doc!{
-                "$elemMatch": doc!{"$in": tags}
-            }
-        };
+    pub async fn find_all(
+        &self,
+        skip: u32,
+        limit: u32,
+    ) -> Result<Vec<Auditor>, mongodb::error::Error> {
+        self.0.find_all(skip, limit).await
+    }
 
-        let result: Vec<Auditor> = self
-            .inner
-            .find(filter, None)
-            .await?
-            .collect::<Vec<MongoResult<Auditor>>>()
-            .await
-            .into_iter()
-            .collect::<MongoResult<_>>()?;
-        Ok(result)
+    pub async fn find_by_tags(
+        &self,
+        tags: Vec<String>,
+    ) -> Result<Vec<Auditor>, mongodb::error::Error> {
+        self.0.find_by_tags(tags).await
     }
 }

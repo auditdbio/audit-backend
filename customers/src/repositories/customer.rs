@@ -1,47 +1,36 @@
-use common::entities::customer::Customer;
-use mongodb::{
-    bson::{doc, oid::ObjectId},
-    Client, Collection,
-};
+use common::{entities::customer::Customer, repository::Repository};
+use mongodb::bson::{oid::ObjectId, Bson};
 
-use crate::error::Result;
+use std::sync::Arc;
 
-#[derive(Debug, Clone)]
-pub struct CustomerRepository {
-    inner: Collection<Customer>,
-}
+#[derive(Clone)]
+pub struct CustomerRepo(Arc<dyn Repository<Customer, Error = mongodb::error::Error> + Send + Sync>);
 
-impl CustomerRepository {
-    const DATABASE: &'static str = "Customers";
-    const COLLECTION: &'static str = "Customers";
-
-    #[allow(dead_code)]
-    pub async fn new(uri: String) -> Self {
-        let client = Client::with_uri_str(uri).await.unwrap();
-        let db = client.database(Self::DATABASE);
-        let inner: Collection<Customer> = db.collection(Self::COLLECTION);
-        Self { inner }
+impl CustomerRepo {
+    pub fn new<T>(repo: T) -> Self
+    where
+        T: Repository<Customer, Error = mongodb::error::Error> + Send + Sync + 'static,
+    {
+        Self(Arc::new(repo))
     }
 
-    pub async fn create(&self, customer: Customer) -> Result<bool> {
-        let exited_customer = self.find(customer.user_id).await?;
-
-        if exited_customer.is_some() {
-            return Ok(false);
-        }
-
-        self.inner.insert_one(customer, None).await?;
-        Ok(true)
+    pub async fn create(&self, user: &Customer) -> Result<bool, mongodb::error::Error> {
+        self.0.create(user).await
     }
 
-    pub async fn find(&self, user_id: ObjectId) -> Result<Option<Customer>> {
-        Ok(self.inner.find_one(doc! {"user_id": user_id}, None).await?)
+    pub async fn find(&self, id: ObjectId) -> Result<Option<Customer>, mongodb::error::Error> {
+        self.0.find("user_id", &Bson::ObjectId(id)).await
     }
 
-    pub async fn delete(&self, user_id: ObjectId) -> Result<Option<Customer>> {
-        Ok(self
-            .inner
-            .find_one_and_delete(doc! {"user_id": user_id}, None)
-            .await?)
+    pub async fn delete(&self, id: &ObjectId) -> Result<Option<Customer>, mongodb::error::Error> {
+        self.0.delete(id).await
+    }
+
+    pub async fn find_all(
+        &self,
+        skip: u32,
+        limit: u32,
+    ) -> Result<Vec<Customer>, mongodb::error::Error> {
+        self.0.find_all(skip, limit).await
     }
 }

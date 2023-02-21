@@ -52,7 +52,6 @@ impl ResponseError for Error {
             .insert_header(ContentType::plaintext())
             .body(self.to_string())
     }
-    
 
     fn status_code(&self) -> StatusCode {
         match *self {

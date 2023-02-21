@@ -10,7 +10,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::{
     error::{Error, OuterError, Result},
-    repositories::{project::ProjectRepository, customer::CustomerRepository},
+    repositories::project::ProjectRepo,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -37,7 +37,7 @@ pub struct PostProjectRequest {
 pub async fn post_project(
     req: HttpRequest,
     Json(data): web::Json<PostProjectRequest>,
-    repo: web::Data<ProjectRepository>,
+    repo: web::Data<ProjectRepo>,
 ) -> Result<web::Json<Project>> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
@@ -81,11 +81,11 @@ pub struct PatchProjectRequest {
 pub async fn patch_project(
     req: HttpRequest,
     web::Json(data): web::Json<PatchProjectRequest>,
-    repo: web::Data<ProjectRepository>,
+    repo: web::Data<ProjectRepo>,
 ) -> Result<web::Json<Project>> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
-    let Some(mut project) = repo.delete(session.user_id()).await? else {
+    let Some(mut project) = repo.delete(&session.user_id()).await? else {
         return Err(Error::Outer(OuterError::ProjectNotFound))
     };
 
@@ -109,7 +109,7 @@ pub async fn patch_project(
         project.status = status;
     }
 
-    repo.delete(session.user_id()).await.unwrap();
+    repo.delete(&session.user_id()).await.unwrap();
     repo.create(&project).await?;
 
     Ok(web::Json(project))
@@ -126,11 +126,11 @@ pub async fn patch_project(
 #[delete("/api/projects")]
 pub async fn delete_project(
     req: HttpRequest,
-    repo: web::Data<ProjectRepository>,
+    repo: web::Data<ProjectRepo>,
 ) -> Result<HttpResponse> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
-    let Some(project) = repo.delete(session.user_id()).await? else {
+    let Some(project) = repo.delete(&session.user_id()).await? else {
         return Ok(HttpResponse::BadRequest().finish()); // TODO: Error: project not found
     };
 
@@ -149,11 +149,11 @@ pub async fn delete_project(
 pub async fn get_project(
     req: HttpRequest,
     id: web::Path<ObjectId>,
-    repo: web::Data<ProjectRepository>,
+    repo: web::Data<ProjectRepo>,
 ) -> Result<HttpResponse> {
     let _session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
-    let Some(project) = repo.find(&id).await? else {
+    let Some(project) = repo.find(id.into_inner()).await? else {
         return Ok(HttpResponse::BadRequest().finish()); // TODO: Error: project not found
     };
     Ok(HttpResponse::Ok().json(project))
@@ -179,26 +179,12 @@ pub struct AllProjectsResponse {
 )]
 #[get("/api/projects/all")]
 pub async fn get_projects(
-    repo: web::Data<ProjectRepository>,
+    repo: web::Data<ProjectRepo>,
     query: web::Query<AllProjectsQuery>,
 ) -> Result<HttpResponse> {
-    // let tags = query.tags.split(",").map(ToString::to_string).collect();
+    let tags = query.tags.split(",").map(ToString::to_string).collect();
 
-    // let projects = repo.request_with_tags(tags).await?;
+    let projects = repo.find_by_tags(tags).await?;
 
-    // Ok(HttpResponse::Ok().json(projects))
-    Ok(HttpResponse::Ok().finish())
+    Ok(HttpResponse::Ok().json(projects))
 }
-
-#[get("/api/projects/test")]
-pub async fn test_query(
-    repo: web::Data<ProjectRepository>,
-) -> Result<HttpResponse> {
-    // let tags = query.tags.split(",").map(ToString::to_string).collect();
-
-    // let projects = repo.request_with_tags(tags).await?;
-
-    // Ok(HttpResponse::Ok().json(projects))
-    Ok(HttpResponse::Ok().finish())
-}
-

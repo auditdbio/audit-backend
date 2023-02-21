@@ -2,8 +2,12 @@ use std::env;
 
 use actix_cors::Cors;
 use actix_web::{middleware, web, App, HttpServer};
-use audits::{get_audits, post_audit_request, patch_audit_request, delete_audit_request, post_audit, delete_audit, get_views};
 use audits::repositories::{audit::AuditRepo, audit_request::AuditRequestRepo};
+use audits::{
+    delete_audit, delete_audit_request, get_audits, get_views, patch_audit_request, post_audit,
+    post_audit_request,
+};
+use common::repository::mongo_repository::MongoRepository;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -11,8 +15,8 @@ async fn main() -> std::io::Result<()> {
 
     let mongo_uri = env::var("MONGOURI").unwrap();
 
-    let audit_repo = AuditRepo::new(mongo_uri.clone()).await;
-    let audit_request_repo = AuditRequestRepo::new(mongo_uri.clone()).await;
+    let audit_repo = AuditRepo::new(MongoRepository::new(&mongo_uri, "audits", "audits").await);
+    let audit_request_repo = AuditRequestRepo::new(MongoRepository::new(&mongo_uri, "audits", "requests").await);
     HttpServer::new(move || {
         let cors = Cors::default()
             .allow_any_origin()

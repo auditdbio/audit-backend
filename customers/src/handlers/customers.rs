@@ -9,7 +9,7 @@ use common::{auth_session::get_auth_session, entities::customer::Customer};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::{error::Result, repositories::customer::CustomerRepository};
+use crate::{error::Result, repositories::customer::CustomerRepo};
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PostCustomerRequest {
@@ -35,7 +35,7 @@ pub struct PostCustomerRequest {
 pub async fn post_customer(
     req: HttpRequest,
     Json(data): web::Json<PostCustomerRequest>,
-    repo: web::Data<CustomerRepository>,
+    repo: web::Data<CustomerRepo>,
 ) -> Result<HttpResponse> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
@@ -48,7 +48,7 @@ pub async fn post_customer(
         contacts: data.contacts,
     };
 
-    if !repo.create(customer).await? {
+    if !repo.create(&customer).await? {
         return Ok(HttpResponse::BadRequest().finish()); // TODO: Error: customer entity already exits
     }
 
@@ -64,10 +64,7 @@ pub async fn post_customer(
     )
 )]
 #[get("/api/customer")]
-pub async fn get_customer(
-    req: HttpRequest,
-    repo: web::Data<CustomerRepository>,
-) -> Result<HttpResponse> {
+pub async fn get_customer(req: HttpRequest, repo: web::Data<CustomerRepo>) -> Result<HttpResponse> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
     let Some(customer) = repo.find(session.user_id()).await? else {
@@ -100,7 +97,7 @@ pub struct PatchCustomerRequest {
 pub async fn patch_customer(
     req: HttpRequest,
     web::Json(data): web::Json<PatchCustomerRequest>,
-    repo: web::Data<CustomerRepository>,
+    repo: web::Data<CustomerRepo>,
 ) -> Result<HttpResponse> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
@@ -128,8 +125,8 @@ pub async fn patch_customer(
         customer.contacts = contacts;
     }
 
-    repo.delete(session.user_id()).await.unwrap();
-    repo.create(customer).await?;
+    repo.delete(&session.user_id()).await.unwrap();
+    repo.create(&customer).await?;
 
     Ok(HttpResponse::Ok().finish())
 }
@@ -148,11 +145,11 @@ pub async fn patch_customer(
 #[delete("/api/customer")]
 pub async fn delete_customer(
     req: HttpRequest,
-    repo: web::Data<CustomerRepository>,
+    repo: web::Data<CustomerRepo>,
 ) -> Result<HttpResponse> {
     let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
-    let Some(customer) = repo.delete(session.user_id()).await? else {
+    let Some(customer) = repo.delete(&session.user_id()).await? else {
         return Ok(HttpResponse::BadRequest().finish()); // TODO: Error: this user doesn't exit
     };
     Ok(HttpResponse::Ok().json(customer))

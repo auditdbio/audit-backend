@@ -1,53 +1,50 @@
-use crate::error::Result;
+use std::sync::Arc;
+
 use chrono::NaiveDateTime;
-use mongodb::{
-    bson::{doc, oid::ObjectId},
-    Client, Collection,
-};
+use common::repository::{Entity, Repository};
+use mongodb::bson::{doc, oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TokenModel {
     pub token: String,
     pub user_id: ObjectId,
-    pub created: NaiveDateTime,
+    pub exp: usize,
 }
 
-#[derive(Debug, Clone)]
-pub struct TokenRepository {
-    inner: Collection<TokenModel>,
+impl Entity for TokenModel {
+    fn id(&self) -> ObjectId {
+        self.user_id.clone()
+    }
 }
 
-impl TokenRepository {
-    const DATABASE: &'static str = "Users";
-    const COLLECTION: &'static str = "Tokens";
+#[derive(Clone)]
+pub struct TokenRepo(Arc<dyn Repository<TokenModel, Error = mongodb::error::Error> + Send + Sync>);
 
-    #[allow(dead_code)] // is says that this function is not used, but it is used in main.rs
-    pub async fn new(uri: String) -> Self {
-        let client = Client::with_uri_str(uri).await.unwrap();
-        let db = client.database(Self::DATABASE);
-        let inner: Collection<TokenModel> = db.collection(Self::COLLECTION);
-        Self { inner }
+impl TokenRepo {
+    pub fn new<T>(repo: T) -> Self
+    where
+        T: Repository<TokenModel, Error = mongodb::error::Error> + Send + Sync + 'static,
+    {
+        Self(Arc::new(repo))
+    }
+    pub async fn create(&self, user: &TokenModel) -> Result<bool, mongodb::error::Error> {
+        self.0.create(user).await
     }
 
-    pub async fn create(&self, token: &TokenModel) -> Result<()> {
-        self.inner.insert_one(token, None).await?;
-        Ok(())
+    pub async fn find_by_token(
+        &self,
+        token: String,
+    ) -> Result<Option<TokenModel>, mongodb::error::Error> {
+        self.0.find("token", &Bson::String(token)).await
     }
 
-    pub async fn find(&self, token: &str) -> Result<Option<TokenModel>> {
-        Ok(self.inner.find_one(doc! {"token": token}, None).await?)
-    }
-
-    pub async fn delete(&self, token: &str) -> Result<Option<TokenModel>> {
-        Ok(self
-            .inner
-            .find_one_and_delete(doc! {"token": token}, None)
-            .await?)
-    }
-
-    #[allow(dead_code)]
-    pub async fn find_by_user(&self, user_id: ObjectId) -> Result<Option<TokenModel>> {
-        Ok(self.inner.find_one(doc! {"user_id": user_id}, None).await?)
+    pub async fn delete(&self, token: String) -> Result<Option<TokenModel>, mongodb::error::Error> {
+        let token = self.find_by_token(token).await?;
+        if let Some(token) = token {
+            self.0.delete(&token.user_id).await
+        } else {
+            Ok(None)
+        }
     }
 }

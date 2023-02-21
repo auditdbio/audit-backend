@@ -5,7 +5,7 @@ use actix_web::{
     web::{self, Json},
     HttpRequest, HttpResponse,
 };
-use chrono::Utc;
+use chrono::{Duration, Timelike, Utc};
 use common::ruleset::Ruleset;
 use common::{
     auth_session::{jwt_from_header, AuthSession},
@@ -20,8 +20,8 @@ use crate::{
     constants::MAX_DURATION,
     error::{Error, OuterError, Result},
     repositories::{
-        token::{TokenModel, TokenRepository},
-        user::UserRepository,
+        token::{TokenModel, TokenRepo},
+        user::UserRepo,
     },
     ruleset::Login,
     utils::jwt::{self, create},
@@ -29,14 +29,14 @@ use crate::{
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct LoginRequest {
-    email: String,
+    pub email: String,
     pub password: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct LoginResponse {
-    token: String,
-    user: User,
+    pub token: String,
+    pub user: User,
 }
 
 #[utoipa::path(
@@ -50,8 +50,8 @@ pub struct LoginResponse {
 #[post("/api/auth/login")]
 pub async fn login(
     Json(data): web::Json<LoginRequest>,
-    users_repo: web::Data<UserRepository>,
-    tokens_repo: web::Data<TokenRepository>,
+    users_repo: web::Data<UserRepo>,
+    tokens_repo: web::Data<TokenRepo>,
 ) -> Result<web::Json<LoginResponse>> {
     let Some(user) = users_repo.find_by_email(&data.email).await? else {
         return Err(Error::Outer(OuterError::UserNotFound));
@@ -60,9 +60,9 @@ pub async fn login(
     if !Login::request_access(&data, &user) {
         return Err(Error::Outer(OuterError::PasswordsDoesntMatch));
     }
-
+    let res = Utc::now() + Duration::days(1);
     let token = TokenModel {
-        created: Utc::now().naive_utc(),
+        exp: res.naive_utc().timestamp() as usize,
         token: uuid::Uuid::new_v4().to_string(),
         user_id: user.id,
     };
@@ -72,6 +72,7 @@ pub async fn login(
     let session = AuthSession {
         user_id: user.id.to_hex(),
         token: token.token,
+        exp: token.exp,
     };
 
     let response = LoginResponse {
@@ -84,7 +85,7 @@ pub async fn login(
 
 pub(super) async fn verify_token(
     req: &HttpRequest,
-    repo: &web::Data<TokenRepository>,
+    repo: &web::Data<TokenRepo>,
 ) -> Result<result::Result<(TokenModel, AuthSession), String>> {
     let Some(jwt) = jwt_from_header(&req) else {
         return Ok(Err("Error: Failed to parse header".to_string()));
@@ -93,15 +94,9 @@ pub(super) async fn verify_token(
     let Some(session) = jwt::verify(&jwt)? else {
         return Ok(Err("Error: Json web token has invalid signature".to_string()));
     };
-    let Some(token) = repo.find(&session.token).await? else {
+    let Some(token) = repo.find_by_token(session.token.clone()).await? else {
         return Ok(Err("Error: Invalid token".to_string()))
     };
-
-    let token_duration = Utc::now().naive_utc() - token.created;
-
-    if token_duration > *MAX_DURATION {
-        return Ok(Err("Error: Token expired".to_string()));
-    }
 
     return Ok(Ok((token, session)));
 }
@@ -122,22 +117,23 @@ pub struct RestoreResponse {
 #[post("/api/auth/restore")]
 pub async fn restore(
     req: HttpRequest,
-    repo: web::Data<TokenRepository>,
+    repo: web::Data<TokenRepo>,
 ) -> Result<web::Json<RestoreResponse>> {
     let Ok((mut token, session)) = verify_token(&req, &repo).await? else {
         return Err(Error::Outer(OuterError::UserNotFound));
     };
 
-    repo.delete(&token.token).await?.unwrap();
+    repo.delete(token.token).await?.unwrap();
 
     token.token = Uuid::new_v4().to_string();
-    token.created = Utc::now().naive_utc();
+    token.exp = (Utc::now() + Duration::days(1)).naive_utc().timestamp() as usize;
 
     repo.create(&token).await?;
 
     let session = AuthSession {
         user_id: session.user_id,
         token: token.token,
+        exp: token.exp,
     };
 
     let response = RestoreResponse {
@@ -156,11 +152,47 @@ pub async fn restore(
     )
 )]
 #[get("/api/auth/verify")]
-pub async fn verify(req: HttpRequest, repo: web::Data<TokenRepository>) -> Result<HttpResponse> {
+pub async fn verify(req: HttpRequest, repo: web::Data<TokenRepo>) -> Result<HttpResponse> {
     let res = verify_token(&req, &repo)
         .await?
         .ok()
         .map(|(_, session)| session);
 
     Ok(HttpResponse::Ok().json(res))
+}
+
+#[cfg(test)]
+mod tests {
+    use actix_web::test::{self, init_service};
+
+    use crate::{create_test_app, PostUserRequest};
+
+    #[actix_web::test]
+    async fn test_login() {
+        let mut app = init_service(create_test_app()).await;
+
+        let req = test::TestRequest::post()
+            .uri("/api/users")
+            .set_json(&PostUserRequest {
+                name: "test".to_string(),
+                email: "test@gmail.com".to_string(),
+                password: "test".to_string(),
+                current_role: "Customer".to_string(),
+            })
+            .to_request();
+
+        let resp = test::call_service(&mut app, req).await;
+        assert!(resp.status().is_success());
+
+        let req = test::TestRequest::post()
+            .uri("/api/auth/login")
+            .set_json(&super::LoginRequest {
+                email: "test@gmail.com".to_string(),
+                password: "test".to_string(),
+            })
+            .to_request();
+
+        let resp = test::call_service(&mut app, req).await;
+        assert!(resp.status().is_success());
+    }
 }

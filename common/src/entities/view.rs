@@ -2,7 +2,7 @@ use chrono::NaiveDateTime;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use utoipa::{
-    openapi::{ObjectBuilder, Schema, SchemaType},
+    openapi::{ObjectBuilder, SchemaType},
     ToSchema,
 };
 
@@ -20,25 +20,29 @@ pub struct View {
     pub last_modified: NaiveDateTime,
 }
 
-impl<'s>  ToSchema<'s> for View {
-    fn schema() -> (&'s str, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>) {
-        ("View",
-        ObjectBuilder::new()
-            .property("id", ObjectBuilder::new().schema_type(SchemaType::String))
-            .required("id")
-            .property("name", ObjectBuilder::new().schema_type(SchemaType::String))
-            .required("name")
-            .property(
-                "source",
-                ObjectBuilder::new().schema_type(SchemaType::String),
-            )
-            .required("source")
-            .property(
-                "last_modified",
-                ObjectBuilder::new().schema_type(SchemaType::String),
-            )
-            .required("last_modified")
-            .into()
+impl<'s> ToSchema<'s> for View {
+    fn schema() -> (
+        &'s str,
+        utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>,
+    ) {
+        (
+            "View",
+            ObjectBuilder::new()
+                .property("id", ObjectBuilder::new().schema_type(SchemaType::Object))
+                .required("id")
+                .property("name", ObjectBuilder::new().schema_type(SchemaType::String))
+                .required("name")
+                .property(
+                    "source",
+                    ObjectBuilder::new().schema_type(SchemaType::String),
+                )
+                .required("source")
+                .property(
+                    "last_modified",
+                    ObjectBuilder::new().schema_type(SchemaType::String),
+                )
+                .required("last_modified")
+                .into(),
         )
     }
 }

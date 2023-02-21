@@ -80,7 +80,7 @@ pub async fn get_audits(
 ) -> Result<HttpResponse> {
     let _session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
 
-    let audits = repo.find(&id).await?;
+    let audits = repo.find(*id).await?;
 
     Ok(HttpResponse::Ok().json(audits))
 }
@@ -154,28 +154,28 @@ pub async fn get_views(
         req.headers().get("Authorization").unwrap().clone(),
     );
 
-    let requests_as_customer = request_repo.find_by_customer(&session.user_id()).await?;
+    let requests_as_customer = request_repo.find_by_customer(session.user_id()).await?;
     for request in requests_as_customer {
         let project = get_project(&client, &request.project_id).await?;
 
         views.push(request.to_view(project.name));
     }
 
-    let requests_as_auditor = request_repo.find_by_auditor(&session.user_id()).await?;
+    let requests_as_auditor = request_repo.find_by_auditor(session.user_id()).await?;
     for request in requests_as_auditor {
         let project = get_project(&client, &request.project_id).await?;
 
         views.push(request.to_view(project.name));
     }
 
-    let audits_as_auditor = audits_repo.find_by_auditor(&session.user_id()).await?;
+    let audits_as_auditor = audits_repo.find_by_auditor(session.user_id()).await?;
     for audit in audits_as_auditor {
         let project = get_project(&client, &audit.project_id).await?;
 
         views.push(audit.to_view(project.name));
     }
 
-    let audits_as_customer = audits_repo.find_by_customer(&session.user_id()).await?;
+    let audits_as_customer = audits_repo.find_by_customer(session.user_id()).await?;
     for audit in audits_as_customer {
         let project = get_project(&client, &audit.project_id).await?;
 

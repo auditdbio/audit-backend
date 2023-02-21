@@ -1,6 +1,9 @@
 use chrono::NaiveDateTime;
-use mongodb::{bson::{oid::ObjectId, doc}, Collection, Client};
-use serde::{Serialize, Deserialize};
+use mongodb::{
+    bson::{doc, oid::ObjectId},
+    Client, Collection,
+};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MetaData {
@@ -24,7 +27,7 @@ impl MetaRepository {
         let inner: Collection<MetaData> = db.collection(Self::COLLECTION);
         Self { inner }
     }
-    
+
     pub async fn create(&self, metadata: MetaData) -> Result<bool, mongodb::error::Error> {
         let exited_metadata = self.find(&metadata.id).await?;
 
@@ -46,5 +49,4 @@ impl MetaRepository {
             .find_one_and_delete(doc! {"id": id}, None)
             .await?)
     }
-
 }

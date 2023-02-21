@@ -1,59 +1,66 @@
-use common::entities::audit::Audit;
-use futures::StreamExt;
+use common::{entities::audit::Audit, repository::Repository};
+use futures::stream::StreamExt;
 use mongodb::{
-    bson::{doc, oid::ObjectId, Document},
-    error::Result,
+    bson::{doc, oid::ObjectId, Bson, Document},
     Client, Collection,
 };
 
-#[derive(Debug, Clone)]
-pub struct AuditRepo {
-    inner: Collection<Audit>,
-}
+use std::sync::Arc;
+
+#[derive(Clone)]
+pub struct AuditRepo(
+    Arc<dyn Repository<Audit, Error = mongodb::error::Error> + Send + Sync>,
+);
 
 impl AuditRepo {
-    const DATABASE: &'static str = "Audits";
-    const COLLECTION: &'static str = "Audits";
-
-    pub async fn new(uri: String) -> Self {
-        let client = Client::with_uri_str(uri).await.unwrap();
-        let db = client.database(Self::DATABASE);
-        let inner: Collection<Audit> = db.collection(Self::COLLECTION);
-        Self { inner }
+    pub fn new<T>(repo: T) -> Self
+    where
+        T: Repository<Audit, Error = mongodb::error::Error> + Send + Sync + 'static,
+    {
+        Self(Arc::new(repo))
     }
 
-    pub async fn create(&self, audit: &Audit) -> Result<()> {
-        self.inner.insert_one(audit, None).await?;
-        Ok(())
+    pub async fn create(&self, user: &Audit) -> Result<bool, mongodb::error::Error> {
+        self.0.create(user).await
     }
 
-    async fn find_by(&self, document: Document) -> Result<Vec<Audit>> {
-        let cursor = self.inner.find(document, None).await?;
-        let result = cursor
-            .collect::<Vec<_>>()
-            .await
-            .into_iter()
-            .collect::<Result<Vec<_>>>()?;
-
-        Ok(result)
+    pub async fn find(&self, id: ObjectId) -> Result<Option<Audit>, mongodb::error::Error> {
+        self.0.find("id", &Bson::ObjectId(id)).await
     }
 
-    pub async fn find(&self, audit_id: &ObjectId) -> Result<Option<Audit>> {
-        Ok(self.inner.find_one(doc! {"id": audit_id}, None).await?)
+    pub async fn find_by_customer(
+        &self,
+        customer_id: ObjectId,
+    ) -> Result<Vec<Audit>, mongodb::error::Error> {
+        self.0.find_many("id", &Bson::ObjectId(customer_id)).await
     }
 
-    pub async fn find_by_auditor(&self, auditor_id: &ObjectId) -> Result<Vec<Audit>> {
-        self.find_by(doc! {"auditor_id": auditor_id}).await
+    pub async fn find_by_auditor(
+        &self,
+        auditor_id: ObjectId,
+    ) -> Result<Vec<Audit>, mongodb::error::Error> {
+        self.0.find_many("id", &Bson::ObjectId(auditor_id)).await
     }
 
-    pub async fn find_by_customer(&self, customer_id: &ObjectId) -> Result<Vec<Audit>> {
-        self.find_by(doc! {"customer_id": customer_id}).await
+    pub async fn find_by_project(
+        &self,
+        project_id: ObjectId,
+    ) -> Result<Vec<Audit>, mongodb::error::Error> {
+        self.0.find_many("id", &Bson::ObjectId(project_id)).await
     }
 
-    pub async fn delete(&self, audit_id: &ObjectId) -> Result<Option<Audit>> {
-        Ok(self
-            .inner
-            .find_one_and_delete(doc! {"id": audit_id}, None)
-            .await?)
+    pub async fn delete(
+        &self,
+        id: &ObjectId,
+    ) -> Result<Option<Audit>, mongodb::error::Error> {
+        self.0.delete(id).await
+    }
+
+    pub async fn find_all(
+        &self,
+        skip: u32,
+        limit: u32,
+    ) -> Result<Vec<Audit>, mongodb::error::Error> {
+        self.0.find_all(skip, limit).await
     }
 }

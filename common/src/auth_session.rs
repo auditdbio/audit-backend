@@ -8,6 +8,7 @@ use utoipa::ToSchema;
 pub struct AuthSession {
     pub user_id: String,
     pub token: String,
+    pub exp: usize,
 }
 
 impl AuthSession {

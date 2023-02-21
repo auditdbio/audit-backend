@@ -3,23 +3,24 @@ use actix_web::{
     web::{self, Json},
     HttpRequest, HttpResponse,
 };
-use common::{entities::user::User, auth_session::get_auth_session};
+use common::{auth_session::get_auth_session, entities::user::User};
 use mongodb::bson::{doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};
+use std::str;
 use utoipa::ToSchema;
 
 use crate::{
     error::{Error, OuterError, Result},
     handlers::auth::verify_token,
-    repositories::{token::TokenRepository, user::UserRepository},
+    repositories::{token::TokenRepo, user::UserRepo},
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PostUserRequest {
-    name: String,
-    email: String,
-    password: String,
-    current_role: String,
+    pub name: String,
+    pub email: String,
+    pub password: String,
+    pub current_role: String,
 }
 
 #[utoipa::path(
@@ -33,7 +34,7 @@ pub struct PostUserRequest {
 #[post("/api/users")]
 pub async fn post_user(
     Json(data): web::Json<PostUserRequest>,
-    repo: web::Data<UserRepository>,
+    repo: web::Data<UserRepo>,
 ) -> Result<web::Json<User>> {
     let user = User {
         id: ObjectId::new(),
@@ -43,10 +44,11 @@ pub async fn post_user(
         current_role: data.current_role,
     };
 
-    if !repo.create(&user).await? {
+    if repo.find_by_email(&user.email).await?.is_some() {
         Err(Error::Outer(OuterError::NotUniqueEmail))?;
     };
 
+    repo.create(&user).await?;
     return Ok(web::Json(user));
 }
 
@@ -72,8 +74,8 @@ pub struct PatchUserRequest {
 pub async fn patch_user(
     req: HttpRequest,
     Json(data): web::Json<PatchUserRequest>,
-    users_repo: web::Data<UserRepository>,
-    tokens_repo: web::Data<TokenRepository>,
+    users_repo: web::Data<UserRepo>,
+    tokens_repo: web::Data<TokenRepo>,
 ) -> Result<web::Json<User>> {
     let Ok((_, session)) = verify_token(&req, &tokens_repo).await? else {
         return Err(Error::Outer(OuterError::Unauthorized));
@@ -99,7 +101,7 @@ pub async fn patch_user(
         }
     }
 
-    users_repo.delete(user_id).await?;
+    users_repo.delete(&user_id).await?;
 
     users_repo.create(&user).await?;
 
@@ -117,8 +119,8 @@ pub async fn patch_user(
 #[delete("/api/users")]
 pub async fn delete_user(
     req: HttpRequest,
-    users_repo: web::Data<UserRepository>,
-    tokens_repo: web::Data<TokenRepository>,
+    users_repo: web::Data<UserRepo>,
+    tokens_repo: web::Data<TokenRepo>,
 ) -> Result<web::Json<User>> {
     let Ok((_, session)) = verify_token(&req, &tokens_repo).await? else {
         return Err(Error::Outer(OuterError::Unauthorized)); //TODO: error description
@@ -126,8 +128,8 @@ pub async fn delete_user(
 
     let user_id = ObjectId::parse_str(&session.user_id).unwrap();
 
-    let deleted_user = users_repo.delete(user_id).await?;
-    if !deleted_user.is_none() {
+    let deleted_user = users_repo.delete(&user_id).await?;
+    if deleted_user.is_none() {
         return Err(Error::Outer(OuterError::UserNotFound));
     }
     Ok(web::Json(deleted_user.unwrap()))
@@ -142,7 +144,6 @@ pub struct GetUsersRequest {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct GetUsersResponse {
     data: Vec<User>,
-    has_next_page: bool,
     page: u32,
     limit: u32,
 }
@@ -158,13 +159,14 @@ pub struct GetUsersResponse {
 #[get("/api/users")]
 pub async fn get_users(
     Json(data): web::Json<GetUsersRequest>,
-    repo: web::Data<UserRepository>,
+    repo: web::Data<UserRepo>,
 ) -> Result<HttpResponse> {
-    let users = repo.users((data.page - 1) * data.limit, data.limit).await?;
+    let users = repo
+        .find_all((data.page - 1) * data.limit, data.limit)
+        .await?;
 
     Ok(HttpResponse::Ok().json(GetUsersResponse {
         data: users,
-        has_next_page: false,
         page: data.page,
         limit: data.limit,
     }))
@@ -179,10 +181,7 @@ pub async fn get_users(
     )
 )]
 #[get("/api/users/user")]
-pub async fn get_user(
-    req: HttpRequest,
-    repo: web::Data<UserRepository>,
-) -> Result<HttpResponse> {    
+pub async fn get_user(req: HttpRequest, repo: web::Data<UserRepo>) -> Result<HttpResponse> {
     let session = get_auth_session(&req).await.unwrap();
 
     let user = repo.find(session.user_id()).await.unwrap();
@@ -198,7 +197,7 @@ pub async fn get_user(
 #[get("/api/users/{email}")]
 pub async fn get_user_email(
     email: web::Path<(String,)>,
-    repo: web::Data<UserRepository>,
+    repo: web::Data<UserRepo>,
 ) -> Result<HttpResponse> {
     let (email,) = email.into_inner();
 
@@ -209,23 +208,107 @@ pub async fn get_user_email(
     Ok(HttpResponse::Ok().json(doc! {"id": user.id, "name": user.name, "email": user.email}))
 }
 
-// #[cfg(test)]
-// mod test {
-//     use actix_web::{test::{self, init_service}, App};
+#[cfg(test)]
+mod test {
+    use actix_web::test::{self, init_service};
+    use common::repository::test_repository::TestRepository;
 
-//     #[actix_web::test]
-//     async fn test_post_user() {
-//         let req = test::TestRequest::post()
-//             .uri("/api/users")
-//             .set_json(&super::PostUserRequest {
-//                 name: "test".to_string(),
-//                 email: "test@gmail.com".to_string(),
-//                 password: "test".to_string(),
-//             })
-//             .to_request();
+    use crate::{
+        create_app, create_test_app,
+        repositories::{token::TokenRepo, user::UserRepo},
+        GetUsersRequest,
+    };
 
-//         let mut app = init_service(App::new().configure(crate::configure_service)).await;
-//         let resp = test::call_service(&mut app, req).await;
-//         assert!(resp.status().is_success());
-//     }
-// }
+    #[actix_web::test]
+    async fn test_post_user() {
+        let mut app = init_service(create_test_app()).await;
+
+        let req = test::TestRequest::post()
+            .uri("/api/users")
+            .set_json(&super::PostUserRequest {
+                name: "test".to_string(),
+                email: "test@gmail.com".to_string(),
+                password: "test".to_string(),
+                current_role: "Customer".to_string(),
+            })
+            .to_request();
+
+        let resp = test::call_service(&mut app, req).await;
+        assert!(resp.status().is_success());
+    }
+
+    #[actix_web::test]
+    async fn test_post_user_with_existing_email() {
+        let user_repo = UserRepo::new(TestRepository::new());
+
+        let token_repo = TokenRepo::new(TestRepository::new());
+
+        let mut app = init_service(create_app(user_repo.clone(), token_repo)).await;
+
+        let req = test::TestRequest::post()
+            .uri("/api/users")
+            .set_json(&super::PostUserRequest {
+                name: "test".to_string(),
+                email: "test@gmail.com".to_string(),
+                password: "test".to_string(),
+                current_role: "Customer".to_string(),
+            })
+            .to_request();
+        let resp = test::call_service(&mut app, req).await;
+        assert!(resp.status().is_success());
+
+        let req = test::TestRequest::post()
+            .uri("/api/users")
+            .set_json(&super::PostUserRequest {
+                name: "test".to_string(),
+                email: "test@gmail.com".to_string(),
+                password: "test".to_string(),
+                current_role: "Customer".to_string(),
+            })
+            .to_request();
+        let resp = test::call_service(&mut app, req).await;
+
+        assert!(resp.status().is_client_error());
+    }
+
+    #[actix_web::test]
+    async fn test_delete_user() {
+        let mut app = init_service(create_test_app()).await;
+
+        let req = test::TestRequest::post()
+            .uri("/api/users")
+            .set_json(&super::PostUserRequest {
+                name: "test".to_string(),
+                email: "test@gmail.com".to_string(),
+                password: "test".to_string(),
+                current_role: "Customer".to_string(),
+            })
+            .to_request();
+        let resp = test::call_service(&mut app, req).await;
+        assert!(resp.status().is_success());
+
+        let req = test::TestRequest::post()
+            .uri("/api/auth/login")
+            .set_json(&crate::LoginRequest {
+                email: "test@gmail.com".to_string(),
+                password: "test".to_string(),
+            })
+            .to_request();
+        let resp = test::call_service(&mut app, req).await;
+        assert!(resp.status().is_success());
+
+        let body = test::read_body(resp).await;
+        let token = serde_json::from_slice::<crate::LoginResponse>(&body)
+            .unwrap()
+            .token;
+
+        let req = test::TestRequest::delete()
+            .uri("/api/users")
+            .insert_header(("Authorization", format!("Bearer {}", token)))
+            .to_request();
+
+        let resp = test::call_service(&mut app, req).await;
+
+        assert!(resp.status().is_success());
+    }
+}
