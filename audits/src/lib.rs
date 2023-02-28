@@ -4,19 +4,27 @@ pub mod handlers;
 pub mod repositories;
 pub mod ruleset;
 
+use actix_cors::Cors;
+use actix_web::body::MessageBody;
+use actix_web::dev::ServiceFactory;
+use actix_web::dev::ServiceRequest;
+use actix_web::dev::ServiceResponse;
+use actix_web::middleware;
+use actix_web::web;
+use actix_web::App;
+use common::repository::test_repository::TestRepository;
 pub use handlers::audit::*;
 pub use handlers::audit_request::*;
 use repositories::audit::AuditRepo;
 use repositories::audit_request::AuditRequestRepo;
 use repositories::closed_audits::ClosedAuditRepo;
-use repositories::closed_request::ClosedRequestRepo;
+use repositories::closed_request::ClosedAuditRequestRepo;
 
 pub fn create_app(
     audit_repo: AuditRepo,
     audit_request_repo: AuditRequestRepo,
     closed_audit_repo: ClosedAuditRepo,
-    closed_audit_request_repo: ClosedRequestRepo,
-
+    closed_audit_request_repo: ClosedAuditRequestRepo,
 ) -> App<
     impl ServiceFactory<
         ServiceRequest,
@@ -33,12 +41,17 @@ pub fn create_app(
     let app = App::new()
         .wrap(cors)
         .wrap(middleware::Logger::default())
-        .app_data(web::Data::new(auditor_repo))
-        .service(post_auditor)
-        .service(get_auditor)
-        .service(patch_auditor)
-        .service(delete_auditor)
-        .service(get_auditors);
+        .app_data(web::Data::new(audit_repo))
+        .app_data(web::Data::new(audit_request_repo))
+        .app_data(web::Data::new(closed_audit_repo))
+        .app_data(web::Data::new(closed_audit_request_repo))
+        .service(post_audit_request)
+        .service(patch_audit_request)
+        .service(delete_audit_request)
+        .service(post_audit)
+        .service(delete_audit)
+        .service(get_audits)
+        .service(get_views);
     app
 }
 
@@ -51,7 +64,15 @@ pub fn create_test_app() -> App<
         Error = actix_web::Error,
     >,
 > {
-    let auditor_repo = AuditorRepo::new(TestRepository::new());
+    let audit_repo = AuditRepo::new(TestRepository::new());
+    let closed_audit_repo = ClosedAuditRepo::new(TestRepository::new());
+    let audit_request_repo = AuditRequestRepo::new(TestRepository::new());
+    let closed_audit_request_repo = ClosedAuditRequestRepo::new(TestRepository::new());
 
-    create_app(auditor_repo)
+    create_app(
+        audit_repo,
+        audit_request_repo,
+        closed_audit_repo,
+        closed_audit_request_repo,
+    )
 }

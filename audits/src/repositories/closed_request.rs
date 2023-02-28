@@ -1,31 +1,22 @@
-use common::entities::audit_request::AuditRequest;
-use mongodb::{error::Result, Client, Collection};
-use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ClosedRequestModel {
-    pub request: AuditRequest,
-    pub declined: bool,
-}
+use common::{entities::audit_request::AuditRequest, repository::Repository};
+use mongodb::error::Result;
 
-#[derive(Debug, Clone)]
-pub struct ClosedRequestRepo {
-    inner: Collection<ClosedRequestModel>,
-}
+#[derive(Clone)]
+pub struct ClosedAuditRequestRepo(
+    Arc<dyn Repository<AuditRequest, Error = mongodb::error::Error> + Send + Sync>,
+);
 
-impl ClosedRequestRepo {
-    const DATABASE: &'static str = "Audits";
-    const COLLECTION: &'static str = "ClosedRequests";
-
-    pub async fn new(uri: String) -> Self {
-        let client = Client::with_uri_str(uri).await.unwrap();
-        let db = client.database(Self::DATABASE);
-        let inner: Collection<ClosedRequestModel> = db.collection(Self::COLLECTION);
-        Self { inner }
+impl ClosedAuditRequestRepo {
+    pub fn new<T>(repo: T) -> Self
+    where
+        T: Repository<AuditRequest, Error = mongodb::error::Error> + Send + Sync + 'static,
+    {
+        Self(Arc::new(repo))
     }
 
-    pub async fn create(&self, req: ClosedRequestModel) -> Result<()> {
-        self.inner.insert_one(req, None).await?;
-        Ok(())
+    pub async fn create(&self, request: &AuditRequest) -> Result<()> {
+        self.0.create(request).await.map(|_| ())
     }
 }

@@ -3,7 +3,10 @@ use actix_web::{
     web::{self, Json},
     HttpRequest, HttpResponse,
 };
-use common::{auth_session::get_auth_session, entities::user::User};
+use common::{
+    auth_session::{get_auth_session, AuthSessionManager, SessionManager},
+    entities::user::User,
+};
 use mongodb::bson::{doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};
 use std::str;
@@ -181,8 +184,15 @@ pub async fn get_users(
     )
 )]
 #[get("/api/users/user")]
-pub async fn get_user(req: HttpRequest, repo: web::Data<UserRepo>) -> Result<HttpResponse> {
-    let session = get_auth_session(&req).await.unwrap();
+pub async fn get_user(
+    req: HttpRequest,
+    repo: web::Data<UserRepo>,
+    manager: web::Data<AuthSessionManager>,
+) -> Result<HttpResponse> {
+    let session = manager
+        .get_session(req.into())
+        .await
+        .map_err(|_| Error::Outer(OuterError::Unauthorized))?;
 
     let user = repo.find(session.user_id()).await.unwrap();
 

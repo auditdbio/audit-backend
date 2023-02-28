@@ -6,7 +6,7 @@ use actix_web::{
 use awc::Client;
 use chrono::Utc;
 use common::{
-    auth_session::get_auth_session,
+    auth_session::{get_auth_session, AuthSessionManager, SessionManager},
     entities::{audit::Audit, audit_request::AuditRequest, project::Project, view::View},
 };
 use mongodb::bson::oid::ObjectId;
@@ -37,8 +37,9 @@ pub async fn post_audit(
     req: HttpRequest,
     web::Json(request): web::Json<AuditRequest>,
     repo: web::Data<AuditRepo>,
+    manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let _session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let Some(price) = request.price else {
         return Ok(HttpResponse::BadRequest().body("Price is required"));
@@ -77,8 +78,9 @@ pub async fn get_audits(
     req: HttpRequest,
     id: web::Path<ObjectId>,
     repo: web::Data<AuditRepo>,
+    manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let _session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let audits = repo.find(*id).await?;
 
@@ -99,8 +101,9 @@ pub async fn delete_audit(
     id: web::Path<ObjectId>,
     repo: web::Data<AuditRepo>,
     closed_repo: web::Data<ClosedAuditRepo>,
+    manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let _session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let Some(audit) = repo.delete(&id).await? else {
         return Ok(HttpResponse::BadRequest().finish());
@@ -143,8 +146,9 @@ pub async fn get_views(
     req: HttpRequest,
     request_repo: web::Data<AuditRequestRepo>,
     audits_repo: web::Data<AuditRepo>,
+    manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.clone().into()).await.unwrap(); // TODO: remove unwrap
 
     let mut views = Vec::new();
     let mut client = awc::Client::default();

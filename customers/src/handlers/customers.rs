@@ -5,7 +5,10 @@ use actix_web::{
     web::{self, Json},
     HttpRequest, HttpResponse,
 };
-use common::{auth_session::get_auth_session, entities::customer::Customer};
+use common::{
+    auth_session::{get_auth_session, AuthSessionManager, SessionManager},
+    entities::customer::Customer,
+};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -36,8 +39,9 @@ pub async fn post_customer(
     req: HttpRequest,
     Json(data): web::Json<PostCustomerRequest>,
     repo: web::Data<CustomerRepo>,
+    manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let customer = Customer {
         user_id: session.user_id(),
@@ -64,8 +68,12 @@ pub async fn post_customer(
     )
 )]
 #[get("/api/customer")]
-pub async fn get_customer(req: HttpRequest, repo: web::Data<CustomerRepo>) -> Result<HttpResponse> {
-    let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
+pub async fn get_customer(
+    req: HttpRequest,
+    repo: web::Data<CustomerRepo>,
+    manager: web::Data<AuthSessionManager>,
+) -> Result<HttpResponse> {
+    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let Some(customer) = repo.find(session.user_id()).await? else {
         return Ok(HttpResponse::BadRequest().finish());
@@ -98,8 +106,9 @@ pub async fn patch_customer(
     req: HttpRequest,
     web::Json(data): web::Json<PatchCustomerRequest>,
     repo: web::Data<CustomerRepo>,
+    manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let Some(mut customer) = repo.find(session.user_id()).await? else {
         return Ok(HttpResponse::BadRequest().finish());
@@ -146,11 +155,75 @@ pub async fn patch_customer(
 pub async fn delete_customer(
     req: HttpRequest,
     repo: web::Data<CustomerRepo>,
+    manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let Some(customer) = repo.delete(&session.user_id()).await? else {
         return Ok(HttpResponse::BadRequest().finish()); // TODO: Error: this user doesn't exit
     };
     Ok(HttpResponse::Ok().json(customer))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use actix_web::test::{init_service, self};
+
+    use crate::{create_test_app, PostCustomerRequest, PatchCustomerRequest};
+
+    #[actix_web::test]
+    async fn test_post_customer() {
+        let app = init_service(create_test_app()).await;
+        let req = actix_web::test::TestRequest::post()
+            .uri("/api/customer")
+            .set_json(&PostCustomerRequest {
+                first_name: "John".to_string(),
+                last_name: "Doe".to_string(),
+                about: "I'm a test".to_string(),
+                company: "Test Inc.".to_string(),
+                contacts: HashMap::new(),
+            })
+            .to_request();
+        let res = test::call_service(&app, req).await;
+        assert!(res.status().is_success());
+    }
+
+    #[actix_web::test]
+    async fn test_patch_customer() {
+        let app = init_service(create_test_app()).await;
+        let req = actix_web::test::TestRequest::patch()
+            .uri("/api/customer")
+            .set_json(&PatchCustomerRequest {
+                first_name: Some("John".to_string()),
+                last_name: Some("Doe".to_string()),
+                about: Some("I'm a test".to_string()),
+                company: Some("Test Inc.".to_string()),
+                contacts: Some(HashMap::new()),
+            })
+            .to_request();
+        let res = test::call_service(&app, req).await;
+        assert!(res.status().is_success());
+    }
+
+    #[actix_web::test]
+    async fn test_delete_customer() {
+        let app = init_service(create_test_app()).await;
+        let req = actix_web::test::TestRequest::delete()
+            .uri("/api/customer")
+            .to_request();
+        let res = test::call_service(&app, req).await;
+        assert!(res.status().is_success());
+    }
+
+    #[actix_web::test]
+    async fn test_get_customer() {
+        let app = init_service(create_test_app()).await;
+        let req = actix_web::test::TestRequest::get()
+            .uri("/api/customer")
+            .to_request();
+        let res = test::call_service(&app, req).await;
+        assert!(res.status().is_success());
+    }
 }

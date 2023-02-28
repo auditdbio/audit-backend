@@ -5,7 +5,10 @@ use actix_web::{
     web::{self, Json},
     HttpRequest, HttpResponse,
 };
-use common::{auth_session::get_auth_session, entities::auditor::Auditor};
+use common::{
+    auth_session::{get_auth_session, AuthSessionManager, SessionManager},
+    entities::auditor::Auditor,
+};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
@@ -37,8 +40,9 @@ pub async fn post_auditor(
     req: HttpRequest,
     Json(data): web::Json<PostAuditorRequest>,
     repo: web::Data<AuditorRepo>,
+    manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let auditor = Auditor {
         user_id: session.user_id(),
@@ -65,8 +69,12 @@ pub async fn post_auditor(
     )
 )]
 #[get("/api/auditors")]
-pub async fn get_auditor(req: HttpRequest, repo: web::Data<AuditorRepo>) -> Result<HttpResponse> {
-    let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
+pub async fn get_auditor(
+    req: HttpRequest,
+    repo: web::Data<AuditorRepo>,
+    manager: web::Data<AuthSessionManager>,
+) -> Result<HttpResponse> {
+    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let Some(auditor) = repo.find(session.user_id()).await? else {
         return Ok(HttpResponse::BadRequest().finish());
@@ -100,8 +108,9 @@ pub async fn patch_auditor(
     req: HttpRequest,
     web::Json(data): web::Json<PatchAuditorRequest>,
     repo: web::Data<AuditorRepo>,
+    manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let Some(mut auditor ) = repo.find(session.user_id()).await? else {
         return Ok(HttpResponse::BadRequest().body("Error: no auditor instance for this user"));
@@ -142,8 +151,9 @@ pub async fn patch_auditor(
 pub async fn delete_auditor(
     req: HttpRequest,
     repo: web::Data<AuditorRepo>,
+    manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let Some(auditor) = repo.delete(&session.user_id()).await? else {
         return Ok(HttpResponse::BadRequest().finish());
@@ -177,4 +187,43 @@ pub async fn get_auditors(
     let tags = query.tags.split(',').map(ToString::to_string).collect();
     let auditors = repo.find_by_tags(tags).await?;
     Ok(HttpResponse::Ok().json(auditors))
+}
+
+#[cfg(test)]
+mod tests {
+    use actix_web::{
+        http::StatusCode,
+        test::{self, init_service},
+        web, App,
+    };
+    use common::entities::auditor::Auditor;
+
+    use crate::{
+        create_test_app,
+        handlers::auditor::{delete_auditor, get_auditor, get_auditors, post_auditor},
+        repositories::auditor::AuditorRepo,
+        PostAuditorRequest,
+    };
+
+    #[actix_web::test]
+    async fn test_post_auditor() {
+        let mut app = init_service(create_test_app()).await;
+
+        let req = test::TestRequest::post()
+            .uri("/api/auditors")
+            .set_json(&PostAuditorRequest {
+                first_name: "John".to_string(),
+                last_name: "Doe".to_string(),
+                about: "About me".to_string(),
+                company: "Company".to_string(),
+                tags: vec!["tag1".to_string(), "tag2".to_string()],
+                contacts: vec![("email".to_string(), "test@test.com".to_string())]
+                    .into_iter()
+                    .collect(),
+            })
+            .to_request();
+
+        let resp = test::call_service(&mut app, req).await;
+        assert!(resp.status().is_client_error());
+    }
 }

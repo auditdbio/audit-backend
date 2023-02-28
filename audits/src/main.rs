@@ -16,7 +16,8 @@ async fn main() -> std::io::Result<()> {
     let mongo_uri = env::var("MONGOURI").unwrap();
 
     let audit_repo = AuditRepo::new(MongoRepository::new(&mongo_uri, "audits", "audits").await);
-    let audit_request_repo = AuditRequestRepo::new(MongoRepository::new(&mongo_uri, "audits", "requests").await);
+    let audit_request_repo =
+        AuditRequestRepo::new(MongoRepository::new(&mongo_uri, "audits", "requests").await);
     HttpServer::new(move || {
         let cors = Cors::default()
             .allow_any_origin()

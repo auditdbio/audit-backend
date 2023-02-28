@@ -7,7 +7,7 @@ use actix_web::{
 };
 use chrono::Utc;
 use common::{
-    auth_session::get_auth_session,
+    auth_session::{get_auth_session, AuthSessionManager, SessionManager},
     entities::{
         audit_request::{AuditRequest, PriceRange},
         role::Role,
@@ -50,8 +50,9 @@ pub async fn post_audit_request(
     req: HttpRequest,
     Json(data): web::Json<PostAuditRequestRequest>,
     repo: web::Data<AuditRequestRepo>,
+    manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let _session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let audit_request = AuditRequest {
         id: ObjectId::new(),
@@ -105,8 +106,9 @@ pub async fn patch_audit_request(
     req: HttpRequest,
     Json(data): web::Json<PatchAuditRequestRequest>,
     repo: web::Data<AuditRequestRepo>,
+    manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let _session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let Some(mut audit_request) = repo.delete(&data.id).await? else {
         return Ok(HttpResponse::BadRequest().finish());
@@ -156,8 +158,9 @@ pub async fn delete_audit_request(
     req: HttpRequest,
     id: web::Path<ObjectId>,
     repo: web::Data<AuditRequestRepo>,
+    manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let _session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let Some(request) = repo.delete(&id).await? else {
         return Ok(HttpResponse::BadRequest().finish());

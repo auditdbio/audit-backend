@@ -1,9 +1,6 @@
 use common::{entities::audit_request::AuditRequest, repository::Repository};
-use futures::stream::StreamExt;
-use mongodb::{
-    bson::{doc, oid::ObjectId, Bson, Document},
-    Client, Collection,
-};
+
+use mongodb::bson::{oid::ObjectId, Bson};
 
 use std::sync::Arc;
 

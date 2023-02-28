@@ -1,24 +1,20 @@
-use common::entities::audit::Audit;
-use mongodb::{error::Result, Client, Collection};
+use std::sync::Arc;
 
-#[derive(Debug, Clone)]
-pub struct ClosedAuditRepo {
-    inner: Collection<Audit>,
-}
+use common::{entities::audit::Audit, repository::Repository};
+use mongodb::error::Result;
+
+#[derive(Clone)]
+pub struct ClosedAuditRepo(Arc<dyn Repository<Audit, Error = mongodb::error::Error> + Send + Sync>);
 
 impl ClosedAuditRepo {
-    const DATABASE: &'static str = "Audits";
-    const COLLECTION: &'static str = "ClosedAudits";
-
-    pub async fn new(uri: String) -> Self {
-        let client = Client::with_uri_str(uri).await.unwrap();
-        let db = client.database(Self::DATABASE);
-        let inner: Collection<Audit> = db.collection(Self::COLLECTION);
-        Self { inner }
+    pub fn new<T>(repo: T) -> Self
+    where
+        T: Repository<Audit, Error = mongodb::error::Error> + Send + Sync + 'static,
+    {
+        Self(Arc::new(repo))
     }
 
     pub async fn create(&self, audit: &Audit) -> Result<()> {
-        self.inner.insert_one(audit, None).await?;
-        Ok(())
+        self.0.create(audit).await.map(|_| ())
     }
 }

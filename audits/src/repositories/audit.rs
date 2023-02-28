@@ -1,16 +1,11 @@
 use common::{entities::audit::Audit, repository::Repository};
-use futures::stream::StreamExt;
-use mongodb::{
-    bson::{doc, oid::ObjectId, Bson, Document},
-    Client, Collection,
-};
+
+use mongodb::bson::{oid::ObjectId, Bson};
 
 use std::sync::Arc;
 
 #[derive(Clone)]
-pub struct AuditRepo(
-    Arc<dyn Repository<Audit, Error = mongodb::error::Error> + Send + Sync>,
-);
+pub struct AuditRepo(Arc<dyn Repository<Audit, Error = mongodb::error::Error> + Send + Sync>);
 
 impl AuditRepo {
     pub fn new<T>(repo: T) -> Self
@@ -49,10 +44,7 @@ impl AuditRepo {
         self.0.find_many("id", &Bson::ObjectId(project_id)).await
     }
 
-    pub async fn delete(
-        &self,
-        id: &ObjectId,
-    ) -> Result<Option<Audit>, mongodb::error::Error> {
+    pub async fn delete(&self, id: &ObjectId) -> Result<Option<Audit>, mongodb::error::Error> {
         self.0.delete(id).await
     }
 
