@@ -11,69 +11,89 @@ services:
     depends_on:
       - binaries
     build: ./users
-    ports:
-      - 3001:3001
+    expose:
+      - "3001"
     volumes:
       - binaries:/data/binaries
     environment:
       MONGOURI: mongodb://database/backend
       MONGOURI_TEST: mongodb://database/test
       RUST_LOG: actix
+    networks:
+      - nginx-proxy
+      - database
   swagger:
     depends_on:
       - binaries
     build: ./swagger
-    ports:
-      - 8080:8080
+    expose:
+      - "8080"
     volumes:
       - binaries:/data/binaries
     environment:
       MONGOURI: mongodb://database/backend
       MONGOURI_TEST: mongodb://database/test
       RUST_LOG: actix
+    networks:
+      - nginx-proxy
   customers:
     depends_on:
       - binaries
     build: ./customers
-    ports:
-      - 3003:3002
+    expose:
+      - "3002"
     volumes:
       - binaries:/data/binaries
     environment:
       MONGOURI: mongodb://database/backend
       MONGOURI_TEST: mongodb://database/test
       RUST_LOG: actix
+    networks:
+      - nginx-proxy
+      - database
   audits:
     depends_on:
       - binaries
     build: ./audits
     volumes:
       - binaries:/data/binaries
-    ports:
-      - 3004:3003
+    expose:
+      - "3003"
     environment:
       MONGOURI: mongodb://database/backend
       MONGOURI_TEST: mongodb://database/test
       RUST_LOG: actix
+    networks:
+      - nginx-proxy
+      - database
   auditors:
     depends_on:
       - binaries
     build: ./auditors
-    ports:
-      - 3002:3004
+    expose:
+      - "3004"
     volumes:
       - binaries:/data/binaries
     environment:
       MONGOURI: mongodb://database/backend
       MONGOURI_TEST: mongodb://database/test
       RUST_LOG: actix
+    networks:
+      - nginx-proxy
+      - database
   database:
     image: mongo:4.0-xenial
     ports:
       - 27017:27017
     volumes:
       - database:/data/db
+    networks:
+      - database
 
 volumes:
   database:
   binaries:
+networks:
+  nginx-proxy:
+    external: true
+  database:
