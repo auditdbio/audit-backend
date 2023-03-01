@@ -2,7 +2,10 @@ use std::env;
 
 use actix_cors::Cors;
 use actix_web::{middleware, web, App, HttpServer};
-use common::repository::mongo_repository::MongoRepository;
+use common::{
+    auth_session::{AuthSessionManager, HttpSessionManager},
+    repository::mongo_repository::MongoRepository,
+};
 use customers::handlers::{
     customers::{delete_customer, get_customer, patch_customer, post_customer},
     projects::{delete_project, get_project, patch_project, post_project},
@@ -20,8 +23,11 @@ async fn main() -> std::io::Result<()> {
         CustomerRepo::new(MongoRepository::new(&mongo_uri, "customers", "customers").await);
     let project_repo =
         ProjectRepo::new(MongoRepository::new(&mongo_uri, "customers", "projects").await);
-    HttpServer::new(move || create_app(customer_repo.clone(), project_repo.clone()))
-        .bind(("0.0.0.0", 3002))?
-        .run()
-        .await
+    let manager = AuthSessionManager::new(HttpSessionManager);
+    HttpServer::new(move || {
+        create_app(customer_repo.clone(), project_repo.clone(), manager.clone())
+    })
+    .bind(("0.0.0.0", 3002))?
+    .run()
+    .await
 }

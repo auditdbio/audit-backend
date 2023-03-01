@@ -4,7 +4,7 @@ use actix_web::{
     HttpRequest, HttpResponse,
 };
 use common::{
-    auth_session::{get_auth_session, AuthSessionManager, SessionManager},
+    auth_session::{AuthSessionManager, SessionManager},
     entities::user::User,
 };
 use mongodb::bson::{doc, oid::ObjectId};
@@ -84,7 +84,7 @@ pub async fn patch_user(
         return Err(Error::Outer(OuterError::Unauthorized));
     };
 
-    let user_id = ObjectId::parse_str(&session.user_id).unwrap();
+    let user_id = session.user_id();
 
     let Some(mut user) = users_repo.find(user_id).await? else {
         return Err(Error::Outer(OuterError::UserNotFound));
@@ -129,7 +129,7 @@ pub async fn delete_user(
         return Err(Error::Outer(OuterError::Unauthorized)); //TODO: error description
     };
 
-    let user_id = ObjectId::parse_str(&session.user_id).unwrap();
+    let user_id = session.user_id();
 
     let deleted_user = users_repo.delete(&user_id).await?;
     if deleted_user.is_none() {
@@ -221,7 +221,11 @@ pub async fn get_user_email(
 #[cfg(test)]
 mod test {
     use actix_web::test::{self, init_service};
-    use common::repository::test_repository::TestRepository;
+    use common::{
+        auth_session::{AuthSession, AuthSessionManager, TestSessionManager},
+        repository::test_repository::TestRepository,
+    };
+    use mongodb::bson::oid::ObjectId;
 
     use crate::{
         create_app, create_test_app,
@@ -231,7 +235,12 @@ mod test {
 
     #[actix_web::test]
     async fn test_post_user() {
-        let mut app = init_service(create_test_app()).await;
+        let test_user = AuthSession {
+            user_id: ObjectId::new(),
+            token: "".to_string(),
+            exp: 100000000,
+        };
+        let mut app = init_service(create_test_app(test_user)).await;
 
         let req = test::TestRequest::post()
             .uri("/api/users")
@@ -249,11 +258,19 @@ mod test {
 
     #[actix_web::test]
     async fn test_post_user_with_existing_email() {
+        let test_user = AuthSession {
+            user_id: ObjectId::new(),
+            token: "".to_string(),
+            exp: 100000000,
+        };
+
         let user_repo = UserRepo::new(TestRepository::new());
 
         let token_repo = TokenRepo::new(TestRepository::new());
 
-        let mut app = init_service(create_app(user_repo.clone(), token_repo)).await;
+        let test_manager = AuthSessionManager::new(TestSessionManager(test_user));
+
+        let mut app = init_service(create_app(user_repo, token_repo, test_manager)).await;
 
         let req = test::TestRequest::post()
             .uri("/api/users")
@@ -283,7 +300,12 @@ mod test {
 
     #[actix_web::test]
     async fn test_delete_user() {
-        let mut app = init_service(create_test_app()).await;
+        let test_user = AuthSession {
+            user_id: ObjectId::new(),
+            token: "".to_string(),
+            exp: 100000000,
+        };
+        let mut app = init_service(create_test_app(test_user)).await;
 
         let req = test::TestRequest::post()
             .uri("/api/users")

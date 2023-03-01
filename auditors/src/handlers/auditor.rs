@@ -196,7 +196,8 @@ mod tests {
         test::{self, init_service},
         web, App,
     };
-    use common::entities::auditor::Auditor;
+    use common::{auth_session::AuthSession, entities::auditor::Auditor};
+    use mongodb::bson::oid::ObjectId;
 
     use crate::{
         create_test_app,
@@ -207,7 +208,13 @@ mod tests {
 
     #[actix_web::test]
     async fn test_post_auditor() {
-        let mut app = init_service(create_test_app()).await;
+        let test_user = AuthSession {
+            user_id: ObjectId::new(),
+            token: "".to_string(),
+            exp: 100000000,
+        };
+
+        let mut app = init_service(create_test_app(test_user)).await;
 
         let req = test::TestRequest::post()
             .uri("/api/auditors")

@@ -5,7 +5,7 @@ use actix_web::{
     web::{self, Json},
     HttpRequest, HttpResponse,
 };
-use chrono::{Duration, Timelike, Utc};
+use chrono::{Duration, Utc};
 use common::ruleset::Ruleset;
 use common::{
     auth_session::{jwt_from_header, AuthSession},
@@ -70,7 +70,7 @@ pub async fn login(
     tokens_repo.create(&token).await?;
 
     let session = AuthSession {
-        user_id: user.id.to_hex(),
+        user_id: user.id,
         token: token.token,
         exp: token.exp,
     };
@@ -164,12 +164,20 @@ pub async fn verify(req: HttpRequest, repo: web::Data<TokenRepo>) -> Result<Http
 #[cfg(test)]
 mod tests {
     use actix_web::test::{self, init_service};
+    use common::auth_session::AuthSession;
+    use mongodb::bson::oid::ObjectId;
 
     use crate::{create_test_app, PostUserRequest};
 
     #[actix_web::test]
     async fn test_login() {
-        let mut app = init_service(create_test_app()).await;
+        let test_user = AuthSession {
+            user_id: ObjectId::new(),
+            token: "".to_string(),
+            exp: 100000000,
+        };
+
+        let mut app = init_service(create_test_app(test_user)).await;
 
         let req = test::TestRequest::post()
             .uri("/api/users")

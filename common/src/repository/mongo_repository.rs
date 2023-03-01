@@ -37,6 +37,7 @@ where
             .find_one(doc! {"id": item.id()}, None)
             .await?
             .is_none();
+        
         if result {
             self.collection.insert_one(item, None).await?;
         }

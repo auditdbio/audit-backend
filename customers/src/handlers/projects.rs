@@ -62,7 +62,7 @@ pub async fn post_project(
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PatchProjectRequest {
-    project_id: String,
+    project_id: ObjectId,
     name: Option<String>,
     description: Option<String>,
     scope: Option<Vec<String>>,
@@ -200,21 +200,31 @@ pub async fn get_projects(
 mod tests {
     use std::collections::HashMap;
 
-    use actix_web::test::{init_service, self};
+    use actix_web::test::{self, init_service};
+    use common::auth_session::AuthSession;
+    use mongodb::bson::oid::ObjectId;
 
-    use crate::{create_test_app, PostCustomerRequest, PatchCustomerRequest};
+    use crate::{
+        create_test_app, PatchCustomerRequest, PatchProjectRequest, PostCustomerRequest,
+        PostProjectRequest,
+    };
 
     #[actix_web::test]
     async fn test_post_customer() {
-        let app = init_service(create_test_app()).await;
+        let test_user = AuthSession {
+            user_id: ObjectId::new(),
+            token: "".to_string(),
+            exp: 100000000,
+        };
+        let app = init_service(create_test_app(test_user)).await;
         let req = actix_web::test::TestRequest::post()
             .uri("/api/customer")
-            .set_json(&PostCustomerRequest {
-                first_name: "John".to_string(),
-                last_name: "Doe".to_string(),
-                about: "I'm a test".to_string(),
-                company: "Test Inc.".to_string(),
-                contacts: HashMap::new(),
+            .set_json(&PostProjectRequest {
+                name: "Test".to_string(),
+                description: "I'm a test".to_string(),
+                scope: vec!["Test".to_string()],
+                tags: vec!["Test".to_string()],
+                status: "Test".to_string(),
             })
             .to_request();
         let res = test::call_service(&app, req).await;
@@ -223,15 +233,22 @@ mod tests {
 
     #[actix_web::test]
     async fn test_patch_customer() {
-        let app = init_service(create_test_app()).await;
+        let test_user = AuthSession {
+            user_id: ObjectId::new(),
+            token: "".to_string(),
+            exp: 100000000,
+        };
+        let test_project_id = ObjectId::new();
+        let app = init_service(create_test_app(test_user)).await;
         let req = actix_web::test::TestRequest::patch()
             .uri("/api/customer")
-            .set_json(&PatchCustomerRequest {
-                first_name: Some("John".to_string()),
-                last_name: Some("Doe".to_string()),
-                about: Some("I'm a test".to_string()),
-                company: Some("Test Inc.".to_string()),
-                contacts: Some(HashMap::new()),
+            .set_json(&PatchProjectRequest {
+                project_id: test_project_id,
+                name: Some("Test".to_string()),
+                description: Some("Test".to_string()),
+                scope: Some(vec!["Test".to_string()]),
+                tags: Some(vec!["Test".to_string()]),
+                status: Some("Test".to_string()),
             })
             .to_request();
         let res = test::call_service(&app, req).await;
@@ -240,7 +257,12 @@ mod tests {
 
     #[actix_web::test]
     async fn test_delete_customer() {
-        let app = init_service(create_test_app()).await;
+        let test_user = AuthSession {
+            user_id: ObjectId::new(),
+            token: "".to_string(),
+            exp: 100000000,
+        };
+        let app = init_service(create_test_app(test_user)).await;
         let req = actix_web::test::TestRequest::delete()
             .uri("/api/customer")
             .to_request();
@@ -250,7 +272,12 @@ mod tests {
 
     #[actix_web::test]
     async fn test_get_customer() {
-        let app = init_service(create_test_app()).await;
+        let test_user = AuthSession {
+            user_id: ObjectId::new(),
+            token: "".to_string(),
+            exp: 100000000,
+        };
+        let app = init_service(create_test_app(test_user)).await;
         let req = actix_web::test::TestRequest::get()
             .uri("/api/customer")
             .to_request();
@@ -258,4 +285,3 @@ mod tests {
         assert!(res.status().is_success());
     }
 }
-

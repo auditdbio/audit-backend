@@ -4,7 +4,7 @@ use actix_web::{
     HttpRequest, HttpResponse,
 };
 use chrono::Utc;
-use common::auth_session::{self, get_auth_session, AuthSession};
+use common::auth_session::{self, get_auth_session, AuthSession, SessionManager};
 use mongodb::bson::oid::ObjectId;
 
 use crate::repositories::{
@@ -18,8 +18,9 @@ pub async fn create_file(
     file: Bytes,
     files_repo: web::Data<FilesRepository>,
     meta_repo: web::Data<MetaRepository>,
+    manager: web::Data<auth_session::AuthSessionManager>,
 ) -> HttpResponse {
-    let session = get_auth_session(&req).await.unwrap();
+    let session = manager.get_session(req.clone().into()).await.unwrap();
 
     let id = files_repo.create(file).await;
 
@@ -35,7 +36,7 @@ pub async fn create_file(
             .unwrap()
             .to_string(),
     };
-    meta_repo.create(meta_information).await;
+    meta_repo.create(meta_information).await.unwrap();
 
     HttpResponse::Ok().json(id)
 }
@@ -46,8 +47,9 @@ pub async fn get_file(
     id: Path<ObjectId>,
     files_repo: web::Data<FilesRepository>,
     meta_repo: web::Data<MetaRepository>,
+    manager: web::Data<auth_session::AuthSessionManager>,
 ) -> HttpResponse {
-    let session = get_auth_session(&req).await.unwrap();
+    let session = manager.get_session(req.clone().into()).await.unwrap();
     let id = id.into_inner();
 
     let file = files_repo.get(&id).await;

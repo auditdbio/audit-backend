@@ -169,13 +169,21 @@ pub async fn delete_customer(
 mod tests {
     use std::collections::HashMap;
 
-    use actix_web::test::{init_service, self};
+    use actix_web::test::{self, init_service};
+    use common::auth_session::AuthSession;
+    use mongodb::bson::oid::ObjectId;
 
-    use crate::{create_test_app, PostCustomerRequest, PatchCustomerRequest};
+    use crate::{create_test_app, PatchCustomerRequest, PostCustomerRequest};
 
     #[actix_web::test]
     async fn test_post_customer() {
-        let app = init_service(create_test_app()).await;
+        let test_user = AuthSession {
+            user_id: ObjectId::new(),
+            token: "".to_string(),
+            exp: 100000000,
+        };
+
+        let app = init_service(create_test_app(test_user)).await;
         let req = actix_web::test::TestRequest::post()
             .uri("/api/customer")
             .set_json(&PostCustomerRequest {
@@ -192,7 +200,13 @@ mod tests {
 
     #[actix_web::test]
     async fn test_patch_customer() {
-        let app = init_service(create_test_app()).await;
+        let test_user = AuthSession {
+            user_id: ObjectId::new(),
+            token: "".to_string(),
+            exp: 100000000,
+        };
+
+        let app = init_service(create_test_app(test_user)).await;
         let req = actix_web::test::TestRequest::patch()
             .uri("/api/customer")
             .set_json(&PatchCustomerRequest {
@@ -209,7 +223,13 @@ mod tests {
 
     #[actix_web::test]
     async fn test_delete_customer() {
-        let app = init_service(create_test_app()).await;
+        let test_user = AuthSession {
+            user_id: ObjectId::new(),
+            token: "".to_string(),
+            exp: 100000000,
+        };
+
+        let app = init_service(create_test_app(test_user)).await;
         let req = actix_web::test::TestRequest::delete()
             .uri("/api/customer")
             .to_request();
@@ -219,7 +239,13 @@ mod tests {
 
     #[actix_web::test]
     async fn test_get_customer() {
-        let app = init_service(create_test_app()).await;
+        let test_user = AuthSession {
+            user_id: ObjectId::new(),
+            token: "".to_string(),
+            exp: 100000000,
+        };
+
+        let app = init_service(create_test_app(test_user)).await;
         let req = actix_web::test::TestRequest::get()
             .uri("/api/customer")
             .to_request();

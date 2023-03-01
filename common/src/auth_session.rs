@@ -2,19 +2,19 @@ use actix_web::{dev::Payload, HttpRequest};
 use awc::error::SendRequestError;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use std::{error::Error, f32::consts::E};
+use std::{error::Error, f32::consts::E, sync::Arc};
 use utoipa::ToSchema;
 
 #[derive(Debug, Serialize, Deserialize, ToSchema, Clone)]
 pub struct AuthSession {
-    pub user_id: String,
+    pub user_id: ObjectId,
     pub token: String,
     pub exp: usize,
 }
 
 impl AuthSession {
     pub fn user_id(&self) -> ObjectId {
-        ObjectId::parse_str(&self.user_id).unwrap()
+        self.user_id.clone()
     }
 }
 
@@ -71,7 +71,7 @@ impl SessionManager for HttpSessionManager {
     }
 }
 
-pub struct TestSessionManager(AuthSession);
+pub struct TestSessionManager(pub AuthSession);
 
 #[async_trait::async_trait]
 impl SessionManager for TestSessionManager {
@@ -83,9 +83,19 @@ impl SessionManager for TestSessionManager {
     }
 }
 
+#[derive(Clone)]
 pub struct AuthSessionManager(
-    Box<dyn SessionManager<Error = String, Payload = AuthPayload> + Send + Sync>,
+    Arc<dyn SessionManager<Error = String, Payload = AuthPayload> + Send + Sync>,
 );
+
+impl AuthSessionManager {
+    pub fn new<T>(manager: T) -> Self
+    where
+        T: SessionManager<Error = String, Payload = AuthPayload> + Send + Sync + 'static,
+    {
+        Self(Arc::new(manager))
+    }
+}
 
 #[async_trait::async_trait]
 impl SessionManager for AuthSessionManager {

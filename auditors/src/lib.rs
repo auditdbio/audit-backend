@@ -9,12 +9,16 @@ use actix_web::{
     dev::{ServiceFactory, ServiceRequest, ServiceResponse},
     middleware, web, App,
 };
-use common::repository::test_repository::TestRepository;
+use common::{
+    auth_session::{AuthSession, AuthSessionManager, TestSessionManager},
+    repository::test_repository::TestRepository,
+};
 pub use handlers::auditor::*;
 use repositories::auditor::AuditorRepo;
 
 pub fn create_app(
     auditor_repo: AuditorRepo,
+    manager: AuthSessionManager,
 ) -> App<
     impl ServiceFactory<
         ServiceRequest,
@@ -32,6 +36,7 @@ pub fn create_app(
         .wrap(cors)
         .wrap(middleware::Logger::default())
         .app_data(web::Data::new(auditor_repo))
+        .app_data(manager)
         .service(post_auditor)
         .service(get_auditor)
         .service(patch_auditor)
@@ -40,7 +45,9 @@ pub fn create_app(
     app
 }
 
-pub fn create_test_app() -> App<
+pub fn create_test_app(
+    user: AuthSession,
+) -> App<
     impl ServiceFactory<
         ServiceRequest,
         Response = ServiceResponse<impl MessageBody>,
@@ -50,6 +57,6 @@ pub fn create_test_app() -> App<
     >,
 > {
     let auditor_repo = AuditorRepo::new(TestRepository::new());
-
-    create_app(auditor_repo)
+    let test_manager = AuthSessionManager::new(TestSessionManager(user));
+    create_app(auditor_repo, test_manager)
 }
