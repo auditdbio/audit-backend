@@ -3,7 +3,7 @@ pub mod test_repository;
 
 use async_trait::async_trait;
 use mongodb::bson::{oid::ObjectId, Bson};
-use serde::{de::DeserializeOwned, Serialize};
+
 
 pub trait Entity {
     fn id(&self) -> ObjectId;

@@ -4,7 +4,7 @@ use actix_web::{
     HttpRequest, HttpResponse,
 };
 use chrono::Utc;
-use common::auth_session::{self, get_auth_session, AuthSession, SessionManager};
+use common::auth_session::{self, SessionManager};
 use mongodb::bson::oid::ObjectId;
 
 use crate::repositories::{
@@ -49,7 +49,7 @@ pub async fn get_file(
     meta_repo: web::Data<MetaRepository>,
     manager: web::Data<auth_session::AuthSessionManager>,
 ) -> HttpResponse {
-    let session = manager.get_session(req.clone().into()).await.unwrap();
+    let _session = manager.get_session(req.clone().into()).await.unwrap();
     let id = id.into_inner();
 
     let file = files_repo.get(&id).await;

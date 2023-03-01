@@ -1,5 +1,5 @@
 use common::{entities::project::Project, repository::TaggableEntityRepository};
-use futures::stream::StreamExt;
+
 use mongodb::bson::{oid::ObjectId, Bson};
 
 use std::sync::Arc;

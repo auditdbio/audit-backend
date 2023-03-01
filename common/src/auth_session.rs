@@ -1,8 +1,8 @@
-use actix_web::{dev::Payload, HttpRequest};
-use awc::error::SendRequestError;
+use actix_web::{HttpRequest};
+
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use std::{error::Error, f32::consts::E, sync::Arc};
+use std::{sync::Arc};
 use utoipa::ToSchema;
 
 #[derive(Debug, Serialize, Deserialize, ToSchema, Clone)]

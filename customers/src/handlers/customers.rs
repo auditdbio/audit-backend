@@ -6,7 +6,7 @@ use actix_web::{
     HttpRequest, HttpResponse,
 };
 use common::{
-    auth_session::{get_auth_session, AuthSessionManager, SessionManager},
+    auth_session::{AuthSessionManager, SessionManager},
     entities::customer::Customer,
 };
 use serde::{Deserialize, Serialize};

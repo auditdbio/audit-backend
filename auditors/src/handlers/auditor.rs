@@ -6,7 +6,7 @@ use actix_web::{
     HttpRequest, HttpResponse,
 };
 use common::{
-    auth_session::{get_auth_session, AuthSessionManager, SessionManager},
+    auth_session::{AuthSessionManager, SessionManager},
     entities::auditor::Auditor,
 };
 use serde::{Deserialize, Serialize};
@@ -192,17 +192,13 @@ pub async fn get_auditors(
 #[cfg(test)]
 mod tests {
     use actix_web::{
-        http::StatusCode,
         test::{self, init_service},
-        web, App,
     };
-    use common::{auth_session::AuthSession, entities::auditor::Auditor};
+    use common::{auth_session::AuthSession};
     use mongodb::bson::oid::ObjectId;
 
     use crate::{
         create_test_app,
-        handlers::auditor::{delete_auditor, get_auditor, get_auditors, post_auditor},
-        repositories::auditor::AuditorRepo,
         PostAuditorRequest,
     };
 

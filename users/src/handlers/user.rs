@@ -230,7 +230,6 @@ mod test {
     use crate::{
         create_app, create_test_app,
         repositories::{token::TokenRepo, user::UserRepo},
-        GetUsersRequest,
     };
 
     #[actix_web::test]

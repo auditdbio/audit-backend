@@ -1,13 +1,12 @@
 use std::env;
 
-use actix_cors::Cors;
-use actix_web::{middleware, web, App, HttpServer};
+
+use actix_web::{HttpServer};
 use audits::repositories::closed_audits::ClosedAuditRepo;
 use audits::repositories::closed_request::ClosedAuditRequestRepo;
 use audits::repositories::{audit::AuditRepo, audit_request::AuditRequestRepo};
 use audits::{
-    create_app, delete_audit, delete_audit_request, get_audits, get_views, patch_audit_request,
-    post_audit, post_audit_request,
+    create_app,
 };
 use common::auth_session::{AuthSessionManager, HttpSessionManager};
 use common::repository::mongo_repository::MongoRepository;

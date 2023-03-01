@@ -6,7 +6,7 @@ use actix_web::{
 use awc::Client;
 use chrono::Utc;
 use common::{
-    auth_session::{get_auth_session, AuthSessionManager, SessionManager},
+    auth_session::{AuthSessionManager, SessionManager},
     entities::{audit::Audit, audit_request::AuditRequest, project::Project, view::View},
 };
 use mongodb::bson::oid::ObjectId;
@@ -39,7 +39,7 @@ pub async fn post_audit(
     repo: web::Data<AuditRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    let _session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let Some(price) = request.price else {
         return Ok(HttpResponse::BadRequest().body("Price is required"));
@@ -80,7 +80,7 @@ pub async fn get_audits(
     repo: web::Data<AuditRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    let _session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let audits = repo.find(*id).await?;
 
@@ -103,7 +103,7 @@ pub async fn delete_audit(
     closed_repo: web::Data<ClosedAuditRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    let _session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let Some(audit) = repo.delete(&id).await? else {
         return Ok(HttpResponse::BadRequest().finish());

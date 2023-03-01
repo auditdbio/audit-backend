@@ -1,17 +1,14 @@
 use std::env;
 
-use actix_cors::Cors;
-use actix_web::{middleware, web, App, HttpServer};
+
+use actix_web::{HttpServer};
 use common::{
     auth_session::{AuthSessionManager, HttpSessionManager},
     repository::mongo_repository::MongoRepository,
 };
-use customers::handlers::{
-    customers::{delete_customer, get_customer, patch_customer, post_customer},
-    projects::{delete_project, get_project, patch_project, post_project},
-};
+
 use customers::repositories::{customer::CustomerRepo, project::ProjectRepo};
-use customers::{create_app, get_projects};
+use customers::{create_app};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

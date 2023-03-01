@@ -4,7 +4,7 @@ use actix_web::{
     HttpRequest, HttpResponse,
 };
 use common::{
-    auth_session::{get_auth_session, AuthSessionManager, SessionManager},
+    auth_session::{AuthSessionManager, SessionManager},
     entities::project::Project,
 };
 use mongodb::bson::oid::ObjectId;
@@ -158,7 +158,7 @@ pub async fn get_project(
     repo: web::Data<ProjectRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    let _session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let Some(project) = repo.find(id.into_inner()).await? else {
         return Ok(HttpResponse::BadRequest().finish()); // TODO: Error: project not found
@@ -198,14 +198,14 @@ pub async fn get_projects(
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    
 
     use actix_web::test::{self, init_service};
     use common::auth_session::AuthSession;
     use mongodb::bson::oid::ObjectId;
 
     use crate::{
-        create_test_app, PatchCustomerRequest, PatchProjectRequest, PostCustomerRequest,
+        create_test_app, PatchProjectRequest,
         PostProjectRequest,
     };
 

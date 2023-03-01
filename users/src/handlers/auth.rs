@@ -17,7 +17,6 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::{
-    constants::MAX_DURATION,
     error::{Error, OuterError, Result},
     repositories::{
         token::{TokenModel, TokenRepo},
