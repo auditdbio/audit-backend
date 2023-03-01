@@ -1,0 +1,99 @@
+version: "3.8"
+
+services:
+  binaries:
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    volumes:
+      - binaries:/data/binaries
+  users:
+    depends_on:
+      - binaries
+    build: ./users
+    expose:
+      - "3001"
+    volumes:
+      - binaries:/data/binaries
+    environment:
+      MONGOURI: mongodb://database/backend
+      MONGOURI_TEST: mongodb://database/test
+      RUST_LOG: actix
+    networks:
+      - nginx-proxy
+      - database
+  swagger:
+    depends_on:
+      - binaries
+    build: ./swagger
+    expose:
+      - "8080"
+    volumes:
+      - binaries:/data/binaries
+    environment:
+      MONGOURI: mongodb://database/backend
+      MONGOURI_TEST: mongodb://database/test
+      RUST_LOG: actix
+    networks:
+      - nginx-proxy
+  customers:
+    depends_on:
+      - binaries
+    build: ./customers
+    expose:
+      - "3003"
+    volumes:
+      - binaries:/data/binaries
+    environment:
+      MONGOURI: mongodb://database/backend
+      MONGOURI_TEST: mongodb://database/test
+      RUST_LOG: actix
+    networks:
+      - nginx-proxy
+      - database
+  audits:
+    depends_on:
+      - binaries
+    build: ./audits
+    volumes:
+      - binaries:/data/binaries
+    expose:
+      - "3004"
+    environment:
+      MONGOURI: mongodb://database/backend
+      MONGOURI_TEST: mongodb://database/test
+      RUST_LOG: actix
+    networks:
+      - nginx-proxy
+      - database
+  auditors:
+    depends_on:
+      - binaries
+    build: ./auditors
+    expose:
+      - "3002"
+    volumes:
+      - binaries:/data/binaries
+    environment:
+      MONGOURI: mongodb://database/backend
+      MONGOURI_TEST: mongodb://database/test
+      RUST_LOG: actix
+    networks:
+      - nginx-proxy
+      - database
+  database:
+    image: mongo:4.0-xenial
+    ports:
+      - 27017:27017
+    volumes:
+      - database:/data/db
+    networks:
+      - database
+
+volumes:
+  database:
+  binaries:
+networks:
+  nginx-proxy:
+    external: true
+  database:
