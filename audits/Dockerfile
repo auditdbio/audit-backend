@@ -1,6 +1,6 @@
 FROM debian:bullseye
 
-
+RUN apt install ca-certificates -y
 WORKDIR /backend
 COPY ./setup.sh .
 RUN chmod +x ./setup.sh
