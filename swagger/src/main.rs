@@ -32,7 +32,7 @@ async fn main() -> Result<(), impl Error> {
     #[derive(OpenApi)]
     #[openapi(
         servers(
-            (url = "http://dev.auditdb.io/"),
+            (url = "https://dev.auditdb.io/"),
         ),
         paths(
             users::login,
@@ -61,7 +61,7 @@ async fn main() -> Result<(), impl Error> {
     #[derive(OpenApi)]
     #[openapi(
         servers(
-            (url = "http://dev.auditdb.io/"),
+            (url = "https://dev.auditdb.io/"),
         ),
         paths(
             customers::post_customer,
@@ -88,7 +88,7 @@ async fn main() -> Result<(), impl Error> {
     #[derive(OpenApi)]
     #[openapi(
         servers(
-            (url = "http://dev.auditdb.io/"),
+            (url = "https://dev.auditdb.io/"),
         ),
         paths(
             auditors::post_auditor,
@@ -109,7 +109,7 @@ async fn main() -> Result<(), impl Error> {
     #[derive(OpenApi)]
     #[openapi(
         servers(
-            (url = "http://dev.auditdb.io/"),
+            (url = "https://dev.auditdb.io/"),
         ),
         paths(
             audits::post_audit,
