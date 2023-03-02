@@ -14,7 +14,7 @@ use actix_web::web;
 use actix_web::App;
 use common::auth_session::AuthSession;
 use common::auth_session::AuthSessionManager;
-
+use common::auth_session::HttpSessionManager;
 use common::auth_session::TestSessionManager;
 use common::repository::test_repository::TestRepository;
 pub use handlers::audit::*;

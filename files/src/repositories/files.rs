@@ -13,27 +13,32 @@ impl FilesRepository {
         Self {}
     }
 
-    pub async fn create(&self, bytes: Bytes) -> ObjectId {
-        let file_id = ObjectId::new();
+    pub async fn create(&self, bytes: Bytes, path: String) {
         web::block(move || {
-            let mut file = File::create(format!("./files/{}", file_id)).unwrap();
+            let mut file = File::create(format!("/auditdb-files/{}", path)).unwrap();
             file.write_all(&bytes).unwrap();
         })
         .await
         .unwrap();
-        file_id
     }
 
-    pub async fn get(&self, id: &ObjectId) -> Bytes {
-        let id = id.clone();
+    pub async fn get(&self, path: String) -> Bytes {
         web::block(move || {
-            let file = File::open(format!("./files/{}", id)).unwrap();
+            let file = File::open(format!("./files/{}", path)).unwrap();
             let bytes = Bytes::from(
                 file.bytes()
                     .collect::<Result<Vec<u8>, io::Error>>()
                     .unwrap(),
             );
             bytes
+        })
+        .await
+        .unwrap()
+    }
+
+    pub async fn delete(&self, path: String) {
+        web::block(move || {
+            std::fs::remove_file(format!("./files/{}", path)).unwrap();
         })
         .await
         .unwrap()

@@ -1,52 +1,47 @@
+
+use std::sync::Arc;
 use chrono::NaiveDateTime;
-use mongodb::{
-    bson::{doc, oid::ObjectId},
-    Client, Collection,
-};
+use common::repository::{Entity, Repository};
+use mongodb::bson::{doc, oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MetaData {
+pub struct Metadata {
     pub id: ObjectId,
     pub creator_id: ObjectId,
     pub last_modified: NaiveDateTime,
     pub content_type: String,
+    pub path: String,
 }
 
-pub struct MetaRepository {
-    inner: Collection<MetaData>,
-}
 
-impl MetaRepository {
-    const DATABASE: &'static str = "Files";
-    const COLLECTION: &'static str = "Metadata";
+#[derive(Clone)]
+pub struct MetadataRepo(Arc<dyn Repository<Metadata, Error = mongodb::error::Error> + Send + Sync>);
 
-    pub async fn new(uri: String) -> Self {
-        let client = Client::with_uri_str(uri).await.unwrap();
-        let db = client.database(Self::DATABASE);
-        let inner: Collection<MetaData> = db.collection(Self::COLLECTION);
-        Self { inner }
+impl MetadataRepo {
+    pub fn new<T>(repo: T) -> Self
+    where
+        T: Repository<Metadata, Error = mongodb::error::Error> + Send + Sync + 'static,
+    {
+        Self(Arc::new(repo))
+    }
+    pub async fn create(&self, user: &Metadata) -> Result<bool, mongodb::error::Error> {
+        self.0.create(user).await
     }
 
-    pub async fn create(&self, metadata: MetaData) -> Result<bool, mongodb::error::Error> {
-        let exited_metadata = self.find(&metadata.id).await?;
+    pub async fn find_by_path(
+        &self,
+        path: String,
+    ) -> Result<Option<Metadata>, mongodb::error::Error> {
+        self.0.find("token", &Bson::String(path)).await
+    }
 
-        if exited_metadata.is_some() {
-            return Ok(false);
+    pub async fn delete(&self, path: String) -> Result<Option<Metadata>, mongodb::error::Error> {
+        let token = self.find_by_path(path).await?;
+        if let Some(token) = token {
+            self.0.delete(&token.id).await
+        } else {
+            Ok(None)
         }
-
-        self.inner.insert_one(metadata, None).await?;
-        Ok(true)
-    }
-
-    pub async fn find(&self, id: &ObjectId) -> Result<Option<MetaData>, mongodb::error::Error> {
-        Ok(self.inner.find_one(doc! {"id": id}, None).await?)
-    }
-
-    pub async fn delete(&self, id: &ObjectId) -> Result<Option<MetaData>, mongodb::error::Error> {
-        Ok(self
-            .inner
-            .find_one_and_delete(doc! {"id": id}, None)
-            .await?)
     }
 }

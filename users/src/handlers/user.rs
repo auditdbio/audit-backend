@@ -60,6 +60,7 @@ pub struct PatchUserRequest {
     name: Option<String>,
     email: Option<String>,
     password: Option<String>,
+    current_role: Option<String>,
 }
 
 #[utoipa::path(
@@ -67,7 +68,7 @@ pub struct PatchUserRequest {
         ("Authorization" = String, Header,  description = "Bearer token"),
     ),
     request_body(
-        content = LoginRequest
+        content = PatchUserRequest
     ),
     responses(
         (status = 200, body = PublicUser)
@@ -96,6 +97,10 @@ pub async fn patch_user(
 
     if let Some(new_password) = data.password {
         user.password = new_password;
+    }
+
+    if let Some(new_role) = data.current_role {
+        user.current_role = new_role;
     }
 
     if let Some(email) = data.email {
