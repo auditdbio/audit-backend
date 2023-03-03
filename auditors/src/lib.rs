@@ -33,7 +33,7 @@ pub fn create_app(
         .wrap(cors)
         .wrap(middleware::Logger::default())
         .app_data(web::Data::new(auditor_repo))
-        .app_data(manager)
+        .app_data(web::Data::new(manager))
         .service(post_auditor)
         .service(get_auditor)
         .service(patch_auditor)
