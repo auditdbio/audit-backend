@@ -1,6 +1,6 @@
 use actix_web::{
     get, post,
-    web::{self, Bytes, Path},
+    web::{self, Bytes},
     HttpRequest, HttpResponse,
 };
 use chrono::Utc;
