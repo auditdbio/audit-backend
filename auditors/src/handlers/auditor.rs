@@ -9,6 +9,7 @@ use common::{
     auth_session::{AuthSessionManager, SessionManager},
     entities::auditor::Auditor,
 };
+use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
@@ -77,7 +78,7 @@ pub async fn get_auditor(
     let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let Some(auditor) = repo.find(session.user_id()).await? else {
-        return Ok(HttpResponse::BadRequest().finish());
+        return Ok(HttpResponse::Ok().json(doc!{}));
     };
 
     Ok(HttpResponse::Ok().json(auditor))
