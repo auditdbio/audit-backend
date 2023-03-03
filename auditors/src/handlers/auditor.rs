@@ -23,6 +23,7 @@ pub struct PostAuditorRequest {
     pub company: String,
     pub tags: Vec<String>,
     pub contacts: HashMap<String, String>,
+    pub tax: String,
 }
 
 #[utoipa::path(
@@ -53,6 +54,7 @@ pub async fn post_auditor(
         company: data.company,
         contacts: data.contacts,
         tags: data.tags,
+        tax: data.tax,
     };
 
     if !repo.create(&auditor).await? {
@@ -91,6 +93,7 @@ pub struct PatchAuditorRequest {
     about: Option<String>,
     tags: Option<Vec<String>>,
     contacts: Option<HashMap<String, String>>,
+    tax: Option<String>,
 }
 
 #[utoipa::path(
@@ -135,6 +138,10 @@ pub async fn patch_auditor(
 
     if let Some(contacts) = data.contacts {
         auditor.contacts = contacts;
+    }
+
+    if let Some(tax) = data.tax {
+        auditor.tax = tax;
     }
 
     Ok(HttpResponse::Ok().json(auditor))
@@ -224,6 +231,7 @@ mod tests {
                 contacts: vec![("email".to_string(), "test@test.com".to_string())]
                     .into_iter()
                     .collect(),
+                tax: "200".to_string(),
             })
             .to_request();
 

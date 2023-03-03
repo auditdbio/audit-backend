@@ -68,6 +68,7 @@ impl<'s> ToSchema<'s> for Customer {
                     "tags",
                     ObjectBuilder::new().schema_type(SchemaType::Array),
                 )
+                .required("tags")
                 .into(),
         )
     }

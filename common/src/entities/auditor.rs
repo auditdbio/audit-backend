@@ -18,6 +18,7 @@ pub struct Auditor {
     pub company: String,
     pub tags: Vec<String>,
     pub contacts: HashMap<String, String>,
+    pub tax: String,
 }
 
 impl<'s> ToSchema<'s> for Auditor {
@@ -55,6 +56,11 @@ impl<'s> ToSchema<'s> for Auditor {
                     ObjectBuilder::new().schema_type(SchemaType::Object),
                 )
                 .required("contacts")
+                .property(
+                    "tax",
+                    ObjectBuilder::new().schema_type(SchemaType::String),
+                )
+                .required("tax")
                 .into(),
         )
     }

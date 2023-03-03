@@ -16,6 +16,7 @@ use common::{
 pub use handlers::auditor::*;
 use repositories::auditor::AuditorRepo;
 
+
 pub fn create_app(
     auditor_repo: AuditorRepo,
     manager: AuthSessionManager,
