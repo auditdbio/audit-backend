@@ -1,7 +1,7 @@
 
 use std::sync::Arc;
 use chrono::NaiveDateTime;
-use common::repository::{Entity, Repository};
+use common::repository::{Repository, Entity};
 use mongodb::bson::{doc, oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
 
@@ -14,6 +14,11 @@ pub struct Metadata {
     pub path: String,
 }
 
+impl Entity for Metadata {
+    fn id(&self) -> ObjectId {
+        self.id.clone()
+    }
+}
 
 #[derive(Clone)]
 pub struct MetadataRepo(Arc<dyn Repository<Metadata, Error = mongodb::error::Error> + Send + Sync>);

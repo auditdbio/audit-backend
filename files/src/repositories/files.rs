@@ -5,7 +5,7 @@ use std::{
 
 use actix_web::web::{self, Bytes};
 
-
+#[derive(Clone, Copy)]
 pub struct FilesRepository {}
 
 impl FilesRepository {

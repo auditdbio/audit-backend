@@ -59,6 +59,15 @@ impl<'s> ToSchema<'s> for Customer {
                     ObjectBuilder::new().schema_type(SchemaType::Object),
                 )
                 .required("contacts")
+                .property(
+                    "tax",
+                    ObjectBuilder::new().schema_type(SchemaType::String),
+                )
+                .required("tax")
+                .property(
+                    "tags",
+                    ObjectBuilder::new().schema_type(SchemaType::Array),
+                )
                 .into(),
         )
     }
