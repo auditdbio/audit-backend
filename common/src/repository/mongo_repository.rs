@@ -49,7 +49,7 @@ where
         Ok(result)
     }
 
-    async fn delete(&self, item: &ObjectId) -> Result<Option<T>, Self::Error> {
+    async fn delete(&self, field: &str, item: &ObjectId) -> Result<Option<T>, Self::Error> {
         let result = self
             .collection
             .find_one_and_delete(doc! {"id": item}, None)

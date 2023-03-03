@@ -17,6 +17,8 @@ pub struct Customer {
     pub about: String,
     pub company: String,
     pub contacts: HashMap<String, String>,
+    pub tax: String,
+    pub tags: Vec<String>,
 }
 
 impl<'s> ToSchema<'s> for Customer {

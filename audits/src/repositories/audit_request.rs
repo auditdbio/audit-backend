@@ -50,7 +50,7 @@ impl AuditRequestRepo {
         &self,
         id: &ObjectId,
     ) -> Result<Option<AuditRequest>, mongodb::error::Error> {
-        self.0.delete(id).await
+        self.0.delete("id", id).await
     }
 
     pub async fn find_all(

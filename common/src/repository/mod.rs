@@ -18,7 +18,7 @@ pub trait Repository<T> {
     type Error;
     async fn create(&self, item: &T) -> Result<bool, Self::Error>;
     async fn find(&self, field: &str, value: &Bson) -> Result<Option<T>, Self::Error>;
-    async fn delete(&self, item: &ObjectId) -> Result<Option<T>, Self::Error>;
+    async fn delete(&self, field: &str, item: &ObjectId) -> Result<Option<T>, Self::Error>;
     async fn find_many(&self, field: &str, value: &Bson) -> Result<Vec<T>, Self::Error>;
     async fn find_all(&self, skip: u32, limit: u32) -> Result<Vec<T>, Self::Error>;
 }

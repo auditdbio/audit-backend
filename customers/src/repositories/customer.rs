@@ -23,7 +23,7 @@ impl CustomerRepo {
     }
 
     pub async fn delete(&self, id: &ObjectId) -> Result<Option<Customer>, mongodb::error::Error> {
-        self.0.delete(id).await
+        self.0.delete("user_id", id).await
     }
 
     pub async fn find_all(

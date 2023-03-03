@@ -9,6 +9,7 @@ use common::{
     auth_session::{AuthSessionManager, SessionManager},
     entities::customer::Customer,
 };
+use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -21,6 +22,8 @@ pub struct PostCustomerRequest {
     about: String,
     company: String,
     contacts: HashMap<String, String>,
+    tags: Vec<String>,
+    tax: String,
 }
 
 #[utoipa::path(
@@ -31,7 +34,7 @@ pub struct PostCustomerRequest {
         content = PostCustomerRequest
     ),
     responses(
-        (status = 200)
+        (status = 200, body = Customer)
     )
 )]
 #[post("/api/customer")]
@@ -50,13 +53,15 @@ pub async fn post_customer(
         about: data.about,
         company: data.company,
         contacts: data.contacts,
+        tags: data.tags,
+        tax: data.tax,
     };
 
     if !repo.create(&customer).await? {
         return Ok(HttpResponse::BadRequest().finish()); // TODO: Error: customer entity already exits
     }
 
-    Ok(HttpResponse::Ok().finish())
+    Ok(HttpResponse::Ok().json(customer))
 }
 
 #[utoipa::path(
@@ -76,7 +81,7 @@ pub async fn get_customer(
     let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let Some(customer) = repo.find(session.user_id()).await? else {
-        return Ok(HttpResponse::BadRequest().finish());
+        return Ok(HttpResponse::Ok().json(doc!{}));
     };
     Ok(HttpResponse::Ok().json(customer))
 }
@@ -88,6 +93,8 @@ pub struct PatchCustomerRequest {
     about: Option<String>,
     company: Option<String>,
     contacts: Option<HashMap<String, String>>,
+    tags: Option<Vec<String>>,
+    tax: Option<String>,
 }
 
 #[utoipa::path(
@@ -134,10 +141,18 @@ pub async fn patch_customer(
         customer.contacts = contacts;
     }
 
+    if let Some(tags) = data.tags {
+        customer.tags = tags;
+    }
+
+    if let Some(tax) = data.tax {
+        customer.tax = tax;
+    }
+
     repo.delete(&session.user_id()).await.unwrap();
     repo.create(&customer).await?;
 
-    Ok(HttpResponse::Ok().finish())
+    Ok(HttpResponse::Ok().json(customer))
 }
 
 #[utoipa::path(
@@ -192,6 +207,8 @@ mod tests {
                 about: "I'm a test".to_string(),
                 company: "Test Inc.".to_string(),
                 contacts: HashMap::new(),
+                tags: vec![],
+                tax: "200".to_string(),
             })
             .to_request();
         let res = test::call_service(&app, req).await;
@@ -215,6 +232,8 @@ mod tests {
                 about: Some("I'm a test".to_string()),
                 company: Some("Test Inc.".to_string()),
                 contacts: Some(HashMap::new()),
+                tags: Some(vec![]),
+                tax: Some("200".to_string()),
             })
             .to_request();
         let res = test::call_service(&app, req).await;

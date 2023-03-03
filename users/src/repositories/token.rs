@@ -40,7 +40,7 @@ impl TokenRepo {
     pub async fn delete(&self, token: String) -> Result<Option<TokenModel>, mongodb::error::Error> {
         let token = self.find_by_token(token).await?;
         if let Some(token) = token {
-            self.0.delete(&token.user_id).await
+            self.0.delete("id", &token.user_id).await
         } else {
             Ok(None)
         }

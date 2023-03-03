@@ -39,7 +39,7 @@ impl MetadataRepo {
     pub async fn delete(&self, path: String) -> Result<Option<Metadata>, mongodb::error::Error> {
         let token = self.find_by_path(path).await?;
         if let Some(token) = token {
-            self.0.delete(&token.id).await
+            self.0.delete("id", &token.id).await
         } else {
             Ok(None)
         }

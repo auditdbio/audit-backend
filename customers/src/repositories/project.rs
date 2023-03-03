@@ -26,7 +26,7 @@ impl ProjectRepo {
     }
 
     pub async fn delete(&self, id: &ObjectId) -> Result<Option<Project>, mongodb::error::Error> {
-        self.0.delete(id).await
+        self.0.delete("id", id).await
     }
 
     pub async fn find_all(

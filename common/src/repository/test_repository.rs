@@ -48,17 +48,17 @@ where
             .map(|x| bson::from_bson(x).unwrap()))
     }
 
-    async fn delete(&self, id: &ObjectId) -> Result<Option<T>, Self::Error> {
+    async fn delete(&self, field: &str, id: &ObjectId) -> Result<Option<T>, Self::Error> {
         let mut db = self.db.lock().unwrap();
         let result = db
             .iter()
-            .find(|x| &x.as_document().unwrap().get_object_id("id").unwrap() == id)
+            .find(|x| &x.as_document().unwrap().get_object_id(field).unwrap() == id)
             .cloned()
             .map(|x| bson::from_bson(x).unwrap());
 
         let pos = db
             .iter()
-            .position(|x| &x.as_document().unwrap().get_object_id("id").unwrap() == id);
+            .position(|x| &x.as_document().unwrap().get_object_id(field).unwrap() == id);
 
         pos.map(|x| db.remove(x));
 
