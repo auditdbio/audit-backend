@@ -16,6 +16,8 @@ services:
     volumes:
       - binaries:/data/binaries
     environment:
+      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_PATH: ~^/api/(users|auth)
       MONGOURI: mongodb://database/backend
       MONGOURI_TEST: mongodb://database/test
       RUST_LOG: actix
@@ -31,6 +33,8 @@ services:
     volumes:
       - binaries:/data/binaries
     environment:
+      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_PATH: ~^/(swagger-ui|api-doc)/
       MONGOURI: mongodb://database/backend
       MONGOURI_TEST: mongodb://database/test
       RUST_LOG: actix
@@ -45,6 +49,8 @@ services:
     volumes:
       - binaries:/data/binaries
     environment:
+      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_PATH: ~^/api/(customer|projects)
       MONGOURI: mongodb://database/backend
       MONGOURI_TEST: mongodb://database/test
       RUST_LOG: actix
@@ -60,6 +66,8 @@ services:
     expose:
       - "3003"
     environment:
+      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_PATH: ~^/api/(audit|requests)
       MONGOURI: mongodb://database/backend
       MONGOURI_TEST: mongodb://database/test
       RUST_LOG: actix
@@ -75,6 +83,8 @@ services:
     volumes:
       - binaries:/data/binaries
     environment:
+      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_PATH: /api/auditors
       MONGOURI: mongodb://database/backend
       MONGOURI_TEST: mongodb://database/test
       RUST_LOG: actix
@@ -97,3 +107,4 @@ networks:
   nginx-proxy:
     external: true
   database:
+
