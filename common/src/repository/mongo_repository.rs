@@ -92,13 +92,13 @@ where
     async fn find_by_tags(&self, tags: Vec<String>) -> Result<Vec<T>, Self::Error> {
         use mongodb::error::Result as MongoResult;
         let filter = if tags.is_empty() {
-            doc! {}
+            None
         } else {
-            doc! {
+            Some(doc! {
                 "tags": doc!{
                     "$elemMatch": doc!{"$in": tags}
                 }
-            }
+            })
         };
 
         let result: Vec<T> = self
