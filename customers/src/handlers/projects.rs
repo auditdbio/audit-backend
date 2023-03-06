@@ -189,7 +189,7 @@ pub async fn get_projects(
     repo: web::Data<ProjectRepo>,
     query: web::Query<AllProjectsQuery>,
 ) -> Result<HttpResponse> {
-    let tags = query.tags.split(",").map(ToString::to_string).collect();
+    let tags = query.tags.split(",").map(ToString::to_string).filter(|s| !s.is_empty()).collect();
 
     let projects = repo.find_by_tags(tags).await?;
 
