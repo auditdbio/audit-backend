@@ -84,7 +84,7 @@ services:
       - binaries:/data/binaries
     environment:
       VIRTUAL_HOST: dev.auditdb.io
-      VIRTUAL_PATH: /api/auditors
+      VIRTUAL_PATH: ~^/api/auditors
       MONGOURI: mongodb://database/backend
       MONGOURI_TEST: mongodb://database/test
       RUST_LOG: actix
