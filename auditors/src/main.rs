@@ -1,6 +1,6 @@
 use std::env;
 
-use actix_web::{HttpServer};
+use actix_web::HttpServer;
 use auditors::create_app;
 use auditors::repositories::auditor::AuditorRepo;
 use common::auth_session::{AuthSessionManager, HttpSessionManager};

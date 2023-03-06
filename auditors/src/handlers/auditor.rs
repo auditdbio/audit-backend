@@ -199,16 +199,11 @@ pub async fn get_auditors(
 
 #[cfg(test)]
 mod tests {
-    use actix_web::{
-        test::{self, init_service},
-    };
-    use common::{auth_session::AuthSession};
+    use actix_web::test::{self, init_service};
+    use common::auth_session::AuthSession;
     use mongodb::bson::oid::ObjectId;
 
-    use crate::{
-        create_test_app,
-        PostAuditorRequest,
-    };
+    use crate::{create_test_app, PostAuditorRequest};
 
     #[actix_web::test]
     async fn test_post_auditor() {

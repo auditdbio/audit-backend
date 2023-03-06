@@ -198,16 +198,12 @@ pub async fn get_projects(
 
 #[cfg(test)]
 mod tests {
-    
 
     use actix_web::test::{self, init_service};
     use common::auth_session::AuthSession;
     use mongodb::bson::oid::ObjectId;
 
-    use crate::{
-        create_test_app, PatchProjectRequest,
-        PostProjectRequest,
-    };
+    use crate::{create_test_app, PatchProjectRequest, PostProjectRequest};
 
     #[actix_web::test]
     async fn test_post_customer() {

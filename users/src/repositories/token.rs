@@ -1,7 +1,7 @@
-use std::sync::Arc;
 use common::repository::{Entity, Repository};
 use mongodb::bson::{doc, oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TokenModel {

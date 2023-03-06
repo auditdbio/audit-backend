@@ -6,7 +6,7 @@ use actix_web::{
 use chrono::Utc;
 use common::auth_session::{self, SessionManager};
 use mongodb::bson::oid::ObjectId;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::repositories::{
@@ -61,7 +61,11 @@ pub async fn get_file(
     let _session = manager.get_session(req.clone().into()).await.unwrap();
 
     let file = files_repo.get(path.path.clone()).await;
-    let meta_information = meta_repo.find_by_path(path.path.clone()).await.unwrap().unwrap();
+    let meta_information = meta_repo
+        .find_by_path(path.path.clone())
+        .await
+        .unwrap()
+        .unwrap();
 
     HttpResponse::Ok()
         .append_header(("Content-Type", meta_information.content_type))

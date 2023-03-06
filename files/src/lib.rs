@@ -1,5 +1,9 @@
 use actix_cors::Cors;
-use actix_web::{App, dev::{ServiceFactory, ServiceRequest, ServiceResponse}, body::MessageBody, middleware, web};
+use actix_web::{
+    body::MessageBody,
+    dev::{ServiceFactory, ServiceRequest, ServiceResponse},
+    middleware, web, App,
+};
 use common::auth_session::AuthSessionManager;
 use handlers::{create_file, get_file};
 use repositories::{files::FilesRepository, meta::MetadataRepo};

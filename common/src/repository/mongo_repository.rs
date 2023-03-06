@@ -37,7 +37,7 @@ where
             .find_one(doc! {"id": item.id()}, None)
             .await?
             .is_none();
-        
+
         if result {
             self.collection.insert_one(item, None).await?;
         }
@@ -91,9 +91,14 @@ where
 {
     async fn find_by_tags(&self, tags: Vec<String>) -> Result<Vec<T>, Self::Error> {
         use mongodb::error::Result as MongoResult;
-        let filter = doc! {
-            "tags": doc!{
-                "$elemMatch": doc!{"$in": tags}
+
+        let filter = if tags.is_empty() {
+            doc! {}
+        } else {
+            doc! {
+                "tags": doc!{
+                    "$elemMatch": doc!{"$in": tags}
+                }
             }
         };
 

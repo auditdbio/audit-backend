@@ -56,11 +56,8 @@ impl<'s> ToSchema<'s> for Auditor {
                     ObjectBuilder::new().schema_type(SchemaType::Object),
                 )
                 .required("contacts")
-                .property(
-                    "tax",
-                    ObjectBuilder::new().schema_type(SchemaType::String),
-                )
-                .required("tax")
+                .property("tax", ObjectBuilder::new().schema_type(SchemaType::String))
+                .required("company")
                 .into(),
         )
     }

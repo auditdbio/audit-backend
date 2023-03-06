@@ -1,14 +1,13 @@
 use std::env;
 
-
-use actix_web::{HttpServer};
+use actix_web::HttpServer;
 use common::{
     auth_session::{AuthSessionManager, HttpSessionManager},
     repository::mongo_repository::MongoRepository,
 };
 
+use customers::create_app;
 use customers::repositories::{customer::CustomerRepo, project::ProjectRepo};
-use customers::{create_app};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

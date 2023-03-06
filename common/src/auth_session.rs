@@ -1,8 +1,8 @@
-use actix_web::{HttpRequest};
+use actix_web::HttpRequest;
 
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use std::{sync::Arc};
+use std::sync::Arc;
 use utoipa::ToSchema;
 
 #[derive(Debug, Serialize, Deserialize, ToSchema, Clone)]

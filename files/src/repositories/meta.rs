@@ -1,9 +1,8 @@
-
-use std::sync::Arc;
 use chrono::NaiveDateTime;
 use common::repository::{Repository, Entity};
 use mongodb::bson::{doc, oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Metadata {
