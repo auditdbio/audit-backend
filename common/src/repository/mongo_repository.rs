@@ -91,7 +91,6 @@ where
 {
     async fn find_by_tags(&self, tags: Vec<String>) -> Result<Vec<T>, Self::Error> {
         use mongodb::error::Result as MongoResult;
-
         let filter = if tags.is_empty() {
             doc! {}
         } else {
