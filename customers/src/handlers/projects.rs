@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use actix_web::{
     delete, get, patch, post,
     web::{self, Json},
@@ -27,6 +29,7 @@ pub struct PostProjectRequest {
     ready_to_wait: bool,
     prise_from: String,
     prise_to: String,
+    creator_contacts: HashMap<String, String>,
 }
 
 #[utoipa::path(
@@ -63,6 +66,7 @@ pub async fn post_project(
             prise_from: data.prise_from,
             prise_to: data.prise_to,
         },
+        creator_contacts: data.creator_contacts,
     };
 
     repo.create(&project).await?;
@@ -78,6 +82,7 @@ pub struct PatchProjectRequest {
     scope: Option<Vec<String>>,
     tags: Option<Vec<String>>,
     status: Option<String>,
+    creator_contacts: Option<HashMap<String, String>>,
 }
 
 #[utoipa::path(
@@ -220,6 +225,8 @@ pub async fn get_projects(
 #[cfg(test)]
 mod tests {
 
+    use std::collections::HashMap;
+
     use actix_web::test::{self, init_service};
     use common::auth_session::AuthSession;
     use mongodb::bson::oid::ObjectId;
@@ -246,6 +253,7 @@ mod tests {
                 ready_to_wait: false,
                 prise_from: "200".to_string(),
                 prise_to: "200".to_string(),
+                creator_contacts: HashMap::new(),
             })
             .to_request();
         let res = test::call_service(&app, req).await;
@@ -270,6 +278,7 @@ mod tests {
                 scope: Some(vec!["Test".to_string()]),
                 tags: Some(vec!["Test".to_string()]),
                 status: Some("Test".to_string()),
+                creator_contacts: None,
             })
             .to_request();
         let res = test::call_service(&app, req).await;

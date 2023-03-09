@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{str::FromStr, collections::HashMap};
 
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -24,6 +24,7 @@ pub struct Project<Id> {
     pub tags: Vec<String>,
     pub publish_options: PublishOptions,
     pub status: String,
+    pub creator_contacts: HashMap<String, String>,
 }
 
 impl Project<String> {
@@ -37,6 +38,7 @@ impl Project<String> {
             tags: self.tags,
             publish_options: self.publish_options,
             status: self.status,
+            creator_contacts: self.creator_contacts,
         }
     }
 }
@@ -52,6 +54,7 @@ impl Project<ObjectId> {
             tags: self.tags,
             publish_options: self.publish_options,
             status: self.status,
+            creator_contacts: self.creator_contacts,
         }
     }
 }
