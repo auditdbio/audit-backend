@@ -1,4 +1,4 @@
-use common::{entities::audit::Audit, repository::{Repository, TaggableEntityRepository}};
+use common::{entities::audit::Audit, repository::{TaggableEntityRepository}};
 
 use mongodb::bson::{oid::ObjectId, Bson};
 

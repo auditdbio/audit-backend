@@ -167,7 +167,7 @@ pub struct GetProjectResponse {
         (status = 200, body = GetProjectResponse)
     )
 )]
-#[get("/api/projects/project")]
+#[get("/api/projects")]
 pub async fn get_project(
     req: HttpRequest,
     repo: web::Data<ProjectRepo>,

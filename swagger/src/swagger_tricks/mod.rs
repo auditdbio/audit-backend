@@ -1,4 +1,4 @@
-use utoipa::{ToSchema, openapi::{ObjectBuilder, SchemaType}};
+use utoipa::{ToSchema};
 
 pub struct Id();
 

@@ -1,5 +1,5 @@
 use actix_web::{
-    get, post,
+    post,
     web::{self, Bytes},
     HttpRequest, HttpResponse,
 };

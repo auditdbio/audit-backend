@@ -7,7 +7,7 @@ use utoipa::{
     ToSchema,
 };
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub enum Source {
     Request,
     Audit,

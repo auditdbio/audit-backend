@@ -226,7 +226,7 @@ pub struct AllAuditsResponse {
         AllAuditsQuery
     ),
     responses(
-        (status = 200, body = AllAuditorsResponse)
+        (status = 200, body = AllAuditsResponse)
     )
 )]
 #[get("/api/audits/all")]
