@@ -18,7 +18,7 @@ pub struct View<Id> {
     pub id: Id,
     pub name: String,
     pub source: Source,
-    pub last_modified: NaiveDateTime,
+    pub last_modified: i64,
 }
 
 impl View<String> {

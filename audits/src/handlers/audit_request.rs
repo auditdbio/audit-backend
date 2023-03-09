@@ -64,7 +64,7 @@ pub async fn post_audit_request(
         scope: data.scope,
         price: data.price,
         time_frame: data.time_frame,
-        last_modified: Utc::now().naive_utc(),
+        last_modified: Utc::now().naive_utc().timestamp_micros(),
         opener: data.opener,
     };
 
@@ -169,7 +169,7 @@ pub async fn patch_audit_request(
         audit_request.time_frame = time_frame;
     }
 
-    audit_request.last_modified = Utc::now().naive_utc();
+    audit_request.last_modified = Utc::now().naive_utc().timestamp_micros();
 
     repo.create(&audit_request).await?;
 

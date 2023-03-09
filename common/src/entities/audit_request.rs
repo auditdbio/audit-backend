@@ -31,7 +31,7 @@ pub struct AuditRequest<Id> {
     pub scope: Vec<String>,
     pub price: Option<String>,
     pub time_frame: String,
-    pub last_modified: NaiveDateTime,
+    pub last_modified: i64,
     pub opener: Role,
 }
 

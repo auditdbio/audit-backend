@@ -25,7 +25,7 @@ pub struct Audit<Id> {
     pub report_link: Option<String>,
     pub time_frame: String,
     pub tags: Vec<String>,
-    pub last_modified: NaiveDateTime,
+    pub last_modified: i64,
 }
 
 impl Audit<String> {

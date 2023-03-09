@@ -63,7 +63,7 @@ pub async fn post_audit(
         auditor_id: request.auditor_id.parse().unwrap(),
         project_id: project_id,
         status: "pending".to_string(),
-        last_modified: Utc::now().naive_utc(),
+        last_modified: Utc::now().naive_utc().timestamp_micros(),
         auditor_contacts: request.auditor_contacts,
         customer_contacts: request.customer_contacts,
         price: price,
