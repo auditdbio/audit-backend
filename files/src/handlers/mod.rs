@@ -35,7 +35,7 @@ async fn create_file(req: HttpRequest, mut payload: Multipart) -> Result<HttpRes
 
            // Field in turn is stream of *Bytes* object
            while let Some(chunk) = field.next().await {
-               log::info!("-- CHUNK: \n{:?}", std::str::from_utf8(&chunk?));
+               log::info!("-- CHUNK: \n{:?}", &chunk?);
            }
     }
 
