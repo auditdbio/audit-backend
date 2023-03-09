@@ -186,13 +186,13 @@ pub async fn patch_audit_request(
 #[delete("/api/requests/{id}")]
 pub async fn delete_audit_request(
     req: HttpRequest,
-    id: web::Path<ObjectId>,
+    id: web::Path<String>,
     repo: web::Data<AuditRequestRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
     let _session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
-    let Some(request) = repo.delete(&id).await? else {
+    let Some(request) = repo.delete(&id.parse::<ObjectId>().unwrap()).await? else {
         return Ok(HttpResponse::Ok().json(doc!{}));
     };
     Ok(HttpResponse::Ok().json(request.stringify()))

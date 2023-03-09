@@ -15,14 +15,25 @@ use crate::repositories::{
 };
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct CreateFileQuery {
+pub struct FilePath {
     path: String,
 }
 
+#[utoipa::path(
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+    ),
+    request_body(
+        content = FilePath
+    ),
+    responses(
+        (status = 200)
+    )
+)]
 #[post("/api/files/create")]
 pub async fn create_file(
     req: HttpRequest,
-    path: web::Query<CreateFileQuery>,
+    path: web::Json<FilePath>,
     file: Bytes,
     files_repo: web::Data<FilesRepository>,
     meta_repo: web::Data<MetadataRepo>,
@@ -50,10 +61,21 @@ pub async fn create_file(
     HttpResponse::Ok().finish()
 }
 
-#[get("/api/files/create/{id}")]
+#[utoipa::path(
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+    ),
+    request_body(
+        content = FilePath
+    ),
+    responses(
+        (status = 200)
+    )
+)]
+#[post("/api/files/get")]
 pub async fn get_file(
     req: HttpRequest,
-    path: web::Query<CreateFileQuery>,
+    path: web::Json<FilePath>,
     files_repo: web::Data<FilesRepository>,
     meta_repo: web::Data<MetadataRepo>,
     manager: web::Data<auth_session::AuthSessionManager>,
@@ -71,3 +93,9 @@ pub async fn get_file(
         .append_header(("Content-Type", meta_information.content_type))
         .body(file)
 }
+
+pub async fn patch_file() {
+
+}
+
+pub async fn delete_file() {}

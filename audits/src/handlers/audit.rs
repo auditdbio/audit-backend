@@ -39,17 +39,29 @@ pub async fn post_audit(
     repo: web::Data<AuditRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let _session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+
+    let _session = manager.get_session(req.clone().into()).await.unwrap(); // TODO: remove unwrap
 
     let Some(price) = request.price else {
         return Ok(HttpResponse::BadRequest().body("Price is required"));
     };
 
+    let mut client = awc::Client::default();
+
+    client.headers().unwrap().insert(
+        "Authorization".parse().unwrap(),
+        req.headers().get("Authorization").unwrap().clone(),
+    );
+
+    let project_id: ObjectId = request.project_id.parse().unwrap();
+
+    let project = get_project(&client, &project_id).await?;
+
     let audit = Audit {
         id: ObjectId::new(),
         customer_id: request.customer_id.parse().unwrap(),
         auditor_id: request.auditor_id.parse().unwrap(),
-        project_id: request.project_id.parse().unwrap(),
+        project_id: project_id,
         status: "pending".to_string(),
         last_modified: Utc::now().naive_utc(),
         auditor_contacts: request.auditor_contacts,
@@ -58,6 +70,7 @@ pub async fn post_audit(
         report_link: None,
         time_frame: request.time_frame,
         scope: request.scope,
+        tags: project.tags,
     };
 
     repo.create(&audit).await?;
@@ -84,7 +97,7 @@ pub struct GetAuditResponse {
     )
 )]
 #[get("/api/audit")]
-pub async fn get_audits(
+pub async fn get_audit(
     req: HttpRequest,
     query: web::Query<GetAuditQuery>,
     repo: web::Data<AuditRepo>,
@@ -116,14 +129,14 @@ pub async fn get_audits(
 #[delete("/api/audit/{id}")]
 pub async fn delete_audit(
     req: HttpRequest,
-    id: web::Path<ObjectId>,
+    id: web::Path<String>,
     repo: web::Data<AuditRepo>,
     closed_repo: web::Data<ClosedAuditRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
     let _session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
-    let Some(audit) = repo.delete(&id).await? else {
+    let Some(audit) = repo.delete(&id.parse::<ObjectId>().unwrap()).await? else {
         return Ok(HttpResponse::Ok().json(doc!{}));
     };
 
@@ -194,3 +207,38 @@ pub async fn get_views(
 
     Ok(HttpResponse::Ok().json(views))
 }
+
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, IntoParams)]
+pub struct AllAuditsQuery {
+    tags: String,
+    skip: u32,
+    limit: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct AllAuditsResponse {
+    auditors: Vec<Audit<String>>,
+}
+
+#[utoipa::path(
+    params(
+        AllAuditsQuery
+    ),
+    responses(
+        (status = 200, body = AllAuditorsResponse)
+    )
+)]
+#[get("/api/audits/all")]
+pub async fn get_audits(
+    repo: web::Data<AuditRepo>,
+    query: web::Query<AllAuditsQuery>,
+) -> Result<HttpResponse> {
+    let tags = query.tags.split(',').map(ToString::to_string).collect();
+    let auditors = repo.find_by_tags(tags, query.skip, query.limit).await?;
+    Ok(HttpResponse::Ok().json(AllAuditsResponse {
+        auditors: auditors.into_iter().map(Audit::stringify).collect(),
+    }))
+}
+
+

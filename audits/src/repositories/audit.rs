@@ -1,4 +1,4 @@
-use common::{entities::audit::Audit, repository::Repository};
+use common::{entities::audit::Audit, repository::{Repository, TaggableEntityRepository}};
 
 use mongodb::bson::{oid::ObjectId, Bson};
 
@@ -6,13 +6,13 @@ use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct AuditRepo(
-    Arc<dyn Repository<Audit<ObjectId>, Error = mongodb::error::Error> + Send + Sync>,
+    Arc<dyn TaggableEntityRepository<Audit<ObjectId>, Error = mongodb::error::Error> + Send + Sync>,
 );
 
 impl AuditRepo {
     pub fn new<T>(repo: T) -> Self
     where
-        T: Repository<Audit<ObjectId>, Error = mongodb::error::Error> + Send + Sync + 'static,
+        T: TaggableEntityRepository<Audit<ObjectId>, Error = mongodb::error::Error> + Send + Sync + 'static,
     {
         Self(Arc::new(repo))
     }
@@ -56,11 +56,12 @@ impl AuditRepo {
         self.0.delete("id", id).await
     }
 
-    pub async fn find_all(
+    pub async fn find_by_tags(
         &self,
+        tags: Vec<String>,
         skip: u32,
         limit: u32,
     ) -> Result<Vec<Audit<ObjectId>>, mongodb::error::Error> {
-        self.0.find_all(skip, limit).await
+        self.0.find_by_tags(tags, skip, limit).await
     }
 }

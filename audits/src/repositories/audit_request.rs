@@ -12,25 +12,16 @@ pub struct AuditRequestRepo(
 impl AuditRequestRepo {
     pub fn new<T>(repo: T) -> Self
     where
-        T: Repository<AuditRequest<ObjectId>, Error = mongodb::error::Error>
-            + Send
-            + Sync
-            + 'static,
+        T: Repository<AuditRequest<ObjectId>, Error = mongodb::error::Error> + Send + Sync + 'static,
     {
         Self(Arc::new(repo))
     }
 
-    pub async fn create(
-        &self,
-        user: &AuditRequest<ObjectId>,
-    ) -> Result<bool, mongodb::error::Error> {
+    pub async fn create(&self, user: &AuditRequest<ObjectId>) -> Result<bool, mongodb::error::Error> {
         self.0.create(user).await
     }
 
-    pub async fn find(
-        &self,
-        id: ObjectId,
-    ) -> Result<Option<AuditRequest<ObjectId>>, mongodb::error::Error> {
+    pub async fn find(&self, id: ObjectId) -> Result<Option<AuditRequest<ObjectId>>, mongodb::error::Error> {
         self.0.find("id", &Bson::ObjectId(id)).await
     }
 

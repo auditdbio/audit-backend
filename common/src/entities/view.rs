@@ -22,7 +22,7 @@ pub struct View<Id> {
 }
 
 impl View<String> {
-    fn parse(self) -> View<ObjectId> {
+    pub fn parse(self) -> View<ObjectId> {
         View {
             id: ObjectId::from_str(&self.id).unwrap(),
             name: self.name,
@@ -33,7 +33,7 @@ impl View<String> {
 }
 
 impl View<ObjectId> {
-    fn serialize(self) -> View<String> {
+    pub fn stringify(self) -> View<String> {
         View {
             id: self.id.to_hex(),
             name: self.name,

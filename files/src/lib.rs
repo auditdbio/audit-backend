@@ -5,7 +5,7 @@ use actix_web::{
     middleware, web, App,
 };
 use common::auth_session::AuthSessionManager;
-use handlers::{create_file, get_file};
+pub use handlers::*;
 use repositories::{files::FilesRepository, meta::MetadataRepo};
 
 pub mod handlers;

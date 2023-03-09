@@ -118,7 +118,7 @@ pub async fn patch_customer(
 ) -> Result<HttpResponse> {
     let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
-    let Some(mut customer) = repo.find(session.user_id()).await? else {
+    let Some(mut customer) = repo.delete(&session.user_id()).await? else {
         return Ok(HttpResponse::BadRequest().finish());
     };
 
@@ -150,7 +150,6 @@ pub async fn patch_customer(
         customer.tags = tags;
     }
 
-    repo.delete(&session.user_id()).await.unwrap();
     repo.create(&customer).await?;
 
     Ok(HttpResponse::Ok().json(customer.stringify()))
@@ -159,9 +158,6 @@ pub async fn patch_customer(
 #[utoipa::path(
     params(
         ("Authorization" = String, Header,  description = "Bearer token"),
-    ),
-    request_body(
-        content = CustomerRepository
     ),
     responses(
         (status = 200, body = Customer<String>)

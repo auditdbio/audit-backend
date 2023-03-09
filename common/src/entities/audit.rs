@@ -7,7 +7,7 @@ use utoipa::{
     ToSchema,
 };
 
-use crate::repository::Entity;
+use crate::repository::{Entity, TaggableEntity};
 
 use super::view::{Source, View};
 
@@ -24,11 +24,12 @@ pub struct Audit<Id> {
     pub price: String,
     pub report_link: Option<String>,
     pub time_frame: String,
+    pub tags: Vec<String>,
     pub last_modified: NaiveDateTime,
 }
 
 impl Audit<String> {
-    fn parse(self) -> Audit<ObjectId> {
+    pub fn parse(self) -> Audit<ObjectId> {
         Audit {
             id: ObjectId::from_str(&self.id).unwrap(),
             customer_id: ObjectId::from_str(&self.customer_id).unwrap(),
@@ -41,6 +42,7 @@ impl Audit<String> {
             price: self.price,
             report_link: self.report_link,
             time_frame: self.time_frame,
+            tags: self.tags,
             last_modified: self.last_modified,
         }
     }
@@ -60,6 +62,7 @@ impl Audit<ObjectId> {
             price: self.price,
             report_link: self.report_link,
             time_frame: self.time_frame,
+            tags: self.tags,
             last_modified: self.last_modified,
         }
     }
@@ -79,5 +82,11 @@ impl Audit<ObjectId> {
 impl Entity for Audit<ObjectId> {
     fn id(&self) -> ObjectId {
         self.id.clone()
+    }
+}
+
+impl TaggableEntity for Audit<ObjectId> {
+    fn tags(&self) -> &Vec<String> {
+        &self.tags
     }
 }

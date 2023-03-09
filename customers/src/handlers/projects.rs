@@ -99,9 +99,9 @@ pub async fn patch_project(
     repo: web::Data<ProjectRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<web::Json<Project<String>>> {
-    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    let _session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
-    let Some(mut project) = repo.delete(&session.user_id()).await? else {
+    let Some(mut project) = repo.delete(&data.project_id).await? else {
         return Err(Error::Outer(OuterError::ProjectNotFound))
     };
 
@@ -125,7 +125,6 @@ pub async fn patch_project(
         project.status = status;
     }
 
-    repo.delete(&session.user_id()).await.unwrap();
     repo.create(&project).await?;
 
     Ok(web::Json(project.stringify()))
@@ -170,7 +169,6 @@ pub struct GetProjectResponse {
 #[get("/api/projects/project")]
 pub async fn get_project(
     req: HttpRequest,
-    _id: web::Path<ObjectId>,
     repo: web::Data<ProjectRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {

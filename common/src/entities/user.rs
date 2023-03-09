@@ -18,7 +18,7 @@ pub struct User<Id> {
 }
 
 impl User<String> {
-    fn parse(self) -> User<ObjectId> {
+    pub fn parse(self) -> User<ObjectId> {
         User {
             id: ObjectId::from_str(&self.id).unwrap(),
             email: self.email,

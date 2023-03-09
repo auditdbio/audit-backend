@@ -80,7 +80,10 @@ async fn main() -> Result<(), impl Error> {
             customers::PostProjectRequest,
             customers::PatchProjectRequest,
             customers::AllProjectsResponse,
+            customers::GetProjectResponse,
+            customers::AllProjectsQuery,
             common::entities::customer::Customer<String>,
+            common::entities::project::Project<String>,
         ))
     )]
     struct CustomersServiceDoc;
@@ -101,6 +104,8 @@ async fn main() -> Result<(), impl Error> {
             auditors::PostAuditorRequest,
             auditors::PatchAuditorRequest,
             auditors::AllAuditorsResponse,
+            auditors::AllAuditorsQuery,
+            auditors::AllAuditorsResponse,
             common::entities::auditor::Auditor<String>,
         ))
     )]
@@ -113,6 +118,7 @@ async fn main() -> Result<(), impl Error> {
         ),
         paths(
             audits::post_audit,
+            audits::get_audit,
             audits::get_audits,
             audits::delete_audit,
             audits::get_views,
@@ -122,15 +128,36 @@ async fn main() -> Result<(), impl Error> {
         ),
         components(schemas(
             audits::PostAuditRequestRequest,
-            audits::PatchAuditRequestRequest,
+            audits::GetAuditRequestsQuery,
             audits::GetAuditRequestsResponse,
+            audits::PatchAuditRequestRequest,
             audits::GetViewsResponse,
+            audits::GetAuditResponse,
+            audits::GetAuditQuery,
+            audits::GetAuditResponse,
+            audits::AllAuditsQuery,
+            audits::AllAuditsResponse,
             common::entities::audit::Audit<String>,
             common::entities::audit_request::AuditRequest<String>,
             common::entities::view::View<String>,
         ))
     )]
     struct AuditsServiceDoc;
+
+    #[derive(OpenApi)]
+    #[openapi(
+        servers(
+            (url = "https://dev.auditdb.io/"),
+        ),
+        paths(
+            files::create_file,
+            files::get_file,
+        ),
+        components(schemas(
+            files::FilePath
+        ))
+    )]
+    struct FilseServiceDoc;
 
     HttpServer::new(move || {
         App::new()

@@ -120,7 +120,7 @@ pub async fn patch_auditor(
 ) -> Result<HttpResponse> {
     let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
-    let Some(mut auditor ) = repo.find(session.user_id()).await? else {
+    let Some(mut auditor ) = repo.delete(&session.user_id()).await? else {
         return Ok(HttpResponse::BadRequest().body("Error: no auditor instance for this user"));
     };
 
@@ -148,7 +148,6 @@ pub async fn patch_auditor(
         auditor.tax = tax;
     }
 
-    repo.delete(&session.user_id()).await.unwrap();
     repo.create(&auditor).await?;
 
     Ok(HttpResponse::Ok().json(auditor.stringify()))
