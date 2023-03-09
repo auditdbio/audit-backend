@@ -16,7 +16,7 @@ async fn main() -> std::io::Result<()> {
 
     let mongo_uri = env::var("MONGOURI").unwrap();
 
-    let meta_repo = MetadataRepo::new(MongoRepository::new(&mongo_uri, "Users", "users").await);
+    let meta_repo = MetadataRepo::new(MongoRepository::new(&mongo_uri, "files", "meta").await);
     let files_repo = FilesRepository {};
     let manager = AuthSessionManager::new(HttpSessionManager);
 
