@@ -147,7 +147,7 @@ pub async fn restore(
         ("Authorization" = String, Header,  description = "Bearer token"),
     ),
     responses(
-        (status = 200, description = "Get authenticated user's data", body = Option<AuthSession>)
+        (status = 200, description = "Get authenticated user's data")
     )
 )]
 #[get("/api/auth/verify")]

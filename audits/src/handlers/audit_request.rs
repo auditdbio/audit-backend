@@ -116,7 +116,7 @@ pub async fn get_audit_requests(
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct PatchAuditRequestRequest {
-    pub id: ObjectId,
+    pub id: String,
     pub auditor_contacts: Option<HashMap<String, String>>,
     pub customer_contacts: Option<HashMap<String, String>>,
     pub scope: Option<Vec<String>>,
@@ -143,8 +143,9 @@ pub async fn patch_audit_request(
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
     let _session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    let id = data.id.parse().unwrap();
 
-    let Some(mut audit_request) = repo.delete(&data.id).await? else {
+    let Some(mut audit_request) = repo.delete(&id).await? else {
         return Ok(HttpResponse::BadRequest().finish());
     };
 

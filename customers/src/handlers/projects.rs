@@ -73,7 +73,7 @@ pub async fn post_project(
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PatchProjectRequest {
-    project_id: ObjectId,
+    id: String,
     name: Option<String>,
     description: Option<String>,
     scope: Option<Vec<String>>,
@@ -100,8 +100,9 @@ pub async fn patch_project(
     manager: web::Data<AuthSessionManager>,
 ) -> Result<web::Json<Project<String>>> {
     let _session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    let id = data.id.parse::<ObjectId>().unwrap();
 
-    let Some(mut project) = repo.delete(&data.project_id).await? else {
+    let Some(mut project) = repo.delete(&id).await? else {
         return Err(Error::Outer(OuterError::ProjectNotFound))
     };
 
@@ -264,7 +265,7 @@ mod tests {
         let req = actix_web::test::TestRequest::patch()
             .uri("/api/customer")
             .set_json(&PatchProjectRequest {
-                project_id: test_project_id,
+                id: test_project_id.to_hex(),
                 name: Some("Test".to_string()),
                 description: Some("Test".to_string()),
                 scope: Some(vec!["Test".to_string()]),

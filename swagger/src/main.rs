@@ -1,3 +1,5 @@
+mod swagger_tricks;
+
 use std::{error::Error, net::Ipv4Addr};
 
 use actix_web::{middleware::Logger, App, HttpServer};
@@ -53,7 +55,7 @@ async fn main() -> Result<(), impl Error> {
             users::GetUsersRequest,
             users::GetUsersResponse,
             common::entities::user::User<String>,
-            common::auth_session::AuthSession
+            swagger_tricks::Id,
         ))
     )]
     struct UsersServiceDoc;
@@ -82,8 +84,11 @@ async fn main() -> Result<(), impl Error> {
             customers::AllProjectsResponse,
             customers::GetProjectResponse,
             customers::AllProjectsQuery,
+            customers::PatchCustomerRequest,
             common::entities::customer::Customer<String>,
             common::entities::project::Project<String>,
+            common::entities::project::PublishOptions,
+            swagger_tricks::Id,
         ))
     )]
     struct CustomersServiceDoc;
@@ -107,6 +112,7 @@ async fn main() -> Result<(), impl Error> {
             auditors::AllAuditorsQuery,
             auditors::AllAuditorsResponse,
             common::entities::auditor::Auditor<String>,
+            swagger_tricks::Id,
         ))
     )]
     struct AuditorsServiceDoc;
@@ -140,6 +146,7 @@ async fn main() -> Result<(), impl Error> {
             common::entities::audit::Audit<String>,
             common::entities::audit_request::AuditRequest<String>,
             common::entities::view::View<String>,
+            swagger_tricks::Id,
         ))
     )]
     struct AuditsServiceDoc;
