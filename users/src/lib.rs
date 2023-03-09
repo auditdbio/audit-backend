@@ -17,16 +17,19 @@ use common::auth_session::AuthSession;
 use common::auth_session::AuthSessionManager;
 use common::auth_session::TestSessionManager;
 use common::repository::test_repository::TestRepository;
+use repositories::list_element::ListElementRepository;
 use repositories::token::TokenRepo;
 use repositories::user::UserRepo;
 pub use utils::prelude;
 
 pub use handlers::auth::*;
 pub use handlers::user::*;
+pub use handlers::waiting_list::*;
 
 pub fn create_app(
     user_repo: UserRepo,
     token_repo: TokenRepo,
+    elem_repo: ListElementRepository,
     manager: AuthSessionManager,
 ) -> App<
     impl ServiceFactory<
@@ -44,6 +47,7 @@ pub fn create_app(
         .app_data(web::Data::new(user_repo))
         .app_data(web::Data::new(token_repo))
         .app_data(web::Data::new(manager))
+        .app_data(web::Data::new(elem_repo))
         .service(post_user)
         .service(patch_user)
         .service(delete_user)
@@ -70,7 +74,9 @@ pub fn create_test_app(
 
     let token_repo = TokenRepo::new(TestRepository::new());
 
+    let elem_repo = ListElementRepository::new(TestRepository::new());
+
     let test_manager = AuthSessionManager::new(TestSessionManager(user));
 
-    create_app(user_repo, token_repo, test_manager)
+    create_app(user_repo, token_repo, elem_repo, test_manager)
 }

@@ -45,6 +45,7 @@ async fn main() -> Result<(), impl Error> {
             users::delete_user,
             users::get_user,
             users::get_users,
+            users::post_element,
         ),
         components(schemas(
             users::LoginRequest,
@@ -54,6 +55,8 @@ async fn main() -> Result<(), impl Error> {
             users::PatchUserRequest,
             users::GetUsersRequest,
             users::GetUsersResponse,
+            users::PostElement,
+            users::repositories::list_element::ListElement,
             common::entities::user::User<String>,
             swagger_tricks::Id,
         ))
@@ -167,7 +170,7 @@ async fn main() -> Result<(), impl Error> {
             files::FilePath
         ))
     )]
-    struct FilseServiceDoc;
+    struct FilesServiceDoc;
 
     HttpServer::new(move || {
         App::new()
@@ -188,6 +191,10 @@ async fn main() -> Result<(), impl Error> {
                 (
                     Url::new("audits", "/api-doc/openapi4.json"),
                     AuditsServiceDoc::openapi(),
+                ),
+                (
+                    Url::new("audits", "/api-doc/openapi5.json"),
+                    FilesServiceDoc::openapi(),
                 ),
             ]))
     })

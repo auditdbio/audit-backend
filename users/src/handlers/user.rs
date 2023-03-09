@@ -212,7 +212,7 @@ mod test {
 
     use crate::{
         create_app, create_test_app,
-        repositories::{token::TokenRepo, user::UserRepo},
+        repositories::{token::TokenRepo, user::UserRepo, list_element::ListElementRepository},
     };
 
     #[actix_web::test]
@@ -250,9 +250,12 @@ mod test {
 
         let token_repo = TokenRepo::new(TestRepository::new());
 
+        let elem_repo = ListElementRepository::new(TestRepository::new());
+
+
         let test_manager = AuthSessionManager::new(TestSessionManager(test_user));
 
-        let mut app = init_service(create_app(user_repo, token_repo, test_manager)).await;
+        let mut app = init_service(create_app(user_repo, token_repo, elem_repo, test_manager)).await;
 
         let req = test::TestRequest::post()
             .uri("/api/users")
