@@ -16,7 +16,7 @@ pub struct PostElement {
         content = PostElement
     ),
     responses(
-        (status = 200, body = User<String>)
+        (status = 200, body = ListElement)
     )
 )]
 #[post("/api/waiting_list")]

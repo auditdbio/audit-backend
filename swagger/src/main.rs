@@ -193,7 +193,7 @@ async fn main() -> Result<(), impl Error> {
                     AuditsServiceDoc::openapi(),
                 ),
                 (
-                    Url::new("audits", "/api-doc/openapi5.json"),
+                    Url::new("files", "/api-doc/openapi5.json"),
                     FilesServiceDoc::openapi(),
                 ),
             ]))
