@@ -5,7 +5,7 @@ use actix_web::{
 };
 use common::{
     auth_session::{AuthSessionManager, SessionManager},
-    entities::project::Project,
+    entities::project::{Project, PublishOptions},
 };
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -23,6 +23,11 @@ pub struct PostProjectRequest {
     scope: Vec<String>,
     tags: Vec<String>,
     status: String,
+    publish: bool,
+    ready_to_wait: bool,
+    prise_from: String,
+    prise_to: String,
+
 }
 
 #[utoipa::path(
@@ -33,7 +38,7 @@ pub struct PostProjectRequest {
         content = PostProjectRequest,
     ),
     responses(
-        (status = 200, body = Project)
+        (status = 200, body = Project<String>)
     )
 )]
 #[post("/api/projects")]
@@ -42,7 +47,7 @@ pub async fn post_project(
     Json(data): web::Json<PostProjectRequest>,
     repo: web::Data<ProjectRepo>,
     manager: web::Data<AuthSessionManager>,
-) -> Result<web::Json<Project>> {
+) -> Result<web::Json<Project<String>>> {
     let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let project = Project {
@@ -53,11 +58,17 @@ pub async fn post_project(
         status: data.status,
         tags: data.tags,
         scope: data.scope,
+        publish_options: PublishOptions {
+            publish: data.publish,
+            ready_to_wait: data.ready_to_wait,
+            prise_from: data.prise_from,
+            prise_to: data.prise_to,
+        },
     };
 
     repo.create(&project).await?;
 
-    Ok(web::Json(project))
+    Ok(web::Json(project.stringify()))
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -78,7 +89,7 @@ pub struct PatchProjectRequest {
         content = PatchProjectRequest,
     ),
     responses(
-        (status = 200, body = Project)
+        (status = 200, body = Project<String>)
     )
 )]
 #[patch("/api/projects")]
@@ -87,7 +98,7 @@ pub async fn patch_project(
     web::Json(data): web::Json<PatchProjectRequest>,
     repo: web::Data<ProjectRepo>,
     manager: web::Data<AuthSessionManager>,
-) -> Result<web::Json<Project>> {
+) -> Result<web::Json<Project<String>>> {
     let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let Some(mut project) = repo.delete(&session.user_id()).await? else {
@@ -117,7 +128,7 @@ pub async fn patch_project(
     repo.delete(&session.user_id()).await.unwrap();
     repo.create(&project).await?;
 
-    Ok(web::Json(project))
+    Ok(web::Json(project.stringify()))
 }
 
 #[utoipa::path(
@@ -125,7 +136,7 @@ pub async fn patch_project(
         ("Authorization" = String, Header,  description = "Bearer token"),
     ),
     responses(
-        (status = 200, body = Project)
+        (status = 200, body = Project<String>)
     )
 )]
 #[delete("/api/projects")]
@@ -143,37 +154,44 @@ pub async fn delete_project(
     Ok(HttpResponse::Ok().json(project))
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct GetProjectResponse {
+    projects: Vec<Project<String>>,
+}
+
 #[utoipa::path(
     params(
         ("Authorization" = String, Header,  description = "Bearer token"),
     ),
     responses(
-        (status = 200, body = Project)
+        (status = 200, body = GetProjectResponse)
     )
 )]
-#[get("/api/projects/project/{id}")]
+#[get("/api/projects/project")]
 pub async fn get_project(
     req: HttpRequest,
     id: web::Path<ObjectId>,
     repo: web::Data<ProjectRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let _session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
-    let Some(project) = repo.find(id.into_inner()).await? else {
-        return Ok(HttpResponse::BadRequest().finish()); // TODO: Error: project not found
-    };
-    Ok(HttpResponse::Ok().json(project))
+    let projects = repo.find_by_customer(session.user_id()).await?;
+    Ok(HttpResponse::Ok().json(GetProjectResponse {
+        projects: projects.into_iter().map(Project::stringify).collect(),
+    }))
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, IntoParams)]
 pub struct AllProjectsQuery {
     tags: String,
+    skip: u32,
+    limit: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct AllProjectsResponse {
-    tags: Vec<Project>,
+    tags: Vec<Project<String>>,
 }
 
 #[utoipa::path(
@@ -196,7 +214,7 @@ pub async fn get_projects(
         .filter(|s| !s.is_empty())
         .collect();
 
-    let projects = repo.find_by_tags(tags).await?;
+    let projects = repo.find_by_tags(tags, query.skip, query.limit).await?;
 
     Ok(HttpResponse::Ok().json(projects))
 }
@@ -226,6 +244,10 @@ mod tests {
                 scope: vec!["Test".to_string()],
                 tags: vec!["Test".to_string()],
                 status: "Test".to_string(),
+                publish: true,
+                ready_to_wait: false,
+                prise_from: "200".to_string(),
+                prise_to: "200".to_string(),
             })
             .to_request();
         let res = test::call_service(&app, req).await;

@@ -49,6 +49,7 @@ pub fn create_app(
         .app_data(web::Data::new(closed_audit_request_repo))
         .app_data(web::Data::new(manager))
         .service(post_audit_request)
+        .service(get_audit_requests)
         .service(patch_audit_request)
         .service(delete_audit_request)
         .service(post_audit)

@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use chrono::NaiveDateTime;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -12,37 +14,32 @@ pub enum Source {
     Audit,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct View {
-    pub id: ObjectId,
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct View<Id> {
+    pub id: Id,
     pub name: String,
     pub source: Source,
     pub last_modified: NaiveDateTime,
 }
 
-impl<'s> ToSchema<'s> for View {
-    fn schema() -> (
-        &'s str,
-        utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>,
-    ) {
-        (
-            "View",
-            ObjectBuilder::new()
-                .property("id", ObjectBuilder::new().schema_type(SchemaType::Object))
-                .required("id")
-                .property("name", ObjectBuilder::new().schema_type(SchemaType::String))
-                .required("name")
-                .property(
-                    "source",
-                    ObjectBuilder::new().schema_type(SchemaType::String),
-                )
-                .required("source")
-                .property(
-                    "last_modified",
-                    ObjectBuilder::new().schema_type(SchemaType::String),
-                )
-                .required("last_modified")
-                .into(),
-        )
+impl View<String> {
+    fn parse(self) -> View<ObjectId> {
+        View {
+            id: ObjectId::from_str(&self.id).unwrap(),
+            name: self.name,
+            source: self.source,
+            last_modified: self.last_modified,
+        }
+    }
+}
+
+impl View<ObjectId> {
+    fn serialize(self) -> View<String> {
+        View {
+            id: self.id.to_hex(),
+            name: self.name,
+            source: self.source,
+            last_modified: self.last_modified,
+        }
     }
 }

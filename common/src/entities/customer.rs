@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -9,66 +9,49 @@ use utoipa::{
 
 use crate::repository::Entity;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct Customer {
-    pub user_id: ObjectId,
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
+pub struct Customer<Id> {
+    pub user_id: Id,
+    pub avatar: String,
     pub first_name: String,
     pub last_name: String,
     pub about: String,
     pub company: String,
     pub contacts: HashMap<String, String>,
-    pub tax: String,
     pub tags: Vec<String>,
 }
 
-impl<'s> ToSchema<'s> for Customer {
-    fn schema() -> (
-        &'s str,
-        utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>,
-    ) {
-        (
-            "Customer",
-            ObjectBuilder::new()
-                .property(
-                    "user_id",
-                    ObjectBuilder::new().schema_type(SchemaType::Object),
-                )
-                .required("user_id")
-                .property(
-                    "first_name",
-                    ObjectBuilder::new().schema_type(SchemaType::String),
-                )
-                .required("first_name")
-                .property(
-                    "last_name",
-                    ObjectBuilder::new().schema_type(SchemaType::String),
-                )
-                .required("last_name")
-                .property(
-                    "about",
-                    ObjectBuilder::new().schema_type(SchemaType::String),
-                )
-                .required("about")
-                .property(
-                    "company",
-                    ObjectBuilder::new().schema_type(SchemaType::String),
-                )
-                .required("company")
-                .property(
-                    "contacts",
-                    ObjectBuilder::new().schema_type(SchemaType::Object),
-                )
-                .required("contacts")
-                .property("tax", ObjectBuilder::new().schema_type(SchemaType::String))
-                .required("tax")
-                .property("tags", ObjectBuilder::new().schema_type(SchemaType::Array))
-                .required("tags")
-                .into(),
-        )
+impl Customer<String> {
+    pub fn parse(self) -> Customer<ObjectId> {
+        Customer {
+            user_id: ObjectId::from_str(&self.user_id).unwrap(),
+            avatar: self.avatar,
+            first_name: self.first_name,
+            last_name: self.last_name,
+            about: self.about,
+            company: self.company,
+            contacts: self.contacts,
+            tags: self.tags,
+        }
     }
 }
 
-impl Entity for Customer {
+impl Customer<ObjectId> {
+    pub fn stringify(self) -> Customer<String> {
+        Customer {
+            user_id: self.user_id.to_hex(),
+            avatar: self.avatar,
+            first_name: self.first_name,
+            last_name: self.last_name,
+            about: self.about,
+            company: self.company,
+            contacts: self.contacts,
+            tags: self.tags,
+        }
+    }
+}
+
+impl Entity for Customer<ObjectId> {
     fn id(&self) -> ObjectId {
         self.user_id.clone()
     }

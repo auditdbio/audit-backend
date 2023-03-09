@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use actix_web::{
-    delete, patch, post,
+    delete, get, patch, post,
     web::{self, Json},
     HttpRequest, HttpResponse,
 };
@@ -13,22 +13,22 @@ use common::{
         role::Role,
     },
 };
-use mongodb::bson::oid::ObjectId;
+use mongodb::bson::{doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 use crate::error::Result;
 use crate::repositories::audit_request::AuditRequestRepo;
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct PostAuditRequestRequest {
-    pub auditor_id: ObjectId,
-    pub customer_id: ObjectId,
-    pub project_id: ObjectId,
+    pub auditor_id: String,
+    pub customer_id: String,
+    pub project_id: String,
     pub auditor_contacts: HashMap<String, String>,
     pub customer_contacts: HashMap<String, String>,
     pub scope: Vec<String>,
-    pub price: Option<i64>,
+    pub price: Option<String>,
     pub price_range: Option<PriceRange>,
     pub time_frame: String,
     pub opener: Role,
@@ -42,7 +42,7 @@ pub struct PostAuditRequestRequest {
         content = PostAuditRequestRequest
     ),
     responses(
-        (status = 200, body = Audit)
+        (status = 200, body = AuditRequest<String>)
     )
 )]
 #[post("/api/requests")]
@@ -56,14 +56,13 @@ pub async fn post_audit_request(
 
     let audit_request = AuditRequest {
         id: ObjectId::new(),
-        customer_id: data.customer_id,
-        auditor_id: data.auditor_id,
-        project_id: data.project_id,
+        customer_id: data.customer_id.parse().unwrap(),
+        auditor_id: data.auditor_id.parse().unwrap(),
+        project_id: data.project_id.parse().unwrap(),
         auditor_contacts: data.auditor_contacts,
         customer_contacts: data.customer_contacts,
         scope: data.scope,
         price: data.price,
-        price_range: data.price_range,
         time_frame: data.time_frame,
         last_modified: Utc::now().naive_utc(),
         opener: data.opener,
@@ -71,12 +70,48 @@ pub async fn post_audit_request(
 
     repo.create(&audit_request).await?;
 
-    Ok(HttpResponse::Ok().finish())
+    Ok(HttpResponse::Ok().json(audit_request.stringify()))
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct GetAuditRequestsQuery {
+    pub role: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema, IntoParams)]
 pub struct GetAuditRequestsResponse {
-    pub audits: Vec<AuditRequest>,
+    pub audits: Vec<AuditRequest<String>>,
+}
+
+#[utoipa::path(
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+        GetAuditRequestsResponse
+    ),
+    responses(
+        (status = 200, body = AuditRequest<String>)
+    )
+)]
+#[get("/api/requests")]
+pub async fn get_audit_requests(
+    req: HttpRequest,
+    query: web::Query<GetAuditRequestsQuery>,
+    repo: web::Data<AuditRequestRepo>,
+    manager: web::Data<AuthSessionManager>,
+) -> Result<HttpResponse> {
+    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+
+    let audits = match query.role.as_str() {
+        "Auditor" => repo.find_by_auditor(session.user_id).await?,
+        "Customer" => repo.find_by_customer(session.user_id).await?,
+        _ => {
+            unreachable!()
+        }
+    };
+
+    Ok(HttpResponse::Ok().json(GetAuditRequestsResponse {
+        audits: audits.into_iter().map(AuditRequest::stringify).collect(),
+    }))
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
@@ -85,8 +120,7 @@ pub struct PatchAuditRequestRequest {
     pub auditor_contacts: Option<HashMap<String, String>>,
     pub customer_contacts: Option<HashMap<String, String>>,
     pub scope: Option<Vec<String>>,
-    pub price: Option<i64>,
-    pub price_range: Option<PriceRange>,
+    pub price: Option<String>,
     pub time_frame: Option<String>,
 }
 
@@ -98,7 +132,7 @@ pub struct PatchAuditRequestRequest {
         content = PatchAuditRequestRequest
     ),
     responses(
-        (status = 200, body = Auditor)
+        (status = 200, body = AuditRequest<String>)
     )
 )]
 #[patch("/api/requests")]
@@ -130,10 +164,6 @@ pub async fn patch_audit_request(
         audit_request.price = Some(price);
     }
 
-    if let Some(price_range) = data.price_range {
-        audit_request.price_range = Some(price_range);
-    }
-
     if let Some(time_frame) = data.time_frame {
         audit_request.time_frame = time_frame;
     }
@@ -142,7 +172,7 @@ pub async fn patch_audit_request(
 
     repo.create(&audit_request).await?;
 
-    Ok(HttpResponse::Ok().json(audit_request))
+    Ok(HttpResponse::Ok().json(audit_request.stringify()))
 }
 
 #[utoipa::path(
@@ -150,7 +180,7 @@ pub async fn patch_audit_request(
         ("Authorization" = String, Header,  description = "Bearer token"),
     ),
     responses(
-        (status = 200, body = Auditor)
+        (status = 200, body = AuditRequest<String>)
     )
 )]
 #[delete("/api/requests/{id}")]
@@ -163,7 +193,7 @@ pub async fn delete_audit_request(
     let _session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let Some(request) = repo.delete(&id).await? else {
-        return Ok(HttpResponse::BadRequest().finish());
+        return Ok(HttpResponse::Ok().json(doc!{}));
     };
-    Ok(HttpResponse::Ok().json(request))
+    Ok(HttpResponse::Ok().json(request.stringify()))
 }

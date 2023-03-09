@@ -7,7 +7,7 @@ use actix_web::{
 };
 use common::{
     auth_session::{AuthSessionManager, SessionManager},
-    entities::auditor::Auditor,
+    entities::{auditor::Auditor, project},
 };
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
@@ -17,10 +17,12 @@ use crate::{error::Result, repositories::auditor::AuditorRepo};
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PostAuditorRequest {
+    pub avatar: String,
     pub first_name: String,
     pub last_name: String,
     pub about: String,
     pub company: String,
+    pub free_at: String,
     pub tags: Vec<String>,
     pub contacts: HashMap<String, String>,
     pub tax: String,
@@ -34,7 +36,7 @@ pub struct PostAuditorRequest {
         content = PostAuditorRequest
     ),
     responses(
-        (status = 200, body = Auditor)
+        (status = 200, body = Auditor<String>)
     )
 )]
 #[post("/api/auditors")]
@@ -48,10 +50,12 @@ pub async fn post_auditor(
 
     let auditor = Auditor {
         user_id: session.user_id(),
+        avatar: data.avatar,
         first_name: data.first_name,
         last_name: data.last_name,
         about: data.about,
         company: data.company,
+        free_at: data.free_at,
         contacts: data.contacts,
         tags: data.tags,
         tax: data.tax,
@@ -60,7 +64,7 @@ pub async fn post_auditor(
     if !repo.create(&auditor).await? {
         return Ok(HttpResponse::BadRequest().finish());
     }
-    Ok(HttpResponse::Ok().json(auditor))
+    Ok(HttpResponse::Ok().json(auditor.stringify()))
 }
 
 #[utoipa::path(
@@ -68,7 +72,7 @@ pub async fn post_auditor(
         ("Authorization" = String, Header,  description = "Bearer token"),
     ),
     responses(
-        (status = 200, body = Auditor)
+        (status = 200, body = Auditor<String>)
     )
 )]
 #[get("/api/auditors")]
@@ -83,7 +87,7 @@ pub async fn get_auditor(
         return Ok(HttpResponse::Ok().json(doc!{}));
     };
 
-    Ok(HttpResponse::Ok().json(auditor))
+    Ok(HttpResponse::Ok().json(auditor.stringify()))
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -104,7 +108,7 @@ pub struct PatchAuditorRequest {
         content = PatchCustomerRequest
     ),
     responses(
-        (status = 200, body = Auditor)
+        (status = 200, body = Auditor<String>)
     )
 )]
 #[patch("/api/auditors")]
@@ -144,7 +148,10 @@ pub async fn patch_auditor(
         auditor.tax = tax;
     }
 
-    Ok(HttpResponse::Ok().json(auditor))
+    repo.delete(&session.user_id()).await.unwrap();
+    repo.create(&auditor).await?;
+
+    Ok(HttpResponse::Ok().json(auditor.stringify()))
 }
 
 #[utoipa::path(
@@ -152,7 +159,7 @@ pub async fn patch_auditor(
         ("Authorization" = String, Header,  description = "Bearer token"),
     ),
     responses(
-        (status = 200, body = Auditor)
+        (status = 200, body = Auditor<String>)
     )
 )]
 #[delete("/api/auditors")]
@@ -164,19 +171,21 @@ pub async fn delete_auditor(
     let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let Some(auditor) = repo.delete(&session.user_id()).await? else {
-        return Ok(HttpResponse::BadRequest().finish());
+        return Ok(HttpResponse::Ok().json(doc!{}));
     };
-    Ok(HttpResponse::Ok().json(auditor))
+    Ok(HttpResponse::Ok().json(auditor.stringify()))
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, IntoParams)]
 pub struct AllAuditorsQuery {
     tags: String,
+    skip: u32,
+    limit: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct AllAuditorsResponse {
-    auditors: Vec<Auditor>,
+    auditors: Vec<Auditor<String>>,
 }
 
 #[utoipa::path(
@@ -193,8 +202,10 @@ pub async fn get_auditors(
     query: web::Query<AllAuditorsQuery>,
 ) -> Result<HttpResponse> {
     let tags = query.tags.split(',').map(ToString::to_string).collect();
-    let auditors = repo.find_by_tags(tags).await?;
-    Ok(HttpResponse::Ok().json(auditors))
+    let auditors = repo.find_by_tags(tags, query.skip, query.limit).await?;
+    Ok(HttpResponse::Ok().json(AllAuditorsResponse {
+        auditors: auditors.into_iter().map(Auditor::stringify).collect(),
+    }))
 }
 
 #[cfg(test)]
@@ -220,8 +231,10 @@ mod tests {
             .set_json(&PostAuditorRequest {
                 first_name: "John".to_string(),
                 last_name: "Doe".to_string(),
+                avatar: "https://test.com".to_string(),
                 about: "About me".to_string(),
                 company: "Company".to_string(),
+                free_at: "2020-01-01".to_string(),
                 tags: vec!["tag1".to_string(), "tag2".to_string()],
                 contacts: vec![("email".to_string(), "test@test.com".to_string())]
                     .into_iter()

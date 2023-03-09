@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use utoipa::{
@@ -7,44 +9,41 @@ use utoipa::{
 
 use crate::repository::Entity;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct User {
-    pub id: ObjectId,
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
+pub struct User<Id> {
+    pub id: Id,
     pub email: String,
     pub password: String,
     pub name: String,
     pub current_role: String,
 }
 
-impl Entity for User {
-    fn id(&self) -> ObjectId {
-        self.id
+impl User<String> {
+    fn parse(self) -> User<ObjectId> {
+        User {
+            id: ObjectId::from_str(&self.id).unwrap(),
+            email: self.email,
+            password: self.password,
+            name: self.name,
+            current_role: self.current_role,
+        }
     }
 }
 
-impl<'s> ToSchema<'s> for User {
-    fn schema() -> (
-        &'s str,
-        utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>,
-    ) {
-        (
-            "User",
-            ObjectBuilder::new()
-                .property("id", ObjectBuilder::new().schema_type(SchemaType::Object))
-                .required("id")
-                .property(
-                    "email",
-                    ObjectBuilder::new().schema_type(SchemaType::String),
-                )
-                .required("email")
-                .property(
-                    "password",
-                    ObjectBuilder::new().schema_type(SchemaType::String),
-                )
-                .required("password")
-                .property("name", ObjectBuilder::new().schema_type(SchemaType::String))
-                .required("name")
-                .into(),
-        )
+impl User<ObjectId> {
+    pub fn stringify(self) -> User<String> {
+        User {
+            id: self.id.to_hex(),
+            email: self.email,
+            password: self.password,
+            name: self.name,
+            current_role: self.current_role,
+        }
+    }
+}
+
+impl Entity for User<ObjectId> {
+    fn id(&self) -> ObjectId {
+        self.id
     }
 }

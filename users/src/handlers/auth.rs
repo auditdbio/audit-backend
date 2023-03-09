@@ -35,7 +35,7 @@ pub struct LoginRequest {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct LoginResponse {
     pub token: String,
-    pub user: User,
+    pub user: User<String>,
 }
 
 #[utoipa::path(
@@ -76,7 +76,7 @@ pub async fn login(
 
     let response = LoginResponse {
         token: jwt::create(session)?,
-        user,
+        user: user.stringify(),
     };
 
     Ok(web::Json(response))

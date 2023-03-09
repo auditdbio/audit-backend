@@ -89,8 +89,18 @@ impl<T> TaggableEntityRepository<T> for MongoRepository<T>
 where
     T: Entity + Serialize + DeserializeOwned + Unpin + Clone + Send + Sync,
 {
-    async fn find_by_tags(&self, tags: Vec<String>) -> Result<Vec<T>, Self::Error> {
+    async fn find_by_tags(
+        &self,
+        tags: Vec<String>,
+        skip: u32,
+        limit: u32,
+    ) -> Result<Vec<T>, Self::Error> {
         use mongodb::error::Result as MongoResult;
+        let find_options = FindOptions::builder()
+            .skip(skip as u64)
+            .limit(limit as i64)
+            .build();
+
         let filter = if tags.is_empty() {
             None
         } else {
@@ -103,7 +113,7 @@ where
 
         let result: Vec<T> = self
             .collection
-            .find(filter, None)
+            .find(filter, find_options)
             .await?
             .collect::<Vec<MongoResult<T>>>()
             .await

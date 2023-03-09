@@ -1,5 +1,5 @@
 use actix_web::{
-    delete, get,
+    delete, get, post,
     web::{self},
     HttpRequest, HttpResponse,
 };
@@ -9,9 +9,9 @@ use common::{
     auth_session::{AuthSessionManager, SessionManager},
     entities::{audit::Audit, audit_request::AuditRequest, project::Project, view::View},
 };
-use mongodb::bson::oid::ObjectId;
+use mongodb::bson::{oid::ObjectId, doc};
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 use crate::{
     contants::CUSTOMERS_SERVICE,
@@ -26,16 +26,16 @@ use crate::{
         ("Authorization" = String, Header,  description = "Bearer token"),
     ),
     request_body(
-        content = AuditRequest
+        content = AuditRequest<String>
     ),
     responses(
-        (status = 200, body = Audit)
+        (status = 200, body = Audit<String>)
     )
 )]
-#[get("/api/audit")]
+#[post("/api/audit")]
 pub async fn post_audit(
     req: HttpRequest,
-    web::Json(request): web::Json<AuditRequest>,
+    web::Json(request): web::Json<AuditRequest<String>>,
     repo: web::Data<AuditRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
@@ -47,9 +47,9 @@ pub async fn post_audit(
 
     let audit = Audit {
         id: ObjectId::new(),
-        customer_id: request.customer_id,
-        auditor_id: request.auditor_id,
-        project_id: request.project_id,
+        customer_id: request.customer_id.parse().unwrap(),
+        auditor_id: request.auditor_id.parse().unwrap(),
+        project_id: request.project_id.parse().unwrap(),
         status: "pending".to_string(),
         last_modified: Utc::now().naive_utc(),
         auditor_contacts: request.auditor_contacts,
@@ -62,7 +62,17 @@ pub async fn post_audit(
 
     repo.create(&audit).await?;
 
-    Ok(HttpResponse::Ok().json(audit))
+    Ok(HttpResponse::Ok().json(audit.stringify()))
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema, IntoParams)]
+pub struct GetAuditQuery {
+    pub role: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct GetAuditResponse {
+    pub audits: Vec<Audit<String>>,
 }
 
 #[utoipa::path(
@@ -70,21 +80,29 @@ pub async fn post_audit(
         ("Authorization" = String, Header,  description = "Bearer token"),
     ),
     responses(
-        (status = 200, body = Audit)
+        (status = 200, body = GetAuditResponse)
     )
 )]
-#[get("/api/audit/{id}")]
+#[get("/api/audit")]
 pub async fn get_audits(
     req: HttpRequest,
-    id: web::Path<ObjectId>,
+    query: web::Query<GetAuditQuery>,
     repo: web::Data<AuditRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let _session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
-    let audits = repo.find(*id).await?;
+    let audits = match query.role.as_str() {
+        "Auditor" => repo.find_by_auditor(session.user_id).await?,
+        "Customer" => repo.find_by_auditor(session.user_id).await?,
+        _ => {
+            unreachable!()
+        }
+    };
 
-    Ok(HttpResponse::Ok().json(audits))
+    Ok(HttpResponse::Ok().json(GetAuditResponse {
+        audits: audits.into_iter().map(|a| a.stringify()).collect(),
+    }))
 }
 
 #[utoipa::path(
@@ -92,7 +110,7 @@ pub async fn get_audits(
         ("Authorization" = String, Header,  description = "Bearer token"),
     ),
     responses(
-        (status = 200, body = Audit)
+        (status = 200, body = Audit<String>)
     )
 )]
 #[delete("/api/audit/{id}")]
@@ -106,20 +124,20 @@ pub async fn delete_audit(
     let _session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let Some(audit) = repo.delete(&id).await? else {
-        return Ok(HttpResponse::BadRequest().finish());
+        return Ok(HttpResponse::Ok().json(doc!{}));
     };
 
     closed_repo.create(&audit).await?;
 
-    Ok(HttpResponse::Ok().json(audit))
+    Ok(HttpResponse::Ok().json(audit.stringify()))
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct GetViewsResponse {
-    pub views: Vec<View>,
+    pub views: Vec<View<String>>,
 }
 
-async fn get_project(client: &Client, project_id: &ObjectId) -> Result<Project> {
+async fn get_project(client: &Client, project_id: &ObjectId) -> Result<Project<String>> {
     let mut res = client
         .get(format!(
             "http://{}/api/project/{}",
@@ -129,7 +147,7 @@ async fn get_project(client: &Client, project_id: &ObjectId) -> Result<Project> 
         .await
         .unwrap();
 
-    let body = res.json::<Project>().await.unwrap();
+    let body = res.json::<Project<String>>().await.unwrap();
     Ok(body)
 }
 
@@ -158,13 +176,6 @@ pub async fn get_views(
         req.headers().get("Authorization").unwrap().clone(),
     );
 
-    let requests_as_customer = request_repo.find_by_customer(session.user_id()).await?;
-    for request in requests_as_customer {
-        let project = get_project(&client, &request.project_id).await?;
-
-        views.push(request.to_view(project.name));
-    }
-
     let requests_as_auditor = request_repo.find_by_auditor(session.user_id()).await?;
     for request in requests_as_auditor {
         let project = get_project(&client, &request.project_id).await?;
@@ -174,13 +185,6 @@ pub async fn get_views(
 
     let audits_as_auditor = audits_repo.find_by_auditor(session.user_id()).await?;
     for audit in audits_as_auditor {
-        let project = get_project(&client, &audit.project_id).await?;
-
-        views.push(audit.to_view(project.name));
-    }
-
-    let audits_as_customer = audits_repo.find_by_customer(session.user_id()).await?;
-    for audit in audits_as_customer {
         let project = get_project(&client, &audit.project_id).await?;
 
         views.push(audit.to_view(project.name));

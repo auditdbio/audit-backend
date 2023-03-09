@@ -49,7 +49,6 @@ pub fn create_app(
         .service(delete_user)
         .service(get_users)
         .service(get_user)
-        .service(get_user_email)
         .service(login)
         .service(restore)
         .service(verify);

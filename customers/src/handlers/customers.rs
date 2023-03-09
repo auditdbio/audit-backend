@@ -7,7 +7,7 @@ use actix_web::{
 };
 use common::{
     auth_session::{AuthSessionManager, SessionManager},
-    entities::customer::Customer,
+    entities::{customer::Customer, project::Project},
 };
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
@@ -17,13 +17,13 @@ use crate::{error::Result, repositories::customer::CustomerRepo};
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PostCustomerRequest {
+    avatar: String,
     first_name: String,
     last_name: String,
     about: String,
     company: String,
     contacts: HashMap<String, String>,
     tags: Vec<String>,
-    tax: String,
 }
 
 #[utoipa::path(
@@ -34,7 +34,7 @@ pub struct PostCustomerRequest {
         content = PostCustomerRequest
     ),
     responses(
-        (status = 200, body = Customer)
+        (status = 200, body = Customer<String>)
     )
 )]
 #[post("/api/customer")]
@@ -48,20 +48,20 @@ pub async fn post_customer(
 
     let customer = Customer {
         user_id: session.user_id(),
+        avatar: data.avatar,
         first_name: data.first_name,
         last_name: data.last_name,
         about: data.about,
         company: data.company,
         contacts: data.contacts,
         tags: data.tags,
-        tax: data.tax,
     };
 
     if !repo.create(&customer).await? {
         return Ok(HttpResponse::BadRequest().finish()); // TODO: Error: customer entity already exits
     }
 
-    Ok(HttpResponse::Ok().json(customer))
+    Ok(HttpResponse::Ok().json(customer.stringify()))
 }
 
 #[utoipa::path(
@@ -69,7 +69,7 @@ pub async fn post_customer(
         ("Authorization" = String, Header,  description = "Bearer token"),
     ),
     responses(
-        (status = 200, body = Customer)
+        (status = 200, body = Customer<String>)
     )
 )]
 #[get("/api/customer")]
@@ -83,11 +83,12 @@ pub async fn get_customer(
     let Some(customer) = repo.find(session.user_id()).await? else {
         return Ok(HttpResponse::Ok().json(doc!{}));
     };
-    Ok(HttpResponse::Ok().json(customer))
+    Ok(HttpResponse::Ok().json(customer.stringify()))
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PatchCustomerRequest {
+    avatar: Option<String>,
     first_name: Option<String>,
     last_name: Option<String>,
     about: Option<String>,
@@ -105,7 +106,7 @@ pub struct PatchCustomerRequest {
         content = PatchCustomerRequest
     ),
     responses(
-        (status = 200, body = Customer)
+        (status = 200, body = Customer<String>)
     )
 )]
 #[patch("/api/customer")]
@@ -120,6 +121,10 @@ pub async fn patch_customer(
     let Some(mut customer) = repo.find(session.user_id()).await? else {
         return Ok(HttpResponse::BadRequest().finish());
     };
+
+    if let Some(avatar) = data.avatar {
+        customer.avatar = avatar;
+    }
 
     if let Some(first_name) = data.first_name {
         customer.first_name = first_name;
@@ -145,14 +150,10 @@ pub async fn patch_customer(
         customer.tags = tags;
     }
 
-    if let Some(tax) = data.tax {
-        customer.tax = tax;
-    }
-
     repo.delete(&session.user_id()).await.unwrap();
     repo.create(&customer).await?;
 
-    Ok(HttpResponse::Ok().json(customer))
+    Ok(HttpResponse::Ok().json(customer.stringify()))
 }
 
 #[utoipa::path(
@@ -163,7 +164,7 @@ pub async fn patch_customer(
         content = CustomerRepository
     ),
     responses(
-        (status = 200, body = Customer)
+        (status = 200, body = Customer<String>)
     )
 )]
 #[delete("/api/customer")]
@@ -175,9 +176,9 @@ pub async fn delete_customer(
     let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let Some(customer) = repo.delete(&session.user_id()).await? else {
-        return Ok(HttpResponse::BadRequest().finish()); // TODO: Error: this user doesn't exit
+        return Ok(HttpResponse::Ok().json(doc!{})); // TODO: Error: this user doesn't exit
     };
-    Ok(HttpResponse::Ok().json(customer))
+    Ok(HttpResponse::Ok().json(customer.stringify()))
 }
 
 #[cfg(test)]
@@ -202,13 +203,13 @@ mod tests {
         let req = actix_web::test::TestRequest::post()
             .uri("/api/customer")
             .set_json(&PostCustomerRequest {
+                avatar: "https://example.com/avatar.png".to_string(),
                 first_name: "John".to_string(),
                 last_name: "Doe".to_string(),
                 about: "I'm a test".to_string(),
                 company: "Test Inc.".to_string(),
                 contacts: HashMap::new(),
                 tags: vec![],
-                tax: "200".to_string(),
             })
             .to_request();
         let res = test::call_service(&app, req).await;
@@ -227,6 +228,7 @@ mod tests {
         let req = actix_web::test::TestRequest::patch()
             .uri("/api/customer")
             .set_json(&PatchCustomerRequest {
+                avatar: Some("https://example.com/avatar.png".to_string()),
                 first_name: Some("John".to_string()),
                 last_name: Some("Doe".to_string()),
                 about: Some("I'm a test".to_string()),

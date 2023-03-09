@@ -31,14 +31,14 @@ pub struct PostUserRequest {
         content = PostUserRequest
     ),
     responses(
-        (status = 200, description = "Authorized user's token", body = User)
+        (status = 200, body = User<String>)
     )
 )]
 #[post("/api/users")]
 pub async fn post_user(
     Json(data): web::Json<PostUserRequest>,
     repo: web::Data<UserRepo>,
-) -> Result<web::Json<User>> {
+) -> Result<web::Json<User<String>>> {
     let user = User {
         id: ObjectId::new(),
         name: data.name,
@@ -52,7 +52,7 @@ pub async fn post_user(
     };
 
     repo.create(&user).await?;
-    return Ok(web::Json(user));
+    return Ok(web::Json(user.stringify()));
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -71,7 +71,7 @@ pub struct PatchUserRequest {
         content = PatchUserRequest
     ),
     responses(
-        (status = 200, body = PublicUser)
+        (status = 200, body = User<String>)
     )
 )]
 #[patch("/api/users")]
@@ -80,7 +80,7 @@ pub async fn patch_user(
     Json(data): web::Json<PatchUserRequest>,
     users_repo: web::Data<UserRepo>,
     tokens_repo: web::Data<TokenRepo>,
-) -> Result<web::Json<User>> {
+) -> Result<web::Json<User<String>>> {
     let Ok((_, session)) = verify_token(&req, &tokens_repo).await? else {
         return Err(Error::Outer(OuterError::Unauthorized));
     };
@@ -113,7 +113,7 @@ pub async fn patch_user(
 
     users_repo.create(&user).await?;
 
-    Ok(web::Json(user))
+    Ok(web::Json(user.stringify()))
 }
 
 #[utoipa::path(
@@ -121,7 +121,7 @@ pub async fn patch_user(
         ("Authorization" = String, Header,  description = "Bearer token"),
     ),
     responses(
-        (status = 200, description = "Authorized user's token", body = User)
+        (status = 200, body = User<String>)
     )
 )]
 #[delete("/api/users")]
@@ -129,18 +129,17 @@ pub async fn delete_user(
     req: HttpRequest,
     users_repo: web::Data<UserRepo>,
     tokens_repo: web::Data<TokenRepo>,
-) -> Result<web::Json<User>> {
+) -> Result<web::Json<Option<User<String>>>> {
     let Ok((_, session)) = verify_token(&req, &tokens_repo).await? else {
         return Err(Error::Outer(OuterError::Unauthorized)); //TODO: error description
     };
 
     let user_id = session.user_id();
 
-    let deleted_user = users_repo.delete(&user_id).await?;
-    if deleted_user.is_none() {
-        return Err(Error::Outer(OuterError::UserNotFound));
-    }
-    Ok(web::Json(deleted_user.unwrap()))
+    let Some(user) = users_repo.delete(&user_id).await? else {
+        return Ok(web::Json(None));
+    };
+    Ok(web::Json(Some(user.stringify())))
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -151,9 +150,7 @@ pub struct GetUsersRequest {
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct GetUsersResponse {
-    data: Vec<User>,
-    page: u32,
-    limit: u32,
+    data: Vec<User<String>>,
 }
 
 #[utoipa::path(
@@ -161,10 +158,10 @@ pub struct GetUsersResponse {
         content = GetUsersRequest,
     ),
     responses(
-        (status = 200, description = "Authorized user's token", body = GetUsersResponse)
+        (status = 200, body = GetUsersResponse)
     )
 )]
-#[get("/api/users")]
+#[get("/api/users/all")]
 pub async fn get_users(
     Json(data): web::Json<GetUsersRequest>,
     repo: web::Data<UserRepo>,
@@ -174,9 +171,7 @@ pub async fn get_users(
         .await?;
 
     Ok(HttpResponse::Ok().json(GetUsersResponse {
-        data: users,
-        page: data.page,
-        limit: data.limit,
+        data: users.into_iter().map(|user| user.stringify()).collect(),
     }))
 }
 
@@ -185,10 +180,10 @@ pub async fn get_users(
         ("Authorization" = String, Header,  description = "Bearer token"),
     ),
     responses(
-        (status = 200, description = "Authorized user's token", body = User)
+        (status = 200, body = User<String>)
     )
 )]
-#[get("/api/users/user")]
+#[get("/api/users")]
 pub async fn get_user(
     req: HttpRequest,
     repo: web::Data<UserRepo>,
@@ -199,28 +194,11 @@ pub async fn get_user(
         .await
         .map_err(|_| Error::Outer(OuterError::Unauthorized))?;
 
-    let user = repo.find(session.user_id()).await.unwrap();
-
-    Ok(HttpResponse::Ok().json(user))
-}
-
-#[utoipa::path(
-    responses(
-        (status = 200, description = "Authorized user's token", body = String)
-    )
-)]
-#[get("/api/users/{email}")]
-pub async fn get_user_email(
-    email: web::Path<(String,)>,
-    repo: web::Data<UserRepo>,
-) -> Result<HttpResponse> {
-    let (email,) = email.into_inner();
-
-    let Some(user) = repo.find_by_email(&email).await? else {
-        return Ok(HttpResponse::BadRequest().body("Error: User not found"));
+    let Some(user) = repo.find(session.user_id()).await.unwrap() else {
+        return Err(Error::Outer(OuterError::UserNotFound));
     };
 
-    Ok(HttpResponse::Ok().json(doc! {"id": user.id, "name": user.name, "email": user.email}))
+    Ok(HttpResponse::Ok().json(user.stringify()))
 }
 
 #[cfg(test)]

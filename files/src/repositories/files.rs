@@ -24,7 +24,7 @@ impl FilesRepository {
 
     pub async fn get(&self, path: String) -> Bytes {
         web::block(move || {
-            let file = File::open(format!("./files/{}", path)).unwrap();
+            let file = File::open(format!("/auditdb-files/{}", path)).unwrap();
             let bytes = Bytes::from(
                 file.bytes()
                     .collect::<Result<Vec<u8>, io::Error>>()
@@ -38,7 +38,7 @@ impl FilesRepository {
 
     pub async fn delete(&self, path: String) {
         web::block(move || {
-            std::fs::remove_file(format!("./files/{}", path)).unwrap();
+            std::fs::remove_file(format!("/auditdb-files/{}", path)).unwrap();
         })
         .await
         .unwrap()

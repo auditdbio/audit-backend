@@ -24,5 +24,10 @@ pub trait Repository<T> {
 
 #[async_trait]
 pub trait TaggableEntityRepository<T>: Repository<T> {
-    async fn find_by_tags(&self, tags: Vec<String>) -> Result<Vec<T>, Self::Error>;
+    async fn find_by_tags(
+        &self,
+        tags: Vec<String>,
+        skip: u32,
+        limit: u32,
+    ) -> Result<Vec<T>, Self::Error>;
 }

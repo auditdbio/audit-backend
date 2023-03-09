@@ -90,7 +90,12 @@ impl<T> TaggableEntityRepository<T> for TestRepository<T>
 where
     T: Entity + TaggableEntity + Clone + PartialEq + Send + Sync + Serialize + DeserializeOwned,
 {
-    async fn find_by_tags(&self, tags: Vec<String>) -> Result<Vec<T>, Self::Error> {
+    async fn find_by_tags(
+        &self,
+        tags: Vec<String>,
+        skip: u32,
+        limit: u32,
+    ) -> Result<Vec<T>, Self::Error> {
         let db = self.db.lock().unwrap();
         Ok(db
             .iter()
@@ -103,6 +108,8 @@ where
                 }
                 None
             })
+            .skip(skip as usize)
+            .take(limit as usize)
             .collect())
     }
 }

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
 use chrono::NaiveDateTime;
 use mongodb::bson::oid::ObjectId;
@@ -17,28 +17,63 @@ use super::{
 
 #[derive(Debug, Serialize, Deserialize, ToSchema, PartialEq, Clone)]
 pub struct PriceRange {
-    pub lower_bound: i64,
-    pub upper_bound: i64,
+    pub lower_bound: String,
+    pub upper_bound: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct AuditRequest {
-    pub id: ObjectId,
-    pub auditor_id: ObjectId,
-    pub customer_id: ObjectId,
-    pub project_id: ObjectId,
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, ToSchema)]
+pub struct AuditRequest<Id> {
+    pub id: Id,
+    pub auditor_id: Id,
+    pub customer_id: Id,
+    pub project_id: Id,
     pub auditor_contacts: HashMap<String, String>,
     pub customer_contacts: HashMap<String, String>,
     pub scope: Vec<String>,
-    pub price: Option<i64>,
-    pub price_range: Option<PriceRange>,
+    pub price: Option<String>,
     pub time_frame: String,
     pub last_modified: NaiveDateTime,
     pub opener: Role,
 }
 
-impl AuditRequest {
-    pub fn to_view(self, name: String) -> View {
+impl AuditRequest<String> {
+    pub fn parse(self) -> AuditRequest<ObjectId> {
+        AuditRequest {
+            id: ObjectId::from_str(&self.id).unwrap(),
+            auditor_id: ObjectId::from_str(&self.auditor_id).unwrap(),
+            customer_id: ObjectId::from_str(&self.customer_id).unwrap(),
+            project_id: ObjectId::from_str(&self.project_id).unwrap(),
+            auditor_contacts: self.auditor_contacts,
+            customer_contacts: self.customer_contacts,
+            scope: self.scope,
+            price: self.price,
+            time_frame: self.time_frame,
+            last_modified: self.last_modified,
+            opener: self.opener,
+        }
+    }
+}
+
+impl AuditRequest<ObjectId> {
+    pub fn stringify(self) -> AuditRequest<String> {
+        AuditRequest {
+            id: self.id.to_hex(),
+            auditor_id: self.auditor_id.to_hex(),
+            customer_id: self.customer_id.to_hex(),
+            project_id: self.project_id.to_hex(),
+            auditor_contacts: self.auditor_contacts,
+            customer_contacts: self.customer_contacts,
+            scope: self.scope,
+            price: self.price,
+            time_frame: self.time_frame,
+            last_modified: self.last_modified,
+            opener: self.opener,
+        }
+    }
+}
+
+impl AuditRequest<ObjectId> {
+    pub fn to_view(self, name: String) -> View<ObjectId> {
         View {
             id: self.id,
             name,
@@ -48,64 +83,7 @@ impl AuditRequest {
     }
 }
 
-impl<'s> ToSchema<'s> for AuditRequest {
-    fn schema() -> (
-        &'s str,
-        utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>,
-    ) {
-        (
-            "AuditRequest",
-            ObjectBuilder::new()
-                .property("id", ObjectBuilder::new().schema_type(SchemaType::Object))
-                .required("id")
-                .property(
-                    "auditor_id",
-                    ObjectBuilder::new().schema_type(SchemaType::Object),
-                )
-                .required("auditor_id")
-                .property(
-                    "customer_id",
-                    ObjectBuilder::new().schema_type(SchemaType::Object),
-                )
-                .required("customer_id")
-                .property(
-                    "project_id",
-                    ObjectBuilder::new().schema_type(SchemaType::Object),
-                )
-                .required("project_id")
-                .property(
-                    "auditor_contacts",
-                    ObjectBuilder::new().schema_type(SchemaType::Object),
-                )
-                .required("auditor_contacts")
-                .property(
-                    "customer_contacts",
-                    ObjectBuilder::new().schema_type(SchemaType::Object),
-                )
-                .required("customer_contacts")
-                .property("scope", ObjectBuilder::new().schema_type(SchemaType::Array))
-                .required("scope")
-                .property(
-                    "price",
-                    ObjectBuilder::new().schema_type(SchemaType::Integer),
-                )
-                .required("price")
-                .property(
-                    "price_range",
-                    ObjectBuilder::new().schema_type(SchemaType::Object),
-                )
-                .required("price_range")
-                .property(
-                    "last_modified",
-                    ObjectBuilder::new().schema_type(SchemaType::String),
-                )
-                .property("role", ObjectBuilder::new().schema_type(SchemaType::String))
-                .into(),
-        )
-    }
-}
-
-impl Entity for AuditRequest {
+impl Entity for AuditRequest<ObjectId> {
     fn id(&self) -> ObjectId {
         self.id.clone()
     }
