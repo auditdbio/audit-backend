@@ -27,7 +27,6 @@ pub struct PostProjectRequest {
     ready_to_wait: bool,
     prise_from: String,
     prise_to: String,
-
 }
 
 #[utoipa::path(

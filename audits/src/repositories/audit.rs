@@ -1,4 +1,4 @@
-use common::{entities::audit::Audit, repository::{TaggableEntityRepository}};
+use common::{entities::audit::Audit, repository::TaggableEntityRepository};
 
 use mongodb::bson::{oid::ObjectId, Bson};
 
@@ -12,7 +12,10 @@ pub struct AuditRepo(
 impl AuditRepo {
     pub fn new<T>(repo: T) -> Self
     where
-        T: TaggableEntityRepository<Audit<ObjectId>, Error = mongodb::error::Error> + Send + Sync + 'static,
+        T: TaggableEntityRepository<Audit<ObjectId>, Error = mongodb::error::Error>
+            + Send
+            + Sync
+            + 'static,
     {
         Self(Arc::new(repo))
     }

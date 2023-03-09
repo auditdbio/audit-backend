@@ -78,6 +78,7 @@ async fn main() -> Result<(), impl Error> {
             customers::delete_project,
             customers::get_project,
             customers::get_projects,
+            customers::customer_by_id,
         ),
         components(schemas(
             customers::PostCustomerRequest,

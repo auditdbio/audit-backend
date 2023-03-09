@@ -3,9 +3,7 @@ use std::{collections::HashMap, str::FromStr};
 use chrono::NaiveDateTime;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use utoipa::{
-    ToSchema,
-};
+use utoipa::ToSchema;
 
 use crate::repository::Entity;
 

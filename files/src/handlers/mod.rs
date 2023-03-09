@@ -8,7 +8,7 @@ use chrono::Utc;
 use common::auth_session::{self, SessionManager};
 use mongodb::bson::oid::ObjectId;
 
-use actix_web::{Error};
+use actix_web::Error;
 use futures_util::StreamExt as _;
 
 use crate::repositories::{
@@ -31,12 +31,13 @@ use crate::repositories::{
 async fn create_file(req: HttpRequest, mut payload: Multipart) -> Result<HttpResponse, Error> {
     // iterate over multipart stream
     while let Some(item) = payload.next().await {
-           let mut field = item?;
+        let mut field = item?;
 
-           // Field in turn is stream of *Bytes* object
-           while let Some(chunk) = field.next().await {
-               log::info!("-- CHUNK: \n{:?}", &chunk?);
-           }
+        // Field in turn is stream of *Bytes* object
+        while let Some(chunk) = field.next().await {
+            let rf = &chunk?;
+            log::info!("-- CHUNK: \n{:?}", rf);
+        }
     }
 
     Ok(HttpResponse::Ok().into())

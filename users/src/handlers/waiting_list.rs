@@ -1,14 +1,17 @@
-use actix_web::{post, web::{Json, self}};
+use actix_web::{
+    post,
+    web::{self, Json},
+};
 use mongodb::bson::oid::ObjectId;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::repositories::list_element::{ListElementRepository, ListElement};
 use crate::error::Result;
+use crate::repositories::list_element::{ListElement, ListElementRepository};
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PostElement {
-    pub email: String
+    pub email: String,
 }
 
 #[utoipa::path(

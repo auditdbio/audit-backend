@@ -6,13 +6,20 @@ use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct ProjectRepo(
-    Arc<dyn TaggableEntityRepository<Project<ObjectId>, Error = mongodb::error::Error> + Send + Sync>,
+    Arc<
+        dyn TaggableEntityRepository<Project<ObjectId>, Error = mongodb::error::Error>
+            + Send
+            + Sync,
+    >,
 );
 
 impl ProjectRepo {
     pub fn new<T>(repo: T) -> Self
     where
-        T: TaggableEntityRepository<Project<ObjectId>, Error = mongodb::error::Error> + Send + Sync + 'static,
+        T: TaggableEntityRepository<Project<ObjectId>, Error = mongodb::error::Error>
+            + Send
+            + Sync
+            + 'static,
     {
         Self(Arc::new(repo))
     }
@@ -25,14 +32,22 @@ impl ProjectRepo {
         &self,
         customer_id: ObjectId,
     ) -> Result<Vec<Project<ObjectId>>, mongodb::error::Error> {
-        self.0.find_many("customer_id", &Bson::ObjectId(customer_id)).await
+        self.0
+            .find_many("customer_id", &Bson::ObjectId(customer_id))
+            .await
     }
 
-    pub async fn find(&self, id: ObjectId) -> Result<Option<Project<ObjectId>>, mongodb::error::Error> {
+    pub async fn find(
+        &self,
+        id: ObjectId,
+    ) -> Result<Option<Project<ObjectId>>, mongodb::error::Error> {
         self.0.find("id", &Bson::ObjectId(id)).await
     }
 
-    pub async fn delete(&self, id: &ObjectId) -> Result<Option<Project<ObjectId>>, mongodb::error::Error> {
+    pub async fn delete(
+        &self,
+        id: &ObjectId,
+    ) -> Result<Option<Project<ObjectId>>, mongodb::error::Error> {
         self.0.delete("id", id).await
     }
 

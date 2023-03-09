@@ -9,7 +9,7 @@ use common::{
     auth_session::{AuthSessionManager, SessionManager},
     entities::{audit::Audit, audit_request::AuditRequest, project::Project, view::View},
 };
-use mongodb::bson::{oid::ObjectId, doc};
+use mongodb::bson::{doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
@@ -39,7 +39,6 @@ pub async fn post_audit(
     repo: web::Data<AuditRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-
     let _session = manager.get_session(req.clone().into()).await.unwrap(); // TODO: remove unwrap
 
     let Some(price) = request.price else {
@@ -208,7 +207,6 @@ pub async fn get_views(
     Ok(HttpResponse::Ok().json(views))
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, IntoParams)]
 pub struct AllAuditsQuery {
     tags: String,
@@ -240,5 +238,3 @@ pub async fn get_audits(
         auditors: auditors.into_iter().map(Audit::stringify).collect(),
     }))
 }
-
-

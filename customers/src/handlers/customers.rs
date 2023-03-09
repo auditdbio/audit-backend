@@ -7,7 +7,7 @@ use actix_web::{
 };
 use common::{
     auth_session::{AuthSessionManager, SessionManager},
-    entities::{customer::Customer},
+    entities::customer::Customer,
 };
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
@@ -173,6 +173,22 @@ pub async fn delete_customer(
 
     let Some(customer) = repo.delete(&session.user_id()).await? else {
         return Ok(HttpResponse::Ok().json(doc!{})); // TODO: Error: this user doesn't exit
+    };
+    Ok(HttpResponse::Ok().json(customer.stringify()))
+}
+
+#[utoipa::path(
+    responses(
+        (status = 200, body = Customer<String>)
+    )
+)]
+#[get("/api/customer/by_id/{id}")]
+pub async fn customer_by_id(
+    id: web::Path<String>,
+    repo: web::Data<CustomerRepo>,
+) -> Result<HttpResponse> {
+    let Some(customer) = repo.find(id.parse().unwrap()).await? else {
+        return Ok(HttpResponse::Ok().json(doc!{}));
     };
     Ok(HttpResponse::Ok().json(customer.stringify()))
 }

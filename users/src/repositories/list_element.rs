@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use common::{repository::{Repository, Entity}};
+use common::repository::{Entity, Repository};
 use mongodb::bson::{oid::ObjectId, Bson};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq)]
@@ -18,7 +18,9 @@ impl Entity for ListElement {
 }
 
 #[derive(Clone)]
-pub struct ListElementRepository(Arc<dyn Repository<ListElement, Error = mongodb::error::Error> + Send + Sync>);
+pub struct ListElementRepository(
+    Arc<dyn Repository<ListElement, Error = mongodb::error::Error> + Send + Sync>,
+);
 
 impl ListElementRepository {
     pub fn new<T>(repo: T) -> Self
@@ -36,11 +38,17 @@ impl ListElementRepository {
         self.0.find("id", &Bson::ObjectId(id)).await
     }
 
-    pub async fn find_by_email(&self, email: &str) -> Result<Option<ListElement>, mongodb::error::Error> {
+    pub async fn find_by_email(
+        &self,
+        email: &str,
+    ) -> Result<Option<ListElement>, mongodb::error::Error> {
         self.0.find("email", &Bson::String(email.to_string())).await
     }
 
-    pub async fn delete(&self, id: &ObjectId) -> Result<Option<ListElement>, mongodb::error::Error> {
+    pub async fn delete(
+        &self,
+        id: &ObjectId,
+    ) -> Result<Option<ListElement>, mongodb::error::Error> {
         self.0.delete("id", id).await
     }
 
