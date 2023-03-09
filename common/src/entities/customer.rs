@@ -3,7 +3,6 @@ use std::{collections::HashMap, str::FromStr};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use utoipa::{
-    openapi::{ObjectBuilder, SchemaType},
     ToSchema,
 };
 

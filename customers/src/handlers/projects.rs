@@ -170,7 +170,7 @@ pub struct GetProjectResponse {
 #[get("/api/projects/project")]
 pub async fn get_project(
     req: HttpRequest,
-    id: web::Path<ObjectId>,
+    _id: web::Path<ObjectId>,
     repo: web::Data<ProjectRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {

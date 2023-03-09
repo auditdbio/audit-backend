@@ -52,7 +52,7 @@ async fn main() -> Result<(), impl Error> {
             users::PatchUserRequest,
             users::GetUsersRequest,
             users::GetUsersResponse,
-            common::entities::user::User,
+            common::entities::user::User<String>,
             common::auth_session::AuthSession
         ))
     )]
@@ -80,7 +80,7 @@ async fn main() -> Result<(), impl Error> {
             customers::PostProjectRequest,
             customers::PatchProjectRequest,
             customers::AllProjectsResponse,
-            common::entities::customer::Customer,
+            common::entities::customer::Customer<String>,
         ))
     )]
     struct CustomersServiceDoc;
@@ -101,7 +101,7 @@ async fn main() -> Result<(), impl Error> {
             auditors::PostAuditorRequest,
             auditors::PatchAuditorRequest,
             auditors::AllAuditorsResponse,
-            common::entities::auditor::Auditor,
+            common::entities::auditor::Auditor<String>,
         ))
     )]
     struct AuditorsServiceDoc;
@@ -125,9 +125,9 @@ async fn main() -> Result<(), impl Error> {
             audits::PatchAuditRequestRequest,
             audits::GetAuditRequestsResponse,
             audits::GetViewsResponse,
-            common::entities::audit::Audit,
-            common::entities::audit_request::AuditRequest,
-            common::entities::view::View,
+            common::entities::audit::Audit<String>,
+            common::entities::audit_request::AuditRequest<String>,
+            common::entities::view::View<String>,
         ))
     )]
     struct AuditsServiceDoc;

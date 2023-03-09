@@ -4,7 +4,6 @@ use chrono::NaiveDateTime;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use utoipa::{
-    openapi::{ObjectBuilder, SchemaType},
     ToSchema,
 };
 

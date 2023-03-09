@@ -7,7 +7,7 @@ use actix_web::{
 };
 use common::{
     auth_session::{AuthSessionManager, SessionManager},
-    entities::{customer::Customer, project::Project},
+    entities::{customer::Customer},
 };
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
