@@ -56,7 +56,8 @@ pub fn create_app(
         .service(delete_audit)
         .service(get_audit)
         .service(get_audits)
-        .service(get_views);
+        .service(get_views)
+        .service(add_report);
     app
 }
 

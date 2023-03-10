@@ -15,6 +15,7 @@ pub struct Audit<Id> {
     pub auditor_id: Id,
     pub project_id: Id,
     pub project_name: String,
+    pub description: Option<String>,
     pub status: String,
     pub auditor_contacts: HashMap<String, String>,
     pub customer_contacts: HashMap<String, String>,
@@ -24,6 +25,7 @@ pub struct Audit<Id> {
     pub time_frame: String,
     pub tags: Vec<String>,
     pub last_modified: i64,
+    pub report: Option<String>,
 }
 
 impl Audit<String> {
@@ -34,6 +36,7 @@ impl Audit<String> {
             auditor_id: ObjectId::from_str(&self.auditor_id).unwrap(),
             project_id: ObjectId::from_str(&self.project_id).unwrap(),
             project_name: self.project_name,
+            description: self.description,
             status: self.status,
             auditor_contacts: self.auditor_contacts,
             customer_contacts: self.customer_contacts,
@@ -43,6 +46,7 @@ impl Audit<String> {
             time_frame: self.time_frame,
             tags: self.tags,
             last_modified: self.last_modified,
+            report: self.report,
         }
     }
 }
@@ -55,6 +59,7 @@ impl Audit<ObjectId> {
             auditor_id: self.auditor_id.to_hex(),
             project_id: self.project_id.to_hex(),
             project_name: self.project_name,
+            description: self.description,
             status: self.status,
             auditor_contacts: self.auditor_contacts,
             customer_contacts: self.customer_contacts,
@@ -64,6 +69,7 @@ impl Audit<ObjectId> {
             time_frame: self.time_frame,
             tags: self.tags,
             last_modified: self.last_modified,
+            report: self.report,
         }
     }
 }

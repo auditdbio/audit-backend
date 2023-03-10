@@ -1,7 +1,7 @@
 use actix_web::{
     delete, get, post,
-    web::{self},
-    HttpRequest, HttpResponse,
+    web::{self, Json},
+    HttpRequest, HttpResponse, patch,
 };
 use awc::Client;
 use chrono::Utc;
@@ -64,6 +64,7 @@ pub async fn post_audit(
         auditor_id: request.auditor_id,
         project_id: project_id,
         project_name: project.name,
+        description: request.description,
         status: "pending".to_string(),
         last_modified: Utc::now().naive_utc().timestamp_micros(),
         auditor_contacts: request.auditor_contacts,
@@ -73,6 +74,7 @@ pub async fn post_audit(
         time_frame: request.time_frame,
         scope: request.scope,
         tags: project.tags,
+        report: None,
     };
 
     repo.create(&audit).await?;
@@ -241,4 +243,42 @@ pub async fn get_audits(
     Ok(HttpResponse::Ok().json(AllAuditsResponse {
         auditors: auditors.into_iter().map(Audit::stringify).collect(),
     }))
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, IntoParams)]
+pub struct AddReportRequest {
+    pub id: String,
+    pub report: String,
+}
+
+#[utoipa::path(
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+    ),
+    request_body(
+        content = AddReportRequest
+    ),
+    responses(
+        (status = 200)
+    )
+)]
+#[patch("/api/audit/add_report")]
+pub async fn add_report(
+    req: HttpRequest,
+    repo: web::Data<AuditRepo>,
+    manager: web::Data<AuthSessionManager>,
+    Json(body): web::Json<AddReportRequest>,
+) -> Result<HttpResponse> {
+    let _session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+
+    let audit = repo
+        .delete(&body.id.parse::<ObjectId>().unwrap())
+        .await?;
+
+    if let Some(mut audit) = audit {
+        audit.report = Some(body.report);
+        repo.create(&audit).await?;
+    }
+
+    Ok(HttpResponse::Ok().finish())
 }

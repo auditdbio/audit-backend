@@ -137,6 +137,7 @@ async fn main() -> Result<(), impl Error> {
             audits::get_audit_requests,
             audits::patch_audit_request,
             audits::delete_audit_request,
+            audits::add_report,
         ),
         components(schemas(
             audits::PostAuditRequestRequest,
@@ -149,6 +150,7 @@ async fn main() -> Result<(), impl Error> {
             audits::GetAuditResponse,
             audits::AllAuditsQuery,
             audits::AllAuditsResponse,
+            audits::AddReportRequest,
             common::entities::role::Role,
             common::entities::audit_request::PriceRange,
             common::entities::view::Source,
