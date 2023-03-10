@@ -291,6 +291,17 @@ pub struct ChangeStatusRequest {
     pub status: String,
 }
 
+#[utoipa::path(
+    params(
+        ("Authorization" = String, Header,  description = "Bearer token"),
+    ),
+    request_body(
+        content = ChangeStatusRequest
+    ),
+    responses(
+        (status = 200)
+    )
+)]
 #[patch("/api/audit/change_status")]
 pub async fn change_status(
     req: HttpRequest,
