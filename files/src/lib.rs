@@ -31,7 +31,7 @@ pub fn create_app(
         .app_data(web::Data::new(file_repo))
         .app_data(web::Data::new(meta_repo))
         .app_data(web::Data::new(manager))
-        .service(create_file);
-    // .service(get_file);
+        .service(create_file)
+        .service(get_file);
     app
 }
