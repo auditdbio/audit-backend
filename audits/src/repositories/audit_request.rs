@@ -38,21 +38,21 @@ impl AuditRequestRepo {
         &self,
         customer_id: ObjectId,
     ) -> Result<Vec<AuditRequest<ObjectId>>, mongodb::error::Error> {
-        self.0.find_many("id", &Bson::ObjectId(customer_id)).await
+        self.0.find_many("customer_id", &Bson::ObjectId(customer_id)).await
     }
 
     pub async fn find_by_auditor(
         &self,
         auditor_id: ObjectId,
     ) -> Result<Vec<AuditRequest<ObjectId>>, mongodb::error::Error> {
-        self.0.find_many("id", &Bson::ObjectId(auditor_id)).await
+        self.0.find_many("auditor_id", &Bson::ObjectId(auditor_id)).await
     }
 
     pub async fn find_by_project(
         &self,
         project_id: ObjectId,
     ) -> Result<Vec<AuditRequest<ObjectId>>, mongodb::error::Error> {
-        self.0.find_many("id", &Bson::ObjectId(project_id)).await
+        self.0.find_many("project_id", &Bson::ObjectId(project_id)).await
     }
 
     pub async fn delete(

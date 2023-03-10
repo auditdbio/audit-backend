@@ -73,7 +73,7 @@ pub async fn post_audit_request(
     Ok(HttpResponse::Ok().json(audit_request.stringify()))
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema, IntoParams)]
 pub struct GetAuditRequestsQuery {
     pub role: String,
 }
@@ -86,7 +86,7 @@ pub struct GetAuditRequestsResponse {
 #[utoipa::path(
     params(
         ("Authorization" = String, Header,  description = "Bearer token"),
-        GetAuditRequestsResponse
+        GetAuditRequestsQuery
     ),
     responses(
         (status = 200, body = AuditRequest<String>)
