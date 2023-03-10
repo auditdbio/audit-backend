@@ -99,7 +99,7 @@ services:
       VIRTUAL_HOST: dev.auditdb.io
       VIRTUAL_PATH: ~^/api/(files|notused1)
       MONGOURI: mongodb://database/backend
-      RUST_LOG: trace
+      RUST_LOG: actix
     networks:
       - nginx-proxy
       - database
