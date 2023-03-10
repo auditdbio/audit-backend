@@ -159,6 +159,7 @@ async fn get_project(client: &Client, project_id: &ObjectId) -> Result<Project<S
         .await
         .unwrap();
 
+    log::info!("{}", res.json::<serde_json::Value>().await.unwrap());
     let body = res.json::<Project<String>>().await.unwrap();
     Ok(body)
 }

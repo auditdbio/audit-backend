@@ -54,7 +54,7 @@ services:
     environment:
       MONGOURI: mongodb://database/backend
       MONGOURI_TEST: mongodb://database/test
-      RUST_LOG: actix
+      RUST_LOG: trace
   auditors:
     depends_on:
       - binaries
