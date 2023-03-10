@@ -160,16 +160,16 @@ async fn main() -> Result<(), impl Error> {
 
     #[derive(OpenApi)]
     #[openapi(
-        // servers(
-        //     (url = "https://dev.auditdb.io/"),
-        // ),
-        // paths(
-        //     files::create_file,
-        //     files::get_file,
-        // ),
-        // components(schemas(
-        //     files::FilePath
-        // ))
+        servers(
+            (url = "https://dev.auditdb.io/"),
+        ),
+        paths(
+            files::create_file,
+            files::get_file,
+        ),
+        components(schemas(
+            files::FilePath
+        ))
     )]
     struct FilesServiceDoc;
 
