@@ -61,6 +61,7 @@ pub async fn post_audit(
         customer_id: request.customer_id.parse().unwrap(),
         auditor_id: request.auditor_id.parse().unwrap(),
         project_id: project_id,
+        project_name: project.name,
         status: "pending".to_string(),
         last_modified: Utc::now().naive_utc().timestamp_micros(),
         auditor_contacts: request.auditor_contacts,
@@ -90,6 +91,7 @@ pub struct GetAuditResponse {
 #[utoipa::path(
     params(
         ("Authorization" = String, Header,  description = "Bearer token"),
+        GetAuditQuery,
     ),
     responses(
         (status = 200, body = GetAuditResponse)
@@ -149,11 +151,12 @@ pub struct GetViewsResponse {
     pub views: Vec<View<String>>,
 }
 
-async fn get_project(client: &Client, project_id: &ObjectId) -> Result<Project<String>> {
+pub(super) async fn get_project(client: &Client, project_id: &ObjectId) -> Result<Project<String>> {
     let mut res = client
         .get(format!(
             "https://{}/api/projects/by_id/{}",
-            CUSTOMERS_SERVICE, project_id.to_hex()
+            CUSTOMERS_SERVICE,
+            project_id.to_hex()
         ))
         .send()
         .await

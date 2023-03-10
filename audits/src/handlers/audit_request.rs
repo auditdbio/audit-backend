@@ -52,13 +52,25 @@ pub async fn post_audit_request(
     repo: web::Data<AuditRequestRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let _session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    let _session = manager.get_session(req.clone().into()).await.unwrap(); // TODO: remove unwrap
+
+    let project_id = data.project_id.parse().unwrap();
+
+    let mut client = awc::Client::default();
+
+    client.headers().unwrap().insert(
+        "Authorization".parse().unwrap(),
+        req.headers().get("Authorization").unwrap().clone(),
+    );
+
+    let project = super::audit::get_project(&client, &project_id).await?;
 
     let audit_request = AuditRequest {
         id: ObjectId::new(),
         customer_id: data.customer_id.parse().unwrap(),
         auditor_id: data.auditor_id.parse().unwrap(),
         project_id: data.project_id.parse().unwrap(),
+        project_name: project.name,
         auditor_contacts: data.auditor_contacts,
         customer_contacts: data.customer_contacts,
         scope: data.scope,
