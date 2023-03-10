@@ -203,7 +203,7 @@ pub async fn get_views(
 
     views.sort_by(|a, b| b.last_modified.cmp(&a.last_modified));
 
-    Ok(HttpResponse::Ok().json(views))
+    Ok(HttpResponse::Ok().json(views.into_iter().map(|a| a.stringify()).collect::<Vec<_>>()))
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, IntoParams)]
