@@ -278,7 +278,38 @@ pub async fn add_report(
     if let Some(mut audit) = audit {
         audit.report = Some(body.report);
         repo.create(&audit).await?;
+        return Ok(HttpResponse::Ok().json(audit.stringify()));
     }
 
-    Ok(HttpResponse::Ok().finish())
+    Ok(HttpResponse::Ok().json(doc!{}))
 }
+
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, IntoParams)]
+pub struct ChangeStatusRequest {
+    pub id: String,
+    pub status: String,
+}
+
+#[patch("/api/audit/change_status")]
+pub async fn change_status(
+    req: HttpRequest,
+    repo: web::Data<AuditRepo>,
+    manager: web::Data<AuthSessionManager>,
+    Json(body): web::Json<ChangeStatusRequest>,
+) -> Result<HttpResponse> {
+    let _session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+
+    let audit = repo
+        .delete(&body.id.parse::<ObjectId>().unwrap())
+        .await?;
+
+    if let Some(mut audit) = audit {
+        audit.report = Some(body.status);
+        repo.create(&audit).await?;
+        return Ok(HttpResponse::Ok().json(audit.stringify()));
+    }
+
+    Ok(HttpResponse::Ok().json(doc!{}))
+}
+
