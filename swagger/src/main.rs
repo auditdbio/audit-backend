@@ -134,6 +134,7 @@ async fn main() -> Result<(), impl Error> {
             audits::delete_audit,
             audits::get_views,
             audits::post_audit_request,
+            audits::get_audit_requests,
             audits::patch_audit_request,
             audits::delete_audit_request,
         ),
