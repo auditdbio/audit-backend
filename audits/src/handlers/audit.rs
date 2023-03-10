@@ -152,14 +152,12 @@ pub struct GetViewsResponse {
 async fn get_project(client: &Client, project_id: &ObjectId) -> Result<Project<String>> {
     let mut res = client
         .get(format!(
-            "https://{}/api/project/by_id/{}",
+            "https://{}/api/projects/by_id/{}",
             CUSTOMERS_SERVICE, project_id.to_hex()
         ))
         .send()
         .await
         .unwrap();
-
-    log::info!("{}", res.json::<serde_json::Value>().await.unwrap());
     let body = res.json::<Project<String>>().await.unwrap();
     Ok(body)
 }
