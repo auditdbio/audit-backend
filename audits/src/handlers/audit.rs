@@ -37,9 +37,11 @@ pub async fn post_audit(
     req: HttpRequest,
     web::Json(request): web::Json<AuditRequest<String>>,
     repo: web::Data<AuditRepo>,
+    request_repo: web::Data<AuditRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
     let _session = manager.get_session(req.clone().into()).await.unwrap(); // TODO: remove unwrap
+    let request = request.parse();
 
     let Some(price) = request.price else {
         return Ok(HttpResponse::BadRequest().body("Price is required"));
@@ -52,14 +54,14 @@ pub async fn post_audit(
         req.headers().get("Authorization").unwrap().clone(),
     );
 
-    let project_id: ObjectId = request.project_id.parse().unwrap();
+    let project_id: ObjectId = request.project_id;
 
     let project = get_project(&client, &project_id).await?;
 
     let audit = Audit {
         id: ObjectId::new(),
-        customer_id: request.customer_id.parse().unwrap(),
-        auditor_id: request.auditor_id.parse().unwrap(),
+        customer_id: request.customer_id,
+        auditor_id: request.auditor_id,
         project_id: project_id,
         project_name: project.name,
         status: "pending".to_string(),
@@ -74,7 +76,7 @@ pub async fn post_audit(
     };
 
     repo.create(&audit).await?;
-
+    request_repo.delete(&request.id).await?;
     Ok(HttpResponse::Ok().json(audit.stringify()))
 }
 
