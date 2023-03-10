@@ -37,7 +37,7 @@ pub async fn post_audit(
     req: HttpRequest,
     web::Json(request): web::Json<AuditRequest<String>>,
     repo: web::Data<AuditRepo>,
-    request_repo: web::Data<AuditRepo>,
+    request_repo: web::Data<AuditRequestRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
     let _session = manager.get_session(req.clone().into()).await.unwrap(); // TODO: remove unwrap
