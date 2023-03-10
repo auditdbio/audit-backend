@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;

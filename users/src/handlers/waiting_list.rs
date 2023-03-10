@@ -10,7 +10,13 @@ use crate::error::Result;
 use crate::repositories::list_element::{ListElement, ListElementRepository};
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct PostElement {
+pub struct PostElementRequest {
+    pub email: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct PostElementResponse {
+    pub id: String,
     pub email: String,
 }
 
@@ -19,19 +25,22 @@ pub struct PostElement {
         content = PostElement
     ),
     responses(
-        (status = 200, body = ListElement)
+        (status = 200, body = PostElementResponse)
     )
 )]
 #[post("/api/waiting_list")]
 pub async fn post_element(
-    Json(data): web::Json<PostElement>,
+    Json(data): web::Json<PostElementRequest>,
     repo: web::Data<ListElementRepository>,
-) -> Result<web::Json<ListElement>> {
+) -> Result<web::Json<PostElementResponse>> {
     let elem = ListElement {
         id: ObjectId::new(),
         email: data.email,
     };
 
     repo.create(&elem).await?;
-    return Ok(web::Json(elem));
+    return Ok(web::Json(PostElementResponse {
+        id: elem.id.to_hex(),
+        email: elem.email,
+    }));
 }
