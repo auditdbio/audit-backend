@@ -13,7 +13,7 @@ impl FilesRepository {
         Self {}
     }
 
-    pub async fn create(&self, bytes: Bytes, path: String) {
+    pub async fn create(&self, bytes: Vec<u8>, path: String) {
         web::block(move || {
             let mut file = File::create(format!("/auditdb-files/{}", path)).unwrap();
             file.write_all(&bytes).unwrap();

@@ -217,7 +217,12 @@ pub async fn get_projects(
         .filter(|s| !s.is_empty())
         .collect();
 
-    let projects = repo.find_by_tags(tags, query.skip, query.limit).await?;
+    let projects = repo
+        .find_by_tags(tags, query.skip, query.limit)
+        .await?
+        .into_iter()
+        .map(Project::stringify)
+        .collect::<Vec<_>>();
 
     Ok(HttpResponse::Ok().json(projects))
 }

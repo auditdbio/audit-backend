@@ -9,7 +9,6 @@ pub struct Metadata {
     pub id: ObjectId,
     pub creator_id: ObjectId,
     pub last_modified: NaiveDateTime,
-    pub content_type: String,
     pub path: String,
 }
 
