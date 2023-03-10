@@ -9,7 +9,7 @@ use common::{
     auth_session::{AuthSessionManager, SessionManager},
     entities::project::{Project, PublishOptions},
 };
-use mongodb::bson::oid::ObjectId;
+use mongodb::bson::{oid::ObjectId, doc};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
@@ -240,9 +240,10 @@ pub async fn project_by_id(
     id: web::Path<String>,
     repo: web::Data<ProjectRepo>,
 ) -> Result<HttpResponse> {
-    let project = repo.find(id.parse().unwrap()).await?.unwrap().stringify();
-
-    Ok(HttpResponse::Ok().json(project))
+    let Some(project) = repo.find(id.parse().unwrap()).await? else {
+        return Ok(HttpResponse::Ok().json(doc!{}));
+    };
+    Ok(HttpResponse::Ok().json(project.stringify()))
 }
 
 #[cfg(test)]

@@ -50,7 +50,8 @@ pub fn create_app(
         .service(patch_project)
         .service(delete_project)
         .service(get_projects)
-        .service(customer_by_id);
+        .service(customer_by_id)
+        .service(project_by_id);
     app
 }
 

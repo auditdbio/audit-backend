@@ -105,8 +105,8 @@ pub async fn get_audit(
     let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let audits = match query.role.as_str() {
-        "Auditor" => repo.find_by_auditor(session.user_id).await?,
-        "Customer" => repo.find_by_auditor(session.user_id).await?,
+        "Auditor" | "auditor" => repo.find_by_auditor(session.user_id).await?,
+        "Customer" | "customer" => repo.find_by_auditor(session.user_id).await?,
         _ => {
             unreachable!()
         }
