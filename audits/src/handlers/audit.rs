@@ -152,8 +152,8 @@ pub struct GetViewsResponse {
 async fn get_project(client: &Client, project_id: &ObjectId) -> Result<Project<String>> {
     let mut res = client
         .get(format!(
-            "http://{}/api/project/{}",
-            CUSTOMERS_SERVICE, project_id
+            "https://{}/api/project/by_id/{}",
+            CUSTOMERS_SERVICE, project_id.to_hex()
         ))
         .send()
         .await

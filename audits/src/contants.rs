@@ -1,1 +1,1 @@
-pub const CUSTOMERS_SERVICE: &str = "0.0.0.0:3002";
+pub const CUSTOMERS_SERVICE: &str = "dev.auditdb.io";

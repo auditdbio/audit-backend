@@ -227,6 +227,24 @@ pub async fn get_projects(
     Ok(HttpResponse::Ok().json(projects))
 }
 
+#[utoipa::path(
+    params(
+        AllProjectsQuery,
+    ),
+    responses(
+        (status = 200, body = Project<String>)
+    )
+)]
+#[get("/api/projects/by_id/{id}")]
+pub async fn project_by_id(
+    id: web::Path<String>,
+    repo: web::Data<ProjectRepo>,
+) -> Result<HttpResponse> {
+    let project = repo.find(id.parse().unwrap()).await?.unwrap().stringify();
+
+    Ok(HttpResponse::Ok().json(project))
+}
+
 #[cfg(test)]
 mod tests {
 
