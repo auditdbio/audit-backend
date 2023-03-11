@@ -160,6 +160,7 @@ async fn main() -> Result<(), impl Error> {
             common::entities::view::Source,
             common::entities::audit::Audit<String>,
             common::entities::audit_request::AuditRequest<String>,
+            common::entities::audit_request::TimeRange,
             common::entities::view::View<String>,
             swagger_tricks::Id,
         ))
