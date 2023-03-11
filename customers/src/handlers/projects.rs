@@ -228,9 +228,6 @@ pub async fn get_projects(
 }
 
 #[utoipa::path(
-    params(
-        AllProjectsQuery,
-    ),
     responses(
         (status = 200, body = Project<String>)
     )

@@ -112,7 +112,7 @@ pub async fn get_audit(
 
     let audits = match query.role.as_str() {
         "Auditor" | "auditor" => repo.find_by_auditor(session.user_id).await?,
-        "Customer" | "customer" => repo.find_by_auditor(session.user_id).await?,
+        "Customer" | "customer" => repo.find_by_customer(session.user_id).await?,
         _ => {
             unreachable!()
         }
@@ -259,7 +259,7 @@ pub struct AddReportRequest {
         content = AddReportRequest
     ),
     responses(
-        (status = 200)
+        (status = 200, body = Audit<String>)
     )
 )]
 #[patch("/api/audit/add_report")]
@@ -299,7 +299,7 @@ pub struct ChangeStatusRequest {
         content = ChangeStatusRequest
     ),
     responses(
-        (status = 200)
+        (status = 200, body = Audit<String>)
     )
 )]
 #[patch("/api/audit/change_status")]
@@ -324,3 +324,19 @@ pub async fn change_status(
     Ok(HttpResponse::Ok().json(doc!{}))
 }
 
+
+#[utoipa::path(
+    responses(
+        (status = 200, body = Project<String>)
+    )
+)]
+#[get("/api/audit/by_id/{id}")]
+pub async fn audit_by_id(
+    id: web::Path<String>,
+    repo: web::Data<AuditRepo>,
+) -> Result<HttpResponse> {
+    let Some(audit) = repo.find(id.parse().unwrap()).await? else {
+        return Ok(HttpResponse::Ok().json(doc!{}));
+    };
+    Ok(HttpResponse::Ok().json(audit.stringify()))
+}

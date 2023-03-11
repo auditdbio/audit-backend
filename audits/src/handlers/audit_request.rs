@@ -82,7 +82,15 @@ pub async fn post_audit_request(
         opener: data.opener,
     };
 
+    let old_request = repo.find_by_auditor(audit_request.auditor_id).await?.into_iter().filter(|request| &request.customer_id == &audit_request.customer_id).next();
+
+    if let Some(old_request) = old_request {
+        repo.delete(&old_request.id).await?;
+    }
+    
     repo.create(&audit_request).await?;
+
+
 
     Ok(HttpResponse::Ok().json(audit_request.stringify()))
 }
@@ -208,6 +216,22 @@ pub async fn delete_audit_request(
     let _session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
     let Some(request) = repo.delete(&id.parse::<ObjectId>().unwrap()).await? else {
+        return Ok(HttpResponse::Ok().json(doc!{}));
+    };
+    Ok(HttpResponse::Ok().json(request.stringify()))
+}
+
+#[utoipa::path(
+    responses(
+        (status = 200, body = Project<String>)
+    )
+)]
+#[get("/api/requests/by_id/{id}")]
+pub async fn requests_by_id(
+    id: web::Path<String>,
+    repo: web::Data<AuditRequestRepo>,
+) -> Result<HttpResponse> {
+    let Some(request) = repo.find(id.parse().unwrap()).await? else {
         return Ok(HttpResponse::Ok().json(doc!{}));
     };
     Ok(HttpResponse::Ok().json(request.stringify()))

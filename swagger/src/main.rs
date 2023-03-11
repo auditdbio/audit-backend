@@ -139,6 +139,8 @@ async fn main() -> Result<(), impl Error> {
             audits::delete_audit_request,
             audits::add_report,
             audits::change_status,
+            audits::audit_by_id,
+            audits::requests_by_id,
         ),
         components(schemas(
             audits::PostAuditRequestRequest,
