@@ -109,6 +109,7 @@ async fn main() -> Result<(), impl Error> {
             auditors::patch_auditor,
             auditors::delete_auditor,
             auditors::get_auditors,
+            auditors::auditor_by_id,
         ),
         components(schemas(
             auditors::PostAuditorRequest,

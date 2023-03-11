@@ -246,3 +246,20 @@ mod tests {
         assert!(resp.status().is_client_error());
     }
 }
+
+#[utoipa::path(
+    responses(
+        (status = 200, body = Auditor<String>)
+    )
+)]
+#[get("/api/auditors/by_id/{id}")]
+pub async fn auditor_by_id(
+    id: web::Path<String>,
+    repo: web::Data<AuditorRepo>,
+) -> Result<HttpResponse> {
+    let Some(auditor) = repo.find(id.parse().unwrap()).await? else {
+        return Ok(HttpResponse::Ok().json(doc!{}));
+    };
+    Ok(HttpResponse::Ok().json(auditor.stringify()))
+}
+
