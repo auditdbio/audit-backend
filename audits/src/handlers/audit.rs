@@ -230,7 +230,6 @@ pub struct AllAuditsResponse {
     params(
         AllAuditsQuery
     ),
-    
     responses(
         (status = 200, body = AllAuditsResponse)
     )

@@ -88,7 +88,10 @@ pub async fn post_audit_request(
         .find_by_auditor(audit_request.auditor_id)
         .await?
         .into_iter()
-        .filter(|request| &request.customer_id == &audit_request.customer_id)
+        .filter(|request| {
+            &request.customer_id == &audit_request.customer_id
+                && &request.project_id == &audit_request.project_id
+        })
         .next();
 
     if let Some(old_request) = old_request {
