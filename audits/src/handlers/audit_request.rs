@@ -67,7 +67,7 @@ pub async fn post_audit_request(
 
     let project = super::audit::get_project(&client, &project_id).await?;
 
-    let audit_request = AuditRequest {
+    let mut audit_request = AuditRequest {
         id: ObjectId::new(),
         customer_id: data.customer_id.parse().unwrap(),
         auditor_id: data.auditor_id.parse().unwrap(),
@@ -88,6 +88,7 @@ pub async fn post_audit_request(
 
     if let Some(old_request) = old_request {
         repo.delete(&old_request.id).await?;
+        audit_request.id = old_request.id;
     }
     
     repo.create(&audit_request).await?;
