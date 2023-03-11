@@ -17,6 +17,12 @@ pub struct PriceRange {
     pub upper_bound: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, ToSchema, PartialEq, Clone)]
+pub struct TimeRange {
+    pub begin: i64,
+    pub end: i64,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, ToSchema)]
 pub struct AuditRequest<Id> {
     pub id: Id,
@@ -32,6 +38,7 @@ pub struct AuditRequest<Id> {
     pub time_frame: String,
     pub last_modified: i64,
     pub opener: Role,
+    pub time: TimeRange,
 }
 
 impl AuditRequest<String> {
@@ -50,6 +57,7 @@ impl AuditRequest<String> {
             time_frame: self.time_frame,
             last_modified: self.last_modified,
             opener: self.opener,
+            time: self.time,
         }
     }
 }
@@ -70,6 +78,7 @@ impl AuditRequest<ObjectId> {
             time_frame: self.time_frame,
             last_modified: self.last_modified,
             opener: self.opener,
+            time: self.time,
         }
     }
 }

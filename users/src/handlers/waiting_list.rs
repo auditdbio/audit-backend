@@ -22,7 +22,7 @@ pub struct PostElementResponse {
 
 #[utoipa::path(
     request_body(
-        content = PostElement
+        content = PostElementRequest
     ),
     responses(
         (status = 200, body = PostElementResponse)

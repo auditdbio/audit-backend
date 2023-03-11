@@ -75,6 +75,7 @@ pub async fn post_audit(
         scope: request.scope,
         tags: project.tags,
         report: None,
+        time: request.time,
     };
 
     repo.create(&audit).await?;

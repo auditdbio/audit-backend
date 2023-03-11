@@ -9,7 +9,7 @@ use chrono::Utc;
 use common::{
     auth_session::{AuthSessionManager, SessionManager},
     entities::{
-        audit_request::{AuditRequest, PriceRange},
+        audit_request::{AuditRequest, PriceRange, TimeRange},
         role::Role,
     },
 };
@@ -33,6 +33,7 @@ pub struct PostAuditRequestRequest {
     pub price_range: Option<PriceRange>,
     pub time_frame: String,
     pub opener: Role,
+    pub time: TimeRange,
 }
 
 #[utoipa::path(
@@ -80,6 +81,7 @@ pub async fn post_audit_request(
         time_frame: data.time_frame,
         last_modified: Utc::now().naive_utc().timestamp_micros(),
         opener: data.opener,
+        time: data.time,
     };
 
     let old_request = repo.find_by_auditor(audit_request.auditor_id).await?.into_iter().filter(|request| &request.customer_id == &audit_request.customer_id).next();

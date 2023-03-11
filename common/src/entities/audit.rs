@@ -6,7 +6,7 @@ use utoipa::ToSchema;
 
 use crate::repository::{Entity, TaggableEntity};
 
-use super::view::{Source, View};
+use super::{view::{Source, View}, audit_request::TimeRange};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, ToSchema)]
 pub struct Audit<Id> {
@@ -26,6 +26,7 @@ pub struct Audit<Id> {
     pub tags: Vec<String>,
     pub last_modified: i64,
     pub report: Option<String>,
+    pub time: TimeRange,
 }
 
 impl Audit<String> {
@@ -47,6 +48,7 @@ impl Audit<String> {
             tags: self.tags,
             last_modified: self.last_modified,
             report: self.report,
+            time: self.time,
         }
     }
 }
@@ -70,6 +72,7 @@ impl Audit<ObjectId> {
             tags: self.tags,
             last_modified: self.last_modified,
             report: self.report,
+            time: self.time,
         }
     }
 }
