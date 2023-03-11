@@ -95,6 +95,8 @@ where
         skip: u32,
         limit: u32,
     ) -> Result<Vec<T>, Self::Error> {
+        let tags = tags.into_iter().filter(|tag| !tag.is_empty()).collect::<Vec<_>>();
+
         use mongodb::error::Result as MongoResult;
         let find_options = FindOptions::builder()
             .skip(skip as u64)
