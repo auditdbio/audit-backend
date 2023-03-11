@@ -230,6 +230,7 @@ pub struct AllAuditsResponse {
     params(
         AllAuditsQuery
     ),
+
     responses(
         (status = 200, body = AllAuditsResponse)
     )
@@ -282,7 +283,11 @@ pub async fn patch_audit(
 
     let mut audit = audit.clone();
     audit.status = data.status.unwrap_or(audit.status);
-    audit.report = data.report.and(audit.report);
+    audit.report = if let Some(value) = data.report {
+        Some(value)
+    } else {
+        audit.report
+    };
 
     repo.create(&audit).await?;
 
