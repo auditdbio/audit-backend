@@ -262,4 +262,3 @@ pub async fn auditor_by_id(
     };
     Ok(HttpResponse::Ok().json(auditor.stringify()))
 }
-

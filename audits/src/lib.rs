@@ -57,8 +57,7 @@ pub fn create_app(
         .service(get_audit)
         .service(get_audits)
         .service(get_views)
-        .service(add_report)
-        .service(change_status)
+        .service(patch_audit)
         .service(requests_by_id)
         .service(audit_by_id);
     app

@@ -1,7 +1,7 @@
 use actix_web::{
-    delete, get, post,
+    delete, get, patch, post,
     web::{self, Json},
-    HttpRequest, HttpResponse, patch,
+    HttpRequest, HttpResponse,
 };
 use awc::Client;
 use chrono::Utc;
@@ -230,6 +230,7 @@ pub struct AllAuditsResponse {
     params(
         AllAuditsQuery
     ),
+    
     responses(
         (status = 200, body = AllAuditsResponse)
     )
@@ -247,84 +248,47 @@ pub async fn get_audits(
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, IntoParams)]
-pub struct AddReportRequest {
+pub struct PatchAuditRequest {
     pub id: String,
-    pub report: String,
+    pub status: Option<String>,
+    pub report: Option<String>,
 }
 
 #[utoipa::path(
     params(
         ("Authorization" = String, Header,  description = "Bearer token"),
     ),
+
     request_body(
-        content = AddReportRequest
+        content = PatchAuditRequest
     ),
     responses(
-        (status = 200, body = Audit<String>)
+        (status = 200, body = AllAuditsResponse)
     )
 )]
-#[patch("/api/audit/add_report")]
-pub async fn add_report(
+#[patch("/api/audit")]
+pub async fn patch_audit(
     req: HttpRequest,
+    Json(data): web::Json<PatchAuditRequest>,
     repo: web::Data<AuditRepo>,
     manager: web::Data<AuthSessionManager>,
-    Json(body): web::Json<AddReportRequest>,
 ) -> Result<HttpResponse> {
     let _session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
 
-    let audit = repo
-        .delete(&body.id.parse::<ObjectId>().unwrap())
-        .await?;
+    let audit = repo.delete(&data.id.parse().unwrap()).await?;
 
-    if let Some(mut audit) = audit {
-        audit.report = Some(body.report);
-        repo.create(&audit).await?;
-        return Ok(HttpResponse::Ok().json(audit.stringify()));
-    }
+    let Some(audit) = audit else {
+        return Ok(HttpResponse::Ok().json(doc!{}));
+    };
 
-    Ok(HttpResponse::Ok().json(doc!{}))
+    let mut audit = audit.clone();
+    audit.status = data.status.unwrap_or(audit.status);
+    audit.report = data.report.and(audit.report);
+
+    repo.create(&audit).await?;
+
+    Ok(HttpResponse::Ok().json(audit.stringify()))
 }
-
-
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, IntoParams)]
-pub struct ChangeStatusRequest {
-    pub id: String,
-    pub status: String,
-}
-
-#[utoipa::path(
-    params(
-        ("Authorization" = String, Header,  description = "Bearer token"),
-    ),
-    request_body(
-        content = ChangeStatusRequest
-    ),
-    responses(
-        (status = 200, body = Audit<String>)
-    )
-)]
-#[patch("/api/audit/change_status")]
-pub async fn change_status(
-    req: HttpRequest,
-    repo: web::Data<AuditRepo>,
-    manager: web::Data<AuthSessionManager>,
-    Json(body): web::Json<ChangeStatusRequest>,
-) -> Result<HttpResponse> {
-    let _session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
-
-    let audit = repo
-        .delete(&body.id.parse::<ObjectId>().unwrap())
-        .await?;
-
-    if let Some(mut audit) = audit {
-        audit.report = Some(body.status);
-        repo.create(&audit).await?;
-        return Ok(HttpResponse::Ok().json(audit.stringify()));
-    }
-
-    Ok(HttpResponse::Ok().json(doc!{}))
-}
-
 
 #[utoipa::path(
     responses(

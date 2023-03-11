@@ -84,16 +84,19 @@ pub async fn post_audit_request(
         time: data.time,
     };
 
-    let old_request = repo.find_by_auditor(audit_request.auditor_id).await?.into_iter().filter(|request| &request.customer_id == &audit_request.customer_id).next();
+    let old_request = repo
+        .find_by_auditor(audit_request.auditor_id)
+        .await?
+        .into_iter()
+        .filter(|request| &request.customer_id == &audit_request.customer_id)
+        .next();
 
     if let Some(old_request) = old_request {
         repo.delete(&old_request.id).await?;
         audit_request.id = old_request.id;
     }
-    
+
     repo.create(&audit_request).await?;
-
-
 
     Ok(HttpResponse::Ok().json(audit_request.stringify()))
 }

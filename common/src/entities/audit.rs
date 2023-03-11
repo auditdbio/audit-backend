@@ -6,7 +6,10 @@ use utoipa::ToSchema;
 
 use crate::repository::{Entity, TaggableEntity};
 
-use super::{view::{Source, View}, audit_request::TimeRange};
+use super::{
+    audit_request::TimeRange,
+    view::{Source, View},
+};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, ToSchema)]
 pub struct Audit<Id> {
