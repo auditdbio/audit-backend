@@ -17,7 +17,7 @@ use mongodb::bson::{doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
-use crate::error::Result;
+use crate::{error::Result, handlers::audit::get_project};
 use crate::repositories::audit_request::AuditRequestRepo;
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
@@ -64,8 +64,10 @@ pub async fn post_audit_request(
         "Authorization".parse().unwrap(),
         req.headers().get("Authorization").unwrap().clone(),
     );
-
-    let project = super::audit::get_project(&client, &project_id).await?;
+    let Some(result) = get_project(&client, &project_id).await else {
+        return Ok(HttpResponse::Ok().json(doc!{"error": "project id is invalid"}));
+    };
+    let project = result.unwrap();
 
     let mut audit_request = AuditRequest {
         id: ObjectId::new(),

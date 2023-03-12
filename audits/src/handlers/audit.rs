@@ -56,7 +56,10 @@ pub async fn post_audit(
 
     let project_id: ObjectId = request.project_id;
 
-    let project = get_project(&client, &project_id).await?;
+    let Some(result) = get_project(&client, &project_id).await else {
+        return Ok(HttpResponse::Ok().json(doc!{"error": "project id is invalid"}));
+    };
+    let project = result.unwrap();
 
     let audit = Audit {
         id: ObjectId::new(),
@@ -156,7 +159,7 @@ pub struct GetViewsResponse {
     pub views: Vec<View<String>>,
 }
 
-pub(super) async fn get_project(client: &Client, project_id: &ObjectId) -> Result<Project<String>> {
+pub(super) async fn get_project(client: &Client, project_id: &ObjectId) -> Option<Result<Project<String>>> {
     let mut res = client
         .get(format!(
             "https://{}/api/projects/by_id/{}",
@@ -166,8 +169,10 @@ pub(super) async fn get_project(client: &Client, project_id: &ObjectId) -> Resul
         .send()
         .await
         .unwrap();
-    let body = res.json::<Project<String>>().await.unwrap();
-    Ok(body)
+    let Ok(body) = res.json::<Project<String>>().await else {
+        return None;
+    };
+    Some(Ok(body))
 }
 
 #[utoipa::path(
@@ -197,15 +202,19 @@ pub async fn get_views(
 
     let requests_as_auditor = request_repo.find_by_auditor(session.user_id()).await?;
     for request in requests_as_auditor {
-        let project = get_project(&client, &request.project_id).await?;
-
+        let Some(result) = get_project(&client, &request.project_id).await else {
+            return Ok(HttpResponse::Ok().json(doc!{"error": "project id is invalid"}));
+        };
+        let project = result.unwrap();
         views.push(request.to_view(project.name));
     }
 
     let audits_as_auditor = audits_repo.find_by_auditor(session.user_id()).await?;
     for audit in audits_as_auditor {
-        let project = get_project(&client, &audit.project_id).await?;
-
+        let Some(result) = get_project(&client, &audit.project_id).await else {
+            return Ok(HttpResponse::Ok().json(doc!{"error": "project id is invalid"}));
+        };
+        let project = result.unwrap();
         views.push(audit.to_view(project.name));
     }
 

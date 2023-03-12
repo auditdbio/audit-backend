@@ -17,7 +17,6 @@ use common::auth_session::AuthSession;
 use common::auth_session::AuthSessionManager;
 use common::auth_session::TestSessionManager;
 use common::repository::test_repository::TestRepository;
-use handlers::waiting_list;
 use repositories::list_element::ListElementRepository;
 use repositories::token::TokenRepo;
 use repositories::user::UserRepo;
