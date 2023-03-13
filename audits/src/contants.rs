@@ -1,1 +1,1 @@
-pub const CUSTOMERS_SERVICE: &str = "dev.auditdb.io";
+pub const CUSTOMERS_SERVICE: &str = "auditdb.io";
