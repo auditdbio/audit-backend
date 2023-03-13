@@ -69,7 +69,7 @@ pub async fn post_audit(
         return Ok(HttpResponse::Ok().json(doc!{"Error": "You are not allowed to change this request"}));
     };
 
-    if accepter == request.last_changer {
+    if accepter == request.last_changer && request.auditor_id != request.customer_id {
         return Ok(HttpResponse::Ok().json(doc!{"Error": "You are not allowed to accept this request because you are the last changer"}));
     }
 
