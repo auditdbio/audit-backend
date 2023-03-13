@@ -17,8 +17,8 @@ use mongodb::bson::{doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
-use crate::{error::Result, handlers::audit::get_project};
 use crate::repositories::audit_request::AuditRequestRepo;
+use crate::{error::Result, handlers::audit::get_project};
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct PostAuditRequestRequest {
@@ -77,7 +77,9 @@ pub async fn post_audit_request(
     } else if &session.user_id == &customer_id {
         Role::Customer
     } else {
-        return Ok(HttpResponse::Ok().json(doc!{"Error": "You are not allowed to change this request"}));
+        return Ok(
+            HttpResponse::Ok().json(doc! {"Error": "You are not allowed to change this request"})
+        );
     };
 
     let mut audit_request = AuditRequest {
@@ -218,7 +220,9 @@ pub async fn patch_audit_request(
     } else if &session.user_id == &audit_request.customer_id {
         Role::Customer
     } else {
-        return Ok(HttpResponse::Ok().json(doc!{"Error": "You are not allowed to change this request"}));
+        return Ok(
+            HttpResponse::Ok().json(doc! {"Error": "You are not allowed to change this request"})
+        );
     };
 
     audit_request.last_changer = last_changer;

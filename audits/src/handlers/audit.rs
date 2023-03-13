@@ -7,7 +7,9 @@ use awc::Client;
 use chrono::Utc;
 use common::{
     auth_session::{AuthSessionManager, SessionManager},
-    entities::{audit::Audit, audit_request::AuditRequest, project::Project, view::View, role::Role},
+    entities::{
+        audit::Audit, audit_request::AuditRequest, project::Project, role::Role, view::View,
+    },
 };
 use mongodb::bson::{doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};
@@ -66,7 +68,9 @@ pub async fn post_audit(
     } else if &session.user_id == &request.customer_id {
         Role::Customer
     } else {
-        return Ok(HttpResponse::Ok().json(doc!{"Error": "You are not allowed to change this request"}));
+        return Ok(
+            HttpResponse::Ok().json(doc! {"Error": "You are not allowed to change this request"})
+        );
     };
 
     if accepter == request.last_changer && request.auditor_id != request.customer_id {
@@ -171,7 +175,10 @@ pub struct GetViewsResponse {
     pub views: Vec<View<String>>,
 }
 
-pub(super) async fn get_project(client: &Client, project_id: &ObjectId) -> Option<Result<Project<String>>> {
+pub(super) async fn get_project(
+    client: &Client,
+    project_id: &ObjectId,
+) -> Option<Result<Project<String>>> {
     let mut res = client
         .get(format!(
             "https://{}/api/projects/by_id/{}",
