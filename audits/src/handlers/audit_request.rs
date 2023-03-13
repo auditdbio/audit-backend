@@ -32,7 +32,6 @@ pub struct PostAuditRequestRequest {
     pub price: Option<String>,
     pub price_range: Option<PriceRange>,
     pub time_frame: String,
-    pub opener: Role,
     pub time: TimeRange,
 }
 
@@ -54,7 +53,11 @@ pub async fn post_audit_request(
     repo: web::Data<AuditRequestRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let _session = manager.get_session(req.clone().into()).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.clone().into()).await.unwrap(); // TODO: remove unwrap
+
+    let auditor_id = data.auditor_id.parse().unwrap();
+
+    let customer_id = data.customer_id.parse().unwrap();
 
     let project_id = data.project_id.parse().unwrap();
 
@@ -69,11 +72,19 @@ pub async fn post_audit_request(
     };
     let project = result.unwrap();
 
+    let last_changer = if &session.user_id == &auditor_id {
+        Role::Auditor
+    } else if &session.user_id == &customer_id {
+        Role::Customer
+    } else {
+        return Ok(HttpResponse::Ok().json(doc!{"Error": "You are not allowed to change this request"}));
+    };
+
     let mut audit_request = AuditRequest {
         id: ObjectId::new(),
         customer_id: data.customer_id.parse().unwrap(),
         auditor_id: data.auditor_id.parse().unwrap(),
-        project_id: data.project_id.parse().unwrap(),
+        project_id: project_id,
         project_name: project.name,
         description: Some(data.description),
         auditor_contacts: data.auditor_contacts,
@@ -82,7 +93,7 @@ pub async fn post_audit_request(
         price: data.price,
         time_frame: data.time_frame,
         last_modified: Utc::now().naive_utc().timestamp_micros(),
-        opener: data.opener,
+        last_changer: last_changer,
         time: data.time,
     };
 
@@ -175,7 +186,7 @@ pub async fn patch_audit_request(
     repo: web::Data<AuditRequestRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let _session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
     let id = data.id.parse().unwrap();
 
     let Some(mut audit_request) = repo.delete(&id).await? else {
@@ -201,6 +212,16 @@ pub async fn patch_audit_request(
     if let Some(time_frame) = data.time_frame {
         audit_request.time_frame = time_frame;
     }
+
+    let last_changer = if &session.user_id == &audit_request.auditor_id {
+        Role::Auditor
+    } else if &session.user_id == &audit_request.customer_id {
+        Role::Customer
+    } else {
+        return Ok(HttpResponse::Ok().json(doc!{"Error": "You are not allowed to change this request"}));
+    };
+
+    audit_request.last_changer = last_changer;
 
     audit_request.last_modified = Utc::now().naive_utc().timestamp_micros();
 

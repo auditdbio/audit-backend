@@ -37,7 +37,7 @@ pub struct AuditRequest<Id> {
     pub price: Option<String>,
     pub time_frame: String,
     pub last_modified: i64,
-    pub opener: Role,
+    pub last_changer: Role,
     pub time: TimeRange,
 }
 
@@ -56,7 +56,7 @@ impl AuditRequest<String> {
             price: self.price,
             time_frame: self.time_frame,
             last_modified: self.last_modified,
-            opener: self.opener,
+            last_changer: self.last_changer,
             time: self.time,
         }
     }
@@ -77,7 +77,7 @@ impl AuditRequest<ObjectId> {
             price: self.price,
             time_frame: self.time_frame,
             last_modified: self.last_modified,
-            opener: self.opener,
+            last_changer: self.last_changer,
             time: self.time,
         }
     }

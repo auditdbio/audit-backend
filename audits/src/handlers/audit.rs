@@ -7,7 +7,7 @@ use awc::Client;
 use chrono::Utc;
 use common::{
     auth_session::{AuthSessionManager, SessionManager},
-    entities::{audit::Audit, audit_request::AuditRequest, project::Project, view::View},
+    entities::{audit::Audit, audit_request::AuditRequest, project::Project, view::View, role::Role},
 };
 use mongodb::bson::{doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};
@@ -40,7 +40,7 @@ pub async fn post_audit(
     request_repo: web::Data<AuditRequestRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let _session = manager.get_session(req.clone().into()).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.clone().into()).await.unwrap(); // TODO: remove unwrap
     let request = request.parse();
 
     let Some(price) = request.price else {
@@ -60,6 +60,18 @@ pub async fn post_audit(
         return Ok(HttpResponse::Ok().json(doc!{"error": "project id is invalid"}));
     };
     let project = result.unwrap();
+
+    let accepter = if &session.user_id == &request.auditor_id {
+        Role::Auditor
+    } else if &session.user_id == &request.customer_id {
+        Role::Customer
+    } else {
+        return Ok(HttpResponse::Ok().json(doc!{"Error": "You are not allowed to change this request"}));
+    };
+
+    if accepter == request.last_changer {
+        return Ok(HttpResponse::Ok().json(doc!{"Error": "You are not allowed to accept this request because you are the last changer"}));
+    }
 
     let audit = Audit {
         id: ObjectId::new(),
