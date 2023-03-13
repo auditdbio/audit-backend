@@ -92,6 +92,7 @@ pub async fn get_auditor(
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PatchAuditorRequest {
+    avatar: Option<String>,
     first_name: Option<String>,
     last_name: Option<String>,
     about: Option<String>,
@@ -147,6 +148,8 @@ pub async fn patch_auditor(
     if let Some(tax) = data.tax {
         auditor.tax = tax;
     }
+
+    auditor.avatar = data.avatar.unwrap_or(auditor.avatar);
 
     repo.create(&auditor).await?;
 
