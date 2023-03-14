@@ -17,7 +17,7 @@ services:
       - binaries:/data/binaries
     environment:
       VIRTUAL_HOST: dev.auditdb.io
-      VIRTUAL_PATH: ~^/api/(users|auth)
+      VIRTUAL_PATH: ~^/api/(users|auth|waiting_list)
       MONGOURI: mongodb://database/backend
       RUST_LOG: actix
       HELLO_MAIL_ADDRESS: "${HELLO_MAIL_ADDRESS}"
