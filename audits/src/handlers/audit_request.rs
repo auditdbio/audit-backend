@@ -17,8 +17,8 @@ use mongodb::bson::{doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
-use crate::{repositories::audit_request::AuditRequestRepo, handlers::audit::get_auditor};
 use crate::{error::Result, handlers::audit::get_project};
+use crate::{handlers::audit::get_auditor, repositories::audit_request::AuditRequestRepo};
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct PostAuditRequestRequest {

@@ -8,7 +8,8 @@ use chrono::Utc;
 use common::{
     auth_session::{AuthSessionManager, SessionManager},
     entities::{
-        audit::Audit, audit_request::AuditRequest, project::Project, role::Role, view::View, auditor::Auditor,
+        audit::Audit, audit_request::AuditRequest, auditor::Auditor, project::Project, role::Role,
+        view::View,
     },
 };
 use mongodb::bson::{doc, oid::ObjectId};
@@ -16,7 +17,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::{
-    contants::{CUSTOMERS_SERVICE, AUDITORS_SERVICE},
+    contants::{AUDITORS_SERVICE, CUSTOMERS_SERVICE},
     error::Result,
     repositories::{
         audit::AuditRepo, audit_request::AuditRequestRepo, closed_audits::ClosedAuditRepo,

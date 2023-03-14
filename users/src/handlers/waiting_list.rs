@@ -2,14 +2,13 @@ use actix_web::{
     post,
     web::{self, Json},
 };
+use log::info;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use lettre::{Message, SmtpTransport, Transport};
 use lettre::transport::smtp::authentication::Credentials;
-use check_if_email_exists::{check_email, CheckEmailInput, CheckEmailInputProxy, Reachable};
-
+use lettre::{Message, SmtpTransport, Transport};
 
 use crate::error::Result;
 use crate::repositories::list_element::{ListElement, ListElementRepository};
@@ -50,24 +49,22 @@ pub async fn post_element(
         email: email.clone(),
     };
 
-    let mut input = CheckEmailInput::new(email.clone());
-
-    let result = check_email(&input).await;
-
-    if result.is_reachable == Reachable::Safe || result.is_reachable == Reachable::Safe {
-        let email = Message::builder()
-            .from(EMAIL_ADDRESS.clone().parse().unwrap())
-            .to(email.clone().parse().unwrap())
-            .subject("Welcome to AuditDB waiting list!")
-            .body(include_str!("../../templates/waiting-letter.txt").to_string())
-            .unwrap();
-        let mailer = SmtpTransport::relay("smtp.gmail.com")
+    if let Ok(email) = Message::builder()
+        .from(EMAIL_ADDRESS.clone().parse().unwrap())
+        .to(email.clone().parse().unwrap())
+        .subject("Welcome to AuditDB waiting list!")
+        .body(include_str!("../../templates/waiting-letter.txt").to_string()) {
+            let mailer = SmtpTransport::relay("smtp.gmail.com")
             .unwrap()
-            .credentials(Credentials::new(EMAIL_ADDRESS.clone(), EMAIL_PASSWORD.clone()))
+            .credentials(Credentials::new(
+                EMAIL_ADDRESS.clone(),
+                EMAIL_PASSWORD.clone(),
+            ))
             .build();
-        mailer.send(&email).unwrap();
+        if let Err(err) = mailer.send(&email) {
+            info!("Error sending email: {:?}", err);
+        }
     }
-
     
 
     repo.create(&elem).await?;
