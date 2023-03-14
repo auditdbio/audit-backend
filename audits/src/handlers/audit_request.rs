@@ -19,7 +19,6 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::{repositories::audit_request::AuditRequestRepo, handlers::audit::get_auditor};
 use crate::{error::Result, handlers::audit::get_project};
-use crate::{handlers::audit::get_auditor, repositories::audit_request::AuditRequestRepo};
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct PostAuditRequestRequest {
@@ -87,11 +86,6 @@ pub async fn post_audit_request(
             HttpResponse::Ok().json(doc! {"Error": "You are not allowed to change this request"})
         );
     };
-
-    let Some(result) = get_auditor(&client, &auditor_id).await else {
-        return Ok(HttpResponse::Ok().json(doc!{"error": "auditor id is invalid"}));
-    };
-    let auditor = result.unwrap();
 
     let mut audit_request = AuditRequest {
         id: ObjectId::new(),
