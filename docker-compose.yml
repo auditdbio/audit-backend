@@ -20,6 +20,8 @@ services:
       VIRTUAL_PATH: ~^/api/(users|auth)
       MONGOURI: mongodb://database/backend
       RUST_LOG: actix
+      HELLO_MAIL_ADDRESS: "${HELLO_MAIL_ADDRESS}"
+      HELLO_MAIL_PASSWORD: "${HELLO_MAIL_PASSWORD}"
     networks:
       - nginx-proxy
       - database
