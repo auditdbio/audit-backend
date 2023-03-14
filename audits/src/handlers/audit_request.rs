@@ -17,7 +17,7 @@ use mongodb::bson::{doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
-use crate::repositories::audit_request::AuditRequestRepo;
+use crate::{repositories::audit_request::AuditRequestRepo, handlers::audit::get_auditor};
 use crate::{error::Result, handlers::audit::get_project};
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
@@ -82,12 +82,18 @@ pub async fn post_audit_request(
         );
     };
 
+    let Some(result) = get_auditor(&client, &auditor_id).await else {
+        return Ok(HttpResponse::Ok().json(doc!{"error": "auditor id is invalid"}));
+    };
+    let auditor = result.unwrap();
+
     let mut audit_request = AuditRequest {
         id: ObjectId::new(),
-        customer_id: data.customer_id.parse().unwrap(),
-        auditor_id: data.auditor_id.parse().unwrap(),
+        customer_id: customer_id,
+        auditor_id: auditor_id,
         project_id: project_id,
         project_name: project.name,
+        avatar: auditor.avatar,
         description: Some(data.description),
         auditor_contacts: data.auditor_contacts,
         customer_contacts: data.customer_contacts,

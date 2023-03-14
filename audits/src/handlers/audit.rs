@@ -8,7 +8,7 @@ use chrono::Utc;
 use common::{
     auth_session::{AuthSessionManager, SessionManager},
     entities::{
-        audit::Audit, audit_request::AuditRequest, project::Project, role::Role, view::View,
+        audit::Audit, audit_request::AuditRequest, project::Project, role::Role, view::View, auditor::Auditor,
     },
 };
 use mongodb::bson::{doc, oid::ObjectId};
@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::{
-    contants::CUSTOMERS_SERVICE,
+    contants::{CUSTOMERS_SERVICE, AUDITORS_SERVICE},
     error::Result,
     repositories::{
         audit::AuditRepo, audit_request::AuditRequestRepo, closed_audits::ClosedAuditRepo,
@@ -77,12 +77,16 @@ pub async fn post_audit(
         return Ok(HttpResponse::Ok().json(doc!{"Error": "You are not allowed to accept this request because you are the last changer"}));
     }
 
+    
+
+
     let audit = Audit {
         id: ObjectId::new(),
         customer_id: request.customer_id,
         auditor_id: request.auditor_id,
         project_id: project_id,
         project_name: project.name,
+        avatar: request.avatar,
         description: request.description,
         status: "pending".to_string(),
         last_modified: Utc::now().naive_utc().timestamp_micros(),
@@ -189,6 +193,26 @@ pub(super) async fn get_project(
         .await
         .unwrap();
     let Ok(body) = res.json::<Project<String>>().await else {
+        return None;
+    };
+    Some(Ok(body))
+}
+
+
+pub(super) async fn get_auditor(
+    client: &Client,
+    auditor_id: &ObjectId,
+) -> Option<Result<Auditor<String>>> {
+    let mut res = client
+        .get(format!(
+            "https://{}/api/auditors/by_id/{}",
+            AUDITORS_SERVICE,
+            auditor_id.to_hex()
+        ))
+        .send()
+        .await
+        .unwrap();
+    let Ok(body) = res.json::<Auditor<String>>().await else {
         return None;
     };
     Some(Ok(body))
