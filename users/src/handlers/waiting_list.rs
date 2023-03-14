@@ -49,16 +49,25 @@ pub async fn post_element(
         email: email.clone(),
     };
 
-    if let Ok(email) = Message::builder()
-        .from(EMAIL_ADDRESS.clone().parse().unwrap())
-        .to(email.clone().parse().unwrap())
-        .subject("Welcome to AuditDB waiting list!")
-        .body(include_str!("../../templates/waiting-letter.txt").to_string()) {
-            let mailer = SmtpTransport::relay("smtp.gmail.com")
+    
+
+    if let Ok(email) = email.clone().parse() {
+        let Ok(email) = Message::builder()
+            .from(EMAIL_ADDRESS.to_string().parse().unwrap())
+            .to(email)
+            .subject("Welcome to AuditDB waiting list!")
+            .body(include_str!("../../templates/waiting-letter.txt").to_string()) else {
+                info!("Error sending email!!!!!!");
+                return Ok(web::Json(PostElementResponse {
+                    id: elem.id.to_hex(),
+                    email: elem.email,
+                }));
+            };
+        let mailer = SmtpTransport::relay("smtp.gmail.com")
             .unwrap()
             .credentials(Credentials::new(
-                EMAIL_ADDRESS.clone(),
-                EMAIL_PASSWORD.clone(),
+                EMAIL_ADDRESS.to_string(),
+                EMAIL_PASSWORD.to_string(),
             ))
             .build();
         if let Err(err) = mailer.send(&email) {
