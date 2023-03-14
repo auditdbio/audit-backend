@@ -198,7 +198,6 @@ pub(super) async fn get_project(
     Some(Ok(body))
 }
 
-
 pub(super) async fn get_auditor(
     client: &Client,
     auditor_id: &ObjectId,

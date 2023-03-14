@@ -19,6 +19,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::{repositories::audit_request::AuditRequestRepo, handlers::audit::get_auditor};
 use crate::{error::Result, handlers::audit::get_project};
+use crate::{handlers::audit::get_auditor, repositories::audit_request::AuditRequestRepo};
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct PostAuditRequestRequest {
@@ -71,6 +72,11 @@ pub async fn post_audit_request(
         return Ok(HttpResponse::Ok().json(doc!{"error": "project id is invalid"}));
     };
     let project = result.unwrap();
+
+    let Some(result) = get_auditor(&client, &auditor_id).await else {
+        return Ok(HttpResponse::Ok().json(doc!{"error": "project id is invalid"}));
+    };
+    let auditor = result.unwrap();
 
     let last_changer = if &session.user_id == &auditor_id {
         Role::Auditor

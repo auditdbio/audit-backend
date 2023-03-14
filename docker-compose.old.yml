@@ -5,6 +5,8 @@ services:
     build:
       context: ./
       dockerfile: ./Dockerfile
+    environment:
+      CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
     volumes:
       - binaries:/data/binaries
   users:
@@ -19,6 +21,8 @@ services:
       MONGOURI: mongodb://database/backend
       MONGOURI_TEST: mongodb://database/test
       RUST_LOG: actix
+      HELLO_MAIL_ADDRESS: "${HELLO_MAIL_ADDRESS}"
+      HELLO_MAIL_PASSWORD: "${HELLO_MAIL_PASSWORD}"
   swagger:
     depends_on:
       - binaries
