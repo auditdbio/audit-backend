@@ -22,6 +22,7 @@ pub struct PostElementRequest {
 pub struct PostElementResponse {
     pub id: String,
     pub email: String,
+    pub error: Option<String>,
 }
 
 lazy_static::lazy_static! {
@@ -57,10 +58,10 @@ pub async fn post_element(
             .to(email)
             .subject("Welcome to AuditDB waiting list!")
             .body(include_str!("../../templates/waiting-letter.txt").to_string()) else {
-                info!("Error sending email!!!!!!");
                 return Ok(web::Json(PostElementResponse {
                     id: elem.id.to_hex(),
                     email: elem.email,
+                    error: Some("Error creating message builder".to_string()),
                 }));
             };
         let mailer = SmtpTransport::relay("smtp.gmail.com")
@@ -70,8 +71,11 @@ pub async fn post_element(
                 EMAIL_PASSWORD.to_string(),
             ))
             .build();
-        if let Err(err) = mailer.send(&email) {
-            info!("Error sending email: {:?}", err);
+        if let Err(err) = mailer.send(&email) {return Ok(web::Json(PostElementResponse {
+            id: elem.id.to_hex(),
+            email: elem.email,
+            error: Some(format!("Error sending email: {}", err))
+        }));
         }
     }
     
@@ -80,5 +84,6 @@ pub async fn post_element(
     return Ok(web::Json(PostElementResponse {
         id: elem.id.to_hex(),
         email: elem.email,
+        error: None,
     }));
 }
