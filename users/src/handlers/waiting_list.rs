@@ -49,8 +49,6 @@ pub async fn post_element(
         email: email.clone(),
     };
 
-    
-
     if let Ok(email) = email.clone().parse() {
         let Ok(email) = Message::builder()
             .from(EMAIL_ADDRESS.to_string().parse().unwrap())
@@ -70,14 +68,14 @@ pub async fn post_element(
                 EMAIL_PASSWORD.to_string(),
             ))
             .build();
-        if let Err(err) = mailer.send(&email) {return Ok(web::Json(PostElementResponse {
-            id: elem.id.to_hex(),
-            email: elem.email,
-            error: Some(format!("Error sending email: {}", err))
-        }));
+        if let Err(err) = mailer.send(&email) {
+            return Ok(web::Json(PostElementResponse {
+                id: elem.id.to_hex(),
+                email: elem.email,
+                error: Some(format!("Error sending email: {}", err)),
+            }));
         }
     }
-    
 
     repo.create(&elem).await?;
     return Ok(web::Json(PostElementResponse {

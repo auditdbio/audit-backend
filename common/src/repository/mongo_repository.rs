@@ -8,6 +8,11 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use super::{Entity, Repository, TaggableEntityRepository};
 
+lazy_static::lazy_static! {
+    static ref MONGO_INITDB_ROOT_PASSWORD: String = std::env::var("MONGO_INITDB_ROOT_PASSWORD").unwrap();
+    static ref MONGO_INITDB_ROOT_USERNAME: String = std::env::var("MONGO_INITDB_ROOT_USERNAME").unwrap();
+}
+
 pub struct MongoRepository<T> {
     pub collection: mongodb::Collection<T>,
 }
@@ -15,11 +20,16 @@ pub struct MongoRepository<T> {
 impl<T> MongoRepository<T> {
     pub async fn new(mongo_uri: &str, database: &str, collection: &str) -> Self {
         Self {
-            collection: mongodb::Client::with_uri_str(mongo_uri)
-                .await
-                .unwrap()
-                .database(database)
-                .collection(collection),
+            collection: mongodb::Client::with_uri_str(format!(
+                "mongodb:/{}:{}@/{}",
+                MONGO_INITDB_ROOT_USERNAME.as_str(),
+                MONGO_INITDB_ROOT_PASSWORD.as_str(),
+                mongo_uri
+            ))
+            .await
+            .unwrap()
+            .database(database)
+            .collection(collection),
         }
     }
 }

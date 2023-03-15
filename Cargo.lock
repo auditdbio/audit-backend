@@ -775,6 +775,7 @@ dependencies = [
  "futures",
  "jsonwebkey",
  "jsonwebtoken",
+ "lazy_static",
  "mongodb",
  "reqwest",
  "serde",
