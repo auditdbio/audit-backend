@@ -2598,6 +2598,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "search"
+version = "0.1.0"
+dependencies = [
+ "actix-cors",
+ "actix-web",
+ "async-trait",
+ "chrono",
+ "common",
+ "derive_more",
+ "env_logger",
+ "futures",
+ "futures-util",
+ "jsonwebtoken",
+ "lazy_static",
+ "log",
+ "mongodb",
+ "serde",
+ "serde_json",
+ "utoipa",
+ "utoipa-swagger-ui",
+]
+
+[[package]]
 name = "security-framework"
 version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2896,6 +2919,7 @@ dependencies = [
  "files",
  "futures",
  "log",
+ "search",
  "serde",
  "serde_json",
  "users",

@@ -181,6 +181,20 @@ async fn main() -> Result<(), impl Error> {
     )]
     struct FilesServiceDoc;
 
+    #[derive(OpenApi)]
+    #[openapi(
+        servers(
+            (url = "https://dev.auditdb.io/"),
+        ),
+        paths(
+            search::search,
+        ),
+        components(schemas(
+            search::SearchQuery
+        ))
+    )]
+    struct SearchServiceDoc;
+
     HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())
@@ -204,6 +218,10 @@ async fn main() -> Result<(), impl Error> {
                 (
                     Url::new("files", "/api-doc/openapi5.json"),
                     FilesServiceDoc::openapi(),
+                ),
+                (
+                    Url::new("search", "/api-doc/openapi6.json"),
+                    SearchServiceDoc::openapi(),
                 ),
             ]))
     })
