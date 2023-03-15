@@ -2,7 +2,6 @@ use actix_web::{
     post,
     web::{self, Json},
 };
-use log::info;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
