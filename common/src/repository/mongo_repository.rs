@@ -21,7 +21,7 @@ impl<T> MongoRepository<T> {
     pub async fn new(mongo_uri: &str, database: &str, collection: &str) -> Self {
         Self {
             collection: mongodb::Client::with_uri_str(format!(
-                "mongodb:/{}:{}@/{}",
+                "mongodb://{}:{}@/{}",
                 MONGO_INITDB_ROOT_USERNAME.as_str(),
                 MONGO_INITDB_ROOT_PASSWORD.as_str(),
                 mongo_uri
