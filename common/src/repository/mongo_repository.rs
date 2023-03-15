@@ -21,10 +21,9 @@ impl<T> MongoRepository<T> {
     pub async fn new(mongo_uri: &str, database: &str, collection: &str) -> Self {
         Self {
             collection: mongodb::Client::with_uri_str(format!(
-                "mongodb://{}:{}@{}/?authMechanism=SCRAM-SHA-256",
+                "mongodb://{}:{}@/?authMechanism=SCRAM-SHA-256",
                 MONGO_INITDB_ROOT_USERNAME.as_str(),
                 MONGO_INITDB_ROOT_PASSWORD.as_str(),
-                mongo_uri
             ))
             .await
             .unwrap()
