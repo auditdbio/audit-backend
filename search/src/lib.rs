@@ -44,7 +44,6 @@ pub fn create_test_app(
         Error = actix_web::Error,
     >,
 > {
-
     let test_manager = AuthSessionManager::new(TestSessionManager(user));
 
     create_app(test_manager)

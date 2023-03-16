@@ -19,16 +19,13 @@ pub struct MongoRepository<T> {
 
 impl<T> MongoRepository<T> {
     pub async fn new(mongo_uri: &str, database: &str, collection: &str) -> Self {
+        let collection = mongodb::Client::with_uri_str(mongo_uri)
+        .await
+        .unwrap()
+        .database(database)
+        .collection(collection);
         Self {
-            collection: mongodb::Client::with_uri_str(format!(
-                "mongodb://{}:{}@database/?authMechanism=SCRAM-SHA-256",
-                MONGO_INITDB_ROOT_USERNAME.as_str(),
-                MONGO_INITDB_ROOT_PASSWORD.as_str(),
-            ))
-            .await
-            .unwrap()
-            .database(database)
-            .collection(collection),
+           collection,
         }
     }
 }

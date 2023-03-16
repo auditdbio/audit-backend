@@ -1,7 +1,6 @@
 use common::auth_session::{AuthSessionManager, HttpSessionManager};
 use search::create_app;
 
-
 use std::env;
 
 use actix_web::HttpServer;
@@ -14,12 +13,8 @@ async fn main() -> std::io::Result<()> {
 
     let manager = AuthSessionManager::new(HttpSessionManager);
 
-    HttpServer::new(move || {
-        create_app(
-            manager.clone(),
-        )
-    })
-    .bind(("0.0.0.0", 3001))?
-    .run()
-    .await
+    HttpServer::new(move || create_app(manager.clone()))
+        .bind(("0.0.0.0", 3001))?
+        .run()
+        .await
 }

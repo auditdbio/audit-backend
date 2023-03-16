@@ -1,6 +1,6 @@
-use actix_web::{HttpResponse, get, web};
+use actix_web::{get, web, HttpResponse};
 use common::auth_session::AuthSessionManager;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Debug, Serialize, Deserialize, IntoParams, ToSchema)]
@@ -25,6 +25,9 @@ pub struct SearchQuery {
     )
 )]
 #[get("/api/search")]
-pub async fn search(_query: web::Query<SearchQuery>, _manager: web::Data<AuthSessionManager>) -> HttpResponse {
+pub async fn search(
+    _query: web::Query<SearchQuery>,
+    _manager: web::Data<AuthSessionManager>,
+) -> HttpResponse {
     HttpResponse::Ok().body("Hello, world!")
 }
