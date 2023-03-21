@@ -1,8 +1,8 @@
 use common::repository::mongo_repository::MongoRepository;
 use futures::StreamExt;
 use mongodb::{
-    bson::{doc, Document, RawBson},
-    options::{FindOptions, FindOptionsBuilder},
+    bson::{doc, Document},
+    options::FindOptions,
     IndexModel,
 };
 

@@ -1,8 +1,12 @@
-use actix_web::{get, post, web::{self, Json}, HttpResponse};
+use actix_web::{
+    get, post,
+    web::{self, Json},
+    HttpResponse,
+};
 use common::auth_session::AuthSessionManager;
 use mongodb::bson::Document;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+
 use utoipa::{IntoParams, ToSchema};
 
 use crate::repositories::search::SearchRepo;
@@ -57,7 +61,7 @@ pub struct SearchQuery {
 pub async fn search(
     query: web::Query<SearchQuery>,
     _manager: web::Data<AuthSessionManager>,
-    repo: web::Data<SearchRepo>
+    repo: web::Data<SearchRepo>,
 ) -> HttpResponse {
     let results = repo.find(query.into_inner()).await;
     HttpResponse::Ok().json(results)

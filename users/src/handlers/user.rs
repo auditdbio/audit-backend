@@ -5,7 +5,7 @@ use actix_web::{
 };
 use common::{
     auth_session::{AuthSessionManager, SessionManager},
-    entities::{role::Role, user::User},
+    entities::user::User,
 };
 use mongodb::bson::{doc, oid::ObjectId};
 use rand::{distributions::Alphanumeric, Rng};

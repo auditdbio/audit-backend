@@ -9,7 +9,7 @@ use actix_web::HttpServer;
 async fn main() -> std::io::Result<()> {
     env_logger::init();
 
-    let mongo_uri = env::var("MONGOURI").unwrap();
+    let _mongo_uri = env::var("MONGOURI").unwrap();
 
     let manager = AuthSessionManager::new(HttpSessionManager);
 
