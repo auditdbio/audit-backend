@@ -1,4 +1,4 @@
-use actix_web::{get, post, web, HttpResponse};
+use actix_web::{get, post, web::{self, Json}, HttpResponse};
 use common::auth_session::AuthSessionManager;
 use mongodb::bson::Document;
 use serde::{Deserialize, Serialize};
@@ -7,12 +7,26 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::repositories::search::SearchRepo;
 
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct SearchInsertRequest {
+    documents: Vec<Document>,
+}
+
+#[utoipa::path(
+    request_body(
+        content = SearchInsertRequest,
+    ),
+    responses(
+        (status = 200, body = GetAuditResponse)
+    )
+)]
 #[post("/api/search/insert")]
 pub async fn insert_query(
-    json: web::Json<Document>,
+    Json(data): web::Json<SearchInsertRequest>,
     search_repo: web::Data<SearchRepo>,
 ) -> HttpResponse {
-    HttpResponse::Ok().body("Hello, world!")
+    search_repo.insert(data.documents).await;
+    HttpResponse::Ok().finish()
 }
 
 #[derive(Debug, Serialize, Deserialize, IntoParams, ToSchema)]
@@ -41,8 +55,10 @@ pub struct SearchQuery {
 )]
 #[get("/api/search")]
 pub async fn search(
-    _query: web::Query<SearchQuery>,
+    query: web::Query<SearchQuery>,
     _manager: web::Data<AuthSessionManager>,
+    repo: web::Data<SearchRepo>
 ) -> HttpResponse {
-    HttpResponse::Ok().body("Hello, world!")
+    let results = repo.find(query.into_inner()).await;
+    HttpResponse::Ok().json(results)
 }
