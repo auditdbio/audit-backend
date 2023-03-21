@@ -1,4 +1,4 @@
-use actix_web::{get, web, HttpResponse, post};
+use actix_web::{get, post, web, HttpResponse};
 use common::auth_session::AuthSessionManager;
 use mongodb::bson::Document;
 use serde::{Deserialize, Serialize};
@@ -8,10 +8,12 @@ use utoipa::{IntoParams, ToSchema};
 use crate::repositories::search::SearchRepo;
 
 #[post("/api/search/insert")]
-pub async fn insert_query(json: web::Json<Document>, search_repo: web::Data<SearchRepo>) -> HttpResponse {
+pub async fn insert_query(
+    json: web::Json<Document>,
+    search_repo: web::Data<SearchRepo>,
+) -> HttpResponse {
     HttpResponse::Ok().body("Hello, world!")
 }
-
 
 #[derive(Debug, Serialize, Deserialize, IntoParams, ToSchema)]
 pub struct SearchQuery {
@@ -28,7 +30,6 @@ pub struct SearchQuery {
     pub sort_order: i32,
     pub kind: Option<String>,
 }
-
 
 #[utoipa::path(
     params(

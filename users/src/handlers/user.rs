@@ -5,9 +5,10 @@ use actix_web::{
 };
 use common::{
     auth_session::{AuthSessionManager, SessionManager},
-    entities::user::User,
+    entities::{role::Role, user::User},
 };
 use mongodb::bson::{doc, oid::ObjectId};
+use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use std::str;
 use utoipa::ToSchema;
@@ -17,6 +18,25 @@ use crate::{
     handlers::auth::verify_token,
     repositories::{token::TokenRepo, user::UserRepo},
 };
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct UserView {
+    id: String,
+    name: String,
+    email: String,
+    current_role: String,
+}
+
+impl From<User<String>> for UserView {
+    fn from(value: User<String>) -> Self {
+        Self {
+            id: value.id,
+            name: value.name,
+            email: value.email,
+            current_role: value.current_role,
+        }
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PostUserRequest {
@@ -31,19 +51,27 @@ pub struct PostUserRequest {
         content = PostUserRequest
     ),
     responses(
-        (status = 200, body = User<String>)
+        (status = 200, body = UserView)
     )
 )]
 #[post("/api/users")]
 pub async fn post_user(
-    Json(data): web::Json<PostUserRequest>,
+    Json(mut data): web::Json<PostUserRequest>,
     repo: web::Data<UserRepo>,
-) -> Result<web::Json<User<String>>> {
+) -> Result<web::Json<UserView>> {
+    let salt: String = rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(10)
+        .map(char::from)
+        .collect();
+    data.password.push_str(&salt);
+    let password = sha256::digest(data.password);
     let user = User {
         id: ObjectId::new(),
         name: data.name,
         email: data.email,
-        password: data.password,
+        salt,
+        password,
         current_role: data.current_role,
     };
 
@@ -52,7 +80,7 @@ pub async fn post_user(
     };
 
     repo.create(&user).await?;
-    return Ok(web::Json(user.stringify()));
+    return Ok(web::Json(user.stringify().into()));
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -71,7 +99,7 @@ pub struct PatchUserRequest {
         content = PatchUserRequest
     ),
     responses(
-        (status = 200, body = User<String>)
+        (status = 200, body = UserView)
     )
 )]
 #[patch("/api/users")]
@@ -80,7 +108,7 @@ pub async fn patch_user(
     Json(data): web::Json<PatchUserRequest>,
     users_repo: web::Data<UserRepo>,
     tokens_repo: web::Data<TokenRepo>,
-) -> Result<web::Json<User<String>>> {
+) -> Result<web::Json<UserView>> {
     let Ok((_, session)) = verify_token(&req, &tokens_repo).await? else {
         return Err(Error::Outer(OuterError::Unauthorized));
     };
@@ -95,8 +123,9 @@ pub async fn patch_user(
         user.name = new_name;
     }
 
-    if let Some(new_password) = data.password {
-        user.password = new_password;
+    if let Some(mut new_password) = data.password {
+        new_password.push_str(&user.salt);
+        user.password = sha256::digest(new_password);
     }
 
     if let Some(new_role) = data.current_role {
@@ -113,7 +142,7 @@ pub async fn patch_user(
 
     users_repo.create(&user).await?;
 
-    Ok(web::Json(user.stringify()))
+    Ok(web::Json(user.stringify().into()))
 }
 
 #[utoipa::path(
@@ -121,7 +150,7 @@ pub async fn patch_user(
         ("Authorization" = String, Header,  description = "Bearer token"),
     ),
     responses(
-        (status = 200, body = User<String>)
+        (status = 200, body = UserView)
     )
 )]
 #[delete("/api/users")]
@@ -129,7 +158,7 @@ pub async fn delete_user(
     req: HttpRequest,
     users_repo: web::Data<UserRepo>,
     tokens_repo: web::Data<TokenRepo>,
-) -> Result<web::Json<Option<User<String>>>> {
+) -> Result<web::Json<Option<UserView>>> {
     let Ok((_, session)) = verify_token(&req, &tokens_repo).await? else {
         return Err(Error::Outer(OuterError::Unauthorized)); //TODO: error description
     };
@@ -139,7 +168,7 @@ pub async fn delete_user(
     let Some(user) = users_repo.delete(&user_id).await? else {
         return Ok(web::Json(None));
     };
-    Ok(web::Json(Some(user.stringify())))
+    Ok(web::Json(Some(user.stringify().into())))
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -150,7 +179,7 @@ pub struct GetUsersRequest {
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct GetUsersResponse {
-    data: Vec<User<String>>,
+    data: Vec<UserView>,
 }
 
 #[utoipa::path(
@@ -171,7 +200,10 @@ pub async fn get_users(
         .await?;
 
     Ok(HttpResponse::Ok().json(GetUsersResponse {
-        data: users.into_iter().map(|user| user.stringify()).collect(),
+        data: users
+            .into_iter()
+            .map(|user| user.stringify().into())
+            .collect(),
     }))
 }
 
@@ -180,7 +212,7 @@ pub async fn get_users(
         ("Authorization" = String, Header,  description = "Bearer token"),
     ),
     responses(
-        (status = 200, body = User<String>)
+        (status = 200, body = UserView)
     )
 )]
 #[get("/api/users")]

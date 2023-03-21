@@ -20,13 +20,11 @@ pub struct MongoRepository<T> {
 impl<T> MongoRepository<T> {
     pub async fn new(mongo_uri: &str, database: &str, collection: &str) -> Self {
         let collection = mongodb::Client::with_uri_str(mongo_uri)
-        .await
-        .unwrap()
-        .database(database)
-        .collection(collection);
-        Self {
-           collection,
-        }
+            .await
+            .unwrap()
+            .database(database)
+            .collection(collection);
+        Self { collection }
     }
 }
 

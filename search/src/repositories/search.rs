@@ -1,6 +1,10 @@
 use common::repository::mongo_repository::MongoRepository;
 use futures::StreamExt;
-use mongodb::{bson::{RawBson, Document, doc}, IndexModel, options::{FindOptionsBuilder, FindOptions}};
+use mongodb::{
+    bson::{doc, Document, RawBson},
+    options::{FindOptions, FindOptionsBuilder},
+    IndexModel,
+};
 
 use crate::SearchQuery;
 
@@ -9,18 +13,23 @@ pub struct SearchRepo(MongoRepository<Document>);
 impl SearchRepo {
     pub async fn new() -> Self {
         let repo = MongoRepository::new("TODO", "search", "queries").await;
-        repo.collection.create_index(IndexModel::builder()
-        .keys(doc! {
-            "$**": "text",
-        }).build(), None).await.unwrap();
+        repo.collection
+            .create_index(
+                IndexModel::builder()
+                    .keys(doc! {
+                        "$**": "text",
+                    })
+                    .build(),
+                None,
+            )
+            .await
+            .unwrap();
         Self(repo)
     }
 
     pub async fn insert(&self, query: Vec<Document>) {
         self.0.collection.insert_many(query, None).await.unwrap();
     }
-
-
 
     pub async fn find(&self, query: SearchQuery) -> Vec<Document> {
         let text = query.query + " " + &query.tags.join(" ");
@@ -31,12 +40,20 @@ impl SearchRepo {
             })
             .build();
 
-        let mut cursor = self.0.collection.find(doc! {
-            "kind": query.kind,
-            "$text": {
-                "$search": text
-            },
-        }, find_options).await.unwrap();
+        let mut cursor = self
+            .0
+            .collection
+            .find(
+                doc! {
+                    "kind": query.kind,
+                    "$text": {
+                        "$search": text
+                    },
+                },
+                find_options,
+            )
+            .await
+            .unwrap();
 
         let mut result = Vec::new();
         while let Some(doc) = cursor.next().await {
@@ -74,6 +91,4 @@ impl SearchRepo {
         }
         result
     }
-
-    
 }

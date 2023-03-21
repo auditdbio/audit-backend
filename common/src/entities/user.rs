@@ -11,6 +11,7 @@ pub struct User<Id> {
     pub id: Id,
     pub email: String,
     pub password: String,
+    pub salt: String,
     pub name: String,
     pub current_role: String,
 }
@@ -21,6 +22,7 @@ impl User<String> {
             id: ObjectId::from_str(&self.id).unwrap(),
             email: self.email,
             password: self.password,
+            salt: self.salt,
             name: self.name,
             current_role: self.current_role,
         }
@@ -33,6 +35,7 @@ impl User<ObjectId> {
             id: self.id.to_hex(),
             email: self.email,
             password: self.password,
+            salt: self.salt,
             name: self.name,
             current_role: self.current_role,
         }

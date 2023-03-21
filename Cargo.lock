@@ -2795,6 +2795,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "sha256"
+version = "1.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "328169f167261957e83d82be47f9e36629e257c62308129033d7f7e7c173d180"
+dependencies = [
+ "hex",
+ "sha2 0.9.9",
+]
+
+[[package]]
 name = "shellexpand"
 version = "2.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3302,9 +3312,11 @@ dependencies = [
  "lettre",
  "log",
  "mongodb",
+ "rand",
  "regex",
  "serde",
  "serde_json",
+ "sha256",
  "utoipa",
  "utoipa-swagger-ui",
  "uuid 1.2.2",
