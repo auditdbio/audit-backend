@@ -31,6 +31,7 @@ pub fn create_app(
         .wrap(middleware::Logger::default())
         .app_data(web::Data::new(manager))
         .app_data(web::Data::new(search_repo))
+        .service(insert_query)
         .service(search);
     app
 }
