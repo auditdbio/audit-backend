@@ -36,7 +36,7 @@ pub async fn insert_query(
 #[derive(Debug, Serialize, Deserialize, IntoParams, ToSchema)]
 pub struct SearchQuery {
     pub query: String,
-    pub tags: Vec<String>,
+    pub tags: String,
     pub page: u32,
     pub per_page: u32,
     pub tax_rate_from: Option<usize>,
