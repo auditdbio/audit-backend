@@ -15,7 +15,7 @@ async fn main() -> std::io::Result<()> {
     let manager = AuthSessionManager::new(HttpSessionManager);
 
     HttpServer::new(move || create_app(manager.clone(), search_repo.clone()))
-        .bind(("0.0.0.0", 3001))?
+        .bind(("0.0.0.0", 3006))?
         .run()
         .await
 }
