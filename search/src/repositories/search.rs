@@ -35,7 +35,7 @@ impl SearchRepo {
     }
 
     pub async fn find(&self, query: SearchQuery) -> Vec<Document> {
-        let text = query.query + " " + &query.tags.join(" ");
+        let text = query.query + " " + &query.tags;
 
         // let find_options = FindOptions::builder()
         //     .sort(doc! {
