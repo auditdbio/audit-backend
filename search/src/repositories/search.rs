@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use common::repository::mongo_repository::MongoRepository;
 use futures::StreamExt;
 use mongodb::{
@@ -8,11 +10,12 @@ use mongodb::{
 
 use crate::SearchQuery;
 
-pub struct SearchRepo(MongoRepository<Document>);
+#[derive(Clone)]
+pub struct SearchRepo(Arc<MongoRepository<Document>>);
 
 impl SearchRepo {
-    pub async fn new() -> Self {
-        let repo = MongoRepository::new("TODO", "search", "queries").await;
+    pub async fn new(mongo_uri: String) -> Self {
+        let repo = MongoRepository::new(&mongo_uri, "search", "queries").await;
         repo.collection
             .create_index(
                 IndexModel::builder()
@@ -24,7 +27,7 @@ impl SearchRepo {
             )
             .await
             .unwrap();
-        Self(repo)
+        Self(Arc::new(repo))
     }
 
     pub async fn insert(&self, query: Vec<Document>) {
