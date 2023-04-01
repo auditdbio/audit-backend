@@ -1,5 +1,6 @@
 use actix_web::rt::{spawn, time};
 use common::auth_session::{AuthSessionManager, HttpSessionManager};
+use log::info;
 use search::repositories::search::SearchRepo;
 use search::repositories::since::SinceRepo;
 use search::{create_app, fetch_data};
@@ -24,7 +25,10 @@ async fn main() -> std::io::Result<()> {
     spawn(async move {
         let mut interval = time::interval(Duration::from_secs(100));
         loop {
+            info!("start waiting");
             interval.tick().await;
+            info!("end waiting");
+
             fetch_data(since_repo.clone(), search_repo_clone.clone()).await;
         }
     });
