@@ -18,6 +18,8 @@ async fn main() -> std::io::Result<()> {
     let manager = AuthSessionManager::new(HttpSessionManager);
     let since_repo = SinceRepo::new(mongo_uri.clone()).await;
 
+    since_repo.insert_default();
+
     let search_repo_clone = search_repo.clone();
     spawn(async move {
         let mut interval = time::interval(Duration::from_secs(10));
