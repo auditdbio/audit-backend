@@ -182,7 +182,7 @@ pub(super) async fn get_project(
 ) -> Option<Result<Project<String>>> {
     let mut res = client
         .get(format!(
-            "http://{}/api/projects/by_id/{}",
+            "https://{}/api/projects/by_id/{}",
             CUSTOMERS_SERVICE,
             project_id.to_hex()
         ))
@@ -201,7 +201,7 @@ pub(super) async fn get_auditor(
 ) -> Option<Result<Auditor<String>>> {
     let mut res = client
         .get(format!(
-            "http://{}/api/auditors/by_id/{}",
+            "https://{}/api/auditors/by_id/{}",
             AUDITORS_SERVICE,
             auditor_id.to_hex()
         ))

@@ -41,7 +41,7 @@ pub async fn get_auth_session(jwt: String) -> Result<AuthSession, String> {
     let client = reqwest::Client::new();
     let req = client
         .get(format!(
-            "http://{}/api/auth/verify",
+            "https://{}/api/auth/verify",
             USERS_SERVICE.as_str()
         ))
         .header("Authorization", format!("Bearer {}", jwt))
