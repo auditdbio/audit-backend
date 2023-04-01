@@ -22,7 +22,7 @@ async fn main() -> std::io::Result<()> {
 
     let search_repo_clone = search_repo.clone();
     spawn(async move {
-        let mut interval = time::interval(Duration::from_secs(10));
+        let mut interval = time::interval(Duration::from_secs(100));
         loop {
             interval.tick().await;
             fetch_data(since_repo.clone(), search_repo_clone.clone()).await;
