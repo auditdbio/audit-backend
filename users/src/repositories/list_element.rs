@@ -15,6 +15,10 @@ impl Entity for ListElement {
     fn id(&self) -> ObjectId {
         self.id.clone()
     }
+
+    fn timestamp(&self) -> i64 {
+        unreachable!()
+    }
 }
 
 #[derive(Clone)]

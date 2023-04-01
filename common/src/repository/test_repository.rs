@@ -83,6 +83,15 @@ where
             .map(|x| bson::from_bson(x.clone()).unwrap())
             .collect())
     }
+
+    async fn get_all_since(&self, since: i64) -> Result<Vec<T>, Self::Error> {
+        let db = self.db.lock().unwrap();
+        Ok(db
+            .iter()
+            .filter(|x| x.as_document().unwrap().get_i64("last_modified").unwrap() > since)
+            .map(|x| bson::from_bson(x.clone()).unwrap())
+            .collect())
+    }
 }
 
 #[async_trait]

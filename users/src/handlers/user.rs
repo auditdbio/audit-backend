@@ -3,6 +3,7 @@ use actix_web::{
     web::{self, Json},
     HttpRequest, HttpResponse,
 };
+use chrono::Utc;
 use common::{
     auth_session::{AuthSessionManager, SessionManager},
     entities::user::User,
@@ -73,6 +74,7 @@ pub async fn post_user(
         salt,
         password,
         current_role: data.current_role,
+        last_modified: Utc::now().timestamp_micros(),
     };
 
     if repo.find_by_email(&user.email).await?.is_some() {
@@ -237,7 +239,7 @@ pub async fn get_user(
 mod test {
     use actix_web::test::{self, init_service};
     use common::{
-        auth_session::{AuthSession, AuthSessionManager, TestSessionManager},
+        auth_session::{AuthSession, AuthSessionManager, Role, TestSessionManager},
         repository::test_repository::TestRepository,
     };
     use mongodb::bson::oid::ObjectId;
@@ -252,6 +254,7 @@ mod test {
         let test_user = AuthSession {
             user_id: ObjectId::new(),
             token: "".to_string(),
+            role: Role::User,
             exp: 100000000,
         };
         let mut app = init_service(create_test_app(test_user)).await;
@@ -275,6 +278,7 @@ mod test {
         let test_user = AuthSession {
             user_id: ObjectId::new(),
             token: "".to_string(),
+            role: Role::User,
             exp: 100000000,
         };
 
@@ -320,6 +324,7 @@ mod test {
         let test_user = AuthSession {
             user_id: ObjectId::new(),
             token: "".to_string(),
+            role: Role::User,
             exp: 100000000,
         };
         let mut app = init_service(create_test_app(test_user)).await;

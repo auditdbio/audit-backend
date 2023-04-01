@@ -5,11 +5,21 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use utoipa::ToSchema;
 
+use crate::services::USERS_SERVICE;
+
+#[derive(Debug, Serialize, Deserialize, ToSchema, Clone, PartialEq, Eq)]
+pub enum Role {
+    User,
+    Admin,
+    Service,
+}
+
 #[derive(Debug, Serialize, Deserialize, ToSchema, Clone)]
 pub struct AuthSession {
     pub user_id: ObjectId,
     pub token: String,
     pub exp: usize,
+    pub role: Role,
 }
 
 impl AuthSession {
@@ -30,7 +40,7 @@ pub fn jwt_from_header(req: &HttpRequest) -> Option<String> {
 pub async fn get_auth_session(jwt: String) -> Result<AuthSession, String> {
     let client = reqwest::Client::new();
     let req = client
-        .get("https://45.131.67.91:3001/api/auth/verify")
+        .get(format!("https://{}/api/auth/verify", USERS_SERVICE.as_str()))
         .header("Authorization", format!("Bearer {}", jwt))
         .send()
         .await

@@ -4,7 +4,6 @@ use common::repository::mongo_repository::MongoRepository;
 use futures::StreamExt;
 use mongodb::{
     bson::{doc, Document},
-    options::FindOptions,
     IndexModel,
 };
 

@@ -9,7 +9,6 @@ use common::{
     auth_session::{AuthSessionManager, SessionManager},
     entities::{
         audit::Audit, audit_request::AuditRequest, auditor::Auditor, project::Project, role::Role,
-        view::View,
     },
 };
 use mongodb::bson::{doc, oid::ObjectId};
@@ -87,7 +86,7 @@ pub async fn post_audit(
         avatar: request.avatar,
         description: request.description,
         status: "pending".to_string(),
-        last_modified: Utc::now().naive_utc().timestamp_micros(),
+        last_modified: Utc::now().timestamp_micros(),
         auditor_contacts: request.auditor_contacts,
         customer_contacts: request.customer_contacts,
         price: price,
@@ -172,10 +171,10 @@ pub async fn delete_audit(
     Ok(HttpResponse::Ok().json(audit.stringify()))
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct GetViewsResponse {
-    pub views: Vec<View<String>>,
-}
+// #[derive(Debug, Serialize, Deserialize, ToSchema)]
+// pub struct GetViewsResponse {
+//     pub views: Vec<View<String>>,
+// }
 
 pub(super) async fn get_project(
     client: &Client,
@@ -215,53 +214,53 @@ pub(super) async fn get_auditor(
     Some(Ok(body))
 }
 
-#[utoipa::path(
-    params(
-        ("Authorization" = String, Header,  description = "Bearer token"),
-    ),
-    responses(
-        (status = 200, body = GetViewsResponse)
-    )
-)]
-#[get("/api/audit/views")]
-pub async fn get_views(
-    req: HttpRequest,
-    request_repo: web::Data<AuditRequestRepo>,
-    audits_repo: web::Data<AuditRepo>,
-    manager: web::Data<AuthSessionManager>,
-) -> Result<HttpResponse> {
-    let session = manager.get_session(req.clone().into()).await.unwrap(); // TODO: remove unwrap
+// #[utoipa::path(
+//     params(
+//         ("Authorization" = String, Header,  description = "Bearer token"),
+//     ),
+//     responses(
+//         (status = 200, body = GetViewsResponse)
+//     )
+// )]
+// #[get("/api/audit/views")]
+// pub async fn get_views(
+//     req: HttpRequest,
+//     request_repo: web::Data<AuditRequestRepo>,
+//     audits_repo: web::Data<AuditRepo>,
+//     manager: web::Data<AuthSessionManager>,
+// ) -> Result<HttpResponse> {
+//     let session = manager.get_session(req.clone().into()).await.unwrap(); // TODO: remove unwrap
 
-    let mut views = Vec::new();
-    let mut client = awc::Client::default();
+//     let mut views = Vec::new();
+//     let mut client = awc::Client::default();
 
-    client.headers().unwrap().insert(
-        "Authorization".parse().unwrap(),
-        req.headers().get("Authorization").unwrap().clone(),
-    );
+//     client.headers().unwrap().insert(
+//         "Authorization".parse().unwrap(),
+//         req.headers().get("Authorization").unwrap().clone(),
+//     );
 
-    let requests_as_auditor = request_repo.find_by_auditor(session.user_id()).await?;
-    for request in requests_as_auditor {
-        let Some(result) = get_project(&client, &request.project_id).await else {
-            return Ok(HttpResponse::Ok().json(doc!{"error": "project id is invalid"}));
-        };
-        let project = result.unwrap();
-        views.push(request.to_view(project.name));
-    }
+//     let requests_as_auditor = request_repo.find_by_auditor(session.user_id()).await?;
+//     for request in requests_as_auditor {
+//         let Some(result) = get_project(&client, &request.project_id).await else {
+//             return Ok(HttpResponse::Ok().json(doc!{"error": "project id is invalid"}));
+//         };
+//         let project = result.unwrap();
+//         views.push(request.to_view(project.name));
+//     }
 
-    let audits_as_auditor = audits_repo.find_by_auditor(session.user_id()).await?;
-    for audit in audits_as_auditor {
-        let Some(result) = get_project(&client, &audit.project_id).await else {
-            return Ok(HttpResponse::Ok().json(doc!{"error": "project id is invalid"}));
-        };
-        let project = result.unwrap();
-        views.push(audit.to_view(project.name));
-    }
+//     let audits_as_auditor = audits_repo.find_by_auditor(session.user_id()).await?;
+//     for audit in audits_as_auditor {
+//         let Some(result) = get_project(&client, &audit.project_id).await else {
+//             return Ok(HttpResponse::Ok().json(doc!{"error": "project id is invalid"}));
+//         };
+//         let project = result.unwrap();
+//         views.push(audit.to_view(project.name));
+//     }
 
-    views.sort_by(|a, b| b.last_modified.cmp(&a.last_modified));
+//     views.sort_by(|a, b| b.last_modified.cmp(&a.last_modified));
 
-    Ok(HttpResponse::Ok().json(views.into_iter().map(|a| a.stringify()).collect::<Vec<_>>()))
-}
+//     Ok(HttpResponse::Ok().json(views.into_iter().map(|a| a.stringify()).collect::<Vec<_>>()))
+// }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, IntoParams)]
 pub struct AllAuditsQuery {

@@ -6,7 +6,7 @@ use actix_web::{
     HttpRequest, HttpResponse,
 };
 use chrono::{Duration, Utc};
-use common::ruleset::Ruleset;
+use common::{auth_session::Role, ruleset::Ruleset};
 use common::{
     auth_session::{jwt_from_header, AuthSession},
     entities::user::User,
@@ -71,6 +71,7 @@ pub async fn login(
     let session = AuthSession {
         user_id: user.id,
         token: token.token,
+        role: Role::User,
         exp: token.exp,
     };
 
@@ -132,6 +133,7 @@ pub async fn restore(
     let session = AuthSession {
         user_id: session.user_id,
         token: token.token,
+        role: Role::User,
         exp: token.exp,
     };
 
@@ -163,7 +165,7 @@ pub async fn verify(req: HttpRequest, repo: web::Data<TokenRepo>) -> Result<Http
 #[cfg(test)]
 mod tests {
     use actix_web::test::{self, init_service};
-    use common::auth_session::AuthSession;
+    use common::auth_session::{AuthSession, Role};
     use mongodb::bson::oid::ObjectId;
 
     use crate::{create_test_app, PostUserRequest};
@@ -173,6 +175,7 @@ mod tests {
         let test_user = AuthSession {
             user_id: ObjectId::new(),
             token: "".to_string(),
+            role: Role::User,
             exp: 100000000,
         };
 

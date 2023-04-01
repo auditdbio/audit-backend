@@ -86,6 +86,16 @@ where
             .await;
         Ok(result.into_iter().collect::<mongodb::error::Result<_>>()?)
     }
+
+    async fn get_all_since(&self, since: i64) -> Result<Vec<T>, Self::Error> {
+        let result: Vec<mongodb::error::Result<T>> = self
+            .collection
+            .find(doc! {"last_modified": doc! {"$gt": since}}, None)
+            .await?
+            .collect()
+            .await;
+        Ok(result.into_iter().collect::<mongodb::error::Result<_>>()?)
+    }
 }
 
 #[async_trait]

@@ -19,6 +19,7 @@ use common::auth_session::TestSessionManager;
 use common::repository::test_repository::TestRepository;
 pub use handlers::audit::*;
 pub use handlers::audit_request::*;
+use handlers::get_data;
 use repositories::audit::AuditRepo;
 use repositories::audit_request::AuditRequestRepo;
 use repositories::closed_audits::ClosedAuditRepo;
@@ -56,10 +57,10 @@ pub fn create_app(
         .service(delete_audit)
         .service(get_audit)
         .service(get_audits)
-        .service(get_views)
         .service(patch_audit)
         .service(requests_by_id)
-        .service(audit_by_id);
+        .service(audit_by_id)
+        .service(get_data);
     app
 }
 

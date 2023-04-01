@@ -4,7 +4,9 @@ use crate::prelude::*;
 use common::auth_session::AuthSession;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation};
 
-static SECRET: &'static str = "TODO: I will do this later";
+lazy_static::lazy_static! {
+    static ref SECRET: String = std::env::var("SECRET").unwrap();
+}
 
 pub fn create(session: AuthSession) -> Result<String> {
     let key = EncodingKey::from_secret(SECRET.as_bytes());

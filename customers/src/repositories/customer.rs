@@ -41,4 +41,11 @@ impl CustomerRepo {
     ) -> Result<Vec<Customer<ObjectId>>, mongodb::error::Error> {
         self.0.find_all(skip, limit).await
     }
+
+    pub async fn get_all_since(
+        &self,
+        since: i64,
+    ) -> Result<Vec<Customer<ObjectId>>, mongodb::error::Error> {
+        self.0.get_all_since(since).await
+    }
 }

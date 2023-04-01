@@ -57,4 +57,11 @@ impl AuditorRepo {
     ) -> Result<Vec<Auditor<ObjectId>>, mongodb::error::Error> {
         self.0.find_by_tags(tags, skip, limit).await
     }
+
+    pub async fn get_all_since(
+        &self,
+        since: i64,
+    ) -> Result<Vec<Auditor<ObjectId>>, mongodb::error::Error> {
+        self.0.get_all_since(since).await
+    }
 }

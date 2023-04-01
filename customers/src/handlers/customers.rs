@@ -5,6 +5,7 @@ use actix_web::{
     web::{self, Json},
     HttpRequest, HttpResponse,
 };
+use chrono::Utc;
 use common::{
     auth_session::{AuthSessionManager, SessionManager},
     entities::customer::Customer,
@@ -55,6 +56,7 @@ pub async fn post_customer(
         company: data.company,
         contacts: data.contacts,
         tags: data.tags,
+        last_modified: Utc::now().timestamp_micros(),
     };
 
     if !repo.create(&customer).await? {
@@ -198,7 +200,7 @@ mod tests {
     use std::collections::HashMap;
 
     use actix_web::test::{self, init_service};
-    use common::auth_session::AuthSession;
+    use common::auth_session::{AuthSession, Role};
     use mongodb::bson::oid::ObjectId;
 
     use crate::{create_test_app, PatchCustomerRequest, PostCustomerRequest};
@@ -208,6 +210,7 @@ mod tests {
         let test_user = AuthSession {
             user_id: ObjectId::new(),
             token: "".to_string(),
+            role: Role::User,
             exp: 100000000,
         };
 
@@ -233,6 +236,7 @@ mod tests {
         let test_user = AuthSession {
             user_id: ObjectId::new(),
             token: "".to_string(),
+            role: Role::User,
             exp: 100000000,
         };
 
@@ -259,6 +263,7 @@ mod tests {
         let test_user = AuthSession {
             user_id: ObjectId::new(),
             token: "".to_string(),
+            role: Role::User,
             exp: 100000000,
         };
 
@@ -275,6 +280,7 @@ mod tests {
         let test_user = AuthSession {
             user_id: ObjectId::new(),
             token: "".to_string(),
+            role: Role::User,
             exp: 100000000,
         };
 

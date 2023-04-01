@@ -14,6 +14,7 @@ use common::{
     repository::test_repository::TestRepository,
 };
 pub use handlers::auditor::*;
+use handlers::get_data;
 use repositories::auditor::AuditorRepo;
 
 pub fn create_app(
@@ -39,7 +40,8 @@ pub fn create_app(
         .service(patch_auditor)
         .service(delete_auditor)
         .service(get_auditors)
-        .service(auditor_by_id);
+        .service(auditor_by_id)
+        .service(get_data);
     app
 }
 

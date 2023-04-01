@@ -133,7 +133,6 @@ async fn main() -> Result<(), impl Error> {
             audits::get_audit,
             audits::get_audits,
             audits::delete_audit,
-            audits::get_views,
             audits::post_audit_request,
             audits::get_audit_requests,
             audits::patch_audit_request,
@@ -147,7 +146,6 @@ async fn main() -> Result<(), impl Error> {
             audits::GetAuditRequestsQuery,
             audits::GetAuditRequestsResponse,
             audits::PatchAuditRequestRequest,
-            audits::GetViewsResponse,
             audits::GetAuditResponse,
             audits::GetAuditQuery,
             audits::GetAuditResponse,
@@ -156,11 +154,9 @@ async fn main() -> Result<(), impl Error> {
             audits::PatchAuditRequest,
             common::entities::role::Role,
             common::entities::audit_request::PriceRange,
-            common::entities::view::Source,
             common::entities::audit::Audit<String>,
             common::entities::audit_request::AuditRequest<String>,
             common::entities::audit_request::TimeRange,
-            common::entities::view::View<String>,
             swagger_tricks::Id,
         ))
     )]

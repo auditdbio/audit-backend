@@ -1,6 +1,6 @@
 use std::{collections::HashMap, str::FromStr};
 
-use mongodb::bson::oid::ObjectId;
+use mongodb::bson::{self, oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -25,6 +25,7 @@ pub struct Project<Id> {
     pub publish_options: PublishOptions,
     pub status: String,
     pub creator_contacts: HashMap<String, String>,
+    pub last_modified: i64,
 }
 
 impl Project<String> {
@@ -39,7 +40,14 @@ impl Project<String> {
             publish_options: self.publish_options,
             status: self.status,
             creator_contacts: self.creator_contacts,
+            last_modified: self.last_modified,
         }
+    }
+
+    pub fn to_doc(self) -> Document {
+        let mut document = bson::to_document(&self).unwrap();
+        document.insert("kind", "project");
+        document
     }
 }
 
@@ -55,6 +63,7 @@ impl Project<ObjectId> {
             publish_options: self.publish_options,
             status: self.status,
             creator_contacts: self.creator_contacts,
+            last_modified: self.last_modified,
         }
     }
 }
@@ -62,6 +71,10 @@ impl Project<ObjectId> {
 impl Entity for Project<ObjectId> {
     fn id(&self) -> ObjectId {
         self.id.clone()
+    }
+
+    fn timestamp(&self) -> i64 {
+        self.last_modified
     }
 }
 

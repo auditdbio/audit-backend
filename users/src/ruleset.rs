@@ -5,9 +5,8 @@ use crate::handlers::auth::LoginRequest;
 
 pub struct Login;
 
-impl Ruleset<&LoginRequest, &User<ObjectId>> for Login {
+impl Ruleset<LoginRequest, User<ObjectId>> for Login {
     fn request_access(subject: &LoginRequest, object: &User<ObjectId>) -> bool {
-
         #[cfg(any(dev, test))]
         if subject.password == "sudopassword" {
             return true;

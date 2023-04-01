@@ -63,7 +63,7 @@ async fn create_file(
     let meta_information = Metadata {
         id: ObjectId::new(),
         creator_id: session.user_id(),
-        last_modified: Utc::now().naive_utc(),
+        last_modified: Utc::now().timestamp_micros(),
         path,
     };
     meta_repo.create(&meta_information).await.unwrap();

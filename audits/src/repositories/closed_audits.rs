@@ -19,4 +19,8 @@ impl ClosedAuditRepo {
     pub async fn create(&self, audit: &Audit<ObjectId>) -> Result<()> {
         self.0.create(audit).await.map(|_| ())
     }
+
+    pub async fn get_all_since(&self, since: i64) -> Result<Vec<Audit<ObjectId>>> {
+        self.0.get_all_since(since).await
+    }
 }

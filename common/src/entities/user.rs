@@ -14,6 +14,7 @@ pub struct User<Id> {
     pub salt: String,
     pub name: String,
     pub current_role: String,
+    pub last_modified: i64,
 }
 
 impl User<String> {
@@ -25,6 +26,7 @@ impl User<String> {
             salt: self.salt,
             name: self.name,
             current_role: self.current_role,
+            last_modified: self.last_modified,
         }
     }
 }
@@ -38,6 +40,7 @@ impl User<ObjectId> {
             salt: self.salt,
             name: self.name,
             current_role: self.current_role,
+            last_modified: self.last_modified,
         }
     }
 }
@@ -45,5 +48,9 @@ impl User<ObjectId> {
 impl Entity for User<ObjectId> {
     fn id(&self) -> ObjectId {
         self.id
+    }
+
+    fn timestamp(&self) -> i64 {
+        self.last_modified
     }
 }

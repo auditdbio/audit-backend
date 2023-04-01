@@ -5,6 +5,7 @@ use actix_web::{
     web::{self, Json},
     HttpRequest, HttpResponse,
 };
+use chrono::Utc;
 use common::{
     auth_session::{AuthSessionManager, SessionManager},
     entities::auditor::Auditor,
@@ -59,6 +60,7 @@ pub async fn post_auditor(
         contacts: data.contacts,
         tags: data.tags,
         tax: data.tax,
+        last_modified: Utc::now().timestamp_micros(),
     };
 
     if !repo.create(&auditor).await? {
@@ -213,7 +215,7 @@ pub async fn get_auditors(
 #[cfg(test)]
 mod tests {
     use actix_web::test::{self, init_service};
-    use common::auth_session::AuthSession;
+    use common::auth_session::{AuthSession, Role};
     use mongodb::bson::oid::ObjectId;
 
     use crate::{create_test_app, PostAuditorRequest};
@@ -223,6 +225,7 @@ mod tests {
         let test_user = AuthSession {
             user_id: ObjectId::new(),
             token: "".to_string(),
+            role: Role::User,
             exp: 100000000,
         };
 

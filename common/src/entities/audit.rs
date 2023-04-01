@@ -1,15 +1,12 @@
 use std::{collections::HashMap, str::FromStr};
 
-use mongodb::bson::oid::ObjectId;
+use mongodb::bson::{self, oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::repository::{Entity, TaggableEntity};
 
-use super::{
-    audit_request::TimeRange,
-    view::{Source, View},
-};
+use super::audit_request::TimeRange;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, ToSchema)]
 pub struct Audit<Id> {
@@ -56,6 +53,12 @@ impl Audit<String> {
             time: self.time,
         }
     }
+
+    pub fn to_doc(self) -> Document {
+        let mut document = bson::to_document(&self).unwrap();
+        document.insert("kind", "audit");
+        document
+    }
 }
 
 impl Audit<ObjectId> {
@@ -83,20 +86,24 @@ impl Audit<ObjectId> {
     }
 }
 
-impl Audit<ObjectId> {
-    pub fn to_view(self, name: String) -> View<ObjectId> {
-        View {
-            id: self.id,
-            name,
-            last_modified: self.last_modified,
-            source: Source::Audit,
-        }
-    }
-}
+// impl Audit<ObjectId> {
+//     pub fn to_view(self, name: String) -> View<ObjectId> {
+//         View {
+//             id: self.id,
+//             name,
+//             last_modified: self.last_modified,
+//             source: Source::Audit,
+//         }
+//     }
+// }
 
 impl Entity for Audit<ObjectId> {
     fn id(&self) -> ObjectId {
         self.id.clone()
+    }
+
+    fn timestamp(&self) -> i64 {
+        self.last_modified
     }
 }
 

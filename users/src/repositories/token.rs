@@ -14,6 +14,10 @@ impl Entity for TokenModel {
     fn id(&self) -> ObjectId {
         self.user_id.clone()
     }
+
+    fn timestamp(&self) -> i64 {
+        unreachable!()
+    }
 }
 
 #[derive(Clone)]

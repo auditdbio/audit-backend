@@ -16,6 +16,7 @@ utoipa = { version = "3.0.2", features = ["actix_extras"] }
 utoipa-swagger-ui = { version = "3.0.2", features = ["actix-web"] }
 futures = "0.3.25"
 common = {path = "../common"}
+chrono = "0.4.23"
 
 [dependencies.mongodb]
 version = "2.3.1"

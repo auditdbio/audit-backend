@@ -15,6 +15,7 @@ use common::auth_session::AuthSessionManager;
 
 use common::auth_session::TestSessionManager;
 use common::repository::test_repository::TestRepository;
+use handlers::get_data;
 use repositories::customer::CustomerRepo;
 use repositories::project::ProjectRepo;
 
@@ -51,7 +52,8 @@ pub fn create_app(
         .service(delete_project)
         .service(get_projects)
         .service(customer_by_id)
-        .service(project_by_id);
+        .service(project_by_id)
+        .service(get_data);
     app
 }
 

@@ -8,13 +8,17 @@ use std::sync::Arc;
 pub struct Metadata {
     pub id: ObjectId,
     pub creator_id: ObjectId,
-    pub last_modified: NaiveDateTime,
+    pub last_modified: i64,
     pub path: String,
 }
 
 impl Entity for Metadata {
     fn id(&self) -> ObjectId {
         self.id.clone()
+    }
+
+    fn timestamp(&self) -> i64 {
+        self.last_modified
     }
 }
 

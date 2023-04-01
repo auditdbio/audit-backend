@@ -1,15 +1,12 @@
 use std::{collections::HashMap, str::FromStr};
 
-use mongodb::bson::oid::ObjectId;
+use mongodb::bson::{oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::repository::Entity;
 
-use super::{
-    role::Role,
-    view::{Source, View},
-};
+use super::role::Role;
 
 #[derive(Debug, Serialize, Deserialize, ToSchema, PartialEq, Clone)]
 pub struct PriceRange {
@@ -62,6 +59,12 @@ impl AuditRequest<String> {
             time: self.time,
         }
     }
+
+    pub fn to_doc(self) -> Document {
+        let mut document = mongodb::bson::to_document(&self).unwrap();
+        document.insert("kind", "audit_request");
+        document
+    }
 }
 
 impl AuditRequest<ObjectId> {
@@ -86,19 +89,23 @@ impl AuditRequest<ObjectId> {
     }
 }
 
-impl AuditRequest<ObjectId> {
-    pub fn to_view(self, name: String) -> View<ObjectId> {
-        View {
-            id: self.id,
-            name,
-            last_modified: self.last_modified,
-            source: Source::Request,
-        }
-    }
-}
+// impl AuditRequest<ObjectId> {
+//     pub fn to_view(self, name: String) -> View<ObjectId> {
+//         View {
+//             id: self.id,
+//             name,
+//             last_modified: self.last_modified,
+//             source: Source::Request,
+//         }
+//     }
+// }
 
 impl Entity for AuditRequest<ObjectId> {
     fn id(&self) -> ObjectId {
         self.id.clone()
+    }
+
+    fn timestamp(&self) -> i64 {
+        self.last_modified
     }
 }

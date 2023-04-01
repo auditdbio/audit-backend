@@ -1,6 +1,6 @@
 use std::{collections::HashMap, str::FromStr};
 
-use mongodb::bson::oid::ObjectId;
+use mongodb::bson::{bson, doc, oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -18,6 +18,7 @@ pub struct Auditor<Id> {
     pub tags: Vec<String>,
     pub contacts: HashMap<String, String>,
     pub tax: String,
+    pub last_modified: i64,
 }
 
 impl Auditor<String> {
@@ -33,7 +34,14 @@ impl Auditor<String> {
             tags: self.tags,
             contacts: self.contacts,
             tax: self.tax,
+            last_modified: self.last_modified,
         }
+    }
+
+    pub fn to_doc(self) -> Document {
+        let mut document = mongodb::bson::to_document(&self).unwrap();
+        document.insert("kind", "auditor");
+        document
     }
 }
 
@@ -50,13 +58,24 @@ impl Auditor<ObjectId> {
             tags: self.tags,
             contacts: self.contacts,
             tax: self.tax,
+            last_modified: self.last_modified,
         }
+    }
+}
+
+impl From<Auditor<String>> for Auditor<ObjectId> {
+    fn from(auditor: Auditor<String>) -> Self {
+        auditor.parse()
     }
 }
 
 impl Entity for Auditor<ObjectId> {
     fn id(&self) -> ObjectId {
         self.user_id.clone()
+    }
+
+    fn timestamp(&self) -> i64 {
+        self.last_modified
     }
 }
 

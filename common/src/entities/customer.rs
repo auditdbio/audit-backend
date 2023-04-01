@@ -1,6 +1,6 @@
 use std::{collections::HashMap, str::FromStr};
 
-use mongodb::bson::oid::ObjectId;
+use mongodb::bson::{oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -16,6 +16,7 @@ pub struct Customer<Id> {
     pub company: String,
     pub contacts: HashMap<String, String>,
     pub tags: Vec<String>,
+    pub last_modified: i64,
 }
 
 impl Customer<String> {
@@ -29,7 +30,14 @@ impl Customer<String> {
             company: self.company,
             contacts: self.contacts,
             tags: self.tags,
+            last_modified: self.last_modified,
         }
+    }
+
+    pub fn to_doc(self) -> Document {
+        let mut document = mongodb::bson::to_document(&self).unwrap();
+        document.insert("kind", "customer");
+        document
     }
 }
 
@@ -44,6 +52,7 @@ impl Customer<ObjectId> {
             company: self.company,
             contacts: self.contacts,
             tags: self.tags,
+            last_modified: self.last_modified,
         }
     }
 }
@@ -51,5 +60,9 @@ impl Customer<ObjectId> {
 impl Entity for Customer<ObjectId> {
     fn id(&self) -> ObjectId {
         self.user_id.clone()
+    }
+
+    fn timestamp(&self) -> i64 {
+        self.last_modified
     }
 }

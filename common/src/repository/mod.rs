@@ -1,3 +1,4 @@
+pub mod http_repository;
 pub mod mongo_repository;
 pub mod test_repository;
 
@@ -6,6 +7,7 @@ use mongodb::bson::{oid::ObjectId, Bson};
 
 pub trait Entity {
     fn id(&self) -> ObjectId;
+    fn timestamp(&self) -> i64;
 }
 
 pub trait TaggableEntity: Entity {
@@ -20,6 +22,7 @@ pub trait Repository<T> {
     async fn delete(&self, field: &str, item: &ObjectId) -> Result<Option<T>, Self::Error>;
     async fn find_many(&self, field: &str, value: &Bson) -> Result<Vec<T>, Self::Error>;
     async fn find_all(&self, skip: u32, limit: u32) -> Result<Vec<T>, Self::Error>;
+    async fn get_all_since(&self, since: i64) -> Result<Vec<T>, Self::Error>;
 }
 
 #[async_trait]
