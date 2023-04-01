@@ -77,7 +77,7 @@ pub(super) async fn get_data(
     since: i64,
 ) -> Option<Vec<Document>> {
     let reqwest = client
-        .get(format!("https://{origin}/api/{resource}/data/{since}"));
+        .get(format!("http://{origin}/api/{resource}/data/{since}"));
     info!("Request: {:?}", reqwest);
     let Ok(res) = reqwest.send()
         .await else {
