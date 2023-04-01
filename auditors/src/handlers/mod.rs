@@ -1,14 +1,12 @@
 use actix_web::{
     get,
-    web::{self, Json},
+    web::{self},
     HttpRequest, HttpResponse,
 };
 use common::{
     auth_session::{AuthSessionManager, Role, SessionManager},
     entities::auditor::Auditor,
 };
-use mongodb::bson::Document;
-use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
 use crate::repositories::auditor::AuditorRepo;

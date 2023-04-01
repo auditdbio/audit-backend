@@ -7,7 +7,7 @@ use chrono::Utc;
 use common::auth_session::AuthSessionManager;
 use mongodb::bson::Document;
 use reqwest::Client;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use utoipa::{IntoParams, ToSchema};
 

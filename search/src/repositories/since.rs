@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use common::repository::mongo_repository::MongoRepository;
 use common::repository::{Entity, Repository};
-use common::services::{AUDITORS_SERVICE, CUSTOMERS_SERVICE, AUDITS_SERVICE};
+use common::services::{AUDITORS_SERVICE, AUDITS_SERVICE, CUSTOMERS_SERVICE};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
@@ -57,7 +57,6 @@ impl SinceRepo {
                 resource: "customer".to_string(),
                 since: 0,
             },
-
             Since {
                 id: ObjectId::new(),
                 service_name: "customers".to_string(),
@@ -65,7 +64,6 @@ impl SinceRepo {
                 resource: "project".to_string(),
                 since: 0,
             },
-
             Since {
                 id: ObjectId::new(),
                 service_name: "audits".to_string(),
@@ -73,8 +71,6 @@ impl SinceRepo {
                 resource: "audit".to_string(),
                 since: 0,
             },
-
-
             Since {
                 id: ObjectId::new(),
                 service_name: "audits".to_string(),

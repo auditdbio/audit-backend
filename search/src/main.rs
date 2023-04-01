@@ -1,8 +1,8 @@
-use actix_web::rt::{time, spawn};
+use actix_web::rt::{spawn, time};
 use common::auth_session::{AuthSessionManager, HttpSessionManager};
+use search::repositories::search::SearchRepo;
 use search::repositories::since::SinceRepo;
 use search::{create_app, fetch_data};
-use search::repositories::search::SearchRepo;
 
 use std::env;
 use std::time::Duration;
@@ -18,7 +18,7 @@ async fn main() -> std::io::Result<()> {
     let manager = AuthSessionManager::new(HttpSessionManager);
     let since_repo = SinceRepo::new(mongo_uri.clone()).await;
 
-    since_repo.insert_default();
+    since_repo.insert_default().await;
 
     let search_repo_clone = search_repo.clone();
     spawn(async move {
@@ -28,8 +28,6 @@ async fn main() -> std::io::Result<()> {
             fetch_data(since_repo.clone(), search_repo_clone.clone()).await;
         }
     });
-    
-
 
     HttpServer::new(move || create_app(manager.clone(), search_repo.clone()))
         .bind(("0.0.0.0", 3006))?

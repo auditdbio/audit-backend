@@ -1,7 +1,5 @@
 use std::marker::PhantomData;
 
-use super::Repository;
-
 pub trait HasDomain {
     fn get_domain() -> String;
 }

@@ -4,15 +4,13 @@ use crate::{
 };
 use actix_web::{
     get,
-    web::{self, Json},
+    web::{self},
     HttpRequest, HttpResponse,
 };
 use common::{
     auth_session::{AuthSessionManager, Role, SessionManager},
     entities::{audit::Audit, audit_request::AuditRequest},
 };
-use mongodb::bson::Document;
-use serde::{Deserialize, Serialize};
 
 pub mod audit;
 pub mod audit_request;

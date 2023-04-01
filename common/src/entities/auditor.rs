@@ -1,6 +1,6 @@
 use std::{collections::HashMap, str::FromStr};
 
-use mongodb::bson::{bson, doc, oid::ObjectId, Document};
+use mongodb::bson::{doc, oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 

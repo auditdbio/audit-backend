@@ -33,13 +33,13 @@ impl<T: Clone + Into<ObjectId>> Ruleset<AuthSession, Audit<T>> for Read {
 }
 
 impl<T> Ruleset<(), Auditor<T>> for Read {
-    fn request_access(_subject: &(), object: &Auditor<T>) -> bool {
+    fn request_access(_subject: &(), _object: &Auditor<T>) -> bool {
         true // auditors pages are now open for all site visitors
     }
 }
 
 impl<T> Ruleset<AuthSession, Customer<T>> for Read {
-    fn request_access(subject: &AuthSession, _object: &Customer<T>) -> bool {
+    fn request_access(_subject: &AuthSession, _object: &Customer<T>) -> bool {
         true // customers pages are now open for all site visitors
     }
 }
@@ -67,13 +67,13 @@ impl<T: Clone + Into<ObjectId>> Ruleset<AuthSession, Audit<T>> for Edit {
 }
 
 impl<T> Ruleset<(), Auditor<T>> for Edit {
-    fn request_access(_subject: &(), object: &Auditor<T>) -> bool {
+    fn request_access(_subject: &(), _object: &Auditor<T>) -> bool {
         true // auditors pages are now open for all site visitors
     }
 }
 
 impl<T> Ruleset<AuthSession, Customer<T>> for Edit {
-    fn request_access(subject: &AuthSession, _object: &Customer<T>) -> bool {
+    fn request_access(_subject: &AuthSession, _object: &Customer<T>) -> bool {
         true // customers pages are now open for all site visitors
     }
 }
