@@ -1,6 +1,6 @@
 use actix_web::{get, web, HttpRequest, HttpResponse};
 use common::{
-    auth_session::{AuthSessionManager, Role, SessionManager},
+    auth_session::{AuthSessionManager},
     entities::{customer::Customer, project::Project},
 };
 use mongodb::bson::Document;
@@ -20,11 +20,11 @@ pub struct CustomerServiceResponse {
 
 #[get("/api/customer/data/{resource}/{timestamp}")]
 pub async fn get_data(
-    req: HttpRequest,
+    _req: HttpRequest,
     since: web::Path<(String, i64)>,
     project_repo: web::Data<ProjectRepo>,
     customer_repo: web::Data<CustomerRepo>,
-    manager: web::Data<AuthSessionManager>,
+    _manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
     let (resource, since) = since.into_inner();
     //let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap

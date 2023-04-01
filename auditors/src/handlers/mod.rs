@@ -4,7 +4,7 @@ use actix_web::{
     HttpRequest, HttpResponse,
 };
 use common::{
-    auth_session::{AuthSessionManager, Role, SessionManager},
+    auth_session::{AuthSessionManager},
     entities::auditor::Auditor,
 };
 
@@ -15,10 +15,10 @@ pub mod auditor;
 
 #[get("/api/auditor/data/{resource}/{timestamp}")]
 pub async fn get_data(
-    req: HttpRequest,
+    _req: HttpRequest,
     args: web::Path<(String, i64)>,
     repo: web::Data<AuditorRepo>,
-    manager: web::Data<AuthSessionManager>,
+    _manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
     let (resource, since) = args.into_inner();
     // let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap

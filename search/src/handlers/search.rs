@@ -100,6 +100,9 @@ pub async fn fetch_data(since_repo: SinceRepo, search_repo: SearchRepo) {
             continue;
         };
         since_repo.update(since).await.unwrap();
+        if docs.is_empty() {
+            continue;
+        }
         search_repo.insert(docs).await;
     }
 }
