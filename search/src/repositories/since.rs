@@ -73,14 +73,14 @@ impl SinceRepo {
             },
             Since {
                 id: ObjectId::new(),
-                service_name: "audits".to_string(),
+                service_name: "audit".to_string(),
                 service_origin: AUDITS_SERVICE.to_string(),
                 resource: "request".to_string(),
                 since: 0,
             },
         ];
 
-        if count == services.len() as u64 {
+        if count == services.len() as u64 && false {
             return;
         }
 
