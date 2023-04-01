@@ -21,10 +21,10 @@ pub async fn get_data(
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
     let (resource, since) = args.into_inner();
-    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
-    if session.role != Role::Service {
-        return Ok(HttpResponse::Unauthorized().finish());
-    }
+    // let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    // if session.role != Role::Service {
+    //     return Ok(HttpResponse::Unauthorized().finish());
+    // }
 
     return match resource.as_str() {
         "auditor" => {

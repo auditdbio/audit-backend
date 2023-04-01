@@ -80,7 +80,7 @@ impl SinceRepo {
             },
         ];
 
-        if count == services.len() as u64 && false {
+        if count == services.len() as u64 {
             return;
         }
 

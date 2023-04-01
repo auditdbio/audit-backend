@@ -15,7 +15,7 @@ use common::{
 pub mod audit;
 pub mod audit_request;
 
-#[get("/api/auditor/data/{resource}/{timestamp}")]
+#[get("/api/audit/data/{resource}/{timestamp}")]
 pub async fn get_data(
     req: HttpRequest,
     since: web::Path<(String, i64)>,
@@ -24,10 +24,10 @@ pub async fn get_data(
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
     let (resource, since) = since.into_inner();
-    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
-    if session.role != Role::Service {
-        return Ok(HttpResponse::Unauthorized().finish());
-    }
+    // let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    // if session.role != Role::Service {
+    //     return Ok(HttpResponse::Unauthorized().finish());
+    // }
 
     match resource.as_str() {
         "audit" => {
