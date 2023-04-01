@@ -95,10 +95,11 @@ pub async fn fetch_data(since_repo: SinceRepo, search_repo: SearchRepo) {
     let data = since_repo.get_all().await.unwrap();
 
     for mut since in data {
-        since.since = Utc::now().timestamp_micros();
+        let timestamp = Utc::now().timestamp_micros();
         let Some(docs) = get_data(&client, &since.service_name ,&since.resource, &since.service_origin, since.since).await else {
             continue;
         };
+        since.since = timestamp;
         since_repo.update(since).await.unwrap();
         if docs.is_empty() {
             continue;
