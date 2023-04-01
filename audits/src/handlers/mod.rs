@@ -15,7 +15,7 @@ use common::{
 pub mod audit;
 pub mod audit_request;
 
-#[get("/api/audit/data/{resource}/{timestamp}")]
+#[get("/api/auditor/data/{resource}/{timestamp}")]
 pub async fn get_data(
     req: HttpRequest,
     since: web::Path<(String, i64)>,

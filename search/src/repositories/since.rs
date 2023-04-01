@@ -45,28 +45,28 @@ impl SinceRepo {
         let services = vec![
             Since {
                 id: ObjectId::new(),
-                service_name: "auditors".to_string(),
+                service_name: "auditor".to_string(),
                 service_origin: AUDITORS_SERVICE.to_string(),
                 resource: "auditor".to_string(),
                 since: 0,
             },
             Since {
                 id: ObjectId::new(),
-                service_name: "customers".to_string(),
+                service_name: "customer".to_string(),
                 service_origin: CUSTOMERS_SERVICE.to_string(),
                 resource: "customer".to_string(),
                 since: 0,
             },
             Since {
                 id: ObjectId::new(),
-                service_name: "customers".to_string(),
+                service_name: "customer".to_string(),
                 service_origin: CUSTOMERS_SERVICE.to_string(),
                 resource: "project".to_string(),
                 since: 0,
             },
             Since {
                 id: ObjectId::new(),
-                service_name: "audits".to_string(),
+                service_name: "audit".to_string(),
                 service_origin: AUDITS_SERVICE.to_string(),
                 resource: "audit".to_string(),
                 since: 0,

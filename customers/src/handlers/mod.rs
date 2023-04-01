@@ -18,7 +18,7 @@ pub struct CustomerServiceResponse {
     pub customers: Vec<Document>,
 }
 
-#[get("/api/audit/data/{resource}/{timestamp}")]
+#[get("/api/customer/data/{resource}/{timestamp}")]
 pub async fn get_data(
     req: HttpRequest,
     since: web::Path<(String, i64)>,
