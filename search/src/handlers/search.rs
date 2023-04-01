@@ -72,12 +72,13 @@ pub async fn search(
 
 pub(super) async fn get_data(
     client: &Client,
+    service: &String,
     resource: &String,
     origin: &String,
     since: i64,
 ) -> Option<Vec<Document>> {
     let reqwest = client
-        .get(format!("http://{origin}/api/{resource}/data/{since}"));
+        .get(format!("http://{origin}/api/{service}/data/{resource}/{since}"));
     info!("Request: {:?}", reqwest);
     let Ok(res) = reqwest.send()
         .await else {
@@ -95,7 +96,7 @@ pub async fn fetch_data(since_repo: SinceRepo, search_repo: SearchRepo) {
 
     for mut since in data {
         since.since = Utc::now().timestamp_micros();
-        let Some(docs) = get_data(&client, &since.resource, &since.service_origin, since.since).await else {
+        let Some(docs) = get_data(&client, &since.service_name ,&since.resource, &since.service_origin, since.since).await else {
             continue;
         };
         since_repo.update(since).await.unwrap();
