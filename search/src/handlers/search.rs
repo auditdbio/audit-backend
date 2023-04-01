@@ -5,6 +5,7 @@ use actix_web::{
 };
 use chrono::Utc;
 use common::auth_session::AuthSessionManager;
+use log::info;
 use mongodb::bson::Document;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -75,9 +76,10 @@ pub(super) async fn get_data(
     origin: &String,
     since: i64,
 ) -> Option<Vec<Document>> {
-    let Ok(res) = client
-        .get(format!("https://{origin}/api/{resource}/data/{since}"))
-        .send()
+    let reqwest = client
+        .get(format!("https://{origin}/api/{resource}/data/{since}"));
+    info!("Request: {:?}", reqwest);
+    let Ok(res) = reqwest.send()
         .await else {
         return None;
     };
