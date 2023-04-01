@@ -1,3 +1,3 @@
 #!/bin/bash
-cp /data/binaries/files_binary .
-./files_binary
+cp /data/binaries/search_binary .
+./search_binary
