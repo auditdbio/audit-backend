@@ -14,33 +14,23 @@ impl FilesRepository {
     }
 
     pub async fn create(&self, bytes: Vec<u8>, path: String) {
-        web::block(move || {
-            let mut file = File::create(format!("/auditdb-files/{}", path)).unwrap();
-            file.write_all(&bytes).unwrap();
-        })
-        .await
-        .unwrap();
+        let mut file = File::create(format!("/auditdb-files/{}", path)).unwrap();
+        file.write_all(&bytes).unwrap();
     }
 
     pub async fn get(&self, path: String) -> Bytes {
-        web::block(move || {
-            let file = File::open(format!("/auditdb-files/{}", path)).unwrap();
-            let bytes = Bytes::from(
-                file.bytes()
-                    .collect::<Result<Vec<u8>, io::Error>>()
-                    .unwrap(),
-            );
-            bytes
-        })
-        .await
-        .unwrap()
+        let file = File::open(format!("/auditdb-files/{}", path)).unwrap();
+        let bytes = Bytes::from(
+            file.bytes()
+                .collect::<Result<Vec<u8>, io::Error>>()
+                .unwrap(),
+        );
+        bytes
     }
 
     pub async fn delete(&self, path: String) {
-        web::block(move || {
-            std::fs::remove_file(format!("/auditdb-files/{}", path)).unwrap();
-        })
-        .await
-        .unwrap()
+
+        std::fs::remove_file(format!("/auditdb-files/{}", path)).unwrap();
+        
     }
 }
