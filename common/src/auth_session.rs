@@ -71,6 +71,7 @@ pub trait SessionManager {
     type Error;
     type Payload: From<HttpRequest> + Send;
     async fn get_session(&self, req: Self::Payload) -> Result<AuthSession, Self::Error>;
+    async fn get_session_from_string(&self, str: String) -> Result<AuthSession, Self::Error>;
 }
 pub struct HttpSessionManager;
 
@@ -82,6 +83,10 @@ impl SessionManager for HttpSessionManager {
     async fn get_session(&self, req: Self::Payload) -> Result<AuthSession, Self::Error> {
         get_auth_session(req.jwt).await
     }
+
+    async fn get_session_from_string(&self, str: String) -> Result<AuthSession, Self::Error> {
+        get_auth_session(str).await
+    }
 }
 
 pub struct TestSessionManager(pub AuthSession);
@@ -92,6 +97,10 @@ impl SessionManager for TestSessionManager {
     type Payload = AuthPayload;
 
     async fn get_session(&self, _req: Self::Payload) -> Result<AuthSession, Self::Error> {
+        Ok(self.0.clone())
+    }
+
+    async fn get_session_from_string(&self, _str: String) -> Result<AuthSession, Self::Error> {
         Ok(self.0.clone())
     }
 }
@@ -117,5 +126,9 @@ impl SessionManager for AuthSessionManager {
 
     async fn get_session(&self, req: Self::Payload) -> Result<AuthSession, Self::Error> {
         self.0.get_session(req).await
+    }
+
+    async fn get_session_from_string(&self, str: String) -> Result<AuthSession, Self::Error> {
+        self.0.get_session_from_string(str).await
     }
 }

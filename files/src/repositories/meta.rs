@@ -39,7 +39,7 @@ impl MetadataRepo {
         &self,
         path: String,
     ) -> Result<Option<Metadata>, mongodb::error::Error> {
-        self.0.find("token", &Bson::String(path)).await
+        self.0.find("path", &Bson::String(path)).await
     }
 
     pub async fn delete(&self, path: String) -> Result<Option<Metadata>, mongodb::error::Error> {

@@ -3,10 +3,7 @@ use actix_web::{
     web::{self},
     HttpRequest, HttpResponse,
 };
-use common::{
-    auth_session::{AuthSessionManager},
-    entities::auditor::Auditor,
-};
+use common::{auth_session::AuthSessionManager, entities::auditor::Auditor};
 
 use crate::error::Result;
 use crate::repositories::auditor::AuditorRepo;

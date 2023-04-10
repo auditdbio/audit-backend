@@ -1,6 +1,6 @@
 use actix_web::{get, web, HttpRequest, HttpResponse};
 use common::{
-    auth_session::{AuthSessionManager},
+    auth_session::AuthSessionManager,
     entities::{customer::Customer, project::Project},
 };
 use mongodb::bson::Document;

@@ -20,7 +20,10 @@ async fn main() -> std::io::Result<()> {
     let since_repo = SinceRepo::new(mongo_uri.clone()).await;
 
     since_repo.insert_default().await;
-    let timeout = env::var("TIMEOUT").unwrap_or("7200".to_string()).parse::<u64>().unwrap();
+    let timeout = env::var("TIMEOUT")
+        .unwrap_or("7200".to_string())
+        .parse::<u64>()
+        .unwrap();
     let search_repo_clone = search_repo.clone();
     spawn(async move {
         let mut interval = time::interval(Duration::from_secs(timeout));

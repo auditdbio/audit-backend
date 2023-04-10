@@ -8,7 +8,7 @@ use actix_web::{
     HttpRequest, HttpResponse,
 };
 use common::{
-    auth_session::{AuthSessionManager},
+    auth_session::AuthSessionManager,
     entities::{audit::Audit, audit_request::AuditRequest},
 };
 

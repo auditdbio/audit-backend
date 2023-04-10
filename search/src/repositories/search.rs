@@ -3,7 +3,7 @@ use std::sync::Arc;
 use common::repository::mongo_repository::MongoRepository;
 use futures::StreamExt;
 use mongodb::{
-    bson::{doc, Document, Bson},
+    bson::{doc, Bson, Document},
     IndexModel,
 };
 
@@ -34,7 +34,6 @@ impl SearchRepo {
     }
 
     pub async fn find(&self, query: SearchQuery) -> Vec<Document> {
-
         // let find_options = FindOptions::builder()
         //     .sort(doc! {
         //         query.sort_by: query.sort_order,
@@ -50,18 +49,18 @@ impl SearchRepo {
 
         if !query.query.is_empty() || !query.tags.is_empty() {
             let text = query.query + " " + &query.tags;
-            document.insert("$text", doc! {
-                "$search": text,
-            });
+            document.insert(
+                "$text",
+                doc! {
+                    "$search": text,
+                },
+            );
         }
 
         let mut cursor = self
             .0
             .collection
-            .find(
-                document,
-                find_options,
-            )
+            .find(document, find_options)
             .await
             .unwrap();
 

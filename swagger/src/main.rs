@@ -168,21 +168,6 @@ async fn main() -> Result<(), impl Error> {
             (url = "https://dev.auditdb.io/"),
         ),
         paths(
-            files::create_file,
-            files::get_file,
-        ),
-        components(schemas(
-            files::FilePath
-        ))
-    )]
-    struct FilesServiceDoc;
-
-    #[derive(OpenApi)]
-    #[openapi(
-        servers(
-            (url = "https://dev.auditdb.io/"),
-        ),
-        paths(
             search::search,
         ),
         components(schemas(
@@ -210,10 +195,6 @@ async fn main() -> Result<(), impl Error> {
                 (
                     Url::new("audits", "/api-doc/openapi4.json"),
                     AuditsServiceDoc::openapi(),
-                ),
-                (
-                    Url::new("files", "/api-doc/openapi5.json"),
-                    FilesServiceDoc::openapi(),
                 ),
                 (
                     Url::new("search", "/api-doc/openapi6.json"),
