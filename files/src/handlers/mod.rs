@@ -90,7 +90,7 @@ pub async fn get_file(
     let file_path = format!("auditdb-files/{}", path.to_str().unwrap());
 
     let metadata = meta_repo
-        .find_by_path(file_path.clone())
+        .find_by_path(path.to_str().unwrap().to_string())
         .await
         .unwrap()
         .unwrap();
