@@ -74,6 +74,7 @@ async fn create_file(
 #[get("/api/files/get/{filename:.*}")]
 pub async fn get_file(
     req: HttpRequest,
+    files_repo: web::Data<FilesRepository>,
     meta_repo: web::Data<MetadataRepo>,
     manager: web::Data<auth_session::AuthSessionManager>,
 ) -> HttpResponse {
@@ -87,7 +88,7 @@ pub async fn get_file(
     let session = manager.get_session_from_string(auth).await.unwrap();
 
     let path: std::path::PathBuf = req.match_info().query("filename").parse().unwrap();
-    let file_path = format!("auditdb-files/{}", path.to_str().unwrap());
+    let file_path = format!("/auditdb-files/{}", path.to_str().unwrap());
 
     let metadata = meta_repo
         .find_by_path(path.to_str().unwrap().to_string())
