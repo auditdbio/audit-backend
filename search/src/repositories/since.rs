@@ -85,7 +85,7 @@ impl SinceRepo {
         }
 
         for service in services {
-            self.0.create(&service).await.unwrap();
+            self.0.insert(&service).await.unwrap();
         }
     }
 
@@ -95,7 +95,7 @@ impl SinceRepo {
 
     pub async fn update(&self, since: Since) -> Result<(), mongodb::error::Error> {
         self.0.delete("id", &since.id).await?;
-        self.0.create(&since).await?;
+        self.0.insert(&since).await?;
         Ok(())
     }
 }

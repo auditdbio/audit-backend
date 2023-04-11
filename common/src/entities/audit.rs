@@ -4,7 +4,7 @@ use mongodb::bson::{self, oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::repository::{Entity, TaggableEntity};
+use crate::repository::Entity;
 
 use super::audit_request::TimeRange;
 
@@ -21,9 +21,8 @@ pub struct Audit<Id> {
     pub auditor_contacts: HashMap<String, String>,
     pub customer_contacts: HashMap<String, String>,
     pub scope: Vec<String>,
-    pub price: String,
+    pub price: i64,
     pub report_link: Option<String>,
-    pub time_frame: String,
     pub tags: Vec<String>,
     pub last_modified: i64,
     pub report: Option<String>,
@@ -46,7 +45,6 @@ impl Audit<String> {
             scope: self.scope,
             price: self.price,
             report_link: self.report_link,
-            time_frame: self.time_frame,
             tags: self.tags,
             last_modified: self.last_modified,
             report: self.report,
@@ -77,7 +75,6 @@ impl Audit<ObjectId> {
             scope: self.scope,
             price: self.price,
             report_link: self.report_link,
-            time_frame: self.time_frame,
             tags: self.tags,
             last_modified: self.last_modified,
             report: self.report,
@@ -104,11 +101,5 @@ impl Entity for Audit<ObjectId> {
 
     fn timestamp(&self) -> i64 {
         self.last_modified
-    }
-}
-
-impl TaggableEntity for Audit<ObjectId> {
-    fn tags(&self) -> &Vec<String> {
-        &self.tags
     }
 }

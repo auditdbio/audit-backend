@@ -4,13 +4,13 @@ use mongodb::bson::{self, oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::repository::{Entity, TaggableEntity};
+use crate::repository::Entity;
+
+use super::audit_request::PriceRange;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
 pub struct PublishOptions {
     pub publish: bool,
-    pub prise_from: String,
-    pub prise_to: String,
     pub ready_to_wait: bool,
 }
 
@@ -26,6 +26,7 @@ pub struct Project<Id> {
     pub status: String,
     pub creator_contacts: HashMap<String, String>,
     pub last_modified: i64,
+    pub price_range: PriceRange,
 }
 
 impl Project<String> {
@@ -41,6 +42,7 @@ impl Project<String> {
             status: self.status,
             creator_contacts: self.creator_contacts,
             last_modified: self.last_modified,
+            price_range: self.price_range,
         }
     }
 
@@ -64,6 +66,7 @@ impl Project<ObjectId> {
             status: self.status,
             creator_contacts: self.creator_contacts,
             last_modified: self.last_modified,
+            price_range: self.price_range,
         }
     }
 }
@@ -75,11 +78,5 @@ impl Entity for Project<ObjectId> {
 
     fn timestamp(&self) -> i64 {
         self.last_modified
-    }
-}
-
-impl TaggableEntity for Project<ObjectId> {
-    fn tags(&self) -> &Vec<String> {
-        &self.tags
     }
 }
