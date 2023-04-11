@@ -17,7 +17,7 @@ impl CustomerRepo {
     }
 
     pub async fn create(&self, user: &Customer<ObjectId>) -> Result<bool, mongodb::error::Error> {
-        self.0.create(user).await
+        self.0.insert(user).await
     }
 
     pub async fn find(

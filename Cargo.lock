@@ -355,6 +355,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "anyhow"
+version = "1.0.70"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7de8ce5e0f9f8d88245311066a578d72b7af3e7088f32783804676302df237e4"
+
+[[package]]
 name = "askama_escape"
 version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -769,18 +775,22 @@ dependencies = [
  "actix-web",
  "actix-web-httpauth",
  "alcoholic_jwt",
+ "anyhow",
  "async-trait",
  "awc",
  "chrono",
  "derive_more",
  "futures",
+ "futures-util",
  "jsonwebkey",
  "jsonwebtoken",
  "lazy_static",
  "mongodb",
+ "once_cell",
  "reqwest",
  "serde",
  "serde_json",
+ "type-map",
  "utoipa",
 ]
 
@@ -1245,6 +1255,7 @@ dependencies = [
  "actix-multipart",
  "actix-multipart-derive",
  "actix-web",
+ "anyhow",
  "chrono",
  "common",
  "derive_more",
@@ -1258,7 +1269,6 @@ dependencies = [
  "serde",
  "utoipa",
  "utoipa-swagger-ui",
- "uuid 1.2.2",
 ]
 
 [[package]]
@@ -2490,6 +2500,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustc-hash"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
+
+[[package]]
 name = "rustc_version"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3222,6 +3238,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "59547bce71d9c38b83d9c0e92b6066c4253371f15005def0c30d9657f50c7642"
 
 [[package]]
+name = "type-map"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "deb68604048ff8fa93347f02441e4487594adc20bb8a084f9e564d2b827a0a9f"
+dependencies = [
+ "rustc-hash",
+]
+
+[[package]]
 name = "typed-builder"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3303,6 +3328,7 @@ version = "0.1.0"
 dependencies = [
  "actix-cors",
  "actix-web",
+ "anyhow",
  "async-trait",
  "chrono",
  "common",

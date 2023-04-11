@@ -24,7 +24,7 @@ impl AuditRequestRepo {
         &self,
         user: &AuditRequest<ObjectId>,
     ) -> Result<bool, mongodb::error::Error> {
-        self.0.create(user).await
+        self.0.insert(user).await
     }
 
     pub async fn find(

@@ -6,10 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-actix-web = "4.2.1"
+actix-web = "4"
 actix-cors = "0.6.4"
-serde = "1.0.152"
-uuid = "1.2.2"
+serde = "1"
 derive_more = "0.99.17"
 jsonwebtoken = "8"
 chrono = {version = "0.4", features = ["serde"]}
@@ -23,6 +22,7 @@ actix-multipart = "0.6.0"
 actix-multipart-derive = "0.6.0"
 actix-files = "0.6.2"
 futures-util = "0.3.26"
+anyhow = "1"
 common = {path = "../common"}
 
 

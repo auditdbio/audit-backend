@@ -1,20 +1,19 @@
+use std::sync::Arc;
+
 use actix_cors::Cors;
 use actix_web::{
     body::MessageBody,
     dev::{ServiceFactory, ServiceRequest, ServiceResponse},
     middleware, web, App,
 };
-use common::auth_session::AuthSessionManager;
+use common::{auth_session::AuthSessionManager, context::ServiceState};
 pub use handlers::*;
-use repositories::{files::FilesRepository, meta::MetadataRepo};
 
 pub mod handlers;
-pub mod repositories;
+pub mod service;
 
 pub fn create_app(
-    file_repo: FilesRepository,
-    meta_repo: MetadataRepo,
-    manager: AuthSessionManager,
+    state: Arc<ServiceState>,
 ) -> App<
     impl ServiceFactory<
         ServiceRequest,
@@ -28,10 +27,9 @@ pub fn create_app(
     let app = App::new()
         .wrap(cors)
         .wrap(middleware::Logger::default())
-        .app_data(web::Data::new(file_repo))
-        .app_data(web::Data::new(meta_repo))
-        .app_data(web::Data::new(manager))
+        .app_data(web::Data::new(state))
         .service(create_file)
-        .service(get_file);
+        .service(change_user)
+        .service(dele)
     app
 }

@@ -45,7 +45,19 @@ pub async fn post_audit(
     let session = manager.get_session(req.clone().into()).await.unwrap(); // TODO: remove unwrap
     let request = request.parse();
 
-    let Some(price) = request.price else {
+    let price = if let Some(price) = request.price {
+        Some(price)
+    } else if let Some(range) = request.price_range {
+        if range.begin == range.end {
+            Some(range.begin)
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    let Some(price) = price else {
         return Ok(HttpResponse::BadRequest().body("Price is required"));
     };
 
@@ -91,7 +103,6 @@ pub async fn post_audit(
         customer_contacts: request.customer_contacts,
         price: price,
         report_link: None,
-        time_frame: request.time_frame,
         scope: request.scope,
         tags: project.tags,
         report: None,
