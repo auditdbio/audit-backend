@@ -1,3 +1,5 @@
+use std::io::Read;
+
 use actix_multipart::Multipart;
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
 use chrono::Utc;
@@ -101,6 +103,6 @@ pub async fn get_file(
     }
 
     let file = actix_files::NamedFile::open_async(file_path).await.unwrap();
-
+    log::info!("{:?}", file.try_clone().unwrap().bytes());
     file.into_response(&req)
 }
