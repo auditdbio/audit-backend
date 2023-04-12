@@ -90,6 +90,12 @@ async fn create_file(
 
     let full_path = format!("{}.{}", path, extension);
 
+    let meta = meta_repo.find_by_path(full_path.clone()).await.unwrap();
+
+    if meta.is_some() {
+        meta_repo.delete(path.clone()).await.unwrap();
+    }
+
     files_repo.create(file.concat(), full_path).await;
 
     let meta_information = Metadata {
@@ -131,13 +137,13 @@ pub async fn get_file(
         .unwrap();
 
 
-    // if let Ok(auth_session) = session {
-    //     if metadata.creator_id != auth_session.user_id() {
-    //         return HttpResponse::BadRequest().body("You are not allowed to access this file");
-    //     }
-    // } else if metadata.private {
-    //     return HttpResponse::BadRequest().body("You are not allowed to access this file");
-    // }
+    if let Ok(auth_session) = session {
+        if metadata.creator_id != auth_session.user_id() && metadata.private {
+            return HttpResponse::BadRequest().body("You are not allowed to access this file");
+        }
+    } else if metadata.private {
+        return HttpResponse::BadRequest().body("You are not allowed to access this file");
+    }
 
     let full_path = format!("{}.{}", file_path, metadata.extension);
     log::info!("full path: {}", full_path);
