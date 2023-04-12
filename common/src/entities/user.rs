@@ -4,7 +4,7 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::{repository::Entity, auth::{Auth}};
+use crate::{repository::Entity};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
 pub struct User<Id> {
