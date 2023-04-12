@@ -131,16 +131,16 @@ pub async fn get_file(
         .unwrap();
 
 
-    if let Ok(auth_session) = session {
-        if metadata.creator_id != auth_session.user_id() {
-            return HttpResponse::BadRequest().body("You are not allowed to access this file");
-        }
-    } else if metadata.private {
-        return HttpResponse::BadRequest().body("You are not allowed to access this file");
-    }
+    // if let Ok(auth_session) = session {
+    //     if metadata.creator_id != auth_session.user_id() {
+    //         return HttpResponse::BadRequest().body("You are not allowed to access this file");
+    //     }
+    // } else if metadata.private {
+    //     return HttpResponse::BadRequest().body("You are not allowed to access this file");
+    // }
 
     let full_path = format!("{}.{}", file_path, metadata.extension);
-
+    log::info!("full path: {}", full_path);
     let file = actix_files::NamedFile::open_async(full_path).await.unwrap();
     file.into_response(&req)
 }
