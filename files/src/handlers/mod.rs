@@ -120,12 +120,15 @@ pub async fn get_file(
 ) -> HttpResponse {
     let auth = req
         .cookie("Authorization")
-        .unwrap()
-        .to_string()
+        .map(|cookie| cookie.to_string()
         .strip_prefix("Authorization=")
         .unwrap()
-        .to_string();
-    let session = manager.get_session_from_string(auth).await;
+        .to_string());
+
+    let mut session = None;
+    if let Some(auth) = auth {
+        session = Some(manager.get_session_from_string(auth).await);
+    } 
 
     let path: std::path::PathBuf = req.match_info().query("filename").parse().unwrap();
     let file_path = format!("/auditdb-files/{}", path.to_str().unwrap());
@@ -137,7 +140,7 @@ pub async fn get_file(
         .unwrap();
 
 
-    if let Ok(auth_session) = session {
+    if let Some(Ok(auth_session)) = session {
         if metadata.creator_id != auth_session.user_id() && metadata.private {
             return HttpResponse::BadRequest().body("You are not allowed to access this file");
         }
