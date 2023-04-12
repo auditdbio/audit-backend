@@ -90,11 +90,7 @@ async fn create_file(
 
     let full_path = format!("{}.{}", path, extension);
 
-    let meta = meta_repo.find_by_path(full_path.clone()).await.unwrap();
-
-    if meta.is_some() {
-        meta_repo.delete(path.clone()).await.unwrap();
-    }
+    meta_repo.delete(path.clone()).await.unwrap();
 
     files_repo.create(file.concat(), full_path).await;
 
