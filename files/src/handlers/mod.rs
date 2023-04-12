@@ -1,4 +1,4 @@
-use std::io::Read;
+use std::{io::Read, path::Path, ffi::OsStr};
 
 use actix_multipart::Multipart;
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
@@ -21,6 +21,15 @@ pub struct FilePath {
     pub path: String,
 }
 
+
+fn get_extension_from_filename(filename: &str) -> String {
+    Path::new(filename)
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .unwrap_or("")
+        .to_string()
+}
+
 #[utoipa::path(
     params(
         ("Authorization" = String, Header,  description = "Bearer token"),
@@ -40,6 +49,8 @@ async fn create_file(
     let session = manager.get_session(req.clone().into()).await.unwrap();
     let mut file = vec![];
     let mut path = String::new();
+    let mut private = false;
+    let mut original_name = String::new();
 
     while let Some(item) = payload.next().await {
         let mut field = item?;
@@ -57,13 +68,34 @@ async fn create_file(
                     path.push_str(&String::from_utf8(data.to_vec()).unwrap());
                 }
             }
+            "original_name" => {
+                while let Some(chunk) = field.next().await {
+                    let data = chunk?;
+                    original_name.push_str(&String::from_utf8(data.to_vec()).unwrap());
+                }
+            },
+            "private" => {
+                let mut str = String::new();
+                while let Some(chunk) = field.next().await {
+                    let data = chunk?;
+                    str.push_str(&String::from_utf8(data.to_vec()).unwrap());
+                }
+
+                private = str == "true";
+            }
             _ => (),
         }
     }
-    files_repo.create(file.concat(), path.clone()).await;
+    let extension = get_extension_from_filename(&original_name);
+
+    let full_path = format!("{}.{}", path, extension);
+
+    files_repo.create(file.concat(), full_path).await;
 
     let meta_information = Metadata {
         id: ObjectId::new(),
+        private,
+        extension: get_extension_from_filename(&original_name),
         creator_id: session.user_id(),
         last_modified: Utc::now().timestamp_micros(),
         path,
@@ -87,7 +119,7 @@ pub async fn get_file(
         .strip_prefix("Authorization=")
         .unwrap()
         .to_string();
-    let session = manager.get_session_from_string(auth).await.unwrap();
+    let session = manager.get_session_from_string(auth).await;
 
     let path: std::path::PathBuf = req.match_info().query("filename").parse().unwrap();
     let file_path = format!("/auditdb-files/{}", path.to_str().unwrap());
@@ -98,11 +130,17 @@ pub async fn get_file(
         .unwrap()
         .unwrap();
 
-    if metadata.creator_id != session.user_id() {
+
+    if let Ok(auth_session) = session {
+        if metadata.creator_id != auth_session.user_id() {
+            return HttpResponse::BadRequest().body("You are not allowed to access this file");
+        }
+    } else if metadata.private {
         return HttpResponse::BadRequest().body("You are not allowed to access this file");
     }
 
-    let file = actix_files::NamedFile::open_async(file_path).await.unwrap();
-    log::info!("{:?}", file.try_clone().unwrap().bytes());
+    let full_path = format!("{}.{}", metadata.path, metadata.extension);
+
+    let file = actix_files::NamedFile::open_async(full_path).await.unwrap();
     file.into_response(&req)
 }

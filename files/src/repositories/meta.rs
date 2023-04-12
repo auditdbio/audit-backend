@@ -6,6 +6,8 @@ use std::sync::Arc;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Metadata {
     pub id: ObjectId,
+    pub private: bool,
+    pub extension: String,
     pub creator_id: ObjectId,
     pub last_modified: i64,
     pub path: String,
