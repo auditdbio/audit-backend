@@ -139,7 +139,7 @@ pub async fn get_file(
         return HttpResponse::BadRequest().body("You are not allowed to access this file");
     }
 
-    let full_path = format!("{}.{}", metadata.path, metadata.extension);
+    let full_path = format!("{}.{}", file_path, metadata.extension);
 
     let file = actix_files::NamedFile::open_async(full_path).await.unwrap();
     file.into_response(&req)
