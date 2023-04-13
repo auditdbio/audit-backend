@@ -9,14 +9,13 @@ use common::{
     auth_session::{AuthSessionManager, SessionManager},
     entities::{
         audit::Audit, audit_request::AuditRequest, auditor::Auditor, project::Project, role::Role,
-    },
+    }, services::{CUSTOMERS_SERVICE, AUDITORS_SERVICE},
 };
 use mongodb::bson::{doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::{
-    contants::{AUDITORS_SERVICE, CUSTOMERS_SERVICE},
     error::Result,
     repositories::{
         audit::AuditRepo, audit_request::AuditRequestRepo, closed_audits::ClosedAuditRepo,
@@ -183,7 +182,7 @@ pub(super) async fn get_project(
     let mut res = client
         .get(format!(
             "https://{}/api/projects/by_id/{}",
-            CUSTOMERS_SERVICE,
+            CUSTOMERS_SERVICE.as_str(),
             project_id.to_hex()
         ))
         .send()
@@ -202,7 +201,7 @@ pub(super) async fn get_auditor(
     let mut res = client
         .get(format!(
             "https://{}/api/auditors/by_id/{}",
-            AUDITORS_SERVICE,
+            AUDITORS_SERVICE.as_str(),
             auditor_id.to_hex()
         ))
         .send()

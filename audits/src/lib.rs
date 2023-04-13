@@ -1,4 +1,3 @@
-pub mod contants;
 pub mod error;
 pub mod handlers;
 pub mod repositories;
