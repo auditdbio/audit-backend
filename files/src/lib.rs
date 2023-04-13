@@ -24,7 +24,7 @@ pub fn create_app(
         Error = actix_web::Error,
     >,
 > {
-    let cors = Cors::permissive();
+    let cors = Cors::permissive().supports_credentials();
     let app = App::new()
         .wrap(cors)
         .wrap(middleware::Logger::default())
