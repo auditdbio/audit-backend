@@ -1,4 +1,4 @@
-use std::{io::Read, path::Path, ffi::OsStr};
+use std::path::Path;
 
 use actix_multipart::Multipart;
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
@@ -110,24 +110,15 @@ async fn create_file(
 #[get("/api/files/get/{filename:.*}")]
 pub async fn get_file(
     req: HttpRequest,
-    files_repo: web::Data<FilesRepository>,
+    filename: web::Path<String>,
+    _files_repo: web::Data<FilesRepository>,
     meta_repo: web::Data<MetadataRepo>,
     manager: web::Data<auth_session::AuthSessionManager>,
 ) -> HttpResponse {
-    let auth = req
-        .cookie("Authorization")
-        .map(|cookie| cookie.to_string()
-        .strip_prefix("Authorization=")
-        .unwrap()
-        .to_string());
+    let session = manager.get_session(req.clone().into()).await; // TODO: remove unwrap
 
-    let mut session = None;
-    if let Some(auth) = auth {
-        session = Some(manager.get_session_from_string(auth).await);
-    } 
-
-    let path: std::path::PathBuf = req.match_info().query("filename").parse().unwrap();
-    let file_path = format!("/auditdb-files/{}", path.to_str().unwrap());
+    let path: std::path::PathBuf = filename.parse().unwrap();
+    let file_path = format!("/auditdb-files/{}", filename);
 
     let metadata = meta_repo
         .find_by_path(path.to_str().unwrap().to_string())
@@ -136,7 +127,7 @@ pub async fn get_file(
         .unwrap();
 
 
-    if let Some(Ok(auth_session)) = session {
+    if let Ok(auth_session) = session {
         if metadata.creator_id != auth_session.user_id() && metadata.private {
             return HttpResponse::BadRequest().body("You are not allowed to access this file");
         }
@@ -145,7 +136,7 @@ pub async fn get_file(
     }
 
     let full_path = format!("{}.{}", file_path, metadata.extension);
-    log::info!("full path: {}", full_path);
+
     let file = actix_files::NamedFile::open_async(full_path).await.unwrap();
     file.into_response(&req)
 }

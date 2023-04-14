@@ -3,7 +3,7 @@ use std::{
     io::{self, Read, Write},
 };
 
-use actix_web::web::{self, Bytes};
+use actix_web::web::{Bytes};
 
 #[derive(Clone, Copy)]
 pub struct FilesRepository {}
