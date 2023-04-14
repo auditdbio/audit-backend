@@ -53,7 +53,7 @@ pub async fn post_audit_request(
     repo: web::Data<AuditRequestRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = manager.get_session(req.clone().into()).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.clone().into()).await.unwrap().unwrap(); // TODO: remove unwrap
 
     let auditor_id = data.auditor_id.parse().unwrap();
 
@@ -151,7 +151,7 @@ pub async fn get_audit_requests(
     repo: web::Data<AuditRequestRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap().unwrap(); // TODO: remove unwrap
 
     let audits = match query.role.as_str() {
         "Auditor" | "auditor" => repo.find_by_auditor(session.user_id).await?,
@@ -194,7 +194,7 @@ pub async fn patch_audit_request(
     repo: web::Data<AuditRequestRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap().unwrap(); // TODO: remove unwrap
     let id = data.id.parse().unwrap();
 
     let Some(mut audit_request) = repo.delete(&id).await? else {

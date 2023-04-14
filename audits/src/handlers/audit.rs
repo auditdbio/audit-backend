@@ -41,7 +41,7 @@ pub async fn post_audit(
     request_repo: web::Data<AuditRequestRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = manager.get_session(req.clone().into()).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.clone().into()).await.unwrap().unwrap(); // TODO: remove unwrap
     let request = request.parse();
 
     let Some(price) = request.price else {
@@ -128,7 +128,7 @@ pub async fn get_audit(
     repo: web::Data<AuditRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap().unwrap(); // TODO: remove unwrap
 
     let audits = match query.role.as_str() {
         "Auditor" | "auditor" => repo.find_by_auditor(session.user_id).await?,

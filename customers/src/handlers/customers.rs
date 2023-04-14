@@ -45,7 +45,7 @@ pub async fn post_customer(
     repo: web::Data<CustomerRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap().unwrap(); // TODO: remove unwrap
 
     let customer = Customer {
         user_id: session.user_id(),
@@ -80,7 +80,7 @@ pub async fn get_customer(
     repo: web::Data<CustomerRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap().unwrap(); // TODO: remove unwrap
 
     let Some(customer) = repo.find(session.user_id()).await? else {
         return Ok(HttpResponse::Ok().json(doc!{}));
@@ -118,7 +118,7 @@ pub async fn patch_customer(
     repo: web::Data<CustomerRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap().unwrap(); // TODO: remove unwrap
 
     let Some(mut customer) = repo.delete(&session.user_id()).await? else {
         return Ok(HttpResponse::BadRequest().finish());
@@ -171,7 +171,7 @@ pub async fn delete_customer(
     repo: web::Data<CustomerRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap().unwrap(); // TODO: remove unwrap
 
     let Some(customer) = repo.delete(&session.user_id()).await? else {
         return Ok(HttpResponse::Ok().json(doc!{})); // TODO: Error: this user doesn't exit

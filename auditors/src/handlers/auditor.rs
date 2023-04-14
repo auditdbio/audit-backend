@@ -47,7 +47,7 @@ pub async fn post_auditor(
     repo: web::Data<AuditorRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap().unwrap(); // TODO: remove unwrap
 
     let auditor = Auditor {
         user_id: session.user_id(),
@@ -83,7 +83,7 @@ pub async fn get_auditor(
     repo: web::Data<AuditorRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap().unwrap(); // TODO: remove unwrap
 
     let Some(auditor) = repo.find(session.user_id()).await? else {
         return Ok(HttpResponse::Ok().json(doc!{}));
@@ -121,7 +121,7 @@ pub async fn patch_auditor(
     repo: web::Data<AuditorRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap().unwrap(); // TODO: remove unwrap
 
     let Some(mut auditor ) = repo.delete(&session.user_id()).await? else {
         return Ok(HttpResponse::BadRequest().body("Error: no auditor instance for this user"));
@@ -172,7 +172,7 @@ pub async fn delete_auditor(
     repo: web::Data<AuditorRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap().unwrap(); // TODO: remove unwrap
 
     let Some(auditor) = repo.delete(&session.user_id()).await? else {
         return Ok(HttpResponse::Ok().json(doc!{}));

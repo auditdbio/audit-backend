@@ -51,7 +51,7 @@ pub async fn post_project(
     repo: web::Data<ProjectRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<web::Json<Project<String>>> {
-    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap().unwrap(); // TODO: remove unwrap
 
     let project = Project {
         id: ObjectId::new(),
@@ -105,7 +105,7 @@ pub async fn patch_project(
     repo: web::Data<ProjectRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<web::Json<Project<String>>> {
-    let _session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap().unwrap(); // TODO: remove unwrap
     let id = data.id.parse::<ObjectId>().unwrap();
 
     let Some(mut project) = repo.delete(&id).await? else {
@@ -151,7 +151,7 @@ pub async fn delete_project(
     repo: web::Data<ProjectRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap().unwrap(); // TODO: remove unwrap
 
     let Some(project) = repo.delete(&session.user_id()).await? else {
         return Ok(HttpResponse::BadRequest().finish()); // TODO: Error: project not found
@@ -179,7 +179,7 @@ pub async fn get_project(
     repo: web::Data<ProjectRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
+    let session = manager.get_session(req.into()).await.unwrap().unwrap(); // TODO: remove unwrap
 
     let projects = repo.find_by_customer(session.user_id()).await?;
     Ok(HttpResponse::Ok().json(GetProjectResponse {

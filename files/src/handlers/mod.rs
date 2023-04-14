@@ -46,7 +46,7 @@ async fn create_file(
     meta_repo: web::Data<MetadataRepo>,
     manager: web::Data<auth_session::AuthSessionManager>,
 ) -> Result<HttpResponse, Error> {
-    let session = manager.get_session(req.clone().into()).await.unwrap();
+    let session = manager.get_session(req.clone().into()).await.unwrap().unwrap();
     let mut file = vec![];
     let mut path = String::new();
     let mut private = false;
@@ -115,7 +115,7 @@ pub async fn get_file(
     meta_repo: web::Data<MetadataRepo>,
     manager: web::Data<auth_session::AuthSessionManager>,
 ) -> HttpResponse {
-    let session = manager.get_session(req.clone().into()).await; // TODO: remove unwrap
+    let session = manager.get_session(req.clone().into()).await.unwrap(); // TODO: remove unwrap
 
     let path: std::path::PathBuf = filename.parse().unwrap();
     let file_path = format!("/auditdb-files/{}", filename);
@@ -127,7 +127,7 @@ pub async fn get_file(
         .unwrap();
 
 
-    if let Ok(auth_session) = session {
+    if let Some(auth_session) = session {
         if metadata.creator_id != auth_session.user_id() && metadata.private {
             return HttpResponse::BadRequest().body("You are not allowed to access this file");
         }

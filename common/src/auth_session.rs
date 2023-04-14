@@ -56,12 +56,12 @@ pub async fn get_auth_session(jwt: String) -> Result<AuthSession, String> {
 }
 
 pub struct AuthPayload {
-    pub jwt: String,
+    pub jwt: Option<String>,
 }
 
 impl From<HttpRequest> for AuthPayload {
     fn from(req: HttpRequest) -> Self {
-        let jwt = jwt_from_header(&req).unwrap();
+        let jwt = jwt_from_header(&req);
         Self { jwt }
     }
 }
@@ -70,7 +70,7 @@ impl From<HttpRequest> for AuthPayload {
 pub trait SessionManager {
     type Error;
     type Payload: From<HttpRequest> + Send;
-    async fn get_session(&self, req: Self::Payload) -> Result<AuthSession, Self::Error>;
+    async fn get_session(&self, req: Self::Payload) -> Result<Option<AuthSession>, Self::Error>;
     async fn get_session_from_string(&self, str: String) -> Result<AuthSession, Self::Error>;
 }
 pub struct HttpSessionManager;
@@ -80,8 +80,11 @@ impl SessionManager for HttpSessionManager {
     type Error = String;
     type Payload = AuthPayload;
 
-    async fn get_session(&self, req: Self::Payload) -> Result<AuthSession, Self::Error> {
-        get_auth_session(req.jwt).await
+    async fn get_session(&self, req: Self::Payload) -> Result<Option<AuthSession>, Self::Error> {
+        let Some(jwt) = req.jwt else {
+            return Ok(None);
+        };
+        get_auth_session(jwt).await.map(Option::Some)
     }
 
     async fn get_session_from_string(&self, str: String) -> Result<AuthSession, Self::Error> {
@@ -96,8 +99,8 @@ impl SessionManager for TestSessionManager {
     type Error = String;
     type Payload = AuthPayload;
 
-    async fn get_session(&self, _req: Self::Payload) -> Result<AuthSession, Self::Error> {
-        Ok(self.0.clone())
+    async fn get_session(&self, _req: Self::Payload) -> Result<Option<AuthSession>, Self::Error> {
+        Ok(Some(self.0.clone()))
     }
 
     async fn get_session_from_string(&self, _str: String) -> Result<AuthSession, Self::Error> {
@@ -124,7 +127,7 @@ impl SessionManager for AuthSessionManager {
     type Error = String;
     type Payload = AuthPayload;
 
-    async fn get_session(&self, req: Self::Payload) -> Result<AuthSession, Self::Error> {
+    async fn get_session(&self, req: Self::Payload) -> Result<Option<AuthSession>, Self::Error> {
         self.0.get_session(req).await
     }
 

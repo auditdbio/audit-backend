@@ -226,7 +226,8 @@ pub async fn get_user(
     let session = manager
         .get_session(req.into())
         .await
-        .map_err(|_| Error::Outer(OuterError::Unauthorized))?;
+        .map_err(|_| Error::Outer(OuterError::Unauthorized))?
+        .unwrap();
 
     let Some(user) = repo.find(session.user_id()).await.unwrap() else {
         return Err(Error::Outer(OuterError::UserNotFound));
