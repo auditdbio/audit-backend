@@ -1,6 +1,5 @@
-pub mod error;
 pub mod handlers;
-pub mod repositories;
+pub mod service;
 
 use actix_cors::Cors;
 use actix_web::body::MessageBody;
@@ -16,11 +15,9 @@ use common::auth_session::AuthSessionManager;
 use common::auth_session::TestSessionManager;
 use common::repository::test_repository::TestRepository;
 use handlers::get_data;
-use repositories::customer::CustomerRepo;
-use repositories::project::ProjectRepo;
 
-pub use crate::handlers::customers::*;
-pub use crate::handlers::projects::*;
+pub use crate::handlers::customer::*;
+pub use crate::handlers::project::*;
 
 pub fn create_app(
     customer_repo: CustomerRepo,

@@ -1,6 +1,5 @@
 extern crate lazy_static;
 
-use common::auth_session::{AuthSessionManager, HttpSessionManager};
 use common::context::ServiceState;
 use common::entities::user::User;
 use common::repository::mongo_repository::MongoRepository;

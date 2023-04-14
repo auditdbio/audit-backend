@@ -6,11 +6,8 @@ use common::{
 use mongodb::bson::Document;
 use serde::{Deserialize, Serialize};
 
-use crate::error::Result;
-use crate::repositories::{customer::CustomerRepo, project::ProjectRepo};
-
-pub mod customers;
-pub mod projects;
+pub mod customer;
+pub mod project;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CustomerServiceResponse {

@@ -54,7 +54,7 @@ impl UserService {
         Self { context }
     }
 
-    pub async fn create_user(&self, mut user: CreateUser) -> anyhow::Result<PublicUser> {
+    pub async fn create(&self, mut user: CreateUser) -> anyhow::Result<PublicUser> {
         let Some(users) = self.context.get_repository::<User<ObjectId>>() else {
             bail!("No user repository found")
         };
@@ -90,30 +90,26 @@ impl UserService {
         Ok(user.into())
     }
 
-    pub async fn find_user(&self, id: ObjectId) -> anyhow::Result<PublicUser> {
-        let Some(auth) = &self.context.1.user_auth else {
-            bail!("No user auth found")
-        };
+    pub async fn find(&self, id: ObjectId) -> anyhow::Result<Option<PublicUser>> {
+        let auth = self.context.auth_res()?;
 
         let Some(users) = self.context.get_repository::<User<ObjectId>>() else {
             bail!("No user repository found")
         };
 
         let Some(user) = users.find("id", &Bson::ObjectId(id)).await? else {
-            bail!("No user found")
+            return Ok(None);
         };
 
-        if !Read::get_access(auth, &user) {
+        if !Read::get_access(&auth, &user) {
             bail!("User is not available to read this user")
         }
 
-        Ok(user.into())
+        Ok(Some(user.into()))
     }
 
-    pub async fn change_user(&self, change: UserChange) -> anyhow::Result<PublicUser> {
-        let Some(auth) = &self.context.1.user_auth else {
-            bail!("No user auth found")
-        };
+    pub async fn change(&self, change: UserChange) -> anyhow::Result<PublicUser> {
+        let auth = self.context.auth_res()?;
 
         let Some(users) = self.context.get_repository::<User<ObjectId>>() else {
             bail!("No user repository found")
@@ -123,7 +119,7 @@ impl UserService {
             bail!("No user found")
         };
 
-        if !Edit::get_access(auth, &user) {
+        if !Edit::get_access(&auth, &user) {
             bail!("User is not available to change this user")
         }
 
@@ -151,10 +147,8 @@ impl UserService {
         Ok(user.into())
     }
 
-    pub async fn delete_user(&self, id: ObjectId) -> anyhow::Result<PublicUser> {
-        let Some(auth) = &self.context.1.user_auth else {
-            bail!("No user auth found")
-        };
+    pub async fn delete(&self, id: ObjectId) -> anyhow::Result<PublicUser> {
+        let auth = self.context.auth_res()?;
 
         let Some(users) = self.context.get_repository::<User<ObjectId>>() else {
             bail!("No user repository found")
@@ -164,7 +158,7 @@ impl UserService {
             bail!("No user found")
         };
 
-        if !Edit::get_access(auth, &user) {
+        if !Edit::get_access(&auth, &user) {
             bail!("User is not available to delete this user")
         }
 

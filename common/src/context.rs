@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use actix_web::{dev::Payload, FromRequest, HttpRequest};
+use anyhow::anyhow;
 use serde::Serialize;
 use type_map::concurrent::TypeMap;
 
@@ -56,18 +57,12 @@ impl FromRequest for Context {
                 None
             };
 
-
             let Some(state) = req
                 .app_data::<Arc<ServiceState>>()else {
                     return Err(anyhow::anyhow!("No state provided".to_string()).into());
                 };
 
-            Ok(Context(
-                Arc::clone(state),
-                HandlerContext {
-                    user_auth,
-                },
-            ))
+            Ok(Context(Arc::clone(state), HandlerContext { user_auth }))
         }
         let result = from_request_inner(req, payload);
 
@@ -144,8 +139,25 @@ impl Context {
         self.0.repositories.get::<RepositoryObject<T>>().cloned()
     }
 
+    pub fn try_get_repository<T: 'static>(&self) -> anyhow::Result<RepositoryObject<T>> {
+        self.0
+            .repositories
+            .get::<RepositoryObject<T>>()
+            .cloned()
+            .ok_or(anyhow!(
+                "Repository for type {} not found",
+                std::any::type_name::<T>()
+            ))
+    }
+
     pub fn make_request<T: Serialize>(&self) -> ServiceRequest<T> {
         ServiceRequest::<T>::new(&self.0.client, self.0.service_auth.clone())
+    }
+
+    pub fn auth_res(&self) -> anyhow::Result<Auth> {
+        self.1.user_auth.clone().ok_or(anyhow::anyhow!(
+            "This action is not allowed for not authorized user".to_string()
+        ))
     }
 }
 

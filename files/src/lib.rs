@@ -28,8 +28,8 @@ pub fn create_app(
         .wrap(cors)
         .wrap(middleware::Logger::default())
         .app_data(web::Data::new(state))
-        .service(create_file)
+        .service()
         .service(change_user)
-        .service(dele)
+        .service(dele);
     app
 }

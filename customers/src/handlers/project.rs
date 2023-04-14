@@ -17,10 +17,6 @@ use mongodb::bson::{doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
-use crate::{
-    error::{Error, OuterError, Result},
-    repositories::project::ProjectRepo,
-};
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PostProjectRequest {
