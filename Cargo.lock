@@ -1255,6 +1255,7 @@ dependencies = [
  "lazy_static",
  "log",
  "mongodb",
+ "reqwest",
  "serde",
  "utoipa",
  "utoipa-swagger-ui",

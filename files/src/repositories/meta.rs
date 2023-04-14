@@ -8,7 +8,7 @@ pub struct Metadata {
     pub id: ObjectId,
     pub private: bool,
     pub extension: String,
-    pub creator_id: ObjectId,
+    pub allowed_users: Vec<ObjectId>,
     pub last_modified: i64,
     pub path: String,
 }

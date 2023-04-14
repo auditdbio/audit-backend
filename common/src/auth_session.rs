@@ -28,13 +28,19 @@ impl AuthSession {
     }
 }
 
-pub fn jwt_from_header(req: &HttpRequest) -> Option<String> {
-    // possibly make readable error
+pub fn get_auth_header(req: &HttpRequest) -> Option<String> {
     req.headers()
         .get("Authorization")
         .and_then(|x| x.to_str().ok())
-        .and_then(|x| x.strip_prefix("Bearer ")) // remove prefix
         .map(str::to_string)
+}
+
+pub fn jwt_from_header(req: &HttpRequest) -> Option<String> {
+    // possibly make readable error
+    get_auth_header(req)
+        .iter()
+        .map(|x| x.strip_prefix("Bearer ")) // remove prefix
+        .collect()
 }
 
 pub async fn get_auth_session(jwt: String) -> Result<AuthSession, String> {

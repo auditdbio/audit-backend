@@ -53,7 +53,11 @@ pub async fn post_audit_request(
     repo: web::Data<AuditRequestRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = manager.get_session(req.clone().into()).await.unwrap().unwrap(); // TODO: remove unwrap
+    let session = manager
+        .get_session(req.clone().into())
+        .await
+        .unwrap()
+        .unwrap(); // TODO: remove unwrap
 
     let auditor_id = data.auditor_id.parse().unwrap();
 

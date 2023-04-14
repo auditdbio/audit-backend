@@ -105,7 +105,7 @@ pub async fn patch_project(
     repo: web::Data<ProjectRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<web::Json<Project<String>>> {
-    let session = manager.get_session(req.into()).await.unwrap().unwrap(); // TODO: remove unwrap
+    let _session = manager.get_session(req.into()).await.unwrap().unwrap(); // TODO: remove unwrap
     let id = data.id.parse::<ObjectId>().unwrap();
 
     let Some(mut project) = repo.delete(&id).await? else {

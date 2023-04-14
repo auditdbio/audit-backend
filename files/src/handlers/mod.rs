@@ -1,13 +1,18 @@
-use std::path::Path;
+use std::{path::Path, str::FromStr};
 
 use actix_multipart::Multipart;
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
 use chrono::Utc;
-use common::auth_session::{self, SessionManager};
+use common::{
+    auth_session::{self, get_auth_header, SessionManager},
+    entities::audit::Audit,
+    services::AUDITS_SERVICE,
+};
 use mongodb::bson::oid::ObjectId;
 
 use actix_web::Error;
 use futures_util::StreamExt as _;
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -21,13 +26,33 @@ pub struct FilePath {
     pub path: String,
 }
 
-
 fn get_extension_from_filename(filename: &str) -> String {
     Path::new(filename)
         .extension()
         .and_then(|ext| ext.to_str())
         .unwrap_or("")
         .to_string()
+}
+
+pub(super) async fn get_audit(
+    client: &Client,
+    id: &ObjectId,
+    auth: String,
+) -> Option<Audit<String>> {
+    let res = client
+        .get(format!(
+            "https://{}/api/projects/by_id/{}",
+            AUDITS_SERVICE.as_str(),
+            id.to_hex()
+        ))
+        .header("Authorization", auth)
+        .send()
+        .await
+        .unwrap();
+    let Ok(body) = res.json::<Audit<String>>().await else {
+        return None;
+    };
+    Some(body)
 }
 
 #[utoipa::path(
@@ -46,11 +71,16 @@ async fn create_file(
     meta_repo: web::Data<MetadataRepo>,
     manager: web::Data<auth_session::AuthSessionManager>,
 ) -> Result<HttpResponse, Error> {
-    let session = manager.get_session(req.clone().into()).await.unwrap().unwrap();
+    let _session = manager
+        .get_session(req.clone().into())
+        .await
+        .unwrap()
+        .unwrap();
     let mut file = vec![];
     let mut path = String::new();
     let mut private = false;
     let mut original_name = String::new();
+    let mut audit_id = String::new();
 
     while let Some(item) = payload.next().await {
         let mut field = item?;
@@ -73,7 +103,7 @@ async fn create_file(
                     let data = chunk?;
                     original_name.push_str(&String::from_utf8(data.to_vec()).unwrap());
                 }
-            },
+            }
             "private" => {
                 let mut str = String::new();
                 while let Some(chunk) = field.next().await {
@@ -83,9 +113,31 @@ async fn create_file(
 
                 private = str == "true";
             }
+            "audit" => {
+                while let Some(chunk) = field.next().await {
+                    let data = chunk?;
+                    audit_id.push_str(&String::from_utf8(data.to_vec()).unwrap());
+                }
+            }
             _ => (),
         }
     }
+    let allowed_users = if private {
+        let client = reqwest::Client::new();
+
+        let audit_id = ObjectId::from_str(&audit_id).unwrap();
+        let audit = get_audit(&client, &audit_id, get_auth_header(&req).unwrap())
+            .await
+            .unwrap();
+
+        vec![
+            ObjectId::from_str(&audit.auditor_id).unwrap(),
+            ObjectId::from_str(&audit.customer_id).unwrap(),
+        ]
+    } else {
+        Vec::new()
+    };
+
     let extension = get_extension_from_filename(&original_name);
 
     let full_path = format!("{}.{}", path, extension);
@@ -98,7 +150,7 @@ async fn create_file(
         id: ObjectId::new(),
         private,
         extension: get_extension_from_filename(&original_name),
-        creator_id: session.user_id(),
+        allowed_users,
         last_modified: Utc::now().timestamp_micros(),
         path,
     };
@@ -126,9 +178,8 @@ pub async fn get_file(
         .unwrap()
         .unwrap();
 
-
     if let Some(auth_session) = session {
-        if metadata.creator_id != auth_session.user_id() && metadata.private {
+        if metadata.allowed_users.contains(&auth_session.user_id) && metadata.private {
             return HttpResponse::BadRequest().body("You are not allowed to access this file");
         }
     } else if metadata.private {

@@ -9,7 +9,8 @@ use common::{
     auth_session::{AuthSessionManager, SessionManager},
     entities::{
         audit::Audit, audit_request::AuditRequest, auditor::Auditor, project::Project, role::Role,
-    }, services::{CUSTOMERS_SERVICE, AUDITORS_SERVICE},
+    },
+    services::{AUDITORS_SERVICE, CUSTOMERS_SERVICE},
 };
 use mongodb::bson::{doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};
@@ -41,7 +42,11 @@ pub async fn post_audit(
     request_repo: web::Data<AuditRequestRepo>,
     manager: web::Data<AuthSessionManager>,
 ) -> Result<HttpResponse> {
-    let session = manager.get_session(req.clone().into()).await.unwrap().unwrap(); // TODO: remove unwrap
+    let session = manager
+        .get_session(req.clone().into())
+        .await
+        .unwrap()
+        .unwrap(); // TODO: remove unwrap
     let request = request.parse();
 
     let Some(price) = request.price else {

@@ -3,7 +3,7 @@ use std::{
     io::{self, Read, Write},
 };
 
-use actix_web::web::{Bytes};
+use actix_web::web::Bytes;
 
 #[derive(Clone, Copy)]
 pub struct FilesRepository {}
@@ -29,8 +29,6 @@ impl FilesRepository {
     }
 
     pub async fn delete(&self, path: String) {
-
         std::fs::remove_file(format!("/auditdb-files/{}", path)).unwrap();
-        
     }
 }
