@@ -4,7 +4,7 @@ use mongodb::bson::{self, oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::repository::Entity;
+use crate::repository::{Entity, TaggableEntity};
 
 use super::audit_request::PriceRange;
 
@@ -78,5 +78,11 @@ impl Entity for Project<ObjectId> {
 
     fn timestamp(&self) -> i64 {
         self.last_modified
+    }
+}
+
+impl TaggableEntity for Project<ObjectId> {
+    fn tags(&self) -> &Vec<String> {
+        &self.tags
     }
 }

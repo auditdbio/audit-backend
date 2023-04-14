@@ -4,7 +4,7 @@ use mongodb::bson::{doc, oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::repository::Entity;
+use crate::repository::{Entity, TaggableEntity};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
 pub struct Auditor<Id> {
@@ -76,5 +76,11 @@ impl Entity for Auditor<ObjectId> {
 
     fn timestamp(&self) -> i64 {
         self.last_modified
+    }
+}
+
+impl TaggableEntity for Auditor<ObjectId> {
+    fn tags(&self) -> &Vec<String> {
+        &self.tags
     }
 }

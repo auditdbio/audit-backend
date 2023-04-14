@@ -91,11 +91,10 @@ pub async fn post_audit(
         customer_contacts: request.customer_contacts,
         price: price,
         report_link: None,
-        time_frame: request.time_frame,
+        time: request.time,
         scope: request.scope,
         tags: project.tags,
         report: None,
-        time: request.time,
     };
 
     repo.create(&audit).await?;

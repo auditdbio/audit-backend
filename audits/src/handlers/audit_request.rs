@@ -29,7 +29,7 @@ pub struct PostAuditRequestRequest {
     pub auditor_contacts: HashMap<String, String>,
     pub customer_contacts: HashMap<String, String>,
     pub scope: Vec<String>,
-    pub price: Option<String>,
+    pub price: Option<i64>,
     pub price_range: Option<PriceRange>,
     pub time_frame: String,
     pub time: TimeRange,
@@ -89,9 +89,9 @@ pub async fn post_audit_request(
 
     let mut audit_request = AuditRequest {
         id: ObjectId::new(),
-        customer_id: data.customer_id.parse().unwrap(),
         auditor_id: data.auditor_id.parse().unwrap(),
-        project_id: project_id,
+        customer_id: data.customer_id.parse().unwrap(),
+        project_id,
         project_name: project.name,
         avatar: auditor.avatar,
         description: Some(data.description),
@@ -99,9 +99,9 @@ pub async fn post_audit_request(
         customer_contacts: data.customer_contacts,
         scope: data.scope,
         price: data.price,
-        time_frame: data.time_frame,
         last_modified: Utc::now().timestamp_micros(),
-        last_changer: last_changer,
+        last_changer,
+        price_range: data.price_range,
         time: data.time,
     };
 
@@ -172,8 +172,9 @@ pub struct PatchAuditRequestRequest {
     pub auditor_contacts: Option<HashMap<String, String>>,
     pub customer_contacts: Option<HashMap<String, String>>,
     pub scope: Option<Vec<String>>,
-    pub price: Option<String>,
-    pub time_frame: Option<String>,
+    pub price: Option<i64>,
+    pub price_range: Option<PriceRange>,
+    pub time: Option<TimeRange>,
 }
 
 #[utoipa::path(
@@ -217,8 +218,8 @@ pub async fn patch_audit_request(
         audit_request.price = Some(price);
     }
 
-    if let Some(time_frame) = data.time_frame {
-        audit_request.time_frame = time_frame;
+    if let Some(time) = data.time {
+        audit_request.time = time;
     }
 
     let last_changer = if &session.user_id == &audit_request.auditor_id {
