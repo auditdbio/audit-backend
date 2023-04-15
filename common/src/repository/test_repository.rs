@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 
 use async_trait::async_trait;
-use mongodb::bson::{self, oid::ObjectId, Bson};
+use mongodb::{bson::{self, oid::ObjectId, Bson}, error};
 use serde::{de::DeserializeOwned, Serialize};
 
 use super::{Entity, Repository, TaggableEntity, TaggableEntityRepository};
@@ -25,9 +25,10 @@ impl<T> Repository<T> for TestRepository<T>
 where
     T: Entity + Clone + PartialEq + Send + Sync + Serialize + DeserializeOwned,
 {
+
     type Error = mongodb::error::Error;
 
-    async fn create(&self, item: &T) -> Result<bool, Self::Error> {
+    async fn create(&self, item: &T) -> error::Result<bool> {
         let mut db = self.db.lock().unwrap();
 
         let contains = db
@@ -39,7 +40,7 @@ where
         Ok(!contains)
     }
 
-    async fn find(&self, field: &str, value: &Bson) -> Result<Option<T>, Self::Error> {
+    async fn find(&self, field: &str, value: &Bson) -> error::Result<Option<T>> {
         let db = self.db.lock().unwrap();
         Ok(db
             .iter()
@@ -48,7 +49,7 @@ where
             .map(|x| bson::from_bson(x).unwrap()))
     }
 
-    async fn delete(&self, field: &str, id: &ObjectId) -> Result<Option<T>, Self::Error> {
+    async fn delete(&self, field: &str, id: &ObjectId) -> error::Result<Option<T>> {
         let mut db = self.db.lock().unwrap();
         let result = db
             .iter()
@@ -65,7 +66,7 @@ where
         Ok(result)
     }
 
-    async fn find_all(&self, skip: u32, limit: u32) -> Result<Vec<T>, Self::Error> {
+    async fn find_all(&self, skip: u32, limit: u32) -> error::Result<Vec<T>> {
         let db = self.db.lock().unwrap();
         Ok(db
             .iter()
@@ -75,7 +76,7 @@ where
             .collect())
     }
 
-    async fn find_many(&self, field: &str, value: &Bson) -> Result<Vec<T>, Self::Error> {
+    async fn find_many(&self, field: &str, value: &Bson) -> error::Result<Vec<T>> {
         let db = self.db.lock().unwrap();
         Ok(db
             .iter()
@@ -84,7 +85,7 @@ where
             .collect())
     }
 
-    async fn get_all_since(&self, since: i64) -> Result<Vec<T>, Self::Error> {
+    async fn get_all_since(&self, since: i64) -> error::Result<Vec<T>> {
         let db = self.db.lock().unwrap();
         Ok(db
             .iter()

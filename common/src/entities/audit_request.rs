@@ -4,14 +4,14 @@ use mongodb::bson::{oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::repository::Entity;
+use crate::repository::{Entity, TaggableEntity};
 
 use super::role::Role;
 
 #[derive(Debug, Serialize, Deserialize, ToSchema, PartialEq, Clone)]
 pub struct PriceRange {
-    pub lower_bound: String,
-    pub upper_bound: String,
+    pub begin: i64,
+    pub end: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema, PartialEq, Clone)]
@@ -32,8 +32,8 @@ pub struct AuditRequest<Id> {
     pub auditor_contacts: HashMap<String, String>,
     pub customer_contacts: HashMap<String, String>,
     pub scope: Vec<String>,
-    pub price: Option<String>,
-    pub time_frame: String,
+    pub price: Option<i64>,
+    pub price_range: Option<PriceRange>,
     pub last_modified: i64,
     pub last_changer: Role,
     pub time: TimeRange,
@@ -53,10 +53,10 @@ impl AuditRequest<String> {
             customer_contacts: self.customer_contacts,
             scope: self.scope,
             price: self.price,
-            time_frame: self.time_frame,
             last_modified: self.last_modified,
             last_changer: self.last_changer,
             time: self.time,
+            price_range: self.price_range,
         }
     }
 
@@ -81,10 +81,10 @@ impl AuditRequest<ObjectId> {
             customer_contacts: self.customer_contacts,
             scope: self.scope,
             price: self.price,
-            time_frame: self.time_frame,
             last_modified: self.last_modified,
             last_changer: self.last_changer,
             time: self.time,
+            price_range: self.price_range,
         }
     }
 }
@@ -109,3 +109,4 @@ impl Entity for AuditRequest<ObjectId> {
         self.last_modified
     }
 }
+

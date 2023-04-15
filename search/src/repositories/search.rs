@@ -4,6 +4,7 @@ use common::repository::mongo_repository::MongoRepository;
 use futures::StreamExt;
 use mongodb::{
     bson::{doc, Bson, Document},
+    options::FindOptions,
     IndexModel,
 };
 
@@ -34,12 +35,17 @@ impl SearchRepo {
     }
 
     pub async fn find(&self, query: SearchQuery) -> Vec<Document> {
-        // let find_options = FindOptions::builder()
-        //     .sort(doc! {
-        //         query.sort_by: query.sort_order,
-        //     })
-        //     .build();
-        let find_options = None;
+        let find_options = if let Some(sort_by) = query.sort_by {
+            Some(
+                FindOptions::builder()
+                    .sort(doc! {
+                        sort_by: query.sort_order.unwrap_or(1),
+                    })
+                    .build(),
+            )
+        } else {
+            None
+        };
 
         let mut document = doc! {};
 
@@ -57,6 +63,52 @@ impl SearchRepo {
             );
         }
 
+        if let Some(price_range) = query.price {
+            document.insert(
+                "price",
+                doc! {
+                    "$gte": price_range.begin,
+                    "$lte": price_range.end,
+                },
+            );
+            document.insert(
+                "price_range",
+                doc! {
+                    "begin": {
+                        "$gte": price_range.begin,
+                    },
+                    "end": {
+                        "$lte": price_range.end,
+                    },
+                },
+            );
+        }
+
+        if let Some(time_range) = query.time {
+            document.insert(
+                "time",
+                doc! {
+                    "begin": {
+                        "$gte": time_range.begin,
+                    },
+                    "end": {
+                        "$lte": time_range.end,
+                    },
+                },
+            );
+        }
+
+        if let Some(ready_to_wait) = query.ready_to_wait {
+            document.insert(
+                "publish_options",
+                doc! {
+                    "ready_to_wait": doc! {
+                        "$eq": ready_to_wait,
+                    },
+                },
+            );
+        }
+
         let mut cursor = self
             .0
             .collection
@@ -64,40 +116,11 @@ impl SearchRepo {
             .await
             .unwrap();
 
-        let mut result = Vec::new();
-        while let Some(doc) = cursor.next().await {
-            let doc = doc.unwrap();
-            // let tax_rate = doc.get_i64("tax_rate");
-            // let time_from = doc.get_i64("time_from");
-            // let time_to = doc.get_i64("time_to");
-            let ready_to_wait = doc.get_bool("ready_to_wait");
-
-            // if let Ok(tax_rate) = tax_rate {
-            //     if tax_rate < query.tax_rate_from as i64 || tax_rate > query.tax_rate_to as i64 {
-            //         continue;
-            //     }
-            // }
-
-            // if let Ok(time_from) = time_from {
-            //     if time_from < query.time_from as i64 {
-            //         continue;
-            //     }
-            // }
-
-            // if let Ok(time_to) = time_to {
-            //     if time_to > query.time_to as i64 {
-            //         continue;
-            //     }
-            // }
-
-            if let Ok(ready_to_wait) = ready_to_wait {
-                if ready_to_wait != query.ready_to_wait.unwrap_or(ready_to_wait) {
-                    continue;
-                }
-            }
-
-            result.push(doc);
-        }
-        result
+        cursor
+            .collect::<Vec<Result<Document, _>>>()
+            .await
+            .into_iter()
+            .map(|x| x.unwrap())
+            .collect()
     }
 }

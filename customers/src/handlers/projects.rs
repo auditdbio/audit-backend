@@ -8,7 +8,7 @@ use actix_web::{
 use chrono::Utc;
 use common::{
     auth_session::{AuthSessionManager, SessionManager},
-    entities::project::{Project, PublishOptions},
+    entities::{project::{Project, PublishOptions}, audit_request::{TimeRange, PriceRange}},
 };
 use mongodb::bson::{doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};
@@ -28,9 +28,8 @@ pub struct PostProjectRequest {
     status: String,
     publish: bool,
     ready_to_wait: bool,
-    prise_from: String,
-    prise_to: String,
     creator_contacts: HashMap<String, String>,
+    price_range: PriceRange,
 }
 
 #[utoipa::path(
@@ -56,19 +55,18 @@ pub async fn post_project(
     let project = Project {
         id: ObjectId::new(),
         customer_id: session.user_id(),
-        description: data.description,
         name: data.name,
-        status: data.status,
-        tags: data.tags,
+        description: data.description,
         scope: data.scope,
+        tags: data.tags,
         publish_options: PublishOptions {
             publish: data.publish,
             ready_to_wait: data.ready_to_wait,
-            prise_from: data.prise_from,
-            prise_to: data.prise_to,
         },
+        status: data.status,
         creator_contacts: data.creator_contacts,
         last_modified: Utc::now().timestamp_micros(),
+        price_range: data.price_range,
     };
 
     repo.create(&project).await?;
@@ -251,7 +249,7 @@ mod tests {
     use std::collections::HashMap;
 
     use actix_web::test::{self, init_service};
-    use common::auth_session::{AuthSession, Role};
+    use common::{auth_session::{AuthSession, Role}, entities::audit_request::PriceRange};
     use mongodb::bson::oid::ObjectId;
 
     use crate::{create_test_app, PatchProjectRequest, PostProjectRequest};
@@ -275,9 +273,11 @@ mod tests {
                 status: "Test".to_string(),
                 publish: true,
                 ready_to_wait: false,
-                prise_from: "200".to_string(),
-                prise_to: "200".to_string(),
                 creator_contacts: HashMap::new(),
+                price_range: PriceRange {
+                    begin: 0,
+                    end: 100,
+                },
             })
             .to_request();
         let res = test::call_service(&app, req).await;

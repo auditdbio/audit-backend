@@ -4,7 +4,10 @@ use actix_web::{
     HttpResponse,
 };
 use chrono::Utc;
-use common::auth_session::AuthSessionManager;
+use common::{
+    auth_session::AuthSessionManager,
+    entities::audit_request::{PriceRange, TimeRange},
+};
 use log::info;
 use mongodb::bson::Document;
 use reqwest::Client;
@@ -42,10 +45,8 @@ pub struct SearchQuery {
     pub tags: String,
     pub page: u32,
     pub per_page: u32,
-    pub tax_rate_from: Option<usize>,
-    pub tax_rate_to: Option<usize>,
-    pub time_from: Option<usize>,
-    pub time_to: Option<usize>,
+    pub price: Option<PriceRange>,
+    pub time: Option<TimeRange>,
     pub ready_to_wait: Option<bool>,
     pub sort_by: Option<String>,
     pub sort_order: Option<i32>,
