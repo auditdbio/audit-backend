@@ -8,7 +8,7 @@ use actix_web::{
 use chrono::Utc;
 use common::{
     auth_session::{AuthSessionManager, SessionManager},
-    entities::{project::{Project, PublishOptions}, audit_request::{TimeRange, PriceRange}},
+    entities::{project::{Project, PublishOptions}, audit_request::PriceRange},
 };
 use mongodb::bson::{doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};

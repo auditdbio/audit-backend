@@ -109,7 +109,7 @@ impl SearchRepo {
             );
         }
 
-        let mut cursor = self
+        let cursor = self
             .0
             .collection
             .find(document, find_options)
