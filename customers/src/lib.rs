@@ -1,6 +1,8 @@
 pub mod handlers;
 pub mod service;
 
+use std::sync::Arc;
+
 use actix_cors::Cors;
 use actix_web::body::MessageBody;
 use actix_web::dev::ServiceFactory;
@@ -9,20 +11,15 @@ use actix_web::dev::ServiceResponse;
 use actix_web::middleware;
 use actix_web::web;
 use actix_web::App;
-use common::auth_session::AuthSession;
-use common::auth_session::AuthSessionManager;
 
-use common::auth_session::TestSessionManager;
-use common::repository::test_repository::TestRepository;
-use handlers::get_data;
+
+use common::context::ServiceState;
 
 pub use crate::handlers::customer::*;
 pub use crate::handlers::project::*;
 
 pub fn create_app(
-    customer_repo: CustomerRepo,
-    project_repo: ProjectRepo,
-    manager: AuthSessionManager,
+    context: Arc<ServiceState>,
 ) -> App<
     impl ServiceFactory<
         ServiceRequest,
@@ -36,9 +33,7 @@ pub fn create_app(
     let app = App::new()
         .wrap(cors)
         .wrap(middleware::Logger::default())
-        .app_data(web::Data::new(customer_repo.clone()))
-        .app_data(web::Data::new(project_repo.clone()))
-        .app_data(web::Data::new(manager))
+        .app_data(web::Data::new(context))
         .service(post_customer)
         .service(get_customer)
         .service(patch_customer)
@@ -46,30 +41,6 @@ pub fn create_app(
         .service(post_project)
         .service(get_project)
         .service(patch_project)
-        .service(delete_project)
-        .service(get_projects)
-        .service(customer_by_id)
-        .service(project_by_id)
-        .service(get_data);
+        .service(delete_project);
     app
-}
-
-pub fn create_test_app(
-    user: AuthSession,
-) -> App<
-    impl ServiceFactory<
-        ServiceRequest,
-        Response = ServiceResponse<impl MessageBody>,
-        Config = (),
-        InitError = (),
-        Error = actix_web::Error,
-    >,
-> {
-    let user_repo = CustomerRepo::new(TestRepository::new());
-
-    let token_repo = ProjectRepo::new(TestRepository::new());
-
-    let test_manager = AuthSessionManager::new(TestSessionManager(user));
-
-    create_app(user_repo, token_repo, test_manager)
 }

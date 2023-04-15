@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr};
+use std::collections::HashMap;
 
 use mongodb::bson::{self, oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
@@ -14,14 +14,17 @@ pub struct Audit<Id> {
     pub customer_id: Id,
     pub auditor_id: Id,
     pub project_id: Id,
+
     pub project_name: String,
     pub avatar: String,
     pub description: Option<String>,
     pub status: String,
-    pub auditor_contacts: HashMap<String, String>,
-    pub customer_contacts: HashMap<String, String>,
     pub scope: Vec<String>,
     pub price: i64,
+
+
+    pub auditor_contacts: HashMap<String, String>,
+    pub customer_contacts: HashMap<String, String>,
     pub report_link: Option<String>,
     pub tags: Vec<String>,
     pub last_modified: i64,
@@ -32,10 +35,10 @@ pub struct Audit<Id> {
 impl Audit<String> {
     pub fn parse(self) -> Audit<ObjectId> {
         Audit {
-            id: ObjectId::from_str(&self.id).unwrap(),
-            customer_id: ObjectId::from_str(&self.customer_id).unwrap(),
-            auditor_id: ObjectId::from_str(&self.auditor_id).unwrap(),
-            project_id: ObjectId::from_str(&self.project_id).unwrap(),
+            id: self.id.parse().unwrap(),
+            customer_id: self.customer_id.parse().unwrap(),
+            auditor_id: self.auditor_id.parse().unwrap(),
+            project_id: self.project_id.parse().unwrap(),
             project_name: self.project_name,
             avatar: self.avatar,
             description: self.description,

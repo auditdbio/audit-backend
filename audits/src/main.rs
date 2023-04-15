@@ -2,9 +2,6 @@ use std::env;
 
 use actix_web::HttpServer;
 use audits::create_app;
-use audits::repositories::closed_audits::ClosedAuditRepo;
-use audits::repositories::closed_request::ClosedAuditRequestRepo;
-use audits::repositories::{audit::AuditRepo, audit_request::AuditRequestRepo};
 use common::auth_session::{AuthSessionManager, HttpSessionManager};
 use common::repository::mongo_repository::MongoRepository;
 

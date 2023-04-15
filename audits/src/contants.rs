@@ -1,2 +1,0 @@
-pub const CUSTOMERS_SERVICE: &str = "45.131.67.91:3002";
-pub const AUDITORS_SERVICE: &str = "45.131.67.91:3004";

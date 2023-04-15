@@ -42,7 +42,6 @@ impl From<User<ObjectId>> for PublicUser {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UserChange {
-    id: ObjectId,
     email: Option<String>,
     password: Option<String>,
     name: Option<String>,
@@ -91,7 +90,7 @@ impl UserService {
     }
 
     pub async fn find(&self, id: ObjectId) -> anyhow::Result<Option<PublicUser>> {
-        let auth = self.context.auth_res()?;
+        let auth = self.context.auth();
 
         let Some(users) = self.context.get_repository::<User<ObjectId>>() else {
             bail!("No user repository found")
@@ -101,25 +100,25 @@ impl UserService {
             return Ok(None);
         };
 
-        if !Read::get_access(&auth, &user) {
+        if !Read::get_access(auth, &user) {
             bail!("User is not available to read this user")
         }
 
         Ok(Some(user.into()))
     }
 
-    pub async fn change(&self, change: UserChange) -> anyhow::Result<PublicUser> {
-        let auth = self.context.auth_res()?;
+    pub async fn change(&self, id: ObjectId, change: UserChange) -> anyhow::Result<PublicUser> {
+        let auth = self.context.auth();
 
         let Some(users) = self.context.get_repository::<User<ObjectId>>() else {
             bail!("No user repository found")
         };
 
-        let Some(mut user) = users.find("id", &Bson::ObjectId(change.id)).await? else {
+        let Some(mut user) = users.find("id", &Bson::ObjectId(id)).await? else {
             bail!("No user found")
         };
 
-        if !Edit::get_access(&auth, &user) {
+        if !Edit::get_access(auth, &user) {
             bail!("User is not available to change this user")
         }
 
@@ -141,14 +140,14 @@ impl UserService {
 
         user.last_modified = Utc::now().timestamp_micros();
 
-        users.delete("id", &change.id).await?;
+        users.delete("id", &id).await?;
         users.insert(&user).await?;
 
         Ok(user.into())
     }
 
     pub async fn delete(&self, id: ObjectId) -> anyhow::Result<PublicUser> {
-        let auth = self.context.auth_res()?;
+        let auth = self.context.auth();
 
         let Some(users) = self.context.get_repository::<User<ObjectId>>() else {
             bail!("No user repository found")
@@ -158,7 +157,8 @@ impl UserService {
             bail!("No user found")
         };
 
-        if !Edit::get_access(&auth, &user) {
+        if !Edit::get_access(auth, &user) {
+            users.insert(&user).await?;
             bail!("User is not available to delete this user")
         }
 

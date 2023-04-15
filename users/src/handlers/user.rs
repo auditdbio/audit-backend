@@ -1,4 +1,3 @@
-use std::str::FromStr;
 
 use actix_web::{
     delete, get, patch, post,
@@ -6,7 +5,6 @@ use actix_web::{
     HttpResponse,
 };
 use common::{context::Context, error};
-use mongodb::bson::oid::ObjectId;
 use serde_json::json;
 
 use crate::service::user::{CreateUser, PublicUser, UserChange, UserService};
@@ -24,7 +22,7 @@ pub async fn create_user(
 #[get("/api/user/{id}")]
 pub async fn find_user(context: Context, id: Path<String>) -> error::Result<HttpResponse> {
     let user = UserService::new(context)
-        .find(ObjectId::from_str(&id)?)
+        .find(id.parse()?)
         .await?;
     if let Some(user) = user {
         Ok(HttpResponse::Ok().json(user))
@@ -33,13 +31,14 @@ pub async fn find_user(context: Context, id: Path<String>) -> error::Result<Http
     }
 }
 
-#[patch("/api/user")]
+#[patch("/api/user/{id}")]
 pub async fn change_user(
     context: Context,
+    id: Path<String>,
     user: Json<UserChange>,
 ) -> error::Result<Json<PublicUser>> {
     Ok(Json(
-        UserService::new(context).change(user.into_inner()).await?,
+        UserService::new(context).change(id.parse()?, user.into_inner()).await?,
     ))
 }
 
@@ -47,7 +46,7 @@ pub async fn change_user(
 pub async fn delete_user(context: Context, id: Path<String>) -> error::Result<Json<PublicUser>> {
     Ok(Json(
         UserService::new(context)
-            .delete(ObjectId::from_str(&id)?)
+            .delete(id.parse()?)
             .await?,
     ))
 }

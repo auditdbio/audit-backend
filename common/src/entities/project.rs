@@ -32,8 +32,8 @@ pub struct Project<Id> {
 impl Project<String> {
     pub fn parse(self) -> Project<ObjectId> {
         Project {
-            id: ObjectId::from_str(&self.id).unwrap(),
-            customer_id: ObjectId::from_str(&self.customer_id).unwrap(),
+            id: self.id.parse().unwrap(),
+            customer_id: self.customer_id.parse().unwrap(),
             name: self.name,
             description: self.description,
             scope: self.scope,

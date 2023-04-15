@@ -1,13 +1,64 @@
+use std::collections::HashMap;
+
 use anyhow::bail;
 use chrono::Utc;
-use common::{context::Context, entities::project::Project};
+use common::{context::Context, entities::{project::{Project, PublishOptions}, audit_request::PriceRange}, access_rules::{Edit, Read, AccessRules}};
 use mongodb::bson::{oid::ObjectId, Bson};
+use serde::{Serialize, Deserialize};
 
-pub struct CreateProject {}
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateProject {
+    pub name: String,
+    pub description: String,
+    pub scope: Vec<String>,
+    pub tags: Vec<String>,
+    pub publish_options: PublishOptions,
+    pub status: String,
+    pub creator_contacts: HashMap<String, String>,
+    pub price_range: PriceRange,
+}
 
-pub struct ProjectChange {}
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ProjectChange {
+    pub id: ObjectId,
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub scope: Option<Vec<String>>,
+    pub tags: Option<Vec<String>>,
+    pub publish_options: Option<PublishOptions>,
+    pub status: Option<String>,
+    pub creator_contacts: Option<HashMap<String, String>>,
+    pub price_range: Option<PriceRange>,
+}
 
-pub struct PublicProject {}
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PublicProject {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub scope: Vec<String>,
+    pub tags: Vec<String>,
+    pub publish_options: PublishOptions,
+    pub status: String,
+    pub creator_contacts: HashMap<String, String>,
+    pub price_range: PriceRange,
+}
+
+impl From<Project<ObjectId>> for PublicProject {
+    fn from(project: Project<ObjectId>) -> Self {
+        Self {
+            id: project.id.to_hex(),
+            name: project.name,
+            description: project.description,
+            scope: project.scope,
+            tags: project.tags,
+            publish_options: project.publish_options,
+            status: project.status,
+            creator_contacts: project.creator_contacts,
+            price_range: project.price_range,
+        }
+    }
+}
 
 pub struct ProjectService {
     context: Context,
@@ -19,27 +70,51 @@ impl ProjectService {
     }
 
     pub async fn create(&self, project: CreateProject) -> anyhow::Result<PublicProject> {
-        let auth = self.context.auth_res()?;
+        let auth = self.context.auth();
 
         let Some(projects) = self.context.get_repository::<Project<ObjectId>>() else {
             bail!("No project repository found")
         };
 
-        let project = Project {};
-    }
-
-    pub async fn find(&self, id: ObjectId) -> anyhow::Result<Option<PublicProject>> {
-        let Some(projects) = self.context.get_repository::<Project<ObjectId>>() else {
-            bail!("No project repository found")
+        let project = Project {
+            id: ObjectId::new(),
+            customer_id: auth.get_id().ok_or(anyhow::anyhow!("No customer id found"))?.clone(),
+            name: project.name,
+            description: project.description,
+            scope: project.scope,
+            tags: project.tags,
+            publish_options: project.publish_options,
+            status: project.status,
+            creator_contacts: project.creator_contacts,
+            price_range: project.price_range,
+            last_modified: Utc::now().timestamp_micros(),
         };
 
-        let project = projects.find(id).await?;
+        projects.insert(&project).await?;
 
         Ok(project.into())
     }
 
+    pub async fn find(&self, id: ObjectId) -> anyhow::Result<Option<PublicProject>> {
+        let auth = self.context.auth();
+        
+        let Some(projects) = self.context.get_repository::<Project<ObjectId>>() else {
+            bail!("No project repository found")
+        };
+
+        let Some(project) = projects.find("id",&Bson::ObjectId(id)).await? else {
+            return Ok(None)
+        };
+
+        if !Read::get_access(auth, &project) {
+            bail!("User is not available to read this project")
+        }
+
+        Ok(Some(project.into()))
+    }
+
     pub async fn change(&self, change: ProjectChange) -> anyhow::Result<PublicProject> {
-        let auth = self.context.auth_res()?;
+        let auth = self.context.auth();
 
         let Some(projects) = self.context.get_repository::<Project<ObjectId>>() else {
             bail!("No project repository found")
@@ -49,36 +124,40 @@ impl ProjectService {
             bail!("No project found")
         };
 
-        if !Edit::get_access(&auth, &project) {
+        if !Edit::get_access(auth, &project) {
             bail!("User is not available to change this project")
         }
 
-        if let Some(avatar) = change.avatar {
-            project.avatar = avatar;
+        if let Some(name) = change.name {
+            project.name = name;
         }
 
-        if let Some(first_name) = change.first_name {
-            project.first_name = first_name;
+        if let Some(description) = change.description {
+            project.description = description;
         }
 
-        if let Some(last_name) = change.last_name {
-            project.last_name = last_name;
-        }
-
-        if let Some(about) = change.about {
-            project.about = about;
-        }
-
-        if let Some(company) = change.company {
-            project.company = company;
-        }
-
-        if let Some(contacts) = change.contacts {
-            project.contacts = contacts;
+        if let Some(scope) = change.scope {
+            project.scope = scope;
         }
 
         if let Some(tags) = change.tags {
             project.tags = tags;
+        }
+
+        if let Some(publish_options) = change.publish_options {
+            project.publish_options = publish_options;
+        }
+
+        if let Some(status) = change.status {
+            project.status = status;
+        }
+
+        if let Some(creator_contacts) = change.creator_contacts {
+            project.creator_contacts = creator_contacts;
+        }
+
+        if let Some(price_range) = change.price_range {
+            project.price_range = price_range;
         }
 
         project.last_modified = Utc::now().timestamp_micros();
@@ -90,7 +169,7 @@ impl ProjectService {
     }
 
     pub async fn delete(&self, id: ObjectId) -> anyhow::Result<PublicProject> {
-        let auth = self.context.auth_res()?;
+        let auth = self.context.auth();
 
         let Some(projects) = self.context.get_repository::<Project<ObjectId>>() else {
             bail!("No project repository found")
@@ -100,7 +179,8 @@ impl ProjectService {
             bail!("No project found")
         };
 
-        if !Edit::get_access(&auth, &project) {
+        if !Edit::get_access(auth, &project) {
+            projects.insert(&project).await?;
             bail!("User is not available to delete this project")
         }
 

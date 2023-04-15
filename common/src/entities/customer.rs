@@ -22,7 +22,7 @@ pub struct Customer<Id> {
 impl Customer<String> {
     pub fn parse(self) -> Customer<ObjectId> {
         Customer {
-            user_id: ObjectId::from_str(&self.user_id).unwrap(),
+            user_id: self.user_id.parse().unwrap(),
             avatar: self.avatar,
             first_name: self.first_name,
             last_name: self.last_name,

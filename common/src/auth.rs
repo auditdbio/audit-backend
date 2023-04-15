@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use anyhow::bail;
 use jsonwebtoken::{decode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use mongodb::bson::oid::ObjectId;
@@ -21,6 +19,7 @@ pub enum Auth {
     Service(String),
     Admin(ObjectId),
     User(ObjectId),
+    None,
 }
 
 impl Auth {
@@ -55,11 +54,11 @@ impl Auth {
                 let claims = c.claims;
                 match claims.role {
                     Role::Admin => {
-                        let id = ObjectId::from_str(&claims.user_id.unwrap())?;
+                        let id = claims.user_id.unwrap().parse()?;
                         Ok(Auth::Admin(id))
                     }
                     Role::User => {
-                        let id = ObjectId::from_str(&claims.user_id.unwrap())?;
+                        let id = claims.user_id.unwrap().parse()?;
                         Ok(Auth::User(id))
                     }
                     Role::Service => {
@@ -99,6 +98,7 @@ impl Auth {
                 service_name: None,
                 exp: 0,
             },
+            Auth::None => bail!("Cannot create token for Auth::None"),
         };
 
         let token = match jsonwebtoken::encode(&header, &claims, &ENCODING_KEY) {

@@ -32,7 +32,7 @@ impl ServiceState {
 }
 
 pub struct HandlerContext {
-    pub user_auth: Option<Auth>,
+    pub user_auth: Auth,
 }
 
 pub struct Context(pub Arc<ServiceState>, pub HandlerContext);
@@ -52,9 +52,9 @@ impl FromRequest for Context {
                 .map(Auth::from_token);
 
             let user_auth = if let Some(auth) = auth {
-                Some(auth?)
+                auth?
             } else {
-                None
+                Auth::None
             };
 
             let Some(state) = req
@@ -150,14 +150,12 @@ impl Context {
             ))
     }
 
-    pub fn make_request<T: Serialize>(&self) -> ServiceRequest<T> {
-        ServiceRequest::<T>::new(&self.0.client, self.0.service_auth.clone())
+    pub fn auth(&self) -> &Auth {
+        &self.1.user_auth
     }
 
-    pub fn auth_res(&self) -> anyhow::Result<Auth> {
-        self.1.user_auth.clone().ok_or(anyhow::anyhow!(
-            "This action is not allowed for not authorized user".to_string()
-        ))
+    pub fn make_request<T: Serialize>(&self) -> ServiceRequest<T> {
+        ServiceRequest::<T>::new(&self.0.client, self.0.service_auth.clone())
     }
 }
 
