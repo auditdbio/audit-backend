@@ -1,5 +1,8 @@
 pub mod handlers;
 pub mod repositories;
+pub mod service;
+
+use std::sync::Arc;
 
 use actix_cors::Cors;
 use actix_web::body::MessageBody;
@@ -9,12 +12,12 @@ use actix_web::dev::ServiceResponse;
 use actix_web::middleware;
 use actix_web::web;
 use actix_web::App;
-use common::auth_session::AuthSessionManager;
+use common::context::ServiceState;
 pub use handlers::search::*;
 use repositories::search::SearchRepo;
 
 pub fn create_app(
-    manager: AuthSessionManager,
+    state: Arc<ServiceState>,
     search_repo: SearchRepo,
 ) -> App<
     impl ServiceFactory<
@@ -29,9 +32,9 @@ pub fn create_app(
     let app = App::new()
         .wrap(cors)
         .wrap(middleware::Logger::default())
-        .app_data(web::Data::new(manager))
+        .app_data(web::Data::new(state))
         .app_data(web::Data::new(search_repo))
-        .service(insert_query)
+        .service(insert)
         .service(search);
     app
 }

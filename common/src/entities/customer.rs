@@ -61,8 +61,4 @@ impl Entity for Customer<ObjectId> {
     fn id(&self) -> ObjectId {
         self.user_id.clone()
     }
-
-    fn timestamp(&self) -> i64 {
-        self.last_modified
-    }
 }

@@ -8,7 +8,7 @@ use mongodb::{
     IndexModel,
 };
 
-use crate::SearchQuery;
+use crate::service::search::SearchQuery;
 
 #[derive(Clone)]
 pub struct SearchRepo(Arc<MongoRepository<Document>>);
@@ -30,11 +30,12 @@ impl SearchRepo {
         Self(Arc::new(repo))
     }
 
-    pub async fn insert(&self, query: Vec<Document>) {
-        self.0.collection.insert_many(query, None).await.unwrap();
+    pub async fn insert(&self, query: Vec<Document>) -> anyhow::Result<()> {
+        self.0.collection.insert_many(query, None).await?;
+        Ok(())
     }
 
-    pub async fn find(&self, query: SearchQuery) -> Vec<Document> {
+    pub async fn search(&self, query: SearchQuery) -> anyhow::Result<Vec<Document>> {
         let find_options = if let Some(sort_by) = query.sort_by {
             Some(
                 FindOptions::builder()
@@ -109,18 +110,12 @@ impl SearchRepo {
             );
         }
 
-        let mut cursor = self
-            .0
-            .collection
-            .find(document, find_options)
-            .await
-            .unwrap();
+        let cursor = self.0.collection.find(document, find_options).await?;
 
-        cursor
+        Ok(cursor
             .collect::<Vec<Result<Document, _>>>()
             .await
             .into_iter()
-            .map(|x| x.unwrap())
-            .collect()
+            .collect::<Result<Vec<Document>, _>>()?)
     }
 }

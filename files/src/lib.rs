@@ -6,7 +6,7 @@ use actix_web::{
     dev::{ServiceFactory, ServiceRequest, ServiceResponse},
     middleware, web, App,
 };
-use common::{auth_session::AuthSessionManager, context::ServiceState};
+use common::context::ServiceState;
 pub use handlers::*;
 
 pub mod handlers;
@@ -28,8 +28,6 @@ pub fn create_app(
         .wrap(cors)
         .wrap(middleware::Logger::default())
         .app_data(web::Data::new(state))
-        .service()
-        .service(change_user)
-        .service(dele);
+        .service(post_audit);
     app
 }

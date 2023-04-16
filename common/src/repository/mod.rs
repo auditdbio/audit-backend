@@ -9,7 +9,6 @@ use mongodb::bson::{oid::ObjectId, Bson};
 
 pub trait Entity {
     fn id(&self) -> ObjectId;
-    fn timestamp(&self) -> i64;
 }
 
 #[async_trait]

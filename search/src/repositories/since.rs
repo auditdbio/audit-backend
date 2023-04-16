@@ -1,101 +1,77 @@
-use std::sync::Arc;
+use std::collections::HashMap;
 
-use common::repository::mongo_repository::MongoRepository;
-use common::repository::{Entity, Repository};
+use common::repository::Entity;
 use common::services::{AUDITORS_SERVICE, AUDITS_SERVICE, CUSTOMERS_SERVICE};
+use lazy_static::lazy_static;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
+
+lazy_static! {
+    pub static ref PROTOCOL: String = "https".to_string();
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Since {
     pub id: ObjectId,
-    pub service_origin: String,
-    pub service_name: String,
-    pub resource: String,
-    pub since: i64,
+    pub name: String,
+    pub dict: HashMap<String, i64>,
 }
 
 impl Entity for Since {
     fn id(&self) -> ObjectId {
-        ObjectId::new()
-    }
-
-    fn timestamp(&self) -> i64 {
-        unreachable!()
+        self.id
     }
 }
 
-pub struct SinceRepo(Arc<MongoRepository<Since>>);
-
-impl Clone for SinceRepo {
-    fn clone(&self) -> Self {
-        Self(self.0.clone())
-    }
-}
-
-impl SinceRepo {
-    pub async fn new(mongo_uri: String) -> Self {
-        let repo = MongoRepository::new(&mongo_uri, "search", "since").await;
-        Self(Arc::new(repo))
-    }
-
-    pub async fn insert_default(&self) {
-        let count = self.0.collection.count_documents(None, None).await.unwrap();
-
-        let services = vec![
-            Since {
-                id: ObjectId::new(),
-                service_name: "auditor".to_string(),
-                service_origin: AUDITORS_SERVICE.to_string(),
-                resource: "auditor".to_string(),
-                since: 0,
+impl Default for Since {
+    fn default() -> Self {
+        Self {
+            id: ObjectId::new(),
+            name: "since".to_string(),
+            dict: {
+                let mut map = HashMap::new();
+                map.insert(
+                    format!(
+                        "{}://{}/api/project",
+                        PROTOCOL.as_str(),
+                        CUSTOMERS_SERVICE.as_str()
+                    ),
+                    0,
+                );
+                map.insert(
+                    format!(
+                        "{}://{}/api/auditor",
+                        PROTOCOL.as_str(),
+                        AUDITORS_SERVICE.as_str()
+                    ),
+                    0,
+                );
+                map.insert(
+                    format!(
+                        "{}://{}/api/customer",
+                        PROTOCOL.as_str(),
+                        CUSTOMERS_SERVICE.as_str()
+                    ),
+                    0,
+                );
+                map.insert(
+                    format!(
+                        "{}://{}/api/audit",
+                        PROTOCOL.as_str(),
+                        AUDITS_SERVICE.as_str()
+                    ),
+                    0,
+                );
+                map.insert(
+                    format!(
+                        "{}://{}/api/request",
+                        PROTOCOL.as_str(),
+                        AUDITS_SERVICE.as_str()
+                    ),
+                    0,
+                );
+                map
             },
-            Since {
-                id: ObjectId::new(),
-                service_name: "customer".to_string(),
-                service_origin: CUSTOMERS_SERVICE.to_string(),
-                resource: "customer".to_string(),
-                since: 0,
-            },
-            Since {
-                id: ObjectId::new(),
-                service_name: "customer".to_string(),
-                service_origin: CUSTOMERS_SERVICE.to_string(),
-                resource: "project".to_string(),
-                since: 0,
-            },
-            Since {
-                id: ObjectId::new(),
-                service_name: "audit".to_string(),
-                service_origin: AUDITS_SERVICE.to_string(),
-                resource: "audit".to_string(),
-                since: 0,
-            },
-            Since {
-                id: ObjectId::new(),
-                service_name: "audit".to_string(),
-                service_origin: AUDITS_SERVICE.to_string(),
-                resource: "request".to_string(),
-                since: 0,
-            },
-        ];
-
-        if count == services.len() as u64 {
-            return;
         }
-
-        for service in services {
-            self.0.insert(&service).await.unwrap();
-        }
-    }
-
-    pub async fn get_all(&self) -> Result<Vec<Since>, mongodb::error::Error> {
-        self.0.find_all(0, 100).await
-    }
-
-    pub async fn update(&self, since: Since) -> Result<(), mongodb::error::Error> {
-        self.0.delete("id", &since.id).await?;
-        self.0.insert(&since).await?;
-        Ok(())
     }
 }

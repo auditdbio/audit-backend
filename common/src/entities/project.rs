@@ -75,10 +75,6 @@ impl Entity for Project<ObjectId> {
     fn id(&self) -> ObjectId {
         self.id.clone()
     }
-
-    fn timestamp(&self) -> i64 {
-        self.last_modified
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -11,31 +11,55 @@ pub async fn create_file(context: Context, mut payload: Multipart) -> error::Res
     let mut file = vec![];
     let mut path = String::new();
 
+    let mut private = false;
+    let mut original_name = String::new();
+    let mut audit_id = String::new();
+
     while let Some(item) = payload.next().await {
-        let mut field = item.map_err(|e| anyhow::anyhow!("{}", e))?;
+        let mut field = item.unwrap();
 
         match field.name() {
             "file" => {
                 while let Some(chunk) = field.next().await {
-                    let data = chunk.map_err(|e| anyhow::anyhow!("{}", e))?;
+                    let data = chunk.unwrap();
                     file.push(data);
                 }
             }
             "path" => {
                 while let Some(chunk) = field.next().await {
-                    let data = chunk.map_err(|e| anyhow::anyhow!("{}", e))?;
+                    let data = chunk.unwrap();
                     path.push_str(&String::from_utf8(data.to_vec()).unwrap());
                 }
             }
-            "original_name" => {}
-            "private" => {}
-            "audit" => {}
+            "original_name" => {
+                while let Some(chunk) = field.next().await {
+                    let data = chunk.unwrap();
+                    original_name.push_str(&String::from_utf8(data.to_vec()).unwrap());
+                }
+            }
+            "private" => {
+                let mut str = String::new();
+                while let Some(chunk) = field.next().await {
+                    let data = chunk.unwrap();
+                    str.push_str(&String::from_utf8(data.to_vec()).unwrap());
+                }
+
+                private = str == "true";
+            }
+            "audit" => {
+                while let Some(chunk) = field.next().await {
+                    let data = chunk.unwrap();
+                    audit_id.push_str(&String::from_utf8(data.to_vec()).unwrap());
+                }
+            }
             _ => (),
         }
     }
 
+    let allowed_users = Vec::new();
+
     FileService::new(context)
-        .create_file(path, file.concat())
+        .create_file(path, allowed_users, private, original_name, file.concat())
         .await?;
 
     Ok(HttpResponse::Ok().finish())

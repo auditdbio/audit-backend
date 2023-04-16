@@ -3,109 +3,30 @@ use actix_web::{
     web::{self, Json},
     HttpResponse,
 };
-use chrono::Utc;
-use common::{
-    auth_session::AuthSessionManager,
-    entities::audit_request::{PriceRange, TimeRange},
-};
-use log::info;
+use common::{context::Context, error};
 use mongodb::bson::Document;
-use reqwest::Client;
-use serde::{Deserialize, Serialize};
 
-use utoipa::{IntoParams, ToSchema};
+use crate::{
+    repositories::search::SearchRepo,
+    service::search::{SearchInsertRequest, SearchQuery, SearchService},
+};
 
-use crate::repositories::{search::SearchRepo, since::SinceRepo};
-
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct SearchInsertRequest {
-    documents: Vec<Document>,
-}
-
-#[utoipa::path(
-    request_body(
-        content = SearchInsertRequest,
-    ),
-    responses(
-        (status = 200, body = GetAuditResponse)
-    )
-)]
 #[post("/api/search/insert")]
-pub async fn insert_query(
-    Json(data): web::Json<SearchInsertRequest>,
+pub async fn insert(
+    Json(data): Json<SearchInsertRequest>,
+    context: Context,
     search_repo: web::Data<SearchRepo>,
-) -> HttpResponse {
-    search_repo.insert(data.documents).await;
-    HttpResponse::Ok().finish()
+) -> error::Result<HttpResponse> {
+    SearchService::new(search_repo, context)
+        .insert(data)
+        .await?;
+    Ok(HttpResponse::Ok().finish())
 }
 
-#[derive(Debug, Serialize, Deserialize, IntoParams, ToSchema)]
-pub struct SearchQuery {
-    pub query: String,
-    pub tags: String,
-    pub page: u32,
-    pub per_page: u32,
-    pub price: Option<PriceRange>,
-    pub time: Option<TimeRange>,
-    pub ready_to_wait: Option<bool>,
-    pub sort_by: Option<String>,
-    pub sort_order: Option<i32>,
-    pub kind: Option<String>,
-}
-
-#[utoipa::path(
-    params(
-        SearchQuery,
-    ),
-    responses(
-        (status = 200, body = GetAuditResponse)
-    )
-)]
 #[get("/api/search")]
 pub async fn search(
     query: web::Query<SearchQuery>,
-    _manager: web::Data<AuthSessionManager>,
     repo: web::Data<SearchRepo>,
-) -> HttpResponse {
-    let results = repo.find(query.into_inner()).await;
-    HttpResponse::Ok().json(results)
-}
-
-pub(super) async fn get_data(
-    client: &Client,
-    service: &String,
-    resource: &String,
-    origin: &String,
-    since: i64,
-) -> Option<Vec<Document>> {
-    let reqwest = client.get(format!(
-        "https://{origin}/api/{service}/data/{resource}/{since}"
-    ));
-    info!("Request: {:?}", reqwest);
-    let Ok(res) = reqwest.send()
-        .await else {
-        return None;
-    };
-    let Ok(body) = res.json::<Vec<Document>>().await else {
-        return None;
-    };
-    Some(body)
-}
-
-pub async fn fetch_data(since_repo: SinceRepo, search_repo: SearchRepo) {
-    let client = Client::new();
-    let data = since_repo.get_all().await.unwrap();
-
-    for mut since in data {
-        let timestamp = Utc::now().timestamp_micros();
-        let Some(docs) = get_data(&client, &since.service_name ,&since.resource, &since.service_origin, since.since).await else {
-            continue;
-        };
-        since.since = timestamp;
-        since_repo.update(since).await.unwrap();
-        if docs.is_empty() {
-            continue;
-        }
-        search_repo.insert(docs).await;
-    }
+) -> error::Result<Json<Vec<Document>>> {
+    Ok(Json(repo.search(query.into_inner()).await?))
 }

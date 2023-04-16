@@ -31,7 +31,15 @@ pub fn create_app(
     let app = App::new()
         .wrap(cors)
         .wrap(middleware::Logger::default())
-        .app_data(web::Data::new(state));
+        .app_data(web::Data::new(state))
+        .service(post_audit)
+        .service(get_audit)
+        .service(patch_audit)
+        .service(delete_audit)
+        .service(post_audit_request)
+        .service(get_audit_request)
+        .service(patch_audit_request)
+        .service(delete_audit_request);
 
     app
 }

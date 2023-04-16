@@ -86,8 +86,4 @@ impl Entity for Audit<ObjectId> {
     fn id(&self) -> ObjectId {
         self.id.clone()
     }
-
-    fn timestamp(&self) -> i64 {
-        self.last_modified
-    }
 }

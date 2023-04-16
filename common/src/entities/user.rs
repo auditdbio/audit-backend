@@ -47,8 +47,4 @@ impl Entity for User<ObjectId> {
     fn id(&self) -> ObjectId {
         self.id
     }
-
-    fn timestamp(&self) -> i64 {
-        self.last_modified
-    }
 }

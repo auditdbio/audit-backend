@@ -6,6 +6,7 @@ use common::{
     access_rules::{AccessRules, Edit, Read},
     auth::Auth,
     context::Context,
+    repository::Entity,
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -20,22 +21,40 @@ pub struct Metadata {
     pub private: bool,
 }
 
+impl Entity for Metadata {
+    fn id(&self) -> ObjectId {
+        self.id
+    }
+}
+
 impl<'a, 'b> AccessRules<&'a Auth, &'b Metadata> for Read {
-    fn get_access(object: &'a Auth, subject: &'b Metadata) -> bool {
-        if let Auth::User(id) = object {
-            subject.private && subject.allowed_users.contains(id)
-        } else {
-            true
+    fn get_access(auth: &'a Auth, subject: &'b Metadata) -> bool {
+        match auth {
+            Auth::User(id) => {
+                if subject.private {
+                    subject.allowed_users.contains(id)
+                } else {
+                    true
+                }
+            }
+            Auth::Admin(_) | Auth::Service(_) => true,
+            Auth::None => false,
         }
     }
 }
 
 impl<'a, 'b> AccessRules<&'a Auth, &'b Metadata> for Edit {
-    fn get_access(object: &'a Auth, subject: &'b Metadata) -> bool {
-        if let Auth::User(id) = object {
-            subject.private && subject.allowed_users.contains(id)
-        } else {
-            true
+    fn get_access(auth: &'a Auth, subject: &'b Metadata) -> bool {
+        match auth {
+            Auth::User(id) => {
+                if subject.private {
+                    subject.allowed_users.contains(id)
+                } else {
+                    true
+                }
+            }
+            Auth::Admin(_) | Auth::Service(_) => true,
+            Auth::None => false,
         }
     }
 }
@@ -98,9 +117,7 @@ impl FileService {
     }
 
     pub async fn find_file(&self, path: String) -> anyhow::Result<NamedFile> {
-        let Some(auth) = &self.context.1.user_auth else {
-            bail!("No auth found")
-        };
+        let auth = self.context.auth();
 
         let Some(metas) = self.context.get_repository::<Metadata>() else {
             bail!("No metadata repository found")
@@ -121,9 +138,7 @@ impl FileService {
     }
 
     pub async fn delete_file(&self, path: String) -> anyhow::Result<()> {
-        let Some(auth) = &self.context.1.user_auth else {
-            bail!("No auth found")
-        };
+        let auth = self.context.auth();
 
         let Some(metas) = self.context.get_repository::<Metadata>() else {
             bail!("No metadata repository found")
@@ -139,7 +154,7 @@ impl FileService {
 
         let path = format!("/auditdb-files/{}", path);
 
-        std::fs::remove_file(path);
+        std::fs::remove_file(path)?;
 
         Ok(())
     }
