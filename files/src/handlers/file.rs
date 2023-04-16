@@ -1,6 +1,6 @@
 use actix_files::NamedFile;
 use actix_multipart::Multipart;
-use actix_web::{get, post, web::Path, HttpResponse};
+use actix_web::{get, post, web::Path, HttpResponse, delete};
 use common::{context::Context, error};
 use futures::StreamExt;
 
@@ -72,8 +72,9 @@ pub async fn find_file(context: Context, filename: Path<String>) -> error::Resul
         .await?)
 }
 
-pub async fn create_file_token() {}
-
-pub async fn file_by_token() {}
-
-pub async fn delete_file() {}
+#[delete("/api/file/{filename:.*}")]
+pub async fn delete_file(context: Context, filename: Path<String>) -> error::Result<NamedFile> {
+    Ok(FileService::new(context)
+        .find_file(filename.into_inner())
+        .await?)
+}

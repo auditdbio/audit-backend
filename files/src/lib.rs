@@ -6,8 +6,9 @@ use actix_web::{
     dev::{ServiceFactory, ServiceRequest, ServiceResponse},
     middleware, web, App,
 };
-use common::context::ServiceState;
+use common::{context::ServiceState};
 pub use handlers::*;
+use handlers::file::{create_file, find_file, delete_file};
 
 pub mod handlers;
 pub mod service;
@@ -28,6 +29,9 @@ pub fn create_app(
         .wrap(cors)
         .wrap(middleware::Logger::default())
         .app_data(web::Data::new(state))
-        .service(post_audit);
+        .service(create_file)
+        .service(find_file)
+        .service(delete_file);
+
     app
 }
