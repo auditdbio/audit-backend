@@ -1,4 +1,3 @@
-
 use actix_web::{
     delete, get, patch, post,
     web::{Json, Path},
@@ -21,9 +20,7 @@ pub async fn create_user(
 
 #[get("/api/user/{id}")]
 pub async fn find_user(context: Context, id: Path<String>) -> error::Result<HttpResponse> {
-    let user = UserService::new(context)
-        .find(id.parse()?)
-        .await?;
+    let user = UserService::new(context).find(id.parse()?).await?;
     if let Some(user) = user {
         Ok(HttpResponse::Ok().json(user))
     } else {
@@ -38,15 +35,13 @@ pub async fn change_user(
     user: Json<UserChange>,
 ) -> error::Result<Json<PublicUser>> {
     Ok(Json(
-        UserService::new(context).change(id.parse()?, user.into_inner()).await?,
+        UserService::new(context)
+            .change(id.parse()?, user.into_inner())
+            .await?,
     ))
 }
 
 #[delete("/api/user/{id}")]
 pub async fn delete_user(context: Context, id: Path<String>) -> error::Result<Json<PublicUser>> {
-    Ok(Json(
-        UserService::new(context)
-            .delete(id.parse()?)
-            .await?,
-    ))
+    Ok(Json(UserService::new(context).delete(id.parse()?).await?))
 }

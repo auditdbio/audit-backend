@@ -15,7 +15,6 @@ impl IndexerService {
     }
 }
 
-
 /*
 #[get("/api/customer/data/{resource}/{timestamp}")]
 pub async fn get_data(

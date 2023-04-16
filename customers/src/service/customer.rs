@@ -2,9 +2,13 @@ use std::collections::HashMap;
 
 use anyhow::bail;
 use chrono::Utc;
-use common::{context::Context, entities::customer::Customer, access_rules::{Edit, AccessRules, Read}};
+use common::{
+    access_rules::{AccessRules, Edit, Read},
+    context::Context,
+    entities::customer::Customer,
+};
 use mongodb::bson::{oid::ObjectId, Bson};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateCustomer {
@@ -40,7 +44,6 @@ pub struct PublicCustomer {
     tags: Vec<String>,
 }
 
-
 impl From<Customer<ObjectId>> for PublicCustomer {
     fn from(customer: Customer<ObjectId>) -> Self {
         Self {
@@ -55,7 +58,6 @@ impl From<Customer<ObjectId>> for PublicCustomer {
         }
     }
 }
-
 
 pub struct CustomerService {
     context: Context,
@@ -74,7 +76,10 @@ impl CustomerService {
         };
 
         let customer = Customer {
-            user_id: auth.get_id().ok_or(anyhow::anyhow!("No user id found"))?.clone(),
+            user_id: auth
+                .id()
+                .ok_or(anyhow::anyhow!("No user id found"))?
+                .clone(),
             avatar: customer.avatar,
             first_name: customer.first_name,
             last_name: customer.last_name,
@@ -108,7 +113,11 @@ impl CustomerService {
         Ok(Some(customer.into()))
     }
 
-    pub async fn change(&self, id: ObjectId, change: CustomerChange) -> anyhow::Result<PublicCustomer> {
+    pub async fn change(
+        &self,
+        id: ObjectId,
+        change: CustomerChange,
+    ) -> anyhow::Result<PublicCustomer> {
         let auth = self.context.auth();
 
         let Some(customers) = self.context.get_repository::<Customer<ObjectId>>() else {

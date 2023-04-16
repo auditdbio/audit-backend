@@ -1,4 +1,4 @@
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
 use mongodb::bson::{oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
@@ -34,9 +34,8 @@ pub struct AuditRequest<Id> {
     pub auditor_contacts: HashMap<String, String>,
     pub customer_contacts: HashMap<String, String>,
 
-    pub description: Option<String>,
+    pub description: String,
 
-    
     pub price: Option<i64>,
     pub last_modified: i64,
     pub last_changer: Role,

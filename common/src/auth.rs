@@ -23,7 +23,7 @@ pub enum Auth {
 }
 
 impl Auth {
-    pub fn get_id(&self) -> Option<&ObjectId> {
+    pub fn id(&self) -> Option<&ObjectId> {
         match self {
             Auth::Admin(id) => Some(id),
             Auth::User(id) => Some(id),

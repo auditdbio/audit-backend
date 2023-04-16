@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr};
+use std::collections::HashMap;
 
 use mongodb::bson::{self, oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
@@ -78,5 +78,34 @@ impl Entity for Project<ObjectId> {
 
     fn timestamp(&self) -> i64 {
         self.last_modified
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PublicProject {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub scope: Vec<String>,
+    pub tags: Vec<String>,
+    pub publish_options: PublishOptions,
+    pub status: String,
+    pub creator_contacts: HashMap<String, String>,
+    pub price_range: PriceRange,
+}
+
+impl From<Project<ObjectId>> for PublicProject {
+    fn from(project: Project<ObjectId>) -> Self {
+        Self {
+            id: project.id.to_hex(),
+            name: project.name,
+            description: project.description,
+            scope: project.scope,
+            tags: project.tags,
+            publish_options: project.publish_options,
+            status: project.status,
+            creator_contacts: project.creator_contacts,
+            price_range: project.price_range,
+        }
     }
 }

@@ -2,9 +2,13 @@ use std::collections::HashMap;
 
 use anyhow::bail;
 use chrono::Utc;
-use common::{context::Context, entities::auditor::Auditor, access_rules::{Edit, AccessRules, Read}};
+use common::{
+    access_rules::{AccessRules, Edit, Read},
+    context::Context,
+    entities::auditor::{Auditor, PublicAuditor},
+};
 use mongodb::bson::{oid::ObjectId, Bson};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateAuditor {
@@ -32,39 +36,6 @@ pub struct AuditorChange {
     tags: Option<Vec<String>>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PublicAuditor {
-    id: String,
-    avatar: String,
-    first_name: String,
-    last_name: String,
-    about: String,
-    company: String,
-    contacts: HashMap<String, String>,
-    free_at: String,
-    tax: String,
-    tags: Vec<String>,
-}
-
-
-impl From<Auditor<ObjectId>> for PublicAuditor {
-    fn from(auditor: Auditor<ObjectId>) -> Self {
-        Self {
-            id: auditor.user_id.to_hex(),
-            avatar: auditor.avatar,
-            first_name: auditor.first_name,
-            last_name: auditor.last_name,
-            about: auditor.about,
-            company: auditor.company,
-            contacts: auditor.contacts,
-            free_at: auditor.free_at,
-            tax: auditor.tax,
-            tags: auditor.tags,
-        }
-    }
-}
-
-
 pub struct AuditorService {
     context: Context,
 }
@@ -82,7 +53,10 @@ impl AuditorService {
         };
 
         let auditor = Auditor {
-            user_id: auth.get_id().ok_or(anyhow::anyhow!("No user id found"))?.clone(),
+            user_id: auth
+                .id()
+                .ok_or(anyhow::anyhow!("No user id found"))?
+                .clone(),
             avatar: auditor.avatar,
             first_name: auditor.first_name,
             last_name: auditor.last_name,
@@ -118,7 +92,11 @@ impl AuditorService {
         Ok(Some(auditor.into()))
     }
 
-    pub async fn change(&self, id: ObjectId, change: AuditorChange) -> anyhow::Result<PublicAuditor> {
+    pub async fn change(
+        &self,
+        id: ObjectId,
+        change: AuditorChange,
+    ) -> anyhow::Result<PublicAuditor> {
         let auth = self.context.auth();
 
         let Some(auditors) = self.context.get_repository::<Auditor<ObjectId>>() else {

@@ -2,9 +2,16 @@ use std::collections::HashMap;
 
 use anyhow::bail;
 use chrono::Utc;
-use common::{context::Context, entities::{project::{Project, PublishOptions}, audit_request::PriceRange}, access_rules::{Edit, Read, AccessRules}};
+use common::{
+    access_rules::{AccessRules, Edit, Read},
+    context::Context,
+    entities::{
+        audit_request::PriceRange,
+        project::{Project, PublicProject, PublishOptions},
+    },
+};
 use mongodb::bson::{oid::ObjectId, Bson};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateProject {
@@ -31,35 +38,6 @@ pub struct ProjectChange {
     pub price_range: Option<PriceRange>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PublicProject {
-    pub id: String,
-    pub name: String,
-    pub description: String,
-    pub scope: Vec<String>,
-    pub tags: Vec<String>,
-    pub publish_options: PublishOptions,
-    pub status: String,
-    pub creator_contacts: HashMap<String, String>,
-    pub price_range: PriceRange,
-}
-
-impl From<Project<ObjectId>> for PublicProject {
-    fn from(project: Project<ObjectId>) -> Self {
-        Self {
-            id: project.id.to_hex(),
-            name: project.name,
-            description: project.description,
-            scope: project.scope,
-            tags: project.tags,
-            publish_options: project.publish_options,
-            status: project.status,
-            creator_contacts: project.creator_contacts,
-            price_range: project.price_range,
-        }
-    }
-}
-
 pub struct ProjectService {
     context: Context,
 }
@@ -78,7 +56,10 @@ impl ProjectService {
 
         let project = Project {
             id: ObjectId::new(),
-            customer_id: auth.get_id().ok_or(anyhow::anyhow!("No customer id found"))?.clone(),
+            customer_id: auth
+                .id()
+                .ok_or(anyhow::anyhow!("No customer id found"))?
+                .clone(),
             name: project.name,
             description: project.description,
             scope: project.scope,
@@ -97,7 +78,7 @@ impl ProjectService {
 
     pub async fn find(&self, id: ObjectId) -> anyhow::Result<Option<PublicProject>> {
         let auth = self.context.auth();
-        
+
         let Some(projects) = self.context.get_repository::<Project<ObjectId>>() else {
             bail!("No project repository found")
         };

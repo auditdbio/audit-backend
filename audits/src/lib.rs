@@ -32,7 +32,6 @@ pub fn create_app(
         .wrap(cors)
         .wrap(middleware::Logger::default())
         .app_data(web::Data::new(state));
-        
+
     app
 }
-

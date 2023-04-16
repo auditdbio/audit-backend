@@ -11,26 +11,18 @@ async fn main() -> std::io::Result<()> {
 
     let mongo_uri = env::var("MONGOURI").unwrap();
 
-    let audit_repo = AuditRepo::new(MongoRepository::new(&mongo_uri, "audits", "audits").await);
-    let audit_request_repo =
-        AuditRequestRepo::new(MongoRepository::new(&mongo_uri, "audits", "requests").await);
-    let closed_audit_repo =
-        ClosedAuditRepo::new(MongoRepository::new(&mongo_uri, "audits", "closed_audits").await);
-    let closed_audit_request_repo = ClosedAuditRequestRepo::new(
-        MongoRepository::new(&mongo_uri, "audits", "closed_requests").await,
-    );
-    let manager = AuthSessionManager::new(HttpSessionManager);
+    let audit_repo: MongoRepository<Audit<ObjectId>> =
+        MongoRepository::new(&mongo_uri, "audits", "audits").await;
+    let audit_request_repo: MongoRepository<Audit<ObjectId>> =
+        MongoRepository::new(&mongo_uri, "audits", "requests").await;
 
-    HttpServer::new(move || {
-        create_app(
-            audit_repo.clone(),
-            audit_request_repo.clone(),
-            closed_audit_repo.clone(),
-            closed_audit_request_repo.clone(),
-            manager.clone(),
-        )
-    })
-    .bind(("0.0.0.0", 3003))?
-    .run()
-    .await
+    let mut state = ServiceState::new();
+    state.insert(audit_repo);
+    state.insert(audit_request_repo);
+    let state = Arc::new(state);
+
+    HttpServer::new(move || create_app(state.clone()))
+        .bind(("0.0.0.0", 3003))?
+        .run()
+        .await
 }

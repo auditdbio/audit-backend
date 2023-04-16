@@ -6,8 +6,6 @@ use mongodb::{
 };
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::error;
-
 use super::{Entity, Repository};
 
 pub struct MongoRepository<T> {

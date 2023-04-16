@@ -2,7 +2,9 @@ use std::{env, sync::Arc};
 
 use actix_web::HttpServer;
 use common::{
-    repository::mongo_repository::MongoRepository, context::{ServiceState}, entities::{customer::Customer, project::Project},
+    context::ServiceState,
+    entities::{customer::Customer, project::Project},
+    repository::mongo_repository::MongoRepository,
 };
 
 use customers::create_app;
@@ -14,18 +16,18 @@ async fn main() -> std::io::Result<()> {
 
     env_logger::init();
 
-    let customer_repo: MongoRepository<Customer<ObjectId>> = MongoRepository::new(&mongo_uri, "customers", "customers").await;
-    let project_repo: MongoRepository<Project<ObjectId>> = MongoRepository::new(&mongo_uri, "customers", "projects").await;
-    
+    let customer_repo: MongoRepository<Customer<ObjectId>> =
+        MongoRepository::new(&mongo_uri, "customers", "customers").await;
+    let project_repo: MongoRepository<Project<ObjectId>> =
+        MongoRepository::new(&mongo_uri, "customers", "projects").await;
+
     let mut state = ServiceState::new("customer".to_string());
     state.insert(customer_repo);
     state.insert(project_repo);
     let state = Arc::new(state);
 
-    HttpServer::new(move || {
-        create_app(state.clone())
-    })
-    .bind(("0.0.0.0", 3002))?
-    .run()
-    .await
+    HttpServer::new(move || create_app(state.clone()))
+        .bind(("0.0.0.0", 3002))?
+        .run()
+        .await
 }

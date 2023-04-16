@@ -1,6 +1,5 @@
-pub mod service;
 pub mod handlers;
-
+pub mod service;
 
 use std::sync::Arc;
 
@@ -10,9 +9,7 @@ use actix_web::{
     dev::{ServiceFactory, ServiceRequest, ServiceResponse},
     middleware, web, App,
 };
-use common::{
-    context::ServiceState,
-};
+use common::context::ServiceState;
 pub use handlers::auditor::*;
 
 pub fn create_app(

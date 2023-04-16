@@ -1,16 +1,14 @@
 use actix_web::{
     delete, get, patch, post,
-    web::{self, Json}, HttpResponse,
+    web::{self, Json},
+    HttpResponse,
 };
 
-use common::{
-    context::Context, error,
-};
+use common::{context::Context, entities::auditor::PublicAuditor, error};
 
 use serde_json::json;
 
-use crate::service::auditor::{PublicAuditor, AuditorService, CreateAuditor, AuditorChange};
-
+use crate::service::auditor::{AuditorChange, AuditorService, CreateAuditor};
 
 #[post("/api/auditor")]
 pub async fn post_auditor(
@@ -21,18 +19,14 @@ pub async fn post_auditor(
 }
 
 #[get("/api/auditor/{id}")]
-pub async fn get_auditor(
-    context: Context,
-    id: web::Path<String>,
-) -> error::Result<HttpResponse> {
+pub async fn get_auditor(context: Context, id: web::Path<String>) -> error::Result<HttpResponse> {
     let res = AuditorService::new(context).find(id.parse()?).await?;
     if let Some(res) = res {
         Ok(HttpResponse::Ok().json(res))
     } else {
-        Ok(HttpResponse::Ok().json(json!{{}}))
+        Ok(HttpResponse::Ok().json(json! {{}}))
     }
 }
-
 
 #[patch("/api/auditor/{id}")]
 pub async fn patch_auditor(
@@ -40,7 +34,11 @@ pub async fn patch_auditor(
     id: web::Path<String>,
     Json(data): Json<AuditorChange>,
 ) -> error::Result<Json<PublicAuditor>> {
-    Ok(Json(AuditorService::new(context).change(id.parse()?, data).await?))
+    Ok(Json(
+        AuditorService::new(context)
+            .change(id.parse()?, data)
+            .await?,
+    ))
 }
 
 #[delete("/api/auditor/{id}")]
@@ -48,5 +46,7 @@ pub async fn delete_auditor(
     context: Context,
     id: web::Path<String>,
 ) -> error::Result<Json<PublicAuditor>> {
-    Ok(Json(AuditorService::new(context).delete(id.parse()?).await?))
+    Ok(Json(
+        AuditorService::new(context).delete(id.parse()?).await?,
+    ))
 }

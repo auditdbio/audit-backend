@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr};
+use std::collections::HashMap;
 
 use mongodb::bson::{doc, oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
@@ -76,5 +76,36 @@ impl Entity for Auditor<ObjectId> {
 
     fn timestamp(&self) -> i64 {
         self.last_modified
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PublicAuditor {
+    pub id: String,
+    pub avatar: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub about: String,
+    pub company: String,
+    pub contacts: HashMap<String, String>,
+    pub free_at: String,
+    pub tax: String,
+    pub tags: Vec<String>,
+}
+
+impl From<Auditor<ObjectId>> for PublicAuditor {
+    fn from(auditor: Auditor<ObjectId>) -> Self {
+        Self {
+            id: auditor.user_id.to_hex(),
+            avatar: auditor.avatar,
+            first_name: auditor.first_name,
+            last_name: auditor.last_name,
+            about: auditor.about,
+            company: auditor.company,
+            contacts: auditor.contacts,
+            free_at: auditor.free_at,
+            tax: auditor.tax,
+            tags: auditor.tags,
+        }
     }
 }

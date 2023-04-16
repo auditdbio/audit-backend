@@ -17,15 +17,13 @@ pub struct Audit<Id> {
 
     pub project_name: String,
     pub avatar: String,
-    pub description: Option<String>,
+    pub description: String,
     pub status: String,
     pub scope: Vec<String>,
     pub price: i64,
 
-
     pub auditor_contacts: HashMap<String, String>,
     pub customer_contacts: HashMap<String, String>,
-    pub report_link: Option<String>,
     pub tags: Vec<String>,
     pub last_modified: i64,
     pub report: Option<String>,
@@ -47,7 +45,6 @@ impl Audit<String> {
             customer_contacts: self.customer_contacts,
             scope: self.scope,
             price: self.price,
-            report_link: self.report_link,
             tags: self.tags,
             last_modified: self.last_modified,
             report: self.report,
@@ -77,7 +74,6 @@ impl Audit<ObjectId> {
             customer_contacts: self.customer_contacts,
             scope: self.scope,
             price: self.price,
-            report_link: self.report_link,
             tags: self.tags,
             last_modified: self.last_modified,
             report: self.report,
@@ -85,17 +81,6 @@ impl Audit<ObjectId> {
         }
     }
 }
-
-// impl Audit<ObjectId> {
-//     pub fn to_view(self, name: String) -> View<ObjectId> {
-//         View {
-//             id: self.id,
-//             name,
-//             last_modified: self.last_modified,
-//             source: Source::Audit,
-//         }
-//     }
-// }
 
 impl Entity for Audit<ObjectId> {
     fn id(&self) -> ObjectId {

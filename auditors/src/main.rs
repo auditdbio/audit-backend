@@ -14,12 +14,12 @@ async fn main() -> std::io::Result<()> {
     let mongo_uri = env::var("MONGOURI").unwrap();
     env_logger::init();
 
-    let auditor_repo: MongoRepository<Auditor<ObjectId>> = MongoRepository::new(&mongo_uri, "auditors", "auditors").await;
+    let auditor_repo: MongoRepository<Auditor<ObjectId>> =
+        MongoRepository::new(&mongo_uri, "auditors", "auditors").await;
 
     let mut state = ServiceState::new("customer".to_string());
     state.insert(auditor_repo);
     let state = Arc::new(state);
-
 
     HttpServer::new(move || create_app(state.clone()))
         .bind(("0.0.0.0", 3004))?

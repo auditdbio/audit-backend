@@ -7,8 +7,6 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use mongodb::bson::{oid::ObjectId, Bson};
 
-use crate::error;
-
 pub trait Entity {
     fn id(&self) -> ObjectId;
     fn timestamp(&self) -> i64;
