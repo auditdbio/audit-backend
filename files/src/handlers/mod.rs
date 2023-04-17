@@ -41,7 +41,7 @@ pub(super) async fn get_audit(
 ) -> Option<Audit<String>> {
     let res = client
         .get(format!(
-            "https://{}/api/projects/by_id/{}",
+            "https://{}/api/audits/by_id/{}",
             AUDITS_SERVICE.as_str(),
             id.to_hex()
         ))
