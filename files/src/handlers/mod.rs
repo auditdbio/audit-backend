@@ -183,7 +183,7 @@ pub async fn get_file(
         .unwrap();
 
     if let Some(auth_session) = session {
-        if metadata.allowed_users.contains(&auth_session.user_id) && metadata.private {
+        if !metadata.allowed_users.contains(&auth_session.user_id) && metadata.private {
             return HttpResponse::BadRequest().body("You are not allowed to access this file");
         }
     } else if metadata.private {
