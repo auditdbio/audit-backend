@@ -21,7 +21,7 @@ async fn main() -> std::io::Result<()> {
     let manager = AuthSessionManager::new(HttpSessionManager);
 
     HttpServer::new(move || create_app(files_repo, meta_repo.clone(), manager.clone()))
-        .bind(("0.0.0.0", 3005))?
+        .bind(("0.0.0.0", 3015))?
         .run()
         .await
 }

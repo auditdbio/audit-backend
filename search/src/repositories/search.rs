@@ -63,36 +63,36 @@ impl SearchRepo {
             );
         }
 
-        if let Some(price_range) = query.price {
+        if let (Some(price_from), Some(price_to)) = (query.price_from, query.price_to) {
             document.insert(
                 "price",
                 doc! {
-                    "$gte": price_range.from,
-                    "$lte": price_range.to,
+                    "$gte": price_from,
+                    "$lte": price_to,
                 },
             );
             document.insert(
                 "price_range",
                 doc! {
                     "begin": {
-                        "$gte": price_range.from,
+                        "$gte": price_from,
                     },
                     "end": {
-                        "$lte": price_range.to,
+                        "$lte": price_to,
                     },
                 },
             );
         }
 
-        if let Some(time_range) = query.time {
+        if let (Some(time_from), Some(time_to)) = (query.time_from, query.time_to) {
             document.insert(
                 "time",
                 doc! {
                     "begin": {
-                        "$gte": time_range.from,
+                        "$gte": time_from,
                     },
                     "end": {
-                        "$lte": time_range.to,
+                        "$lte": time_to,
                     },
                 },
             );
