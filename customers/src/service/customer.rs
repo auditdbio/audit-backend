@@ -46,6 +46,10 @@ pub struct PublicCustomer {
 
 impl From<Customer<ObjectId>> for PublicCustomer {
     fn from(customer: Customer<ObjectId>) -> Self {
+        let mut contacts = HashMap::new();
+        if customer.public_contacts {
+            contacts = customer.contacts;
+        }
         Self {
             id: customer.user_id.to_hex(),
             avatar: customer.avatar,
@@ -53,7 +57,7 @@ impl From<Customer<ObjectId>> for PublicCustomer {
             last_name: customer.last_name,
             about: customer.about,
             company: customer.company,
-            contacts: customer.contacts,
+            contacts,
             tags: customer.tags,
         }
     }
@@ -88,6 +92,7 @@ impl CustomerService {
             contacts: customer.contacts,
             tags: customer.tags,
             last_modified: Utc::now().timestamp_micros(),
+            public_contacts: false, //TODO: ask frontend
         };
 
         customers.insert(&customer).await?;
@@ -111,6 +116,20 @@ impl CustomerService {
         }
 
         Ok(Some(customer.into()))
+    }
+
+    pub async fn my_customer(&self) -> anyhow::Result<Option<Customer<ObjectId>>> {
+        let auth = self.context.auth();
+
+        let Some(customers) = self.context.get_repository::<Customer<ObjectId>>() else {
+            bail!("No customer repository found")
+        };
+
+        let customer = customers
+            .find("user_id", &Bson::ObjectId(auth.id().unwrap().clone()))
+            .await?;
+
+        Ok(customer)
     }
 
     pub async fn change(

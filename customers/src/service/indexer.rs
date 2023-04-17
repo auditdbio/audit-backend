@@ -1,5 +1,9 @@
-use common::context::Context;
-use mongodb::bson::Document;
+use anyhow::bail;
+use common::{
+    context::Context,
+    entities::{customer::Customer, project::Project},
+};
+use mongodb::bson::{oid::ObjectId, Document};
 
 pub struct IndexerService {
     context: Context,
@@ -10,8 +14,38 @@ impl IndexerService {
         Self { context }
     }
 
-    pub async fn index(&self, since: i64) -> anyhow::Result<Vec<Document>> {
-        todo!()
+    pub async fn index_customer(&self, since: i64) -> anyhow::Result<Vec<Document>> {
+        let auth = self.context.auth();
+
+        // TODO: make authentication check
+
+        let Some(customers) = self.context.get_repository::<Customer<ObjectId>>() else {
+            bail!("No customer repository found")
+        };
+
+        let customers = customers.get_all_since(since).await?;
+
+        Ok(customers
+            .into_iter()
+            .filter_map(|x| x.into())
+            .collect::<Vec<_>>())
+    }
+
+    pub async fn index_project(&self, since: i64) -> anyhow::Result<Vec<Document>> {
+        let auth = self.context.auth();
+
+        // TODO: make authentication check
+
+        let Some(customers) = self.context.get_repository::<Project<ObjectId>>() else {
+            bail!("No project repository found")
+        };
+
+        let customers = customers.get_all_since(since).await?;
+
+        Ok(customers
+            .into_iter()
+            .filter_map(|x| x.into())
+            .collect::<Vec<_>>())
     }
 }
 

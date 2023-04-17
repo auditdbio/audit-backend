@@ -62,6 +62,7 @@ impl AuditorService {
             last_name: auditor.last_name,
             about: auditor.about,
             company: auditor.company,
+            public_contacts: true, // TODO: make it configurable
             contacts: auditor.contacts,
             tags: auditor.tags,
             last_modified: Utc::now().timestamp_micros(),
@@ -90,6 +91,20 @@ impl AuditorService {
         }
 
         Ok(Some(auditor.into()))
+    }
+
+    pub async fn my_auditor(&self) -> anyhow::Result<Option<Auditor<ObjectId>>> {
+        let auth = self.context.auth();
+
+        let Some(auditors) = self.context.get_repository::<Auditor<ObjectId>>() else {
+            bail!("No auditor repository found")
+        };
+
+        let auditor = auditors
+            .find("user_id", &Bson::ObjectId(auth.id().unwrap().clone()))
+            .await?;
+
+        Ok(auditor)
     }
 
     pub async fn change(

@@ -1,6 +1,6 @@
 use actix_files::NamedFile;
 use actix_multipart::Multipart;
-use actix_web::{get, post, web::Path, HttpResponse, delete};
+use actix_web::{delete, get, post, web::Path, HttpResponse};
 use common::{context::Context, error};
 use futures::StreamExt;
 

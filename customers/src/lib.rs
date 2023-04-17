@@ -13,6 +13,8 @@ use actix_web::web;
 use actix_web::App;
 
 use common::context::ServiceState;
+use handlers::indexer::provide_customer_data;
+use handlers::indexer::provide_project_data;
 
 pub use crate::handlers::customer::*;
 pub use crate::handlers::project::*;
@@ -40,6 +42,8 @@ pub fn create_app(
         .service(post_project)
         .service(get_project)
         .service(patch_project)
-        .service(delete_project);
+        .service(delete_project)
+        .service(provide_customer_data)
+        .service(provide_project_data);
     app
 }

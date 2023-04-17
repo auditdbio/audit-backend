@@ -11,6 +11,7 @@ use common::{
         project::PublicProject,
         role::Role,
     },
+    services::{AUDITORS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -113,7 +114,12 @@ impl RequestService {
             .context
             .make_request::<PublicProject>()
             .auth(auth.clone())
-            .get(format!("/api/project/{}", request.project_id))
+            .get(format!(
+                "{}://{}/api/project/{}",
+                PROTOCOL.as_str(),
+                CUSTOMERS_SERVICE.as_str(),
+                request.project_id
+            ))
             .send()
             .await?
             .json::<PublicProject>()
@@ -123,7 +129,12 @@ impl RequestService {
             .context
             .make_request::<PublicAuditor>()
             .auth(auth.clone())
-            .get(format!("/api/user/{}", request.auditor_id))
+            .get(format!(
+                "{}://{}/api/auditor/{}",
+                PROTOCOL.as_str(),
+                AUDITORS_SERVICE.as_str(),
+                request.auditor_id
+            ))
             .send()
             .await?
             .json::<PublicAuditor>()

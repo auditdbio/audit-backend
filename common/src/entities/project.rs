@@ -45,12 +45,6 @@ impl Project<String> {
             price_range: self.price_range,
         }
     }
-
-    pub fn to_doc(self) -> Document {
-        let mut document = bson::to_document(&self).unwrap();
-        document.insert("kind", "project");
-        document
-    }
 }
 
 impl Project<ObjectId> {
@@ -103,5 +97,16 @@ impl From<Project<ObjectId>> for PublicProject {
             creator_contacts: project.creator_contacts,
             price_range: project.price_range,
         }
+    }
+}
+
+impl From<Project<ObjectId>> for Option<Document> {
+    fn from(project: Project<ObjectId>) -> Self {
+        if project.publish_options.publish {
+            return None;
+        }
+        let mut document = bson::to_document(&project).unwrap();
+        document.insert("kind", "project");
+        Some(document)
     }
 }

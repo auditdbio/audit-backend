@@ -14,6 +14,7 @@ pub struct Customer<Id> {
     pub last_name: String,
     pub about: String,
     pub company: String,
+    pub public_contacts: bool,
     pub contacts: HashMap<String, String>,
     pub tags: Vec<String>,
     pub last_modified: i64,
@@ -28,16 +29,11 @@ impl Customer<String> {
             last_name: self.last_name,
             about: self.about,
             company: self.company,
+            public_contacts: self.public_contacts,
             contacts: self.contacts,
             tags: self.tags,
             last_modified: self.last_modified,
         }
-    }
-
-    pub fn to_doc(self) -> Document {
-        let mut document = mongodb::bson::to_document(&self).unwrap();
-        document.insert("kind", "customer");
-        document
     }
 }
 
@@ -50,6 +46,7 @@ impl Customer<ObjectId> {
             last_name: self.last_name,
             about: self.about,
             company: self.company,
+            public_contacts: self.public_contacts,
             contacts: self.contacts,
             tags: self.tags,
             last_modified: self.last_modified,
@@ -60,5 +57,17 @@ impl Customer<ObjectId> {
 impl Entity for Customer<ObjectId> {
     fn id(&self) -> ObjectId {
         self.user_id.clone()
+    }
+}
+
+impl From<Customer<ObjectId>> for Option<Document> {
+    fn from(customer: Customer<ObjectId>) -> Self {
+        let mut document = mongodb::bson::to_document(&customer).unwrap();
+        if !customer.public_contacts {
+            document.remove("contacts");
+        }
+        document.remove("last_modified");
+        document.insert("kind", "customer");
+        Some(document)
     }
 }

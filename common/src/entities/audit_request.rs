@@ -62,12 +62,6 @@ impl AuditRequest<String> {
             price_range: self.price_range,
         }
     }
-
-    pub fn to_doc(self) -> Document {
-        let mut document = mongodb::bson::to_document(&self).unwrap();
-        document.insert("kind", "audit_request");
-        document
-    }
 }
 
 impl AuditRequest<ObjectId> {

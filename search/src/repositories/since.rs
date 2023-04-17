@@ -32,7 +32,7 @@ impl Default for Since {
                 let mut map = HashMap::new();
                 map.insert(
                     format!(
-                        "{}://{}/api/project",
+                        "{}://{}/api/project/data",
                         PROTOCOL.as_str(),
                         CUSTOMERS_SERVICE.as_str()
                     ),
@@ -40,7 +40,7 @@ impl Default for Since {
                 );
                 map.insert(
                     format!(
-                        "{}://{}/api/auditor",
+                        "{}://{}/api/auditor/data",
                         PROTOCOL.as_str(),
                         AUDITORS_SERVICE.as_str()
                     ),
@@ -48,28 +48,13 @@ impl Default for Since {
                 );
                 map.insert(
                     format!(
-                        "{}://{}/api/customer",
+                        "{}://{}/api/customer/data",
                         PROTOCOL.as_str(),
                         CUSTOMERS_SERVICE.as_str()
                     ),
                     0,
                 );
-                map.insert(
-                    format!(
-                        "{}://{}/api/audit",
-                        PROTOCOL.as_str(),
-                        AUDITS_SERVICE.as_str()
-                    ),
-                    0,
-                );
-                map.insert(
-                    format!(
-                        "{}://{}/api/request",
-                        PROTOCOL.as_str(),
-                        AUDITS_SERVICE.as_str()
-                    ),
-                    0,
-                );
+
                 map
             },
         }

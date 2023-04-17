@@ -16,8 +16,9 @@ pub struct Auditor<Id> {
     pub company: String,
     pub free_at: String,
     pub tags: Vec<String>,
+    pub public_contacts: bool,
     pub contacts: HashMap<String, String>,
-    pub tax: String,
+    pub tax: String, // TODO: make price range
     pub last_modified: i64,
 }
 
@@ -32,16 +33,11 @@ impl Auditor<String> {
             company: self.company,
             free_at: self.free_at,
             tags: self.tags,
+            public_contacts: self.public_contacts,
             contacts: self.contacts,
             tax: self.tax,
             last_modified: self.last_modified,
         }
-    }
-
-    pub fn to_doc(self) -> Document {
-        let mut document = mongodb::bson::to_document(&self).unwrap();
-        document.insert("kind", "auditor");
-        document
     }
 }
 
@@ -56,6 +52,7 @@ impl Auditor<ObjectId> {
             company: self.company,
             free_at: self.free_at,
             tags: self.tags,
+            public_contacts: self.public_contacts,
             contacts: self.contacts,
             tax: self.tax,
             last_modified: self.last_modified,
@@ -91,6 +88,11 @@ pub struct PublicAuditor {
 
 impl From<Auditor<ObjectId>> for PublicAuditor {
     fn from(auditor: Auditor<ObjectId>) -> Self {
+        let contacts = if auditor.public_contacts {
+            auditor.contacts
+        } else {
+            HashMap::new()
+        };
         Self {
             id: auditor.user_id.to_hex(),
             avatar: auditor.avatar,
@@ -98,10 +100,22 @@ impl From<Auditor<ObjectId>> for PublicAuditor {
             last_name: auditor.last_name,
             about: auditor.about,
             company: auditor.company,
-            contacts: auditor.contacts,
+            contacts,
             free_at: auditor.free_at,
             tax: auditor.tax,
             tags: auditor.tags,
         }
+    }
+}
+
+impl From<Auditor<ObjectId>> for Option<Document> {
+    fn from(auditor: Auditor<ObjectId>) -> Self {
+        let mut document = mongodb::bson::to_document(&auditor).unwrap();
+        if !auditor.public_contacts {
+            document.remove("contacts");
+        }
+        document.remove("last_modified");
+        document.insert("kind", "customer");
+        Some(document)
     }
 }

@@ -51,12 +51,6 @@ impl Audit<String> {
             time: self.time,
         }
     }
-
-    pub fn to_doc(self) -> Document {
-        let mut document = bson::to_document(&self).unwrap();
-        document.insert("kind", "audit");
-        document
-    }
 }
 
 impl Audit<ObjectId> {

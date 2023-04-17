@@ -28,6 +28,16 @@ pub async fn get_customer(context: Context, id: web::Path<String>) -> error::Res
     }
 }
 
+#[get("/api/auditor/my_auditor")]
+pub async fn get_my_customer(context: Context) -> error::Result<HttpResponse> {
+    let res = CustomerService::new(context).my_customer().await?;
+    if let Some(res) = res {
+        Ok(HttpResponse::Ok().json(res.stringify()))
+    } else {
+        Ok(HttpResponse::Ok().json(json! {{}}))
+    }
+}
+
 #[patch("/api/customer/{id}")]
 pub async fn patch_customer(
     context: Context,

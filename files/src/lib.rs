@@ -6,9 +6,9 @@ use actix_web::{
     dev::{ServiceFactory, ServiceRequest, ServiceResponse},
     middleware, web, App,
 };
-use common::{context::ServiceState};
+use common::context::ServiceState;
+use handlers::file::{create_file, delete_file, find_file};
 pub use handlers::*;
-use handlers::file::{create_file, find_file, delete_file};
 
 pub mod handlers;
 pub mod service;
