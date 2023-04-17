@@ -109,6 +109,8 @@ impl SearchRepo {
             );
         }
 
+        log::info!("Search query: {:?}", document);
+
         let cursor = self
             .0
             .collection
