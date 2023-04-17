@@ -29,8 +29,6 @@ impl AuthSession {
 }
 
 pub fn get_auth_header(req: &HttpRequest) -> Option<String> {
-    log::info!("Headers: {:?}", req.headers());
-    log::info!("Headers: {:?}", req.headers().get("Authorization"));
 
     req.headers()
         .get("Authorization")
@@ -41,9 +39,7 @@ pub fn get_auth_header(req: &HttpRequest) -> Option<String> {
 pub fn jwt_from_header(req: &HttpRequest) -> Option<String> {
     // possibly make readable error
     get_auth_header(req)
-        .iter()
-        .map(|x| x.strip_prefix("Bearer ")) // remove prefix
-        .collect()
+        .and_then(|x| x.strip_prefix("Bearer ").map(str::to_string))
 }
 
 pub async fn get_auth_session(jwt: String) -> Result<AuthSession, String> {
