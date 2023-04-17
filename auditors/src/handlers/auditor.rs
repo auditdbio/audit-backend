@@ -245,8 +245,8 @@ mod tests {
                     .into_iter()
                     .collect(),
                 price_range: PriceRange {
-                    begin: 100,
-                    end: 1000,
+                    from: 100,
+                    to: 1000,
                 },
             })
             .to_request();

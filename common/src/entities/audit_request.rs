@@ -10,14 +10,14 @@ use super::role::Role;
 
 #[derive(Debug, Serialize, Deserialize, ToSchema, PartialEq, Clone)]
 pub struct PriceRange {
-    pub begin: i64,
-    pub end: i64,
+    pub from: i64,
+    pub to: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema, PartialEq, Clone)]
 pub struct TimeRange {
-    pub begin: String,
-    pub end: String,
+    pub from: String,
+    pub to: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, ToSchema)]
