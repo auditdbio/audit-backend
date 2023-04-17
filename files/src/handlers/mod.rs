@@ -49,10 +49,13 @@ pub(super) async fn get_audit(
         .send()
         .await
         .unwrap();
-    let Ok(body) = res.json::<Audit<String>>().await else {
-        return None;
-    };
-    Some(body)
+    match res.json::<Audit<String>>().await {
+        Ok(body) => Some(body),
+        Err(e) => {
+            log::error!("Failed to get audit: {}", e);
+            None
+        }
+    }
 }
 
 #[utoipa::path(
