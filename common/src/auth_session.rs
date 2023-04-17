@@ -87,6 +87,8 @@ impl SessionManager for HttpSessionManager {
     type Payload = AuthPayload;
 
     async fn get_session(&self, req: Self::Payload) -> Result<Option<AuthSession>, Self::Error> {
+        log::info!("jwt {:?}", &req.jwt);
+
         let Some(jwt) = req.jwt else {
             return Ok(None);
         };
