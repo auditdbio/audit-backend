@@ -83,6 +83,7 @@ pub struct PatchProjectRequest {
     tags: Option<Vec<String>>,
     status: Option<String>,
     creator_contacts: Option<HashMap<String, String>>,
+    price: Option<i64>,
 }
 
 #[utoipa::path(
@@ -129,6 +130,17 @@ pub async fn patch_project(
     if let Some(status) = data.status {
         project.status = status;
     }
+
+    
+    if let Some(creator_contacts) = data.creator_contacts {
+        project.creator_contacts = creator_contacts;
+    }
+
+    if let Some(price) = data.price {
+        project.price = price;
+    }
+
+    project.last_modified = Utc::now().timestamp_micros();
 
     repo.create(&project).await?;
 
@@ -301,6 +313,7 @@ mod tests {
                 tags: Some(vec!["Test".to_string()]),
                 status: Some("Test".to_string()),
                 creator_contacts: None,
+                price: None,
             })
             .to_request();
         let res = test::call_service(&app, req).await;
