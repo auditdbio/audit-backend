@@ -83,7 +83,8 @@ async fn create_file(
     let mut path = String::new();
     let mut private = false;
     let mut original_name = String::new();
-    let mut audit_id = String::new();
+    let mut auditor_id = String::new();
+    let mut customer_id = String::new();
 
     while let Some(item) = payload.next().await {
         let mut field = item?;
@@ -116,26 +117,26 @@ async fn create_file(
 
                 private = str == "true";
             }
-            "audit" => {
+            "auditorId" => {
                 while let Some(chunk) = field.next().await {
                     let data = chunk?;
-                    audit_id.push_str(&String::from_utf8(data.to_vec()).unwrap());
+                    auditor_id.push_str(&String::from_utf8(data.to_vec()).unwrap());
+                }
+            }
+            "customerId" => {
+                while let Some(chunk) = field.next().await {
+                    let data = chunk?;
+                    customer_id.push_str(&String::from_utf8(data.to_vec()).unwrap());
                 }
             }
             _ => (),
         }
     }
     let allowed_users = if private {
-        let client = reqwest::Client::new();
-
-        let audit_id = ObjectId::from_str(&audit_id).unwrap();
-        let audit = get_audit(&client, &audit_id, get_auth_header(&req).unwrap())
-            .await
-            .unwrap();
 
         vec![
-            ObjectId::from_str(&audit.auditor_id).unwrap(),
-            ObjectId::from_str(&audit.customer_id).unwrap(),
+            ObjectId::from_str(&auditor_id).unwrap(),
+            ObjectId::from_str(&customer_id).unwrap(),
         ]
     } else {
         Vec::new()
