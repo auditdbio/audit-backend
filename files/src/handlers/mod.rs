@@ -133,7 +133,6 @@ async fn create_file(
         }
     }
     let allowed_users = if private {
-
         vec![
             ObjectId::from_str(&auditor_id).unwrap(),
             ObjectId::from_str(&customer_id).unwrap(),

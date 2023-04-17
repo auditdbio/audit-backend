@@ -8,7 +8,7 @@ use actix_web::{
 use chrono::Utc;
 use common::{
     auth_session::{AuthSessionManager, SessionManager},
-    entities::{project::{Project, PublishOptions}},
+    entities::project::{Project, PublishOptions},
 };
 use mongodb::bson::{doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};
@@ -131,7 +131,6 @@ pub async fn patch_project(
         project.status = status;
     }
 
-    
     if let Some(creator_contacts) = data.creator_contacts {
         project.creator_contacts = creator_contacts;
     }
@@ -261,7 +260,7 @@ mod tests {
     use std::collections::HashMap;
 
     use actix_web::test::{self, init_service};
-    use common::{auth_session::{AuthSession, Role}};
+    use common::auth_session::{AuthSession, Role};
     use mongodb::bson::oid::ObjectId;
 
     use crate::{create_test_app, PatchProjectRequest, PostProjectRequest};

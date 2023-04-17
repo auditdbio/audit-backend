@@ -62,7 +62,6 @@ impl SearchRepo {
                     "$search": text,
                 },
             });
-
         }
 
         if let (Some(price_from), Some(price_to)) = (query.price_from, query.price_to) {
@@ -86,8 +85,6 @@ impl SearchRepo {
                     },
                 ]
             });
-
-            
         }
 
         if let (Some(time_from), Some(time_to)) = (query.time_from, query.time_to) {
@@ -95,8 +92,9 @@ impl SearchRepo {
                 "time": {
                     "$gte": time_from,
                     "$lte": time_to,
-                },
+                }
             });
+           
         }
 
         if let Some(ready_to_wait) = query.ready_to_wait {
@@ -110,7 +108,7 @@ impl SearchRepo {
         let cursor = self
             .0
             .collection
-            .find(doc!{ "$and": docs}, find_options)
+            .find(doc! { "$and": docs}, find_options)
             .await
             .unwrap();
 

@@ -8,7 +8,7 @@ use actix_web::{
 use chrono::Utc;
 use common::{
     auth_session::{AuthSessionManager, SessionManager},
-    entities::{auditor::Auditor, audit_request::PriceRange},
+    entities::{audit_request::PriceRange, auditor::Auditor},
 };
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
@@ -215,7 +215,10 @@ pub async fn get_auditors(
 #[cfg(test)]
 mod tests {
     use actix_web::test::{self, init_service};
-    use common::{auth_session::{AuthSession, Role}, entities::audit_request::PriceRange};
+    use common::{
+        auth_session::{AuthSession, Role},
+        entities::audit_request::PriceRange,
+    };
     use mongodb::bson::oid::ObjectId;
 
     use crate::{create_test_app, PostAuditorRequest};

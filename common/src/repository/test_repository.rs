@@ -1,7 +1,10 @@
 use std::sync::Mutex;
 
 use async_trait::async_trait;
-use mongodb::{bson::{self, oid::ObjectId, Bson}, error};
+use mongodb::{
+    bson::{self, oid::ObjectId, Bson},
+    error,
+};
 use serde::{de::DeserializeOwned, Serialize};
 
 use super::{Entity, Repository, TaggableEntity, TaggableEntityRepository};
@@ -25,7 +28,6 @@ impl<T> Repository<T> for TestRepository<T>
 where
     T: Entity + Clone + PartialEq + Send + Sync + Serialize + DeserializeOwned,
 {
-
     type Error = mongodb::error::Error;
 
     async fn create(&self, item: &T) -> error::Result<bool> {

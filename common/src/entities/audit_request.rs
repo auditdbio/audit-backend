@@ -109,4 +109,3 @@ impl Entity for AuditRequest<ObjectId> {
         self.last_modified
     }
 }
-
