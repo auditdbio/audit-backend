@@ -8,7 +8,7 @@ use actix_web::{
 use chrono::Utc;
 use common::{
     auth_session::{AuthSessionManager, SessionManager},
-    entities::{project::{Project, PublishOptions}, audit_request::PriceRange},
+    entities::{project::{Project, PublishOptions}},
 };
 use mongodb::bson::{doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};
@@ -29,7 +29,7 @@ pub struct PostProjectRequest {
     publish: bool,
     ready_to_wait: bool,
     creator_contacts: HashMap<String, String>,
-    price_range: PriceRange,
+    price: i64,
 }
 
 #[utoipa::path(
@@ -66,7 +66,7 @@ pub async fn post_project(
         status: data.status,
         creator_contacts: data.creator_contacts,
         last_modified: Utc::now().timestamp_micros(),
-        price_range: data.price_range,
+        price: data.price,
     };
 
     repo.create(&project).await?;
@@ -249,7 +249,7 @@ mod tests {
     use std::collections::HashMap;
 
     use actix_web::test::{self, init_service};
-    use common::{auth_session::{AuthSession, Role}, entities::audit_request::PriceRange};
+    use common::{auth_session::{AuthSession, Role}};
     use mongodb::bson::oid::ObjectId;
 
     use crate::{create_test_app, PatchProjectRequest, PostProjectRequest};
@@ -274,10 +274,7 @@ mod tests {
                 publish: true,
                 ready_to_wait: false,
                 creator_contacts: HashMap::new(),
-                price_range: PriceRange {
-                    begin: 0,
-                    end: 100,
-                },
+                price: 100,
             })
             .to_request();
         let res = test::call_service(&app, req).await;
