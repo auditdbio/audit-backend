@@ -30,6 +30,8 @@ impl AuthSession {
 
 pub fn get_auth_header(req: &HttpRequest) -> Option<String> {
     log::info!("Headers: {:?}", req.headers());
+    log::info!("Headers: {:?}", req.headers().get("Authorization"));
+
     req.headers()
         .get("Authorization")
         .and_then(|x| x.to_str().ok())
