@@ -8,7 +8,7 @@ use actix_web::{
 use chrono::Utc;
 use common::{
     auth_session::{AuthSessionManager, SessionManager},
-    entities::auditor::Auditor,
+    entities::{auditor::Auditor, audit_request::PriceRange},
 };
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
@@ -25,8 +25,8 @@ pub struct PostAuditorRequest {
     pub company: String,
     pub free_at: String,
     pub tags: Vec<String>,
+    pub price_range: PriceRange,
     pub contacts: HashMap<String, String>,
-    pub tax: String,
 }
 
 #[utoipa::path(
@@ -59,7 +59,7 @@ pub async fn post_auditor(
         free_at: data.free_at,
         contacts: data.contacts,
         tags: data.tags,
-        tax: data.tax,
+        price_range: data.price_range,
         last_modified: Utc::now().timestamp_micros(),
     };
 
@@ -100,7 +100,7 @@ pub struct PatchAuditorRequest {
     about: Option<String>,
     tags: Option<Vec<String>>,
     contacts: Option<HashMap<String, String>>,
-    tax: Option<String>,
+    price_range: Option<PriceRange>,
 }
 
 #[utoipa::path(
@@ -147,8 +147,8 @@ pub async fn patch_auditor(
         auditor.contacts = contacts;
     }
 
-    if let Some(tax) = data.tax {
-        auditor.tax = tax;
+    if let Some(price_range) = data.price_range {
+        auditor.price_range = price_range;
     }
 
     auditor.avatar = data.avatar.unwrap_or(auditor.avatar);
@@ -215,7 +215,7 @@ pub async fn get_auditors(
 #[cfg(test)]
 mod tests {
     use actix_web::test::{self, init_service};
-    use common::auth_session::{AuthSession, Role};
+    use common::{auth_session::{AuthSession, Role}, entities::audit_request::PriceRange};
     use mongodb::bson::oid::ObjectId;
 
     use crate::{create_test_app, PostAuditorRequest};
@@ -244,7 +244,10 @@ mod tests {
                 contacts: vec![("email".to_string(), "test@test.com".to_string())]
                     .into_iter()
                     .collect(),
-                tax: "200".to_string(),
+                price_range: PriceRange {
+                    begin: 100,
+                    end: 1000,
+                },
             })
             .to_request();
 

@@ -6,6 +6,8 @@ use utoipa::ToSchema;
 
 use crate::repository::{Entity, TaggableEntity};
 
+use super::audit_request::PriceRange;
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
 pub struct Auditor<Id> {
     pub user_id: Id,
@@ -17,7 +19,7 @@ pub struct Auditor<Id> {
     pub free_at: String,
     pub tags: Vec<String>,
     pub contacts: HashMap<String, String>,
-    pub tax: String,
+    pub price_range: PriceRange,
     pub last_modified: i64,
 }
 
@@ -33,7 +35,7 @@ impl Auditor<String> {
             free_at: self.free_at,
             tags: self.tags,
             contacts: self.contacts,
-            tax: self.tax,
+            price_range: self.price_range,
             last_modified: self.last_modified,
         }
     }
@@ -57,7 +59,7 @@ impl Auditor<ObjectId> {
             free_at: self.free_at,
             tags: self.tags,
             contacts: self.contacts,
-            tax: self.tax,
+            price_range: self.price_range,
             last_modified: self.last_modified,
         }
     }
