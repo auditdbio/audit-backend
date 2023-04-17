@@ -4,15 +4,13 @@ use actix_multipart::Multipart;
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
 use chrono::Utc;
 use common::{
-    auth_session::{self, get_auth_header, SessionManager},
-    entities::audit::Audit,
-    services::AUDITS_SERVICE,
+    auth_session::{self, SessionManager},
 };
 use mongodb::bson::oid::ObjectId;
 
 use actix_web::Error;
 use futures_util::StreamExt as _;
-use reqwest::Client;
+
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -32,30 +30,6 @@ fn get_extension_from_filename(filename: &str) -> String {
         .and_then(|ext| ext.to_str())
         .unwrap_or("")
         .to_string()
-}
-
-pub(super) async fn get_audit(
-    client: &Client,
-    id: &ObjectId,
-    auth: String,
-) -> Option<Audit<String>> {
-    let res = client
-        .get(format!(
-            "https://{}/api/audits/by_id/{}",
-            AUDITS_SERVICE.as_str(),
-            id.to_hex()
-        ))
-        .header("Authorization", auth)
-        .send()
-        .await
-        .unwrap();
-    match res.json::<Audit<String>>().await {
-        Ok(body) => Some(body),
-        Err(e) => {
-            log::error!("Failed to get audit: {}", e);
-            None
-        }
-    }
 }
 
 #[utoipa::path(

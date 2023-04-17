@@ -3,7 +3,7 @@ use std::sync::Arc;
 use common::repository::mongo_repository::MongoRepository;
 use futures::StreamExt;
 use mongodb::{
-    bson::{doc, Bson, Document},
+    bson::{doc, Document},
     options::FindOptions,
     IndexModel,
 };
@@ -83,6 +83,7 @@ impl SearchRepo {
                             },
                         },
                     },
+
                 ]
             });
         }

@@ -6,7 +6,6 @@ use actix_web::{
 use chrono::Utc;
 use common::{
     auth_session::AuthSessionManager,
-    entities::audit_request::{PriceRange, TimeRange},
 };
 use log::info;
 use mongodb::bson::Document;
