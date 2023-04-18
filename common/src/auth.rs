@@ -1,8 +1,11 @@
 use anyhow::bail;
+use chrono::Utc;
 use jsonwebtoken::{decode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use mongodb::bson::oid::ObjectId;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
+
+use crate::constants::DURATION;
 
 pub static ENCODING_KEY: Lazy<EncodingKey> = Lazy::new(|| {
     let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
@@ -78,25 +81,25 @@ impl Auth {
             alg: Algorithm::HS512,
             ..Default::default()
         };
-
+        let exp = Utc::now().timestamp() + DURATION.num_seconds();
         let claims = match self {
             Auth::Service(name) => Claims {
                 role: Role::Service,
                 user_id: None,
                 service_name: Some(name.clone()),
-                exp: 0,
+                exp,
             },
             Auth::Admin(id) => Claims {
                 role: Role::Admin,
                 user_id: Some(id.to_hex()),
                 service_name: None,
-                exp: 0,
+                exp,
             },
             Auth::User(id) => Claims {
                 role: Role::User,
                 user_id: Some(id.to_hex()),
                 service_name: None,
-                exp: 0,
+                exp,
             },
             Auth::None => bail!("Cannot create token for Auth::None"),
         };
