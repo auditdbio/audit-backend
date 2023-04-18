@@ -97,7 +97,7 @@ impl ProjectService {
         };
 
         let projects = projects
-            .find("customer_id", &Bson::ObjectId(auth.id().unwrap().clone()))
+            .find_many("customer_id", &Bson::ObjectId(auth.id().unwrap().clone()))
             .await?;
 
         Ok(projects.into_iter().map(Project::stringify).collect())

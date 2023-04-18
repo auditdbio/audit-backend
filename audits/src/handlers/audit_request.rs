@@ -35,7 +35,7 @@ pub async fn get_audit_request(
     }
 }
 
-#[get("/api/audit_request/my_audit_request/{role}")]
+#[get("/api/my_audit_request/{role}")]
 pub async fn get_my_audit_request(
     context: Context,
     role: web::Path<Role>,
