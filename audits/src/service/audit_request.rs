@@ -147,7 +147,7 @@ impl RequestService {
             project_name: project.name,
             project_avatar: auditor.avatar,
             project_scope: project.scope,
-            price_range: Some(project.price_range),
+            price_range: Some(auditor.price_range),
             price: None,
             auditor_contacts: auditor.contacts,
             customer_contacts: project.creator_contacts,
