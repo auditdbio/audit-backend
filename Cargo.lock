@@ -1911,6 +1911,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "mail"
+version = "0.1.0"
+dependencies = [
+ "actix-cors",
+ "actix-web",
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "common",
+ "derive_more",
+ "env_logger",
+ "futures",
+ "futures-util",
+ "jsonwebtoken",
+ "lazy_static",
+ "lettre",
+ "log",
+ "mongodb",
+ "rand",
+ "regex",
+ "serde",
+ "serde_json",
+ "sha256",
+ "utoipa",
+ "utoipa-swagger-ui",
+ "uuid 1.2.2",
+]
+
+[[package]]
 name = "match_cfg"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

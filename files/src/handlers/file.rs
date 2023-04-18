@@ -62,7 +62,7 @@ pub async fn create_file(context: Context, mut payload: Multipart) -> error::Res
             _ => (),
         }
     }
-    
+
     let mut allowed_users = vec![];
     if private {
         allowed_users = vec![customer_id.parse()?, auditor_id.parse()?];

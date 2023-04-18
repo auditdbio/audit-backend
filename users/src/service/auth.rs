@@ -45,7 +45,11 @@ impl AuthService {
             bail!("No user found")
         };
 
-        if !Self::request_access(login.password.clone(), user.password.clone(), user.salt.clone()) {
+        if !Self::request_access(
+            login.password.clone(),
+            user.password.clone(),
+            user.salt.clone(),
+        ) {
             bail!("Incorrect password")
         }
         let auth = Auth::User(user.id);

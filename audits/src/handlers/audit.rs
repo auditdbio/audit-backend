@@ -4,7 +4,11 @@ use actix_web::{
     HttpResponse,
 };
 
-use common::{context::Context, error, entities::{audit::Audit, role::Role}};
+use common::{
+    context::Context,
+    entities::{audit::Audit, role::Role},
+    error,
+};
 
 use serde_json::json;
 

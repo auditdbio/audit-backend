@@ -103,7 +103,11 @@ impl ProjectService {
         Ok(projects.into_iter().map(Project::stringify).collect())
     }
 
-    pub async fn change(&self, id: ObjectId, change: ProjectChange) -> anyhow::Result<PublicProject> {
+    pub async fn change(
+        &self,
+        id: ObjectId,
+        change: ProjectChange,
+    ) -> anyhow::Result<PublicProject> {
         let auth = self.context.auth();
 
         let Some(projects) = self.context.get_repository::<Project<ObjectId>>() else {

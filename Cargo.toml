@@ -8,5 +8,6 @@ members = [
     "files",
     "swagger",
     "users",
-    "search"
+    "search",
+    "mail"
 ]

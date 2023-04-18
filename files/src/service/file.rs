@@ -135,7 +135,9 @@ impl FileService {
         if !Read::get_access(auth, &meta) {
             bail!("Access denied for this user")
         }
-        let file = actix_files::NamedFile::open_async(format!("{}.{}", path, meta.extension)).await.unwrap();
+        let file = actix_files::NamedFile::open_async(format!("{}.{}", path, meta.extension))
+            .await
+            .unwrap();
 
         Ok(file)
     }

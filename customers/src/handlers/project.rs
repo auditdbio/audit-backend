@@ -7,9 +7,7 @@ use actix_web::{
 use common::{context::Context, entities::project::PublicProject, error};
 use serde_json::json;
 
-use crate::service::{
-    project::{CreateProject, ProjectService, ProjectChange},
-};
+use crate::service::project::{CreateProject, ProjectChange, ProjectService};
 
 #[post("/api/project")]
 pub async fn post_project(

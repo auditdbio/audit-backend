@@ -145,3 +145,15 @@ impl<'a, 'b> AccessRules<&'a Auth, ()> for GetData {
         }
     }
 }
+
+pub struct SendMail;
+
+impl<'a, 'b> AccessRules<&'a Auth, ()> for SendMail {
+    fn get_access(auth: &'a Auth, _user: ()) -> bool {
+        match auth {
+            Auth::Service(_) | Auth::Admin(_) => true,
+            Auth::User(_) => false,
+            Auth::None => false,
+        }
+    }
+}
