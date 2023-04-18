@@ -14,7 +14,7 @@ async fn main() -> std::io::Result<()> {
         MongoRepository::new(&mongo_uri, "files", "meta").await;
 
     let mut state = ServiceState::new("files".to_string());
-    state.insert(meta_repo);
+    state.insert(Arc::new(meta_repo));
     let state = Arc::new(state);
 
     HttpServer::new(move || create_app(state.clone()))

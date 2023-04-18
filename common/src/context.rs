@@ -26,7 +26,11 @@ impl ServiceState {
         }
     }
 
-    pub fn insert<T>(&mut self, repository: impl Repository<T> + Send + Sync + 'static) {
+    pub fn insert<T: 'static>(&mut self, repository: RepositoryObject<T>) {
+        self.repositories.insert(repository);
+    }
+
+    pub fn insert_manual<T: Send + Sync + 'static>(&mut self, repository: T) {
         self.repositories.insert(repository);
     }
 }
@@ -136,6 +140,10 @@ impl<'a, 'b, T: Serialize> ServiceRequest<'a, 'b, T> {
 impl Context {
     pub fn get_repository<T: 'static>(&self) -> Option<RepositoryObject<T>> {
         self.0.repositories.get::<RepositoryObject<T>>().cloned()
+    }
+
+    pub fn get_repository_manual<T: 'static + Clone>(&self) -> Option<T> {
+        self.0.repositories.get::<T>().cloned()
     }
 
     pub fn try_get_repository<T: 'static>(&self) -> anyhow::Result<RepositoryObject<T>> {

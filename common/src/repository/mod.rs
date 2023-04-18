@@ -21,4 +21,4 @@ pub trait Repository<T> {
     async fn get_all_since(&self, since: i64) -> anyhow::Result<Vec<T>>;
 }
 
-pub type RepositoryObject<T> = Arc<dyn Repository<T>>;
+pub type RepositoryObject<T> = Arc<dyn Repository<T> + Send + Sync + 'static>;

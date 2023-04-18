@@ -20,7 +20,7 @@ async fn main() -> std::io::Result<()> {
     let user_repo = MongoRepository::new(&mongo_uri, "users", "users").await;
 
     let mut state = ServiceState::new("user".to_string());
-    state.insert::<User<ObjectId>>(user_repo);
+    state.insert::<User<ObjectId>>(Arc::new(user_repo));
 
     let state = Arc::new(state);
 
