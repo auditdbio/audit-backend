@@ -33,6 +33,7 @@ pub fn create_app(
         .service(get_auditor)
         .service(patch_auditor)
         .service(delete_auditor)
-        .service(provide_auditor_data);
+        .service(provide_auditor_data)
+        .service(get_my_auditor);
     app
 }

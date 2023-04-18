@@ -44,6 +44,8 @@ pub fn create_app(
         .service(patch_project)
         .service(delete_project)
         .service(provide_customer_data)
-        .service(provide_project_data);
+        .service(provide_project_data)
+        .service(my_customer)
+        .service(my_project);
     app
 }
