@@ -1,9 +1,6 @@
 use actix_web::web;
 use chrono::Utc;
-use common::{
-    context::Context,
-    repository::RepositoryObject,
-};
+use common::{context::Context, repository::RepositoryObject};
 use log::info;
 use mongodb::bson::{Bson, Document};
 use reqwest::Client;

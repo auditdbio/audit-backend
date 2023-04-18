@@ -167,7 +167,7 @@ impl UserService {
             bail!("No user repository found")
         };
 
-        let Some(user) = users.find("id", &Bson::ObjectId(id)).await? else {
+        let Some(user) = users.delete("id", &id).await? else {
             bail!("No user found")
         };
 

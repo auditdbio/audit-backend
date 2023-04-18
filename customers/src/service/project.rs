@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, hash::Hash};
 
 use anyhow::bail;
 use chrono::Utc;
@@ -21,8 +21,7 @@ pub struct CreateProject {
     pub tags: Vec<String>,
     pub publish_options: PublishOptions,
     pub status: String,
-    pub creator_contacts: HashMap<String, String>,
-    pub price_range: PriceRange,
+    pub price: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -35,7 +34,7 @@ pub struct ProjectChange {
     pub publish_options: Option<PublishOptions>,
     pub status: Option<String>,
     pub creator_contacts: Option<HashMap<String, String>>,
-    pub price_range: Option<PriceRange>,
+    pub price: Option<i64>,
 }
 
 pub struct ProjectService {
@@ -66,8 +65,8 @@ impl ProjectService {
             tags: project.tags,
             publish_options: project.publish_options,
             status: project.status,
-            creator_contacts: project.creator_contacts,
-            price_range: project.price_range,
+            creator_contacts: HashMap::new(),
+            price: project.price,
             last_modified: Utc::now().timestamp_micros(),
         };
 
@@ -151,8 +150,8 @@ impl ProjectService {
             project.creator_contacts = creator_contacts;
         }
 
-        if let Some(price_range) = change.price_range {
-            project.price_range = price_range;
+        if let Some(price) = change.price {
+            project.price = price;
         }
 
         project.last_modified = Utc::now().timestamp_micros();

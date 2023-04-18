@@ -96,7 +96,6 @@ impl SearchRepo {
                     "$lte": time_to,
                 }
             });
-           
         }
 
         if let Some(ready_to_wait) = query.ready_to_wait {

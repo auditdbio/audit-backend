@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use actix_web::{dev::Payload, FromRequest, HttpRequest, web::Data};
+use actix_web::{dev::Payload, web::Data, FromRequest, HttpRequest};
 use anyhow::anyhow;
 use serde::Serialize;
 use type_map::concurrent::TypeMap;
@@ -8,7 +8,7 @@ use type_map::concurrent::TypeMap;
 use crate::{
     auth::Auth,
     error::{self, ServiceError},
-    repository::{Repository, RepositoryObject},
+    repository::RepositoryObject,
 };
 
 pub struct ServiceState {

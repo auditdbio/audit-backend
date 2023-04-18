@@ -26,7 +26,7 @@ pub struct Project<Id> {
     pub status: String,
     pub creator_contacts: HashMap<String, String>,
     pub last_modified: i64,
-    pub price_range: PriceRange,
+    pub price: i64,
 }
 
 impl Project<String> {
@@ -42,7 +42,7 @@ impl Project<String> {
             status: self.status,
             creator_contacts: self.creator_contacts,
             last_modified: self.last_modified,
-            price_range: self.price_range,
+            price: self.price,
         }
     }
 }
@@ -60,7 +60,7 @@ impl Project<ObjectId> {
             status: self.status,
             creator_contacts: self.creator_contacts,
             last_modified: self.last_modified,
-            price_range: self.price_range,
+            price: self.price,
         }
     }
 }
@@ -81,7 +81,7 @@ pub struct PublicProject {
     pub publish_options: PublishOptions,
     pub status: String,
     pub creator_contacts: HashMap<String, String>,
-    pub price_range: PriceRange,
+    pub price: i64,
 }
 
 impl From<Project<ObjectId>> for PublicProject {
@@ -95,7 +95,7 @@ impl From<Project<ObjectId>> for PublicProject {
             publish_options: project.publish_options,
             status: project.status,
             creator_contacts: project.creator_contacts,
-            price_range: project.price_range,
+            price: project.price,
         }
     }
 }

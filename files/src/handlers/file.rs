@@ -65,7 +65,6 @@ pub async fn create_file(context: Context, mut payload: Multipart) -> error::Res
 
     let allowed_users = vec![customer_id.parse()?, auditor_id.parse()?];
 
-
     FileService::new(context)
         .create_file(path, allowed_users, private, original_name, file.concat())
         .await?;

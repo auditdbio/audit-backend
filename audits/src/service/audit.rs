@@ -5,12 +5,7 @@ use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
     context::Context,
-    entities::{
-        audit::Audit,
-        audit_request::TimeRange,
-        project::PublicProject,
-        role::Role,
-    },
+    entities::{audit::Audit, audit_request::TimeRange, project::PublicProject, role::Role},
     services::{CUSTOMERS_SERVICE, PROTOCOL},
 };
 use mongodb::bson::{oid::ObjectId, Bson};

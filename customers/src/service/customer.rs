@@ -148,7 +148,7 @@ impl CustomerService {
             bail!("No customer repository found")
         };
 
-        let Some(mut customer) = customers.find("id", &Bson::ObjectId(id)).await? else {
+        let Some(mut customer) = customers.find("user_id", &Bson::ObjectId(id)).await? else {
             bail!("No customer found")
         };
 
@@ -203,7 +203,7 @@ impl CustomerService {
             bail!("No customer repository found")
         };
 
-        let Some(customer) = customers.find("id", &Bson::ObjectId(id)).await? else {
+        let Some(customer) = customers.delete("id", &id).await? else {
             bail!("No customer found")
         };
 
