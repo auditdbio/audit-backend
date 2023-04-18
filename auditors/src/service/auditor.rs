@@ -124,7 +124,7 @@ impl AuditorService {
             bail!("No auditor repository found")
         };
 
-        let Some(mut auditor) = auditors.find("id", &Bson::ObjectId(id)).await? else {
+        let Some(mut auditor) = auditors.find("user_id", &Bson::ObjectId(id)).await? else {
             bail!("No auditor found")
         };
 
@@ -170,7 +170,7 @@ impl AuditorService {
 
         auditor.last_modified = Utc::now().timestamp_micros();
 
-        auditors.delete("id", &id).await?;
+        auditors.delete("user_id", &id).await?;
         auditors.insert(&auditor).await?;
 
         Ok(auditor.into())
@@ -183,7 +183,7 @@ impl AuditorService {
             bail!("No auditor repository found")
         };
 
-        let Some(auditor) = auditors.find("id", &Bson::ObjectId(id)).await? else {
+        let Some(auditor) = auditors.delete("user_id", &id).await? else {
             bail!("No auditor found")
         };
 

@@ -28,7 +28,7 @@ pub async fn get_customer(context: Context, id: web::Path<String>) -> error::Res
     }
 }
 
-#[get("/api/auditor/my_customer")]
+#[get("/api/my_customer")]
 pub async fn my_customer(context: Context) -> error::Result<HttpResponse> {
     let res = CustomerService::new(context).my_customer().await?;
     if let Some(res) = res {

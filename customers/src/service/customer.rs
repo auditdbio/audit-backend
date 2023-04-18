@@ -190,7 +190,7 @@ impl CustomerService {
 
         customer.last_modified = Utc::now().timestamp_micros();
 
-        customers.delete("id", &id).await?;
+        customers.delete("user_id", &id).await?;
         customers.insert(&customer).await?;
 
         Ok(customer.into())
@@ -203,7 +203,7 @@ impl CustomerService {
             bail!("No customer repository found")
         };
 
-        let Some(customer) = customers.delete("id", &id).await? else {
+        let Some(customer) = customers.delete("user_id", &id).await? else {
             bail!("No customer found")
         };
 

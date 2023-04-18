@@ -124,7 +124,7 @@ impl AuditService {
             bail!("No audit repository found")
         };
 
-        let Some(audit) = audits.find("user_id", &Bson::ObjectId(id)).await? else {
+        let Some(audit) = audits.find("id", &Bson::ObjectId(id)).await? else {
             return Ok(None);
         };
 

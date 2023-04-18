@@ -28,7 +28,7 @@ pub async fn get_auditor(context: Context, id: web::Path<String>) -> error::Resu
     }
 }
 
-#[get("/api/auditor/my_auditor")]
+#[get("/api/my_auditor")]
 pub async fn get_my_auditor(context: Context) -> error::Result<HttpResponse> {
     let res = AuditorService::new(context).my_auditor().await?;
     if let Some(res) = res {

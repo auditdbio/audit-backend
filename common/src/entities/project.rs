@@ -6,8 +6,6 @@ use utoipa::ToSchema;
 
 use crate::repository::Entity;
 
-use super::audit_request::PriceRange;
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
 pub struct PublishOptions {
     pub publish: bool,
