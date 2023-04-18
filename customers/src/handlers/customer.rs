@@ -29,10 +29,10 @@ pub async fn get_customer(context: Context, id: web::Path<String>) -> error::Res
 }
 
 #[get("/api/auditor/my_auditor")]
-pub async fn get_my_customer(context: Context) -> error::Result<HttpResponse> {
+pub async fn my_customer(context: Context) -> error::Result<HttpResponse> {
     let res = CustomerService::new(context).my_customer().await?;
     if let Some(res) = res {
-        Ok(HttpResponse::Ok().json(res.stringify()))
+        Ok(HttpResponse::Ok().json(res))
     } else {
         Ok(HttpResponse::Ok().json(json! {{}}))
     }

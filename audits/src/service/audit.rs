@@ -5,7 +5,7 @@ use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
     context::Context,
-    entities::{audit::Audit, audit_request::TimeRange},
+    entities::{audit::Audit, audit_request::TimeRange, role::Role},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -118,6 +118,26 @@ impl AuditService {
         }
 
         Ok(Some(audit.into()))
+    }
+
+    pub async fn my_audit(&self, role: Role) -> anyhow::Result<Vec<Audit<String>>> {
+        let auth = self.context.auth();
+
+        let Some(audits) = self.context.get_repository::<Audit<ObjectId>>() else {
+            bail!("No audit repository found")
+        };
+
+        let audits = match role {
+            Role::Auditor => audits
+                .find_many("auditor_id", &Bson::ObjectId(auth.id().unwrap().clone()))
+                .await?,
+            Role::Customer => audits
+                .find_many("customer_id", &Bson::ObjectId(auth.id().unwrap().clone()))
+                .await?,
+            _ => bail!("User is not available to change this audit"),
+        };
+
+        Ok(audits.into_iter().map(Audit::stringify).collect())
     }
 
     pub async fn change(&self, id: ObjectId, change: AuditChange) -> anyhow::Result<PublicAudit> {

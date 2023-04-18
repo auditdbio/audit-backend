@@ -107,6 +107,22 @@ impl UserService {
         Ok(Some(user.into()))
     }
 
+    pub async fn my_user(&self) -> anyhow::Result<Option<User<String>>> {
+        let auth = self.context.auth();
+
+        let Some(users) = self.context.get_repository::<User<ObjectId>>() else {
+            bail!("No user repository found")
+        };
+
+        let Some(user) = users.find("id", &Bson::ObjectId(auth.id().unwrap().clone())).await? else {
+            return Ok(None);
+        };
+
+
+
+        Ok(Some(user.stringify()))
+    }
+
     pub async fn change(&self, id: ObjectId, change: UserChange) -> anyhow::Result<PublicUser> {
         let auth = self.context.auth();
 

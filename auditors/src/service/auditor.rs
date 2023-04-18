@@ -93,7 +93,7 @@ impl AuditorService {
         Ok(Some(auditor.into()))
     }
 
-    pub async fn my_auditor(&self) -> anyhow::Result<Option<Auditor<ObjectId>>> {
+    pub async fn my_auditor(&self) -> anyhow::Result<Option<Auditor<String>>> {
         let auth = self.context.auth();
 
         let Some(auditors) = self.context.get_repository::<Auditor<ObjectId>>() else {
@@ -102,7 +102,8 @@ impl AuditorService {
 
         let auditor = auditors
             .find("user_id", &Bson::ObjectId(auth.id().unwrap().clone()))
-            .await?;
+            .await?
+            .map(Auditor::stringify);
 
         Ok(auditor)
     }

@@ -118,7 +118,7 @@ impl CustomerService {
         Ok(Some(customer.into()))
     }
 
-    pub async fn my_customer(&self) -> anyhow::Result<Option<Customer<ObjectId>>> {
+    pub async fn my_customer(&self) -> anyhow::Result<Option<Customer<String>>> {
         let auth = self.context.auth();
 
         let Some(customers) = self.context.get_repository::<Customer<ObjectId>>() else {
@@ -127,7 +127,8 @@ impl CustomerService {
 
         let customer = customers
             .find("user_id", &Bson::ObjectId(auth.id().unwrap().clone()))
-            .await?;
+            .await?
+            .map(Customer::stringify);
 
         Ok(customer)
     }

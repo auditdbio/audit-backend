@@ -28,6 +28,16 @@ pub async fn find_user(context: Context, id: Path<String>) -> error::Result<Http
     }
 }
 
+#[get("/api/my_user")]
+pub async fn my_user(context: Context) -> error::Result<HttpResponse> {
+    let user = UserService::new(context).my_user().await?;
+    if let Some(user) = user {
+        Ok(HttpResponse::Ok().json(user))
+    } else {
+        Ok(HttpResponse::Ok().json(json! {{}}))
+    }
+}
+
 #[patch("/api/user/{id}")]
 pub async fn change_user(
     context: Context,

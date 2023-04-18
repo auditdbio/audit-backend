@@ -4,7 +4,7 @@ use actix_web::{
     HttpResponse,
 };
 
-use common::{context::Context, error};
+use common::{context::Context, error, entities::{audit_request::AuditRequest, role::Role}};
 
 use serde_json::json;
 
@@ -29,6 +29,11 @@ pub async fn get_audit_request(
     } else {
         Ok(HttpResponse::Ok().json(json! {{}}))
     }
+}
+
+#[get("/api/my_audit_request/{role}")]
+pub async fn get_my_audit_request(context: Context, role: web::Path<Role>) -> error::Result<Json<Vec<AuditRequest<String>>>> {
+    Ok(Json(RequestService::new(context).my_request(role.into_inner()).await?))
 }
 
 #[patch("/api/audit_request/{id}")]

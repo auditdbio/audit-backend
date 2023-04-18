@@ -94,7 +94,7 @@ impl ProjectService {
         Ok(Some(project.into()))
     }
 
-    pub async fn my_projects(&self) -> anyhow::Result<Vec<PublicProject>> {
+    pub async fn my_projects(&self) -> anyhow::Result<Vec<Project<String>>> {
         let auth = self.context.auth();
 
         let Some(projects) = self.context.get_repository::<Project<ObjectId>>() else {
@@ -105,7 +105,7 @@ impl ProjectService {
             .find("customer_id", &Bson::ObjectId(auth.id().unwrap().clone()))
             .await?;
 
-        Ok(projects.into_iter().map(|project| project.into()).collect())
+        Ok(projects.into_iter().map(Project::stringify).collect())
     }
 
     pub async fn change(&self, change: ProjectChange) -> anyhow::Result<PublicProject> {

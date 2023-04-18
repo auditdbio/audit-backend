@@ -181,6 +181,36 @@ impl RequestService {
         Ok(Some(request.into()))
     }
 
+    pub async fn my_request(&self, role: Role) -> anyhow::Result<Vec<AuditRequest<String>>> {
+        let auth = self.context.auth();
+
+        let Some(requests) = self.context.get_repository::<AuditRequest<ObjectId>>() else {
+            bail!("No customer repository found")
+        };
+
+        let Some(user_id) = auth.id() else {
+            bail!("Audit can be created only by authenticated user")
+        };
+
+        let id = match role {
+            Role::Auditor => "auditor_id",
+            Role::Customer => "customer_id",
+            _ => bail!("Only auditor or customer can have requests"),
+        };
+
+        let result = requests
+            .find_many(
+                id,
+                &Bson::ObjectId(user_id.clone()),
+            )
+            .await?
+            .into_iter()
+            .map(AuditRequest::stringify)
+            .collect();
+
+        Ok(result)
+    }
+
     pub async fn change(
         &self,
         id: ObjectId,

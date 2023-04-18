@@ -32,7 +32,7 @@ pub async fn get_auditor(context: Context, id: web::Path<String>) -> error::Resu
 pub async fn get_my_auditor(context: Context) -> error::Result<HttpResponse> {
     let res = AuditorService::new(context).my_auditor().await?;
     if let Some(res) = res {
-        Ok(HttpResponse::Ok().json(res.stringify()))
+        Ok(HttpResponse::Ok().json(res))
     } else {
         Ok(HttpResponse::Ok().json(json! {{}}))
     }
