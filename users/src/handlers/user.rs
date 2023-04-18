@@ -28,7 +28,7 @@ pub async fn find_user(context: Context, id: Path<String>) -> error::Result<Http
     }
 }
 
-#[get("/api/my_user")]
+#[get("/api/user/my_user")]
 pub async fn my_user(context: Context) -> error::Result<HttpResponse> {
     let user = UserService::new(context).my_user().await?;
     if let Some(user) = user {
