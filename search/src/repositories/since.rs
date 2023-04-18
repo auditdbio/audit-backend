@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use common::repository::Entity;
-use common::services::{AUDITORS_SERVICE, AUDITS_SERVICE, CUSTOMERS_SERVICE};
+use common::services::{AUDITORS_SERVICE, CUSTOMERS_SERVICE};
 use lazy_static::lazy_static;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};

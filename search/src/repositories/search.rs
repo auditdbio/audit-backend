@@ -68,18 +68,18 @@ impl SearchRepo {
             document.insert(
                 "price",
                 doc! {
-                    "$gte": price_range.begin,
-                    "$lte": price_range.end,
+                    "$gte": price_range.from,
+                    "$lte": price_range.to,
                 },
             );
             document.insert(
                 "price_range",
                 doc! {
                     "begin": {
-                        "$gte": price_range.begin,
+                        "$gte": price_range.from,
                     },
                     "end": {
-                        "$lte": price_range.end,
+                        "$lte": price_range.to,
                     },
                 },
             );
@@ -90,10 +90,10 @@ impl SearchRepo {
                 "time",
                 doc! {
                     "begin": {
-                        "$gte": time_range.begin,
+                        "$gte": time_range.from,
                     },
                     "end": {
-                        "$lte": time_range.end,
+                        "$lte": time_range.to,
                     },
                 },
             );

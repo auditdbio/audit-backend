@@ -1,5 +1,6 @@
 use anyhow::bail;
 use common::{
+    access_rules::{AccessRules, GetData},
     context::Context,
     entities::{customer::Customer, project::Project},
 };
@@ -17,7 +18,9 @@ impl IndexerService {
     pub async fn index_customer(&self, since: i64) -> anyhow::Result<Vec<Document>> {
         let auth = self.context.auth();
 
-        // TODO: make authentication check
+        if !GetData::get_access(auth, ()) {
+            bail!("No access to get customer data")
+        }
 
         let Some(customers) = self.context.get_repository::<Customer<ObjectId>>() else {
             bail!("No customer repository found")
@@ -34,8 +37,9 @@ impl IndexerService {
     pub async fn index_project(&self, since: i64) -> anyhow::Result<Vec<Document>> {
         let auth = self.context.auth();
 
-        // TODO: make authentication check
-
+        if !GetData::get_access(auth, ()) {
+            bail!("No access to get customer data")
+        }
         let Some(customers) = self.context.get_repository::<Project<ObjectId>>() else {
             bail!("No project repository found")
         };
@@ -48,44 +52,3 @@ impl IndexerService {
             .collect::<Vec<_>>())
     }
 }
-
-/*
-#[get("/api/customer/data/{resource}/{timestamp}")]
-pub async fn get_data(
-    _req: HttpRequest,
-    since: web::Path<(String, i64)>,
-    project_repo: web::Data<ProjectRepo>,
-    customer_repo: web::Data<CustomerRepo>,
-    _manager: web::Data<AuthSessionManager>,
-) -> Result<HttpResponse> {
-    let (resource, since) = since.into_inner();
-    //let session = manager.get_session(req.into()).await.unwrap(); // TODO: remove unwrap
-    // if session.role != Role::Service {
-    //     return Ok(HttpResponse::Unauthorized().finish());
-    // }
-
-    match resource.as_str() {
-        "project" => {
-            let projects = project_repo.get_all_since(since).await?;
-            Ok(HttpResponse::Ok().json(
-                projects
-                    .into_iter()
-                    .map(Project::stringify)
-                    .map(Project::to_doc)
-                    .collect::<Vec<_>>(),
-            ))
-        }
-        "customer" => {
-            let customers = customer_repo.get_all_since(since).await?;
-            Ok(HttpResponse::Ok().json(
-                customers
-                    .into_iter()
-                    .map(Customer::stringify)
-                    .map(Customer::to_doc)
-                    .collect::<Vec<_>>(),
-            ))
-        }
-        _ => Ok(HttpResponse::NotFound().finish()),
-    }
-}
- */

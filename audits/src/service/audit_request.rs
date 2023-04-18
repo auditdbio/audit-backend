@@ -28,13 +28,10 @@ pub struct CreateRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RequestChange {
-    auditor_id: Option<String>,
-    project_id: Option<String>,
     description: Option<String>,
     time: Option<TimeRange>,
     project_name: Option<String>,
     project_avatar: Option<String>,
-    project_description: Option<String>,
     project_scope: Option<Vec<String>>,
     price_range: Option<PriceRange>,
     price: Option<i64>,
@@ -195,14 +192,10 @@ impl RequestService {
         let id = match role {
             Role::Auditor => "auditor_id",
             Role::Customer => "customer_id",
-            _ => bail!("Only auditor or customer can have requests"),
         };
 
         let result = requests
-            .find_many(
-                id,
-                &Bson::ObjectId(user_id.clone()),
-            )
+            .find_many(id, &Bson::ObjectId(user_id.clone()))
             .await?
             .into_iter()
             .map(AuditRequest::stringify)
@@ -230,7 +223,51 @@ impl RequestService {
             bail!("User is not available to change this customer")
         }
 
-        // TODO: Change audit here
+        if let Some(description) = change.description {
+            request.description = description;
+        }
+
+        if let Some(time) = change.time {
+            request.time = time;
+        }
+
+        if let Some(project_name) = change.project_name {
+            request.project_name = project_name;
+        }
+
+        if let Some(project_avatar) = change.project_avatar {
+            request.project_avatar = project_avatar;
+        }
+
+        if let Some(project_scope) = change.project_scope {
+            request.project_scope = project_scope;
+        }
+
+        if let Some(price) = change.price {
+            request.price = Some(price);
+        }
+
+        if let Some(price_range) = change.price_range {
+            request.price_range = Some(price_range);
+        }
+
+        if let Some(auditor_contacts) = change.auditor_contacts {
+            request.auditor_contacts = auditor_contacts;
+        }
+
+        if let Some(customer_contacts) = change.customer_contacts {
+            request.customer_contacts = customer_contacts;
+        }
+
+        let role = if auth.id() == Some(&request.customer_id) {
+            Role::Customer
+        } else if auth.id() == Some(&request.auditor_id) {
+            Role::Auditor
+        } else {
+            bail!("User is not available to change this customer")
+        };
+
+        request.last_changer = role;
 
         request.last_modified = Utc::now().timestamp_micros();
 

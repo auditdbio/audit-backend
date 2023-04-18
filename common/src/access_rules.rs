@@ -133,3 +133,15 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b Audit<ObjectId>> for Edit {
         }
     }
 }
+
+pub struct GetData;
+
+impl<'a, 'b> AccessRules<&'a Auth, ()> for GetData {
+    fn get_access(auth: &'a Auth, _user: ()) -> bool {
+        match auth {
+            Auth::Service(_) | Auth::Admin(_) => true,
+            Auth::User(_) => false,
+            Auth::None => false,
+        }
+    }
+}

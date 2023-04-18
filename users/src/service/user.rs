@@ -118,8 +118,6 @@ impl UserService {
             return Ok(None);
         };
 
-
-
         Ok(Some(user.stringify()))
     }
 

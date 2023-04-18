@@ -1,5 +1,9 @@
 use anyhow::bail;
-use common::{context::Context, entities::auditor::Auditor};
+use common::{
+    access_rules::{AccessRules, GetData},
+    context::Context,
+    entities::auditor::Auditor,
+};
 use mongodb::bson::{oid::ObjectId, Document};
 
 pub struct IndexerService {
@@ -14,7 +18,9 @@ impl IndexerService {
     pub async fn index_auditor(&self, since: i64) -> anyhow::Result<Vec<Document>> {
         let auth = self.context.auth();
 
-        // TODO: make authentication check
+        if !GetData::get_access(auth, ()) {
+            bail!("No access to get auditor data")
+        }
 
         let Some(customers) = self.context.get_repository::<Auditor<ObjectId>>() else {
             bail!("No customer repository found")

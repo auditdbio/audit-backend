@@ -71,7 +71,6 @@ impl FromRequest for Context {
 }
 
 pub struct ServiceRequest<'a, 'b, T = ()> {
-    // TODO: return error, if we try to send body into GET request
     client: &'a reqwest::Client,
     method: reqwest::Method,
     url: Option<String>,

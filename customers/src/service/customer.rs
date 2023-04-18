@@ -17,6 +17,7 @@ pub struct CreateCustomer {
     last_name: String,
     about: String,
     company: String,
+    public_contacts: bool,
     contacts: HashMap<String, String>,
     tags: Vec<String>,
 }
@@ -28,6 +29,7 @@ pub struct CustomerChange {
     last_name: Option<String>,
     about: Option<String>,
     company: Option<String>,
+    public_contacts: Option<bool>,
     contacts: Option<HashMap<String, String>>,
     tags: Option<Vec<String>>,
 }
@@ -40,6 +42,7 @@ pub struct PublicCustomer {
     last_name: String,
     about: String,
     company: String,
+    public_contacts: bool,
     contacts: HashMap<String, String>,
     tags: Vec<String>,
 }
@@ -57,6 +60,7 @@ impl From<Customer<ObjectId>> for PublicCustomer {
             last_name: customer.last_name,
             about: customer.about,
             company: customer.company,
+            public_contacts: customer.public_contacts,
             contacts,
             tags: customer.tags,
         }
@@ -92,7 +96,7 @@ impl CustomerService {
             contacts: customer.contacts,
             tags: customer.tags,
             last_modified: Utc::now().timestamp_micros(),
-            public_contacts: false, //TODO: ask frontend
+            public_contacts: customer.public_contacts,
         };
 
         customers.insert(&customer).await?;
@@ -170,6 +174,10 @@ impl CustomerService {
 
         if let Some(company) = change.company {
             customer.company = company;
+        }
+
+        if let Some(public_contacts) = change.public_contacts {
+            customer.public_contacts = public_contacts;
         }
 
         if let Some(contacts) = change.contacts {

@@ -5,7 +5,10 @@ use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
     context::Context,
-    entities::auditor::{Auditor, PublicAuditor},
+    entities::{
+        audit_request::PriceRange,
+        auditor::{Auditor, PublicAuditor},
+    },
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -17,9 +20,10 @@ pub struct CreateAuditor {
     last_name: String,
     about: String,
     company: String,
+    public_contacts: bool,
     contacts: HashMap<String, String>,
     free_at: String,
-    tax: String,
+    price_range: PriceRange,
     tags: Vec<String>,
 }
 
@@ -30,9 +34,10 @@ pub struct AuditorChange {
     last_name: Option<String>,
     about: Option<String>,
     company: Option<String>,
+    public_contacts: Option<bool>,
     contacts: Option<HashMap<String, String>>,
     free_at: Option<String>,
-    tax: Option<String>,
+    price_range: Option<PriceRange>,
     tags: Option<Vec<String>>,
 }
 
@@ -62,12 +67,12 @@ impl AuditorService {
             last_name: auditor.last_name,
             about: auditor.about,
             company: auditor.company,
-            public_contacts: true, // TODO: make it configurable
+            public_contacts: auditor.public_contacts,
             contacts: auditor.contacts,
             tags: auditor.tags,
             last_modified: Utc::now().timestamp_micros(),
             free_at: auditor.free_at,
-            tax: auditor.tax,
+            price_range: auditor.price_range,
         };
 
         auditors.insert(&auditor).await?;
@@ -159,8 +164,8 @@ impl AuditorService {
             auditor.free_at = free_at;
         }
 
-        if let Some(tax) = change.tax {
-            auditor.tax = tax;
+        if let Some(price_range) = change.price_range {
+            auditor.price_range = price_range;
         }
 
         auditor.last_modified = Utc::now().timestamp_micros();

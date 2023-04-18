@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use actix_web::HttpServer;
 use audits::create_app;
-use common::auth_session::{AuthSessionManager, HttpSessionManager};
+
 use common::context::ServiceState;
 use common::entities::audit::Audit;
 use common::entities::audit_request::AuditRequest;

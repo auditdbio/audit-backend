@@ -5,7 +5,13 @@ use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
     context::Context,
-    entities::{audit::Audit, audit_request::TimeRange, role::Role},
+    entities::{
+        audit::Audit,
+        audit_request::TimeRange,
+        project::PublicProject,
+        role::Role,
+    },
+    services::{CUSTOMERS_SERVICE, PROTOCOL},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -18,7 +24,7 @@ pub struct AuditChange {
     pub status: Option<String>,
     pub scope: Option<Vec<String>>,
     pub report: Option<String>,
-    pub time: Option<i64>,
+    pub time: Option<TimeRange>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -78,6 +84,20 @@ impl AuditService {
             bail!("No audit repository found")
         };
 
+        let project = self
+            .context
+            .make_request::<PublicProject>()
+            .get(format!(
+                "{}://{}/api/project/{}",
+                PROTOCOL.as_str(),
+                CUSTOMERS_SERVICE.as_str(),
+                request.project_id
+            ))
+            .send()
+            .await?
+            .json::<PublicProject>()
+            .await?;
+
         let audit = Audit {
             id: ObjectId::new(),
             customer_id: request.customer_id.parse()?,
@@ -91,7 +111,7 @@ impl AuditService {
             price: request.price.ok_or(anyhow::anyhow!("Price is required"))?,
             auditor_contacts: request.auditor_contacts,
             customer_contacts: request.customer_contacts,
-            tags: todo!(),
+            tags: project.tags,
             last_modified: Utc::now().timestamp_micros(),
             report: None,
             time: request.time,
@@ -128,13 +148,16 @@ impl AuditService {
         };
 
         let audits = match role {
-            Role::Auditor => audits
-                .find_many("auditor_id", &Bson::ObjectId(auth.id().unwrap().clone()))
-                .await?,
-            Role::Customer => audits
-                .find_many("customer_id", &Bson::ObjectId(auth.id().unwrap().clone()))
-                .await?,
-            _ => bail!("User is not available to change this audit"),
+            Role::Auditor => {
+                audits
+                    .find_many("auditor_id", &Bson::ObjectId(auth.id().unwrap().clone()))
+                    .await?
+            }
+            Role::Customer => {
+                audits
+                    .find_many("customer_id", &Bson::ObjectId(auth.id().unwrap().clone()))
+                    .await?
+            }
         };
 
         Ok(audits.into_iter().map(Audit::stringify).collect())
@@ -155,7 +178,25 @@ impl AuditService {
             bail!("User is not available to change this audit")
         }
 
-        // TODO: Change audit here
+        if let Some(avatar) = change.avatar {
+            audit.avatar = avatar;
+        }
+
+        if let Some(status) = change.status {
+            audit.status = status;
+        }
+
+        if let Some(scope) = change.scope {
+            audit.scope = scope;
+        }
+
+        if let Some(report) = change.report {
+            audit.report = Some(report);
+        }
+
+        if let Some(time) = change.time {
+            audit.time = time;
+        }
 
         audit.last_modified = Utc::now().timestamp_micros();
 
