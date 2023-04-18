@@ -1,14 +1,11 @@
-use std::{collections::HashMap, hash::Hash};
+use std::collections::HashMap;
 
 use anyhow::bail;
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
     context::Context,
-    entities::{
-        audit_request::PriceRange,
-        project::{Project, PublicProject, PublishOptions},
-    },
+    entities::project::{Project, PublicProject, PublishOptions},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -26,7 +23,6 @@ pub struct CreateProject {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ProjectChange {
-    pub id: ObjectId,
     pub name: Option<String>,
     pub description: Option<String>,
     pub scope: Option<Vec<String>>,
@@ -107,14 +103,14 @@ impl ProjectService {
         Ok(projects.into_iter().map(Project::stringify).collect())
     }
 
-    pub async fn change(&self, change: ProjectChange) -> anyhow::Result<PublicProject> {
+    pub async fn change(&self, id: ObjectId, change: ProjectChange) -> anyhow::Result<PublicProject> {
         let auth = self.context.auth();
 
         let Some(projects) = self.context.get_repository::<Project<ObjectId>>() else {
             bail!("No project repository found")
         };
 
-        let Some(mut project) = projects.find("id", &Bson::ObjectId(change.id)).await? else {
+        let Some(mut project) = projects.find("id", &Bson::ObjectId(id)).await? else {
             bail!("No project found")
         };
 
@@ -156,7 +152,7 @@ impl ProjectService {
 
         project.last_modified = Utc::now().timestamp_micros();
 
-        projects.delete("id", &change.id).await?;
+        projects.delete("id", &id).await?;
         projects.insert(&project).await?;
 
         Ok(project.into())

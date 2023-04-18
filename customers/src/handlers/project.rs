@@ -8,8 +8,7 @@ use common::{context::Context, entities::project::PublicProject, error};
 use serde_json::json;
 
 use crate::service::{
-    customer::{CustomerChange, CustomerService, PublicCustomer},
-    project::{CreateProject, ProjectService},
+    project::{CreateProject, ProjectService, ProjectChange},
 };
 
 #[post("/api/project")]
@@ -22,7 +21,7 @@ pub async fn post_project(
 
 #[get("/api/project/{id}")]
 pub async fn get_project(context: Context, id: web::Path<String>) -> error::Result<HttpResponse> {
-    let res = CustomerService::new(context).find(id.parse()?).await?;
+    let res = ProjectService::new(context).find(id.parse()?).await?;
     if let Some(res) = res {
         Ok(HttpResponse::Ok().json(res))
     } else {
@@ -30,14 +29,20 @@ pub async fn get_project(context: Context, id: web::Path<String>) -> error::Resu
     }
 }
 
+#[get("/api/project/my_project")]
+pub async fn my_project(context: Context) -> error::Result<HttpResponse> {
+    let res = ProjectService::new(context).my_projects().await?;
+    Ok(HttpResponse::Ok().json(res))
+}
+
 #[patch("/api/project/{id}")]
 pub async fn patch_project(
     context: Context,
     id: web::Path<String>,
-    Json(data): Json<CustomerChange>,
-) -> error::Result<Json<PublicCustomer>> {
+    Json(data): Json<ProjectChange>,
+) -> error::Result<Json<PublicProject>> {
     Ok(Json(
-        CustomerService::new(context)
+        ProjectService::new(context)
             .change(id.parse()?, data)
             .await?,
     ))
@@ -47,8 +52,8 @@ pub async fn patch_project(
 pub async fn delete_project(
     context: Context,
     id: web::Path<String>,
-) -> error::Result<Json<PublicCustomer>> {
+) -> error::Result<Json<PublicProject>> {
     Ok(Json(
-        CustomerService::new(context).delete(id.parse()?).await?,
+        ProjectService::new(context).delete(id.parse()?).await?,
     ))
 }
