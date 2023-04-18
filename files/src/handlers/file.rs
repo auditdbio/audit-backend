@@ -13,7 +13,8 @@ pub async fn create_file(context: Context, mut payload: Multipart) -> error::Res
 
     let mut private = false;
     let mut original_name = String::new();
-    let mut audit_id = String::new();
+    let mut customer_id = String::new();
+    let mut auditor_id = String::new();
 
     while let Some(item) = payload.next().await {
         let mut field = item.unwrap();
@@ -46,17 +47,24 @@ pub async fn create_file(context: Context, mut payload: Multipart) -> error::Res
 
                 private = str == "true";
             }
-            "audit" => {
+            "customerId" => {
                 while let Some(chunk) = field.next().await {
                     let data = chunk.unwrap();
-                    audit_id.push_str(&String::from_utf8(data.to_vec()).unwrap());
+                    customer_id.push_str(&String::from_utf8(data.to_vec()).unwrap());
+                }
+            }
+            "auditorId" => {
+                while let Some(chunk) = field.next().await {
+                    let data = chunk.unwrap();
+                    auditor_id.push_str(&String::from_utf8(data.to_vec()).unwrap());
                 }
             }
             _ => (),
         }
     }
 
-    let allowed_users = Vec::new();
+    let allowed_users = vec![customer_id.parse()?, auditor_id.parse()?];
+
 
     FileService::new(context)
         .create_file(path, allowed_users, private, original_name, file.concat())

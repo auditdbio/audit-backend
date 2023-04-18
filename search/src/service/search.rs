@@ -2,7 +2,6 @@ use actix_web::web;
 use chrono::Utc;
 use common::{
     context::Context,
-    entities::audit_request::{PriceRange, TimeRange},
     repository::RepositoryObject,
 };
 use log::info;
@@ -55,8 +54,10 @@ pub struct SearchQuery {
     pub tags: String,
     pub page: u32,
     pub per_page: u32,
-    pub price: Option<PriceRange>,
-    pub time: Option<TimeRange>,
+    pub price_from: Option<i64>,
+    pub price_to: Option<i64>,
+    pub time_from: Option<String>,
+    pub time_to: Option<String>,
     pub ready_to_wait: Option<bool>,
     pub sort_by: Option<String>,
     pub sort_order: Option<i32>,

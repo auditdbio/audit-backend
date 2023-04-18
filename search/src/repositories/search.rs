@@ -3,7 +3,7 @@ use std::sync::Arc;
 use common::repository::mongo_repository::MongoRepository;
 use futures::StreamExt;
 use mongodb::{
-    bson::{doc, Bson, Document},
+    bson::{doc, Document},
     options::FindOptions,
     IndexModel,
 };
@@ -48,74 +48,77 @@ impl SearchRepo {
             None
         };
 
-        let mut document = doc! {};
+        let mut docs = Vec::new();
 
         if let Some(kind) = query.kind {
-            document.insert("kind", Bson::String(kind));
+            docs.push(doc! {
+                "kind": kind,
+            });
         }
 
         if !query.query.is_empty() || !query.tags.is_empty() {
             let text = query.query + " " + &query.tags;
-            document.insert(
-                "$text",
-                doc! {
+            docs.push(doc! {
+                "$text": {
                     "$search": text,
                 },
-            );
+            });
         }
 
-        if let Some(price_range) = query.price {
-            document.insert(
-                "price",
-                doc! {
-                    "$gte": price_range.from,
-                    "$lte": price_range.to,
-                },
-            );
-            document.insert(
-                "price_range",
-                doc! {
-                    "begin": {
-                        "$gte": price_range.from,
+        if let (Some(price_from), Some(price_to)) = (query.price_from, query.price_to) {
+            docs.push(doc! {
+                "$or": [
+                    {
+                        "price": {
+                            "$gte": price_from,
+                            "$lte": price_to,
+                        },
                     },
-                    "end": {
-                        "$lte": price_range.to,
+                    {
+                        "price_range": {
+                            "begin": {
+                                "$gte": price_from,
+                            },
+                            "end": {
+                                "$lte": price_to,
+                            },
+                        },
                     },
-                },
-            );
+
+                ]
+            });
         }
 
-        if let Some(time_range) = query.time {
-            document.insert(
-                "time",
-                doc! {
-                    "begin": {
-                        "$gte": time_range.from,
-                    },
-                    "end": {
-                        "$lte": time_range.to,
-                    },
-                },
-            );
+        if let (Some(time_from), Some(time_to)) = (query.time_from, query.time_to) {
+            docs.push(doc! {
+                "time": {
+                    "$gte": time_from,
+                    "$lte": time_to,
+                }
+            });
+           
         }
 
         if let Some(ready_to_wait) = query.ready_to_wait {
-            document.insert(
-                "publish_options",
-                doc! {
-                    "ready_to_wait": doc! {
-                        "$eq": ready_to_wait,
-                    },
-                },
-            );
+            docs.push(doc! {
+                "ready_to_wait": ready_to_wait,
+            });
         }
 
-        let cursor = self.0.collection.find(document, find_options).await?;
+        log::info!("Search query: {:?}", docs);
+
+        let cursor = self
+            .0
+            .collection
+            .find(doc! { "$and": docs}, find_options)
+            .await
+            .unwrap();
 
         Ok(cursor
             .collect::<Vec<Result<Document, _>>>()
             .await
             .into_iter()
-            .collect::<Result<Vec<Document>, _>>()?)
+            .map(|x| x.unwrap())
+            .collect())
     }
 }
