@@ -75,6 +75,7 @@ impl AuditService {
     }
 
     pub async fn create(&self, request: PublicRequest) -> anyhow::Result<PublicAudit> {
+        let auth = self.context.auth();
         let Some(audits) = self.context.get_repository::<Audit<ObjectId>>() else {
             bail!("No audit repository found")
         };
@@ -88,6 +89,7 @@ impl AuditService {
                 CUSTOMERS_SERVICE.as_str(),
                 request.project_id
             ))
+            .auth(auth.clone())
             .send()
             .await?
             .json::<PublicProject>()
