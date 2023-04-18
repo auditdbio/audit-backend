@@ -84,29 +84,33 @@ impl FileService {
         let Some(metas) = self.context.get_repository::<Metadata>() else {
             bail!("No metadata repository found")
         };
+
+        let path = format!("/auditdb-files/{}", path);
+
         let meta = metas.find("path", &Bson::String(path.clone())).await?;
 
         if meta.is_some() {
             bail!("File already exists")
         }
 
-        let path = format!("/auditdb-files/{}", path);
-        let path = Path::new(&path);
+        let os_path = Path::new(&path);
 
-        let Some(prefix) = path.parent() else {
+        let Some(prefix) = os_path.parent() else {
             bail!("No parent directory")
         };
 
         std::fs::create_dir_all(prefix)?;
 
-        let mut file = File::create(path)?;
+        let extension = original_name.split('.').last().unwrap().to_string();
+        let mut file = File::create(&format!("{}.{}", path, extension))?;
+
         file.write_all(&content).unwrap();
 
         let meta = Metadata {
             id: ObjectId::new(),
             last_modified: chrono::Utc::now().timestamp(),
-            path: path.to_str().unwrap().to_string(),
-            extension: original_name.split('.').last().unwrap().to_string(),
+            path,
+            extension,
             private,
             allowed_users,
         };
@@ -119,6 +123,8 @@ impl FileService {
     pub async fn find_file(&self, path: String) -> anyhow::Result<NamedFile> {
         let auth = self.context.auth();
 
+        let path = format!("/auditdb-files/{}", path);
+
         let Some(metas) = self.context.get_repository::<Metadata>() else {
             bail!("No metadata repository found")
         };
@@ -129,10 +135,7 @@ impl FileService {
         if !Read::get_access(auth, &meta) {
             bail!("Access denied for this user")
         }
-
-        let path = format!("/auditdb-files/{}", path);
-
-        let file = actix_files::NamedFile::open_async(path).await.unwrap();
+        let file = actix_files::NamedFile::open_async(format!("{}.{}", path, meta.extension)).await.unwrap();
 
         Ok(file)
     }
