@@ -89,8 +89,8 @@ impl FileService {
 
         let meta = metas.find("path", &Bson::String(path.clone())).await?;
 
-        if meta.is_some() {
-            bail!("File already exists")
+        if let Some(meta) = meta {
+            metas.delete("id", &meta.id).await?;
         }
 
         let os_path = Path::new(&path);
