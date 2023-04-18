@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use actix_web::{dev::Payload, FromRequest, HttpRequest};
+use actix_web::{dev::Payload, FromRequest, HttpRequest, web::Data};
 use anyhow::anyhow;
 use serde::Serialize;
 use type_map::concurrent::TypeMap;
@@ -58,7 +58,7 @@ impl FromRequest for Context {
             };
 
             let Some(state) = req
-                .app_data::<Arc<ServiceState>>()else {
+                .app_data::<Data<Arc<ServiceState>>>()else {
                     return Err(anyhow::anyhow!("No state provided".to_string()).into());
                 };
 
