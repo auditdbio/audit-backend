@@ -16,8 +16,8 @@ pub struct PriceRange {
 
 #[derive(Debug, Serialize, Deserialize, ToSchema, PartialEq, Clone)]
 pub struct TimeRange {
-    pub from: String,
-    pub to: String,
+    pub from: i64,
+    pub to: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, ToSchema)]
