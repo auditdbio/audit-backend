@@ -30,13 +30,12 @@ pub struct AuditRequest<Id> {
     pub project_name: String,
     pub project_avatar: String,
     pub project_scope: Vec<String>,
-    pub price_range: Option<PriceRange>,
     pub auditor_contacts: HashMap<String, String>,
     pub customer_contacts: HashMap<String, String>,
 
     pub description: String,
 
-    pub price: Option<i64>,
+    pub price: i64,
     pub last_modified: i64,
     pub last_changer: Role,
     pub time: TimeRange,
@@ -59,7 +58,6 @@ impl AuditRequest<String> {
             last_modified: self.last_modified,
             last_changer: self.last_changer,
             time: self.time,
-            price_range: self.price_range,
         }
     }
 }
@@ -81,21 +79,9 @@ impl AuditRequest<ObjectId> {
             last_modified: self.last_modified,
             last_changer: self.last_changer,
             time: self.time,
-            price_range: self.price_range,
         }
     }
 }
-
-// impl AuditRequest<ObjectId> {
-//     pub fn to_view(self, name: String) -> View<ObjectId> {
-//         View {
-//             id: self.id,
-//             name,
-//             last_modified: self.last_modified,
-//             source: Source::Request,
-//         }
-//     }
-// }
 
 impl Entity for AuditRequest<ObjectId> {
     fn id(&self) -> ObjectId {

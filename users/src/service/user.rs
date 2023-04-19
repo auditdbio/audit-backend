@@ -18,6 +18,7 @@ pub struct CreateUser {
     email: String,
     password: String,
     name: String,
+    code: String,
     current_role: String,
 }
 

@@ -1,8 +1,9 @@
-
 use anyhow::bail;
 use common::{
     access_rules::{AccessRules, SendMail},
-    context::Context, repository::Entity,
+    context::Context,
+    entities::letter::{CreateLetter, Letter},
+    repository::Entity,
 };
 use lettre::{transport::smtp::authentication::Credentials, Message, SmtpTransport, Transport};
 use mongodb::bson::oid::ObjectId;
@@ -13,8 +14,8 @@ lazy_static::lazy_static! {
     static ref EMAIL_PASSWORD: String = std::env::var("HELLO_MAIL_PASSWORD").unwrap();
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Letter {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Feedback {
     pub id: ObjectId,
     pub name: String,
     pub company: String,
@@ -22,19 +23,18 @@ pub struct Letter {
     pub message: String,
 }
 
-impl Entity for Letter {
+impl Entity for Feedback {
     fn id(&self) -> ObjectId {
-        self.id
+        self.id.clone()
     }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct CreateLetter {
+pub struct CreateFeedback {
     pub name: String,
     pub company: String,
     pub email: String,
     pub message: String,
-
 }
 
 pub struct MailService {
@@ -43,27 +43,16 @@ pub struct MailService {
 
 impl MailService {
     pub fn new(context: Context) -> MailService {
-        MailService { context: context }
+        MailService { context }
     }
 
-    pub async fn send_mail(&self, letter: CreateLetter) -> anyhow::Result<()> {
-        let auth = self.context.auth();
-
-        if !SendMail::get_access(auth, ()) {
-            bail!("Users can't send mail");
-        }
-
-        let letters = self.context.try_get_repository::<Letter>()?;
-
-        let Ok(email) = letter.email.clone().parse() else {
-            bail!("Error parsing email");
-        };
-
+    async fn send_email(&self, letter: Letter) -> anyhow::Result<()> {
+        let email = letter.email.parse()?;
 
         let Ok(email) = Message::builder()
                 .from(EMAIL_ADDRESS.to_string().parse().unwrap())
                 .to(email)
-                .subject("Welcome to AuditDB waiting list!")
+                .subject(letter.subject.clone())
                 .body(letter.message.clone()) else {
                     bail!("Error building email");
                 };
@@ -77,16 +66,56 @@ impl MailService {
         if let Err(err) = mailer.send(&email) {
             bail!("Error sending email: {}", err);
         }
+        Ok(())
+    }
+
+    pub async fn feedback(&self, feedback: CreateFeedback) -> anyhow::Result<()> {
+        let feedbacks = self.context.try_get_repository::<Feedback>()?;
 
         let letter = Letter {
             id: ObjectId::new(),
-            name: letter.name,
-            company: letter.company,
+            email: feedback.email.clone(),
+            message: feedback.message.clone(),
+            subject: format!(
+                "{} ({}) from {} send feedback",
+                feedback.name, feedback.email, feedback.company
+            ),
+        };
+
+        self.send_email(letter).await?;
+
+        let feedback = Feedback {
+            id: ObjectId::new(),
+            name: feedback.name,
+            company: feedback.company,
+            email: feedback.email,
+            message: feedback.message,
+        };
+
+        feedbacks.insert(&feedback).await?;
+        Ok(())
+    }
+
+    pub async fn send_letter(&self, letter: CreateLetter) -> anyhow::Result<()> {
+        let auth = self.context.auth();
+
+        let letters = self.context.try_get_repository::<Letter>()?;
+
+        if !SendMail::get_access(auth, ()) {
+            bail!("Users can't send mail");
+        }
+
+        let letter = Letter {
+            id: ObjectId::new(),
+            subject: letter.subject,
             email: letter.email,
             message: letter.message,
         };
 
         letters.insert(&letter).await?;
+
+        self.send_email(letter).await?;
+
         Ok(())
     }
 }

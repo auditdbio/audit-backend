@@ -1,9 +1,13 @@
 use std::sync::Arc;
 
 use actix_cors::Cors;
-use actix_web::{App, middleware, web, dev::{ServiceFactory, ServiceResponse, ServiceRequest}, body::MessageBody};
+use actix_web::{
+    body::MessageBody,
+    dev::{ServiceFactory, ServiceRequest, ServiceResponse},
+    middleware, web, App,
+};
 use common::context::ServiceState;
-use handlers::mail::sent_mail;
+use handlers::mail::{send_feedback, send_mail};
 
 pub mod handlers;
 pub mod service;
@@ -24,6 +28,7 @@ pub fn create_app(
         .wrap(cors)
         .wrap(middleware::Logger::default())
         .app_data(web::Data::new(state))
-        .service(sent_mail);
+        .service(send_mail)
+        .service(send_feedback);
     app
 }

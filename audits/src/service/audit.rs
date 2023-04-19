@@ -105,7 +105,7 @@ impl AuditService {
             description: request.description,
             status: "pending".to_string(),
             scope: request.project_scope,
-            price: request.price.ok_or(anyhow::anyhow!("Price is required"))?,
+            price: request.price,
             auditor_contacts: request.auditor_contacts,
             customer_contacts: request.customer_contacts,
             tags: project.tags,

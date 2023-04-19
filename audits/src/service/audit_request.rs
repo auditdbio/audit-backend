@@ -22,6 +22,7 @@ pub struct CreateRequest {
     auditor_id: String,
     project_id: String,
 
+    price: i64,
     description: String,
     time: TimeRange,
 }
@@ -50,8 +51,7 @@ pub struct PublicRequest {
     pub project_name: String,
     pub project_avatar: String,
     pub project_scope: Vec<String>,
-    pub price_range: Option<PriceRange>,
-    pub price: Option<i64>,
+    pub price: i64,
     pub auditor_contacts: HashMap<String, String>,
     pub customer_contacts: HashMap<String, String>,
 }
@@ -68,7 +68,6 @@ impl From<AuditRequest<ObjectId>> for PublicRequest {
             project_name: request.project_name,
             project_avatar: request.project_avatar,
             project_scope: request.project_scope,
-            price_range: request.price_range,
             price: request.price,
             auditor_contacts: request.auditor_contacts,
             customer_contacts: request.customer_contacts,
@@ -149,8 +148,7 @@ impl RequestService {
             project_name: project.name,
             project_avatar: auditor.avatar,
             project_scope: project.scope,
-            price_range: Some(auditor.price_range),
-            price: None,
+            price: request.price,
             auditor_contacts: auditor.contacts,
             customer_contacts: project.creator_contacts,
             last_modified: Utc::now().timestamp_micros(),
@@ -246,11 +244,7 @@ impl RequestService {
         }
 
         if let Some(price) = change.price {
-            request.price = Some(price);
-        }
-
-        if let Some(price_range) = change.price_range {
-            request.price_range = Some(price_range);
+            request.price = price;
         }
 
         if let Some(auditor_contacts) = change.auditor_contacts {

@@ -1,6 +1,14 @@
 use anyhow::bail;
-use common::{auth::Auth, context::Context, entities::user::User};
+use common::{
+    auth::Auth,
+    context::Context,
+    entities::{
+        letter::CreateLetter,
+        user::User,
+    }, services::{PROTOCOL, MAIL_SERVICE},
+};
 use mongodb::bson::{oid::ObjectId, Bson};
+use rand::{Rng, distributions::Alphanumeric};
 use serde::{Deserialize, Serialize};
 
 use super::user::PublicUser;
@@ -58,5 +66,31 @@ impl AuthService {
             user: user.into(),
             token: auth.to_token()?,
         })
+    }
+
+    pub async fn send_code(&self, email: String) -> anyhow::Result<()> {
+        let code: String = rand::thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(6)
+            .map(char::from)
+            .collect();
+
+        let message = include_str!("../../templates/code.txt").to_string().replace("{code}", &code);
+
+        let letter = CreateLetter {
+            email,
+            message,
+            subject: "AuditDB verification code".to_string(),
+        };
+
+        self.context
+            .make_request()
+            .auth(self.context.server_auth())
+            .post(format!("{}://{}/api/mail", PROTOCOL.as_str(), MAIL_SERVICE.as_str()))
+            .json(&letter)
+            .send()
+            .await?;
+
+        Ok(())
     }
 }
