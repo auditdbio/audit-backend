@@ -1,6 +1,6 @@
 use actix_web::web;
 use chrono::Utc;
-use common::{context::Context, repository::RepositoryObject};
+use common::{context::Context, repository::RepositoryObject, auth::Auth};
 use log::info;
 use mongodb::bson::{Bson, Document};
 use reqwest::Client;
@@ -24,8 +24,12 @@ pub(super) async fn get_data(client: &Client, url: &str, since: i64) -> Option<V
     Some(body)
 }
 
-pub async fn fetch_data(since_repo: RepositoryObject<Since>, search_repo: SearchRepo) {
-    let client = Client::new();
+pub async fn fetch_data(auth: &Auth, since_repo: RepositoryObject<Since>, search_repo: SearchRepo) -> anyhow::Result<()> {
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert("Authorization", auth.to_token()?.parse()?);
+
+
+    let client = Client::builder().default_headers(headers).build()?;
     let mut data = since_repo
         .find("name", &Bson::String("since".to_string()))
         .await
@@ -48,6 +52,7 @@ pub async fn fetch_data(since_repo: RepositoryObject<Since>, search_repo: Search
 
     since_repo.delete("id", &data.id).await.unwrap();
     since_repo.insert(&data).await.unwrap();
+    Ok(())
 }
 
 #[derive(Debug, Serialize, Deserialize)]
