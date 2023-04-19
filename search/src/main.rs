@@ -2,6 +2,7 @@ use actix_web::rt::{spawn, time};
 use common::context::ServiceState;
 use common::repository::mongo_repository::MongoRepository;
 use common::repository::Repository;
+use common::services::{CUSTOMERS_SERVICE, AUDITORS_SERVICE};
 use log::info;
 use mongodb::bson::Bson;
 use search::create_app;
@@ -50,6 +51,8 @@ async fn main() -> std::io::Result<()> {
     });
 
     let state = Arc::new(ServiceState::new("search".to_string()));
+
+    log::info!("{} {}", CUSTOMERS_SERVICE.as_str(), AUDITORS_SERVICE.as_str());
 
     HttpServer::new(move || create_app(state.clone(), search_repo.clone()))
         .bind(("0.0.0.0", 3006))?
