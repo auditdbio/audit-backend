@@ -138,6 +138,11 @@ impl<'a, 'b, T: Serialize> ServiceRequest<'a, 'b, T> {
 }
 
 impl Context {
+
+    pub fn server_auth(&self) -> Auth {
+        self.0.service_auth.clone()
+    }
+    
     pub fn get_repository<T: 'static>(&self) -> Option<RepositoryObject<T>> {
         self.0.repositories.get::<RepositoryObject<T>>().cloned()
     }
