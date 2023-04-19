@@ -26,7 +26,7 @@ pub(super) async fn get_data(client: &Client, url: &str, since: i64) -> Option<V
 
 pub async fn fetch_data(auth: &Auth, since_repo: RepositoryObject<Since>, search_repo: SearchRepo) -> anyhow::Result<()> {
     let mut headers = reqwest::header::HeaderMap::new();
-    headers.insert("Authorization", auth.to_token()?.parse()?);
+    headers.insert("Authorization", ("Bearer ".to_string() + &auth.to_token()?).parse()?);
 
 
     let client = Client::builder().default_headers(headers).build()?;
