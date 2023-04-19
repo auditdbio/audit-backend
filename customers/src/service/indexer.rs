@@ -18,7 +18,7 @@ impl IndexerService {
     pub async fn index_customer(&self, since: i64) -> anyhow::Result<Vec<Document>> {
         let auth = self.context.auth();
 
-        if !GetData::get_access(auth, ()) {
+        if GetData::get_access(auth, ()) {
             bail!("No access to get customer data")
         }
 
@@ -38,7 +38,7 @@ impl IndexerService {
         let auth = self.context.auth();
 
         if !GetData::get_access(auth, ()) {
-            bail!("No access to get customer data")
+            bail!("No access to get customer data: {:?}", auth)
         }
         let Some(customers) = self.context.get_repository::<Project<ObjectId>>() else {
             bail!("No project repository found")

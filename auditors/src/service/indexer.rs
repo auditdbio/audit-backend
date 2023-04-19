@@ -19,7 +19,7 @@ impl IndexerService {
         let auth = self.context.auth();
 
         if !GetData::get_access(auth, ()) {
-            bail!("No access to get auditor data")
+            bail!("No access to get auditor data {:?}", auth)
         }
 
         let Some(customers) = self.context.get_repository::<Auditor<ObjectId>>() else {
