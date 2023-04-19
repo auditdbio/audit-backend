@@ -100,7 +100,7 @@ impl From<Project<ObjectId>> for PublicProject {
 
 impl From<Project<ObjectId>> for Option<Document> {
     fn from(project: Project<ObjectId>) -> Self {
-        if project.publish_options.publish {
+        if !project.publish_options.publish {
             return None;
         }
         let mut document = bson::to_document(&project).unwrap();
