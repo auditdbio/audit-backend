@@ -32,12 +32,14 @@ pub async fn fetch_data(since_repo: RepositoryObject<Since>, search_repo: Search
     for since in data.dict.iter_mut() {
         let timestamp = Utc::now().timestamp_micros();
         let Some(docs) = get_data(&client, &since.0 ,*since.1).await else {
+            log::info!("No data for {}", since.0);
             continue;
         };
         *since.1 = timestamp;
         if docs.is_empty() {
             continue;
         }
+        log::info!("Documents {:?}", docs);
         search_repo.insert(docs).await.unwrap();
     }
 

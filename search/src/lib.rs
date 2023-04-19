@@ -39,18 +39,3 @@ pub fn create_app(
     app
 }
 
-// pub fn create_test_app(
-//     user: AuthSession,
-// ) -> App<
-//     impl ServiceFactory<
-//         ServiceRequest,
-//         Response = ServiceResponse<impl MessageBody>,
-//         Config = (),
-//         InitError = (),
-//         Error = actix_web::Error,
-//     >,
-// > {
-//     let test_manager = AuthSessionManager::new(TestSessionManager(user));
-
-//     create_app(test_manager)
-// }
