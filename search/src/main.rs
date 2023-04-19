@@ -52,7 +52,7 @@ async fn main() -> std::io::Result<()> {
 
     let state = Arc::new(ServiceState::new("search".to_string()));
 
-    log::info!("{} {}", CUSTOMERS_SERVICE.as_str(), AUDITORS_SERVICE.as_str());
+    log::info!("{} {} {:?}", CUSTOMERS_SERVICE.as_str(), AUDITORS_SERVICE.as_str(), Since::default());
 
     HttpServer::new(move || create_app(state.clone(), search_repo.clone()))
         .bind(("0.0.0.0", 3006))?
