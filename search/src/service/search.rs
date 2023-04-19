@@ -9,9 +9,8 @@ use serde::{Deserialize, Serialize};
 use crate::repositories::{search::SearchRepo, since::Since};
 
 pub(super) async fn get_data(client: &Client, url: &str, since: i64) -> Option<Vec<Document>> {
-    let reqwest = client.get(format!("{url}/{since}"));
-    info!("Request: {:?}", reqwest);
-    let Ok(res) = reqwest.send()
+    let request = client.get(format!("{url}/{since}"));
+    let Ok(res) = request.send()
         .await else {
         log::error!("Error while sending request");
         return None;

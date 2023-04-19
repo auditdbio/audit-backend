@@ -117,7 +117,7 @@ impl From<Auditor<ObjectId>> for Option<Document> {
             document.remove("contacts");
         }
         document.remove("last_modified");
-        document.insert("kind", "customer");
+        document.insert("kind", "auditor");
         Some(document)
     }
 }
