@@ -13,9 +13,11 @@ pub(super) async fn get_data(client: &Client, url: &str, since: i64) -> Option<V
     info!("Request: {:?}", reqwest);
     let Ok(res) = reqwest.send()
         .await else {
+        log::error!("Error while sending request");
         return None;
     };
     let Ok(body) = res.json::<Vec<Document>>().await else {
+        log::error!("Error while parsing response");
         return None;
     };
     Some(body)
