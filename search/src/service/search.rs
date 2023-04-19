@@ -16,6 +16,7 @@ pub(super) async fn get_data(client: &Client, url: &str, since: i64) -> Option<V
         log::error!("Error while sending request");
         return None;
     };
+    info!("Response: {:?}", res);
     let Ok(body) = res.json::<Vec<Document>>().await else {
         log::error!("Error while parsing response");
         return None;
