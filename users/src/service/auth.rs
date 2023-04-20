@@ -2,13 +2,12 @@ use anyhow::bail;
 use common::{
     auth::Auth,
     context::Context,
-    entities::{
-        letter::CreateLetter,
-        user::User,
-    }, services::{PROTOCOL, MAIL_SERVICE}, repository::Entity,
+    entities::{letter::CreateLetter, user::User},
+    repository::Entity,
+    services::{MAIL_SERVICE, PROTOCOL},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
-use rand::{Rng, distributions::Alphanumeric};
+use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 
 use super::user::PublicUser;
@@ -92,7 +91,9 @@ impl AuthService {
             bail!("No code repository found")
         };
 
-        let message = include_str!("../../templates/code.txt").to_string().replace("{code}", &code);
+        let message = include_str!("../../templates/code.txt")
+            .to_string()
+            .replace("{code}", &code);
 
         let letter = CreateLetter {
             email: email.clone(),
@@ -103,7 +104,11 @@ impl AuthService {
         self.context
             .make_request()
             .auth(self.context.server_auth())
-            .post(format!("{}://{}/api/mail", PROTOCOL.as_str(), MAIL_SERVICE.as_str()))
+            .post(format!(
+                "{}://{}/api/mail",
+                PROTOCOL.as_str(),
+                MAIL_SERVICE.as_str()
+            ))
             .json(&letter)
             .send()
             .await?;
@@ -113,7 +118,7 @@ impl AuthService {
             code: code.clone(),
             email,
         };
-    
+
         codes.insert(&code).await?;
 
         Ok(())

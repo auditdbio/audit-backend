@@ -164,7 +164,9 @@ impl RequestService {
             .pop();
 
         if let Some(old_version_of_this_request) = old_version_of_this_request {
-            requests.delete("id", &old_version_of_this_request.id).await?;
+            requests
+                .delete("id", &old_version_of_this_request.id)
+                .await?;
         }
 
         requests.insert(&request).await?;

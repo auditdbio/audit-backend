@@ -123,7 +123,10 @@ impl<'a, 'b, T: Serialize> ServiceRequest<'a, 'b, T> {
 
     pub async fn send(self) -> anyhow::Result<reqwest::Response> {
         let url = self.url.as_ref().unwrap();
-        let mut request = self.client.request(self.method, url);
+        let mut request = self
+            .client
+            .request(self.method, url)
+            .header("Authorization", format!("Bearer {}", self.auth.to_token()?));
         if let Some(body) = self.body {
             request = request.json(body);
         }

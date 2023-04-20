@@ -38,4 +38,3 @@ pub fn create_app(
         .service(search);
     app
 }
-

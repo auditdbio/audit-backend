@@ -4,8 +4,8 @@ use common::context::ServiceState;
 use common::entities::user::User;
 use common::repository::mongo_repository::MongoRepository;
 use mongodb::bson::oid::ObjectId;
-use users::*;
 use users::service::auth::Code;
+use users::*;
 
 use std::env;
 use std::sync::Arc;

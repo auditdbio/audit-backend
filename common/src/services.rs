@@ -11,5 +11,4 @@ lazy_static! {
     pub static ref MAIL_SERVICE: String = var("MAIL_SERVICE_URL").unwrap();
     pub static ref SEARCH_SERVICE: String = var("SEARCH_SERVICE_URL").unwrap();
     pub static ref USERS_SERVICE: String = var("USERS_SERVICE_URL").unwrap();
-
 }

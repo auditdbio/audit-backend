@@ -1,11 +1,16 @@
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
 use anyhow::bail;
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
     context::Context,
-    entities::{audit::Audit, audit_request::{TimeRange, AuditRequest}, project::PublicProject, role::Role},
+    entities::{
+        audit::Audit,
+        audit_request::{AuditRequest, TimeRange},
+        project::PublicProject,
+        role::Role,
+    },
     services::{CUSTOMERS_SERVICE, PROTOCOL},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
@@ -119,9 +124,7 @@ impl AuditService {
             bail!("No audit request repository found")
         };
 
-        requests
-            .delete("id", &request.id.parse()?)
-            .await?;
+        requests.delete("id", &request.id.parse()?).await?;
 
         Ok(audit.into())
     }

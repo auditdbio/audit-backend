@@ -1,4 +1,7 @@
-use actix_web::{post, web::{Json, Path}, get};
+use actix_web::{
+    get, post,
+    web::{Json, Path},
+};
 use common::{context::Context, error};
 
 use crate::service::auth::{AuthService, Login, Token};
@@ -10,5 +13,9 @@ pub async fn login(context: Context, login: Json<Login>) -> error::Result<Json<T
 
 #[get("/api/auth/send_code/{email}")]
 pub async fn send_code(context: Context, email: Path<String>) -> error::Result<Json<()>> {
-    Ok(Json(AuthService::new(context).send_code(email.into_inner()).await?))
+    Ok(Json(
+        AuthService::new(context)
+            .send_code(email.into_inner())
+            .await?,
+    ))
 }

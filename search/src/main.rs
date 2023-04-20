@@ -3,7 +3,7 @@ use common::auth::Auth;
 use common::context::ServiceState;
 use common::repository::mongo_repository::MongoRepository;
 use common::repository::Repository;
-use common::services::{CUSTOMERS_SERVICE, AUDITORS_SERVICE};
+use common::services::{AUDITORS_SERVICE, CUSTOMERS_SERVICE};
 use log::info;
 use mongodb::bson::Bson;
 use search::create_app;
@@ -48,13 +48,20 @@ async fn main() -> std::io::Result<()> {
             interval.tick().await;
             info!("end waiting");
 
-            fetch_data(&auth, since_repo.clone(), search_repo_clone.clone()).await.unwrap();
+            fetch_data(&auth, since_repo.clone(), search_repo_clone.clone())
+                .await
+                .unwrap();
         }
     });
 
     let state = Arc::new(ServiceState::new("search".to_string()));
 
-    log::info!("{} {} {:?}", CUSTOMERS_SERVICE.as_str(), AUDITORS_SERVICE.as_str(), Since::default());
+    log::info!(
+        "{} {} {:?}",
+        CUSTOMERS_SERVICE.as_str(),
+        AUDITORS_SERVICE.as_str(),
+        Since::default()
+    );
 
     HttpServer::new(move || create_app(state.clone(), search_repo.clone()))
         .bind(("0.0.0.0", 3006))?
