@@ -1,11 +1,11 @@
-use std::collections::HashMap;
+use std::{collections::HashMap};
 
 use anyhow::bail;
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
     context::Context,
-    entities::{audit::Audit, audit_request::TimeRange, project::PublicProject, role::Role},
+    entities::{audit::Audit, audit_request::{TimeRange, AuditRequest}, project::PublicProject, role::Role},
     services::{CUSTOMERS_SERVICE, PROTOCOL},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
@@ -75,7 +75,6 @@ impl AuditService {
     }
 
     pub async fn create(&self, request: PublicRequest) -> anyhow::Result<PublicAudit> {
-        let auth = self.context.auth();
         let Some(audits) = self.context.get_repository::<Audit<ObjectId>>() else {
             bail!("No audit repository found")
         };
@@ -89,7 +88,7 @@ impl AuditService {
                 CUSTOMERS_SERVICE.as_str(),
                 request.project_id
             ))
-            .auth(auth.clone())
+            .auth(self.context.server_auth())
             .send()
             .await?
             .json::<PublicProject>()
@@ -115,6 +114,14 @@ impl AuditService {
         };
 
         audits.insert(&audit).await?;
+
+        let Some(requests) = self.context.get_repository::<AuditRequest<ObjectId>>() else {
+            bail!("No audit request repository found")
+        };
+
+        requests
+            .delete("id", &request.id.parse()?)
+            .await?;
 
         Ok(audit.into())
     }

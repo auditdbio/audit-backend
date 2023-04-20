@@ -155,6 +155,18 @@ impl RequestService {
             last_changer,
         };
 
+        let old_version_of_this_request = requests
+            .find_many("project_id", &Bson::ObjectId(request.project_id))
+            .await?
+            .into_iter()
+            .filter(|r| r.customer_id == request.customer_id && r.auditor_id == request.auditor_id)
+            .collect::<Vec<_>>()
+            .pop();
+
+        if let Some(old_version_of_this_request) = old_version_of_this_request {
+            requests.delete("id", &old_version_of_this_request.id).await?;
+        }
+
         requests.insert(&request).await?;
 
         Ok(request.into())
