@@ -8,7 +8,7 @@ pub async fn login(context: Context, login: Json<Login>) -> error::Result<Json<T
     Ok(Json(AuthService::new(context).login(&login).await?))
 }
 
-#[get("/api/send_code/email")]
+#[get("/api/auth/send_code/{email}")]
 pub async fn send_code(context: Context, email: Path<String>) -> error::Result<Json<()>> {
     Ok(Json(AuthService::new(context).send_code(email.into_inner()).await?))
 }
