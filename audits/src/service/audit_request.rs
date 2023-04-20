@@ -13,6 +13,7 @@ use common::{
     },
     services::{AUDITORS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL},
 };
+use log::info;
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
 
@@ -121,7 +122,7 @@ impl RequestService {
             .await?
             .json::<PublicProject>()
             .await?;
-
+        info!("Project: {:?}", project);
         let auditor = self
             .context
             .make_request::<PublicAuditor>()
@@ -137,6 +138,7 @@ impl RequestService {
             .await?
             .json::<PublicAuditor>()
             .await?;
+        info!("Auditor: {:?}", auditor);
 
         let request = AuditRequest {
             id: ObjectId::new(),

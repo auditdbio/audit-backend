@@ -76,7 +76,7 @@ impl Entity for Auditor<ObjectId> {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PublicAuditor {
-    pub id: String,
+    pub user_id: String,
     pub avatar: String,
     pub first_name: String,
     pub last_name: String,
@@ -96,7 +96,7 @@ impl From<Auditor<ObjectId>> for PublicAuditor {
             HashMap::new()
         };
         Self {
-            id: auditor.user_id.to_hex(),
+            user_id: auditor.user_id.to_hex(),
             avatar: auditor.avatar,
             first_name: auditor.first_name,
             last_name: auditor.last_name,
