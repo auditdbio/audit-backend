@@ -157,3 +157,5 @@ impl<'a, 'b> AccessRules<&'a Auth, ()> for SendMail {
         }
     }
 }
+
+pub struct Create;

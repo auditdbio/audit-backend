@@ -1,13 +1,15 @@
 use anyhow::bail;
 use chrono::Utc;
 use common::{
-    access_rules::{AccessRules, Edit, Read},
+    access_rules::{AccessRules, Edit, Read, Create},
     context::Context,
     entities::user::User,
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
+
+use super::auth::Code;
 
 pub struct UserService {
     pub context: Context,
@@ -49,6 +51,12 @@ pub struct UserChange {
     current_role: Option<String>,
 }
 
+impl<'a, 'b> AccessRules<&'a CreateUser, &'b Code> for Create {
+    fn get_access(user: &'a CreateUser, code: &'b Code) -> bool {
+        &user.code == &code.code && &user.email == &code.email
+    }
+}
+
 impl UserService {
     pub fn new(context: Context) -> Self {
         Self { context }
@@ -58,6 +66,18 @@ impl UserService {
         let Some(users) = self.context.get_repository::<User<ObjectId>>() else {
             bail!("No user repository found")
         };
+
+        let Some(codes) = self.context.get_repository::<Code>() else {
+            bail!("No code repository found")
+        };
+
+        let Some(code) = codes.find("email", &Bson::String(user.email.clone())).await? else {
+            bail!("No code found")
+        };
+
+        if !Create::get_access(&user, &code) {
+            bail!("User is not allowed to create this user")
+        }
 
         let salt: String = rand::thread_rng()
             .sample_iter(&Alphanumeric)

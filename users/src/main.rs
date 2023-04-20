@@ -5,6 +5,7 @@ use common::entities::user::User;
 use common::repository::mongo_repository::MongoRepository;
 use mongodb::bson::oid::ObjectId;
 use users::*;
+use users::service::auth::Code;
 
 use std::env;
 use std::sync::Arc;
@@ -18,9 +19,11 @@ async fn main() -> std::io::Result<()> {
     let mongo_uri = env::var("MONGOURI").unwrap();
 
     let user_repo = MongoRepository::new(&mongo_uri, "users", "users").await;
+    let code_repo = MongoRepository::new(&mongo_uri, "users", "codes").await;
 
     let mut state = ServiceState::new("user".to_string());
     state.insert::<User<ObjectId>>(Arc::new(user_repo));
+    state.insert::<Code>(Arc::new(code_repo));
 
     let state = Arc::new(state);
 
