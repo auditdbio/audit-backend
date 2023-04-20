@@ -1,7 +1,7 @@
 use actix_web::web;
 use chrono::Utc;
 use common::{context::Context, repository::RepositoryObject, auth::Auth};
-use log::info;
+
 use mongodb::bson::{Bson, Document};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};

@@ -5,7 +5,7 @@ use common::{
     entities::{
         letter::CreateLetter,
         user::User,
-    }, services::{PROTOCOL, MAIL_SERVICE},
+    }, services::{PROTOCOL, MAIL_SERVICE}, repository::Entity,
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use rand::{Rng, distributions::Alphanumeric};
@@ -27,6 +27,19 @@ pub struct Login {
 pub struct Token {
     pub token: String,
     pub user: PublicUser,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Code {
+    pub id: ObjectId,
+    pub code: String,
+    pub email: String,
+}
+
+impl Entity for Code {
+    fn id(&self) -> ObjectId {
+        self.id.clone()
+    }
 }
 
 impl AuthService {
@@ -75,10 +88,14 @@ impl AuthService {
             .map(char::from)
             .collect();
 
+        let Some(codes) = self.context.get_repository::<Code>() else {
+            bail!("No code repository found")
+        };
+
         let message = include_str!("../../templates/code.txt").to_string().replace("{code}", &code);
 
         let letter = CreateLetter {
-            email,
+            email: email.clone(),
             message,
             subject: "AuditDB verification code".to_string(),
         };
@@ -90,6 +107,14 @@ impl AuthService {
             .json(&letter)
             .send()
             .await?;
+
+        let code = Code {
+            id: ObjectId::new(),
+            code: code.clone(),
+            email,
+        };
+    
+        codes.insert(&code).await?;
 
         Ok(())
     }
