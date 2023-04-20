@@ -7,7 +7,7 @@ use common::{
     services::{MAIL_SERVICE, PROTOCOL},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
-use rand::{distributions::Alphanumeric, Rng};
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 use super::user::PublicUser;
@@ -81,11 +81,7 @@ impl AuthService {
     }
 
     pub async fn send_code(&self, email: String) -> anyhow::Result<()> {
-        let code: String = rand::thread_rng()
-            .sample_iter(&Alphanumeric)
-            .take(6)
-            .map(char::from)
-            .collect();
+        let code = format!("{:0>6}", rand::thread_rng().gen_range(0..1_000_000));
 
         let Some(codes) = self.context.get_repository::<Code>() else {
             bail!("No code repository found")
