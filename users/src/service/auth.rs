@@ -97,7 +97,7 @@ impl AuthService {
         let letter = CreateLetter {
             email: email.clone(),
             message,
-            subject: "AuditDB verification code".to_string(),
+            subject: format!("Your AuditDB verification code - {}", code),
         };
 
         self.context

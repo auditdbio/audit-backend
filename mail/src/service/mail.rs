@@ -102,7 +102,7 @@ impl MailService {
         let letters = self.context.try_get_repository::<Letter>()?;
 
         if !SendMail::get_access(auth, ()) {
-            bail!("Users can't send mail");
+            bail!("Users can't send mail: {:?}", auth);
         }
 
         let letter = Letter {
