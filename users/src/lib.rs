@@ -37,6 +37,7 @@ pub fn create_app(
         .service(delete_user)
         .service(find_user)
         .service(login)
-        .service(my_user);
+        .service(my_user)
+        .service(send_code);
     app
 }
