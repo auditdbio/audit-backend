@@ -112,6 +112,7 @@ impl From<Auditor<ObjectId>> for PublicAuditor {
 
 impl From<Auditor<ObjectId>> for Option<Document> {
     fn from(auditor: Auditor<ObjectId>) -> Self {
+        let auditor = auditor.stringify();
         let mut document = mongodb::bson::to_document(&auditor).unwrap();
         if !auditor.public_contacts {
             document.remove("contacts");

@@ -100,6 +100,7 @@ impl From<Project<ObjectId>> for PublicProject {
 
 impl From<Project<ObjectId>> for Option<Document> {
     fn from(project: Project<ObjectId>) -> Self {
+        let project = project.stringify();
         if !project.publish_options.publish {
             return None;
         }

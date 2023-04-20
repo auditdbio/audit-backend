@@ -62,6 +62,7 @@ impl Entity for Customer<ObjectId> {
 
 impl From<Customer<ObjectId>> for Option<Document> {
     fn from(customer: Customer<ObjectId>) -> Self {
+        let customer = customer.stringify();
         let mut document = mongodb::bson::to_document(&customer).unwrap();
         if !customer.public_contacts {
             document.remove("contacts");
