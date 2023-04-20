@@ -6,3 +6,4 @@ cp /usr/src/audit_backend/target/release/auditors /data/binaries/auditors_binary
 cp /usr/src/audit_backend/target/release/audits /data/binaries/audits_binary
 cp /usr/src/audit_backend/target/release/files /data/binaries/files_binary
 cp /usr/src/audit_backend/target/release/search /data/binaries/search_binary
+cp /usr/src/audit_backend/target/release/mail /data/binaries/mail_binary
