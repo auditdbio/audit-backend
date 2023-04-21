@@ -80,7 +80,11 @@ impl AuthService {
         })
     }
 
-    pub async fn authentication(&self, mut user: CreateUser) -> anyhow::Result<()> {
+    pub async fn authentication(
+        &self,
+        mut user: CreateUser,
+        verify_email: bool,
+    ) -> anyhow::Result<PublicUser> {
         let Some(users) = self.context.get_repository::<User<ObjectId>>() else {
             bail!("No user repository found")
         };
@@ -99,36 +103,38 @@ impl AuthService {
             .map(char::from)
             .collect();
 
-        let message = include_str!("../../templates/link.txt")
-            .to_string()
-            .replace(
-                "{link}",
-                format!(
-                    "{}://{}/api/auth/verify/{}",
+        if verify_email {
+            let message = include_str!("../../templates/link.txt")
+                .to_string()
+                .replace(
+                    "{link}",
+                    format!(
+                        "{}://{}/api/auth/verify/{}",
+                        PROTOCOL.as_str(),
+                        USERS_SERVICE.as_str(),
+                        code
+                    )
+                    .as_str(),
+                );
+
+            let letter = CreateLetter {
+                email: user.email.clone(),
+                message,
+                subject: "Registration at auditdb.io".to_string(),
+            };
+
+            self.context
+                .make_request()
+                .auth(self.context.server_auth())
+                .post(format!(
+                    "{}://{}/api/mail",
                     PROTOCOL.as_str(),
-                    USERS_SERVICE.as_str(),
-                    code
-                )
-                .as_str(),
-            );
-
-        let letter = CreateLetter {
-            email: user.email.clone(),
-            message,
-            subject: "Registration at auditdb.io".to_string(),
-        };
-
-        self.context
-            .make_request()
-            .auth(self.context.server_auth())
-            .post(format!(
-                "{}://{}/api/mail",
-                PROTOCOL.as_str(),
-                MAIL_SERVICE.as_str()
-            ))
-            .json(&letter)
-            .send()
-            .await?;
+                    MAIL_SERVICE.as_str()
+                ))
+                .json(&letter)
+                .send()
+                .await?;
+        }
 
         let salt: String = rand::thread_rng()
             .sample_iter(&Alphanumeric)
@@ -158,9 +164,13 @@ impl AuthService {
             bail!("No code repository found")
         };
 
-        links.insert(&link).await?;
+        if verify_email {
+            links.insert(&link).await?;
+        } else {
+            users.insert(&link.user).await?;
+        }
 
-        Ok(())
+        Ok(link.user.into())
     }
 
     pub async fn verify_link(&self, code: String) -> anyhow::Result<bool> {

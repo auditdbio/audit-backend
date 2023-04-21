@@ -7,7 +7,7 @@ use common::{context::Context, error};
 
 use crate::service::{
     auth::{AuthService, Login, Token},
-    user::CreateUser,
+    user::{CreateUser, PublicUser},
 };
 
 #[post("/api/auth/login")]
@@ -19,8 +19,8 @@ pub async fn login(context: Context, login: Json<Login>) -> error::Result<Json<T
 pub async fn create_user(
     context: Context,
     Json(user): web::Json<CreateUser>,
-) -> error::Result<Json<()>> {
-    Ok(Json(AuthService::new(context).authentication(user).await?))
+) -> error::Result<Json<PublicUser>> {
+    Ok(Json(AuthService::new(context).authentication(user, false).await?))
 }
 
 #[get("/api/auth/verify/{code}")]
