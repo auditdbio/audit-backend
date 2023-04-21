@@ -220,7 +220,7 @@ impl AuditService {
             bail!("No audit repository found")
         };
 
-        let Some(audit) = audits.find("id", &Bson::ObjectId(id)).await? else {
+        let Some(audit) = audits.delete("id", &id).await? else {
             bail!("No audit found")
         };
 

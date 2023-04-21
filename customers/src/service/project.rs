@@ -186,7 +186,7 @@ impl ProjectService {
             bail!("No project repository found")
         };
 
-        let Some(project) = projects.find("id", &Bson::ObjectId(id)).await? else {
+        let Some(project) = projects.delete("id", &id).await? else {
             bail!("No project found")
         };
 

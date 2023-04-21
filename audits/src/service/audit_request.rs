@@ -296,7 +296,7 @@ impl RequestService {
             bail!("No customer repository found")
         };
 
-        let Some(request) = requests.find("id", &Bson::ObjectId(id)).await? else {
+        let Some(request) = requests.delete("id", &id).await? else {
             bail!("No customer found")
         };
 
