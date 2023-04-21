@@ -20,7 +20,11 @@ pub async fn create_user(
     context: Context,
     Json(user): web::Json<CreateUser>,
 ) -> error::Result<Json<PublicUser>> {
-    Ok(Json(AuthService::new(context).authentication(user, false).await?))
+    Ok(Json(
+        AuthService::new(context)
+            .authentication(user, false)
+            .await?,
+    ))
 }
 
 #[get("/api/auth/verify/{code}")]

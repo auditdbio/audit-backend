@@ -15,6 +15,7 @@ use actix_web::App;
 use common::context::ServiceState;
 pub use handlers::auth::*;
 pub use handlers::user::*;
+use handlers::waiting_list::run_action;
 
 pub fn create_app(
     state: Arc<ServiceState>,
@@ -38,6 +39,7 @@ pub fn create_app(
         .service(login)
         .service(my_user)
         .service(verify_link)
-        .service(create_user);
+        .service(create_user)
+        .service(run_action);
     app
 }
