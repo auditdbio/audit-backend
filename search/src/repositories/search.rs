@@ -56,11 +56,21 @@ impl SearchRepo {
             });
         }
 
-        if !query.query.is_empty() || !query.tags.is_empty() {
-            let text = query.query + " " + &query.tags;
+        if !query.query.is_empty()  {
+            let text = query.query;
             docs.push(doc! {
                 "$text": {
                     "$search": text,
+                },
+            });
+        }
+
+        let tags = query.tags.split(" ").filter(|s| !s.is_empty()).collect::<Vec<_>>();
+
+        if !tags.is_empty() {
+            docs.push(doc! {
+                "tags": {
+                    "$all": tags,
                 },
             });
         }
