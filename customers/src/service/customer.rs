@@ -36,7 +36,7 @@ pub struct CustomerChange {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PublicCustomer {
-    id: String,
+    user_id: String,
     avatar: String,
     first_name: String,
     last_name: String,
@@ -54,7 +54,7 @@ impl From<Customer<ObjectId>> for PublicCustomer {
             contacts = customer.contacts;
         }
         Self {
-            id: customer.user_id.to_hex(),
+            user_id: customer.user_id.to_hex(),
             avatar: customer.avatar,
             first_name: customer.first_name,
             last_name: customer.last_name,

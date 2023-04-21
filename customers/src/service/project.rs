@@ -5,7 +5,7 @@ use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
     context::Context,
-    entities::project::{Project, PublicProject, PublishOptions},
+    entities::{project::{Project, PublicProject, PublishOptions}, customer::Customer},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -49,6 +49,17 @@ impl ProjectService {
             bail!("No project repository found")
         };
 
+        let Some(customers) = self.context.get_repository::<Customer<ObjectId>>() else {
+            bail!("No customer repository found")
+        };
+        let customer = customers.find("user_id", &Bson::ObjectId(auth.id().unwrap().clone())).await?.unwrap();
+
+        let creator_contacts = if !project.publish_options.publish || customer.public_contacts {
+            customer.contacts
+        } else {
+            HashMap::new()
+        };
+
         let project = Project {
             id: ObjectId::new(),
             customer_id: auth
@@ -61,7 +72,7 @@ impl ProjectService {
             tags: project.tags,
             publish_options: project.publish_options,
             status: project.status,
-            creator_contacts: HashMap::new(),
+            creator_contacts,
             price: project.price,
             last_modified: Utc::now().timestamp_micros(),
         };
