@@ -23,7 +23,7 @@ pub async fn create_user(
     Ok(Json(AuthService::new(context).authentication(user).await?))
 }
 
-#[get("/api/auth/verify_link/{code}")]
+#[get("/api/auth/verify/{code}")]
 pub async fn verify_link(context: Context, code: web::Path<String>) -> error::Result<HttpResponse> {
     let result = AuthService::new(context)
         .verify_link(code.into_inner())
