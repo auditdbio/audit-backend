@@ -56,7 +56,7 @@ impl SearchRepo {
             });
         }
 
-        if !query.query.is_empty()  {
+        if !query.query.is_empty() {
             let text = query.query;
             docs.push(doc! {
                 "$text": {
@@ -65,7 +65,11 @@ impl SearchRepo {
             });
         }
 
-        let tags = query.tags.split(" ").filter(|s| !s.is_empty()).collect::<Vec<_>>();
+        let tags = query
+            .tags
+            .split(" ")
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<_>>();
 
         if !tags.is_empty() {
             docs.push(doc! {
