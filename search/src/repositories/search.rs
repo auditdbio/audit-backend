@@ -31,6 +31,21 @@ impl SearchRepo {
     }
 
     pub async fn insert(&self, query: Vec<Document>) -> anyhow::Result<()> {
+        for doc in query.iter() {
+            self.0
+                .collection
+                .update_one(
+                    doc! {
+                        "kind": doc.get("kind").unwrap(),
+                        "id": doc.get("id").unwrap(),
+                    },
+                    doc! {
+                        "$set": doc,
+                    },
+                    None,
+                )
+                .await?;
+        }
         self.0.collection.insert_many(query, None).await?;
         Ok(())
     }

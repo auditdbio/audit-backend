@@ -67,6 +67,7 @@ impl From<Customer<ObjectId>> for Option<Document> {
         if !customer.public_contacts {
             document.remove("contacts");
         }
+        document.insert("id", customer.user_id);
         document.remove("last_modified");
         document.insert("kind", "customer");
         Some(document)

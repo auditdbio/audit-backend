@@ -4,7 +4,6 @@ use common::context::ServiceState;
 use common::entities::user::User;
 use common::repository::mongo_repository::MongoRepository;
 use mongodb::bson::oid::ObjectId;
-use users::handlers::waiting_list;
 use users::service::auth::Link;
 use users::*;
 use users::service::waiting_list::WaitingListElement;

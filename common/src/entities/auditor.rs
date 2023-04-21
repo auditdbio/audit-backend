@@ -119,6 +119,7 @@ impl From<Auditor<ObjectId>> for Option<Document> {
         if !auditor.public_contacts {
             document.remove("contacts");
         }
+        document.insert("id", auditor.user_id);
         document.remove("last_modified");
         document.insert("kind", "auditor");
         Some(document)
