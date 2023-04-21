@@ -1,16 +1,17 @@
 use anyhow::bail;
+use chrono::Utc;
 use common::{
     auth::Auth,
     context::Context,
     entities::{letter::CreateLetter, user::User},
     repository::Entity,
-    services::{MAIL_SERVICE, PROTOCOL},
+    services::{MAIL_SERVICE, PROTOCOL, USERS_SERVICE},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
-use rand::Rng;
+use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 
-use super::user::PublicUser;
+use super::user::{CreateUser, PublicUser};
 
 pub struct AuthService {
     context: Context,
@@ -29,15 +30,14 @@ pub struct Token {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Code {
-    pub id: ObjectId,
+pub struct Link {
+    pub user: User<ObjectId>,
     pub code: String,
-    pub email: String,
 }
 
-impl Entity for Code {
+impl Entity for Link {
     fn id(&self) -> ObjectId {
-        self.id.clone()
+        ObjectId::new()
     }
 }
 
@@ -80,21 +80,42 @@ impl AuthService {
         })
     }
 
-    pub async fn send_code(&self, email: String) -> anyhow::Result<()> {
-        let code = format!("{:0>6}", rand::thread_rng().gen_range(0..1_000_000));
-
-        let Some(codes) = self.context.get_repository::<Code>() else {
-            bail!("No code repository found")
+    pub async fn authentication(&self, mut user: CreateUser) -> anyhow::Result<()> {
+        let Some(users) = self.context.get_repository::<User<ObjectId>>() else {
+            bail!("No user repository found")
         };
 
-        let message = include_str!("../../templates/code.txt")
+        if users
+            .find("email", &Bson::String(user.email.clone()))
+            .await?
+            .is_some()
+        {
+            bail!("User with email already exists")
+        }
+
+        let code: String = rand::thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(10)
+            .map(char::from)
+            .collect();
+
+        let message = include_str!("../../templates/link.txt")
             .to_string()
-            .replace("{code}", &code);
+            .replace(
+                "{link}",
+                format!(
+                    "{}://{}/api/auth/verify/{}",
+                    PROTOCOL.as_str(),
+                    USERS_SERVICE.as_str(),
+                    code
+                )
+                .as_str(),
+            );
 
         let letter = CreateLetter {
-            email: email.clone(),
+            email: user.email.clone(),
             message,
-            subject: format!("Your AuditDB verification code - {}", code),
+            subject: "Registration at auditdb.io".to_string(),
         };
 
         self.context
@@ -109,14 +130,56 @@ impl AuthService {
             .send()
             .await?;
 
-        let code = Code {
+        let salt: String = rand::thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(10)
+            .map(char::from)
+            .collect();
+
+        user.password.push_str(&salt);
+        let password = sha256::digest(user.password);
+
+        let user = User {
             id: ObjectId::new(),
-            code: code.clone(),
-            email,
+            name: user.name,
+            email: user.email,
+            salt,
+            password,
+            current_role: user.current_role,
+            last_modified: Utc::now().timestamp_micros(),
         };
 
-        codes.insert(&code).await?;
+        let link = Link {
+            user,
+            code: code.clone(),
+        };
+
+        let Some(links) = self.context.get_repository::<Link>() else {
+            bail!("No code repository found")
+        };
+
+        links.insert(&link).await?;
 
         Ok(())
+    }
+
+    pub async fn verify_link(&self, code: String) -> anyhow::Result<bool> {
+        let Some(codes) = self.context.get_repository::<Link>() else {
+            bail!("No code repository found")
+        };
+
+        // TODO: rewrite this with get_access
+
+        let Some(link) = codes.find("code", &Bson::String(code.clone())).await? else {
+            return Ok(false);
+        };
+
+        let Some(users) = self.context.get_repository::<User<ObjectId>>() else {
+            bail!("No user repository found")
+        };
+
+        users.insert(&link.user).await?;
+
+        Ok(true)
     }
 }

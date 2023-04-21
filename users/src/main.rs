@@ -4,7 +4,7 @@ use common::context::ServiceState;
 use common::entities::user::User;
 use common::repository::mongo_repository::MongoRepository;
 use mongodb::bson::oid::ObjectId;
-use users::service::auth::Code;
+use users::service::auth::Link;
 use users::*;
 
 use std::env;
@@ -19,11 +19,11 @@ async fn main() -> std::io::Result<()> {
     let mongo_uri = env::var("MONGOURI").unwrap();
 
     let user_repo = MongoRepository::new(&mongo_uri, "users", "users").await;
-    let code_repo = MongoRepository::new(&mongo_uri, "users", "codes").await;
+    let code_repo = MongoRepository::new(&mongo_uri, "users", "links").await;
 
     let mut state = ServiceState::new("user".to_string());
     state.insert::<User<ObjectId>>(Arc::new(user_repo));
-    state.insert::<Code>(Arc::new(code_repo));
+    state.insert::<Link>(Arc::new(code_repo));
 
     let state = Arc::new(state);
 

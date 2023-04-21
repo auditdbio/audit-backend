@@ -32,12 +32,12 @@ pub fn create_app(
         .wrap(cors)
         .wrap(middleware::Logger::default())
         .app_data(web::Data::new(state))
-        .service(create_user)
         .service(change_user)
         .service(delete_user)
         .service(find_user)
         .service(login)
         .service(my_user)
-        .service(send_code);
+        .service(verify_link)
+        .service(create_user);
     app
 }

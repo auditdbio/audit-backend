@@ -1,22 +1,12 @@
 use actix_web::{
-    delete, get, patch, post,
+    delete, get, patch,
     web::{Json, Path},
     HttpResponse,
 };
 use common::{context::Context, error};
 use serde_json::json;
 
-use crate::service::user::{CreateUser, PublicUser, UserChange, UserService};
-
-#[post("/api/user")]
-pub async fn create_user(
-    context: Context,
-    user: Json<CreateUser>,
-) -> error::Result<Json<PublicUser>> {
-    Ok(Json(
-        UserService::new(context).create(user.into_inner()).await?,
-    ))
-}
+use crate::service::user::{PublicUser, UserChange, UserService};
 
 #[get("/api/user/{id}")]
 pub async fn find_user(context: Context, id: Path<String>) -> error::Result<HttpResponse> {

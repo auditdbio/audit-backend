@@ -1,15 +1,14 @@
 use anyhow::bail;
 use chrono::Utc;
 use common::{
-    access_rules::{AccessRules, Create, Edit, Read},
+    access_rules::{AccessRules, Edit, Read},
+    auth::Auth,
     context::Context,
     entities::user::User,
 };
 use mongodb::bson::{oid::ObjectId, Bson};
-use rand::{distributions::Alphanumeric, Rng};
-use serde::{Deserialize, Serialize};
 
-use super::auth::Code;
+use serde::{Deserialize, Serialize};
 
 pub struct UserService {
     pub context: Context,
@@ -17,11 +16,10 @@ pub struct UserService {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateUser {
-    email: String,
-    password: String,
-    name: String,
-    code: String,
-    current_role: String,
+    pub email: String,
+    pub password: String,
+    pub name: String,
+    pub current_role: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -51,59 +49,25 @@ pub struct UserChange {
     current_role: Option<String>,
 }
 
-impl<'a, 'b> AccessRules<&'a CreateUser, &'b Code> for Create {
-    fn get_access(user: &'a CreateUser, code: &'b Code) -> bool {
-        &user.code == &code.code && &user.email == &code.email
-    }
-}
-
 impl UserService {
     pub fn new(context: Context) -> Self {
         Self { context }
     }
 
-    pub async fn create(&self, mut user: CreateUser) -> anyhow::Result<PublicUser> {
+    pub async fn create(&self, user: User<String>) -> anyhow::Result<PublicUser> {
+        let auth = self.context.auth();
+
+        // TODO: rewrite with get_access framework
+
+        if let Auth::Service(_) = auth {
+            bail!("Only services can create users")
+        }
+
         let Some(users) = self.context.get_repository::<User<ObjectId>>() else {
             bail!("No user repository found")
         };
 
-        let Some(codes) = self.context.get_repository::<Code>() else {
-            bail!("No code repository found")
-        };
-
-        let Some(code) = codes.find("email", &Bson::String(user.email.clone())).await? else {
-            bail!("No code found")
-        };
-
-        if !Create::get_access(&user, &code) {
-            bail!("User is not allowed to create this user")
-        }
-
-        let salt: String = rand::thread_rng()
-            .sample_iter(&Alphanumeric)
-            .take(10)
-            .map(char::from)
-            .collect();
-        user.password.push_str(&salt);
-        let password = sha256::digest(user.password);
-
-        let user = User {
-            id: ObjectId::new(),
-            name: user.name,
-            email: user.email,
-            salt,
-            password,
-            current_role: user.current_role,
-            last_modified: Utc::now().timestamp_micros(),
-        };
-
-        if users
-            .find("email", &Bson::String(user.email.clone()))
-            .await?
-            .is_some()
-        {
-            bail!("User with email already exists")
-        }
+        let user = user.parse();
 
         users.insert(&user).await?;
 
