@@ -4,7 +4,7 @@ use actix_web::{
     HttpResponse,
 };
 
-use common::{context::Context, error};
+use common::{context::Context, entities::customer::Customer, error};
 
 use serde_json::json;
 
@@ -38,17 +38,12 @@ pub async fn my_customer(context: Context) -> error::Result<HttpResponse> {
     }
 }
 
-#[patch("/api/customer/{id}")]
+#[patch("/api/my_customer")]
 pub async fn patch_customer(
     context: Context,
-    id: web::Path<String>,
     Json(data): Json<CustomerChange>,
-) -> error::Result<Json<PublicCustomer>> {
-    Ok(Json(
-        CustomerService::new(context)
-            .change(id.parse()?, data)
-            .await?,
-    ))
+) -> error::Result<Json<Customer<String>>> {
+    Ok(Json(CustomerService::new(context).change(data).await?))
 }
 
 #[delete("/api/customer/{id}")]

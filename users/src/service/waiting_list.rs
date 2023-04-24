@@ -2,12 +2,13 @@ use anyhow::bail;
 use common::{
     context::Context,
     entities::letter::CreateLetter,
-    services::{MAIL_SERVICE, PROTOCOL}, repository::Entity,
+    repository::Entity,
+    services::{MAIL_SERVICE, PROTOCOL},
 };
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-lazy_static::lazy_static!{
+lazy_static::lazy_static! {
     static ref RUN_ACTION_SECRET: String = std::env::var("RUN_ACTION_SECRET").unwrap();
 }
 

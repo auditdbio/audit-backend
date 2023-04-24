@@ -22,6 +22,7 @@ pub struct Project<Id> {
     pub tags: Vec<String>,
     pub publish_options: PublishOptions,
     pub status: String,
+    pub public_contacts: bool,
     pub creator_contacts: HashMap<String, String>,
     pub last_modified: i64,
     pub price: i64,
@@ -38,6 +39,7 @@ impl Project<String> {
             tags: self.tags,
             publish_options: self.publish_options,
             status: self.status,
+            public_contacts: self.public_contacts,
             creator_contacts: self.creator_contacts,
             last_modified: self.last_modified,
             price: self.price,
@@ -56,6 +58,7 @@ impl Project<ObjectId> {
             tags: self.tags,
             publish_options: self.publish_options,
             status: self.status,
+            public_contacts: self.public_contacts,
             creator_contacts: self.creator_contacts,
             last_modified: self.last_modified,
             price: self.price,
@@ -78,12 +81,19 @@ pub struct PublicProject {
     pub tags: Vec<String>,
     pub publish_options: PublishOptions,
     pub status: String,
+    pub public_contacts: bool,
     pub creator_contacts: HashMap<String, String>,
     pub price: i64,
 }
 
 impl From<Project<ObjectId>> for PublicProject {
     fn from(project: Project<ObjectId>) -> Self {
+        let creator_contacts = if project.public_contacts {
+            project.creator_contacts
+        } else {
+            HashMap::new()
+        };
+
         Self {
             id: project.id.to_hex(),
             name: project.name,
@@ -92,7 +102,8 @@ impl From<Project<ObjectId>> for PublicProject {
             tags: project.tags,
             publish_options: project.publish_options,
             status: project.status,
-            creator_contacts: project.creator_contacts,
+            public_contacts: project.public_contacts,
+            creator_contacts,
             price: project.price,
         }
     }

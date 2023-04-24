@@ -4,7 +4,11 @@ use actix_web::{
     HttpResponse,
 };
 
-use common::{context::Context, entities::auditor::PublicAuditor, error};
+use common::{
+    context::Context,
+    entities::auditor::{Auditor, PublicAuditor},
+    error,
+};
 
 use serde_json::json;
 
@@ -38,17 +42,12 @@ pub async fn get_my_auditor(context: Context) -> error::Result<HttpResponse> {
     }
 }
 
-#[patch("/api/auditor/{id}")]
+#[patch("/api/my_auditor")]
 pub async fn patch_auditor(
     context: Context,
-    id: web::Path<String>,
     Json(data): Json<AuditorChange>,
-) -> error::Result<Json<PublicAuditor>> {
-    Ok(Json(
-        AuditorService::new(context)
-            .change(id.parse()?, data)
-            .await?,
-    ))
+) -> error::Result<Json<Auditor<String>>> {
+    Ok(Json(AuditorService::new(context).change(data).await?))
 }
 
 #[delete("/api/auditor/{id}")]

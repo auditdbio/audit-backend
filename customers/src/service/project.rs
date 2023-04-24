@@ -81,6 +81,7 @@ impl ProjectService {
             creator_contacts,
             price: project.price,
             last_modified: Utc::now().timestamp_micros(),
+            public_contacts: customer.public_contacts,
         };
 
         projects.insert(&project).await?;

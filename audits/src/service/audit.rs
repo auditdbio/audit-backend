@@ -8,6 +8,8 @@ use common::{
     entities::{
         audit::Audit,
         audit_request::{AuditRequest, TimeRange},
+        auditor::Auditor,
+        customer::Customer,
         project::PublicProject,
         role::Role,
     },
@@ -99,19 +101,49 @@ impl AuditService {
             .json::<PublicProject>()
             .await?;
 
+        let customer = self
+            .context
+            .make_request::<Customer<String>>()
+            .get(format!(
+                "{}://{}/api/customer/{}",
+                PROTOCOL.as_str(),
+                CUSTOMERS_SERVICE.as_str(),
+                request.customer_id
+            ))
+            .auth(self.context.server_auth())
+            .send()
+            .await?
+            .json::<Customer<String>>()
+            .await?;
+
+        let auditor = self
+            .context
+            .make_request::<Auditor<String>>()
+            .get(format!(
+                "{}://{}/api/auditor/{}",
+                PROTOCOL.as_str(),
+                CUSTOMERS_SERVICE.as_str(),
+                request.auditor_id
+            ))
+            .auth(self.context.server_auth())
+            .send()
+            .await?
+            .json::<Auditor<String>>()
+            .await?;
+
         let audit = Audit {
             id: ObjectId::new(),
             customer_id: request.customer_id.parse()?,
             auditor_id: request.auditor_id.parse()?,
             project_id: request.project_id.parse()?,
             project_name: request.project_name,
-            avatar: request.project_avatar,
+            avatar: request.avatar,
             description: request.description,
             status: "pending".to_string(),
             scope: request.project_scope,
             price: request.price,
-            auditor_contacts: request.auditor_contacts,
-            customer_contacts: request.customer_contacts,
+            auditor_contacts: customer.contacts,
+            customer_contacts: auditor.contacts,
             tags: project.tags,
             last_modified: Utc::now().timestamp_micros(),
             report: None,

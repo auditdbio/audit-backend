@@ -113,12 +113,9 @@ impl AuditorService {
         Ok(auditor)
     }
 
-    pub async fn change(
-        &self,
-        id: ObjectId,
-        change: AuditorChange,
-    ) -> anyhow::Result<PublicAuditor> {
+    pub async fn change(&self, change: AuditorChange) -> anyhow::Result<Auditor<String>> {
         let auth = self.context.auth();
+        let id = auth.id().unwrap().clone();
 
         let Some(auditors) = self.context.get_repository::<Auditor<ObjectId>>() else {
             bail!("No auditor repository found")
@@ -173,7 +170,7 @@ impl AuditorService {
         auditors.delete("user_id", &id).await?;
         auditors.insert(&auditor).await?;
 
-        Ok(auditor.into())
+        Ok(auditor.stringify())
     }
 
     pub async fn delete(&self, id: ObjectId) -> anyhow::Result<PublicAuditor> {

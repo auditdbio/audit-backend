@@ -89,4 +89,14 @@ where
             .await;
         Ok(result.into_iter().collect::<mongodb::error::Result<_>>()?)
     }
+
+    async fn find_all_by_ids(&self, ids: Vec<ObjectId>) -> anyhow::Result<Vec<T>> {
+        let result: Vec<mongodb::error::Result<T>> = self
+            .collection
+            .find(doc! {"id": doc! {"$in": ids}}, None)
+            .await?
+            .collect()
+            .await;
+        Ok(result.into_iter().collect::<mongodb::error::Result<_>>()?)
+    }
 }

@@ -33,7 +33,7 @@ pub struct RequestChange {
     description: Option<String>,
     time: Option<TimeRange>,
     project_name: Option<String>,
-    project_avatar: Option<String>,
+    avatar: Option<String>,
     project_scope: Option<Vec<String>>,
     price_range: Option<PriceRange>,
     price: Option<i64>,
@@ -50,7 +50,7 @@ pub struct PublicRequest {
     pub description: String,
     pub time: TimeRange,
     pub project_name: String,
-    pub project_avatar: String,
+    pub avatar: String,
     pub project_scope: Vec<String>,
     pub price: i64,
     pub auditor_contacts: HashMap<String, String>,
@@ -67,7 +67,7 @@ impl From<AuditRequest<ObjectId>> for PublicRequest {
             description: request.description,
             time: request.time,
             project_name: request.project_name,
-            project_avatar: request.project_avatar,
+            avatar: request.avatar,
             project_scope: request.project_scope,
             price: request.price,
             auditor_contacts: request.auditor_contacts,
@@ -117,7 +117,7 @@ impl RequestService {
                 CUSTOMERS_SERVICE.as_str(),
                 request.project_id
             ))
-            .auth(self.context.server_auth())
+            .auth(auth.clone())
             .send()
             .await?
             .json::<PublicProject>()
@@ -148,7 +148,7 @@ impl RequestService {
             description: request.description,
             time: request.time,
             project_name: project.name,
-            project_avatar: auditor.avatar,
+            avatar: auditor.avatar,
             project_scope: project.scope,
             price: request.price,
             auditor_contacts: auditor.contacts,
@@ -251,8 +251,8 @@ impl RequestService {
             request.project_name = project_name;
         }
 
-        if let Some(project_avatar) = change.project_avatar {
-            request.project_avatar = project_avatar;
+        if let Some(avatar) = change.avatar {
+            request.avatar = avatar;
         }
 
         if let Some(project_scope) = change.project_scope {

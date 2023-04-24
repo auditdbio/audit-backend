@@ -5,7 +5,7 @@ use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
     context::Context,
-    entities::customer::Customer,
+    entities::{customer::Customer, project::Project},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -137,12 +137,9 @@ impl CustomerService {
         Ok(customer)
     }
 
-    pub async fn change(
-        &self,
-        id: ObjectId,
-        change: CustomerChange,
-    ) -> anyhow::Result<PublicCustomer> {
+    pub async fn change(&self, change: CustomerChange) -> anyhow::Result<Customer<String>> {
         let auth = self.context.auth();
+        let id = auth.id().unwrap().clone();
 
         let Some(customers) = self.context.get_repository::<Customer<ObjectId>>() else {
             bail!("No customer repository found")
@@ -178,6 +175,20 @@ impl CustomerService {
 
         if let Some(public_contacts) = change.public_contacts {
             customer.public_contacts = public_contacts;
+
+            let Some(projects) = self.context.get_repository::<Project<ObjectId>>() else {
+                bail!("No project repository found")
+            };
+
+            let customer_projects = projects
+                .find_many("customer_id", &Bson::ObjectId(id))
+                .await?;
+
+            for mut project in customer_projects {
+                project.public_contacts = public_contacts;
+                projects.delete("id", &project.id).await?;
+                projects.insert(&project).await?;
+            }
         }
 
         if let Some(contacts) = change.contacts {
@@ -193,7 +204,7 @@ impl CustomerService {
         customers.delete("user_id", &id).await?;
         customers.insert(&customer).await?;
 
-        Ok(customer.into())
+        Ok(customer.stringify())
     }
 
     pub async fn delete(&self, id: ObjectId) -> anyhow::Result<PublicCustomer> {
