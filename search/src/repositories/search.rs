@@ -3,7 +3,7 @@ use std::sync::Arc;
 use common::repository::mongo_repository::MongoRepository;
 use futures::StreamExt;
 use mongodb::{
-    bson::{doc, Document},
+    bson::{doc, Document, Bson},
     options::FindOptions,
     IndexModel,
 };
@@ -132,6 +132,17 @@ impl SearchRepo {
                 "ready_to_wait": ready_to_wait,
             });
         }
+
+        docs.push(doc! {
+            "$or": [
+                {
+                    "private": false,
+                },
+                {
+                    "private": Bson::Null,
+                }
+            ]
+        });
 
         log::info!("Search query: {:?}", docs);
 

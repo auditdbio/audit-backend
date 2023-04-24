@@ -112,11 +112,9 @@ impl From<Project<ObjectId>> for PublicProject {
 impl From<Project<ObjectId>> for Option<Document> {
     fn from(project: Project<ObjectId>) -> Self {
         let project = project.stringify();
-        if !project.publish_options.publish {
-            return None;
-        }
         let mut document = bson::to_document(&project).unwrap();
         document.insert("kind", "project");
+        document.insert("private", project.publish_options.publish);
         Some(document)
     }
 }
