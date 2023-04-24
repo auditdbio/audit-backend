@@ -165,6 +165,10 @@ impl AuditorService {
             auditor.price_range = price_range;
         }
 
+        if let Some(public_contacts) = change.public_contacts {
+            auditor.public_contacts = public_contacts;
+        }
+
         auditor.last_modified = Utc::now().timestamp_micros();
 
         auditors.delete("user_id", &id).await?;
