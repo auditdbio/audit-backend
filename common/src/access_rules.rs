@@ -153,7 +153,7 @@ impl<'a, 'b> AccessRules<&'a Auth, ()> for SendMail {
         match auth {
             Auth::Service(_) | Auth::Admin(_) => true,
             Auth::User(_) => false,
-            Auth::None => true,
+            Auth::None => false,
         }
     }
 }

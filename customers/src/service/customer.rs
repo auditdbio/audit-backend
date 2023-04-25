@@ -5,7 +5,10 @@ use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
     context::Context,
-    entities::{customer::{Customer, PublicCustomer}, project::Project},
+    entities::{
+        customer::{Customer, PublicCustomer},
+        project::Project,
+    },
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -33,7 +36,6 @@ pub struct CustomerChange {
     contacts: Option<HashMap<String, String>>,
     tags: Option<Vec<String>>,
 }
-
 
 pub struct CustomerService {
     context: Context,

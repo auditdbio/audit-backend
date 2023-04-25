@@ -74,7 +74,6 @@ impl From<Customer<ObjectId>> for Option<Document> {
     }
 }
 
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PublicCustomer {
     pub user_id: String,
