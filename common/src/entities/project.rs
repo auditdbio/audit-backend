@@ -114,7 +114,7 @@ impl From<Project<ObjectId>> for Option<Document> {
         let project = project.stringify();
         let mut document = bson::to_document(&project).unwrap();
         document.insert("kind", "project");
-        document.insert("private", project.publish_options.publish);
+        document.insert("private", !project.publish_options.publish);
         Some(document)
     }
 }
