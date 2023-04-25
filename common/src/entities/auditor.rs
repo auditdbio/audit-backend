@@ -89,29 +89,6 @@ pub struct PublicAuditor {
     pub tags: Vec<String>,
 }
 
-impl From<Auditor<ObjectId>> for PublicAuditor {
-    fn from(auditor: Auditor<ObjectId>) -> Self {
-        let contacts = if auditor.public_contacts {
-            auditor.contacts
-        } else {
-            HashMap::new()
-        };
-        Self {
-            user_id: auditor.user_id.to_hex(),
-            avatar: auditor.avatar,
-            first_name: auditor.first_name,
-            last_name: auditor.last_name,
-            about: auditor.about,
-            company: auditor.company,
-            public_contacts: auditor.public_contacts,
-            contacts,
-            free_at: auditor.free_at,
-            price_range: auditor.price_range,
-            tags: auditor.tags,
-        }
-    }
-}
-
 impl From<Auditor<ObjectId>> for Option<Document> {
     fn from(auditor: Auditor<ObjectId>) -> Self {
         let auditor = auditor.stringify();

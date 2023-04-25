@@ -8,7 +8,7 @@ use common::{
     entities::{
         audit::Audit,
         audit_request::{AuditRequest, TimeRange},
-        auditor::Auditor,
+        auditor::PublicAuditor,
         customer::PublicCustomer,
         project::PublicProject,
         role::Role,
@@ -118,7 +118,7 @@ impl AuditService {
 
         let auditor = self
             .context
-            .make_request::<Auditor<String>>()
+            .make_request::<PublicAuditor>()
             .get(format!(
                 "{}://{}/api/auditor/{}",
                 PROTOCOL.as_str(),
@@ -128,7 +128,7 @@ impl AuditService {
             .auth(self.context.server_auth())
             .send()
             .await?
-            .json::<Auditor<String>>()
+            .json::<PublicAuditor>()
             .await?;
 
         let audit = Audit {
