@@ -115,8 +115,8 @@ impl SearchRepo {
             });
         }
 
-        let price_from = query.price_from.unwrap_or(i64::MAX);
-        let price_to = query.price_to.unwrap_or(0);
+        let price_from = query.price_from.unwrap_or(0);
+        let price_to = query.price_to.unwrap_or(i64::MAX);
         docs.push(doc! {
             "$or": [
                 {
@@ -127,17 +127,10 @@ impl SearchRepo {
                 },
                 {
                     "price_range": {
-<<<<<<< HEAD
                         "from": {
                             "$gte": price_from,
                         },
                         "to": {
-=======
-                        "begin": {
-                            "$gte": price_from,
-                        },
-                        "end": {
->>>>>>> 1e817ef3f6084d39f9c35ca5380babf76b219807
                             "$lte": price_to,
                         },
                     },
