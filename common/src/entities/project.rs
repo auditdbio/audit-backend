@@ -113,7 +113,14 @@ impl From<Project<ObjectId>> for Option<Document> {
     fn from(project: Project<ObjectId>) -> Self {
         let project = project.stringify();
         let mut document = bson::to_document(&project).unwrap();
-        document.insert("search_tags", project.tags.iter().map(|tag| tag.to_lowercase()).collect::<Vec<String>>());
+        document.insert(
+            "search_tags",
+            project
+                .tags
+                .iter()
+                .map(|tag| tag.to_lowercase())
+                .collect::<Vec<String>>(),
+        );
         document.insert("kind", "project");
         document.insert("private", !project.publish_options.publish);
         Some(document)

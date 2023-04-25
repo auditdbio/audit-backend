@@ -61,7 +61,8 @@ impl SearchRepo {
                     "price_range.to"
                 } else {
                     "price_range.from"
-                }.to_string();
+                }
+                .to_string();
                 sort.insert(sort_field, sort_order);
             }
             Some(
@@ -114,29 +115,29 @@ impl SearchRepo {
             });
         }
 
-        if let (Some(price_from), Some(price_to)) = (query.price_from, query.price_to) {
-            docs.push(doc! {
-                "$or": [
-                    {
-                        "price": {
+        let price_from = query.price_from.unwrap_or(i64::MAX);
+        let price_to = query.price_to.unwrap_or(0);
+        docs.push(doc! {
+            "$or": [
+                {
+                    "price": {
+                        "$gte": price_from,
+                        "$lte": price_to,
+                    },
+                },
+                {
+                    "price_range": {
+                        "from": {
                             "$gte": price_from,
+                        },
+                        "to": {
                             "$lte": price_to,
                         },
                     },
-                    {
-                        "price_range": {
-                            "begin": {
-                                "$gte": price_from,
-                            },
-                            "end": {
-                                "$lte": price_to,
-                            },
-                        },
-                    },
+                },
 
-                ]
-            });
-        }
+            ]
+        });
 
         if let (Some(time_from), Some(time_to)) = (query.time_from, query.time_to) {
             docs.push(doc! {
