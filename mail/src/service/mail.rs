@@ -10,6 +10,7 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 lazy_static::lazy_static! {
+    static ref FEEDBACK_EMAIL: String = std::env::var("FEEDBACK_EMAIL").unwrap();
     static ref EMAIL_ADDRESS: String = std::env::var("HELLO_MAIL_ADDRESS").unwrap();
     static ref EMAIL_PASSWORD: String = std::env::var("HELLO_MAIL_PASSWORD").unwrap();
 }
@@ -74,7 +75,7 @@ impl MailService {
 
         let letter = Letter {
             id: ObjectId::new(),
-            email: feedback.email.clone(),
+            email: FEEDBACK_EMAIL.to_string(),
             message: feedback.message.clone(),
             subject: format!(
                 "{} ({}) from {} send feedback",

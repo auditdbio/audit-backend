@@ -20,9 +20,16 @@ pub async fn create_user(
     context: Context,
     Json(user): web::Json<CreateUser>,
 ) -> error::Result<Json<PublicUser>> {
+    let use_email = true;
+
+    #[cfg(feature = "test_server")]
+    if user.use_email == Some(false) {
+        use_email = false;
+    }
+
     Ok(Json(
         AuthService::new(context)
-            .authentication(user, false)
+            .authentication(user, use_email)
             .await?,
     ))
 }

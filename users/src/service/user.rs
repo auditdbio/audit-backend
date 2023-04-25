@@ -20,6 +20,7 @@ pub struct CreateUser {
     pub password: String,
     pub name: String,
     pub current_role: String,
+    pub use_email: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
