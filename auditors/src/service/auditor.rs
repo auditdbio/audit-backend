@@ -77,7 +77,7 @@ impl AuditorService {
 
         auditors.insert(&auditor).await?;
 
-        Ok(auditor.into())
+        Ok(auth.public_auditor(auditor))
     }
 
     pub async fn find(&self, id: ObjectId) -> anyhow::Result<Option<PublicAuditor>> {
@@ -95,7 +95,7 @@ impl AuditorService {
             bail!("User is not available to change this auditor")
         }
 
-        Ok(Some(auditor.into()))
+        Ok(Some(auth.public_auditor(auditor)))
     }
 
     pub async fn my_auditor(&self) -> anyhow::Result<Option<Auditor<String>>> {
@@ -193,6 +193,6 @@ impl AuditorService {
             bail!("User is not available to delete this auditor")
         }
 
-        Ok(auditor.into())
+        Ok(auth.public_auditor(auditor))
     }
 }

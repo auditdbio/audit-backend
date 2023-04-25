@@ -7,7 +7,7 @@ use mongodb::bson::oid::ObjectId;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use crate::{constants::DURATION, entities::customer::{PublicCustomer, Customer}};
+use crate::{constants::DURATION, entities::{customer::{PublicCustomer, Customer}, auditor::{PublicAuditor, Auditor}}};
 
 pub static ENCODING_KEY: Lazy<EncodingKey> = Lazy::new(|| {
     let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
@@ -49,7 +49,7 @@ impl Auth {
         if customer.public_contacts || self.full_access() {
             contacts = customer.contacts;
         }
-        
+
         PublicCustomer {
             user_id: customer.user_id.to_hex(),
             avatar: customer.avatar,
@@ -60,6 +60,28 @@ impl Auth {
             public_contacts: customer.public_contacts,
             contacts,
             tags: customer.tags,
+        }
+    }
+
+    pub fn public_auditor(&self, auditor: Auditor<ObjectId>) -> PublicAuditor {
+        let mut contacts = HashMap::new();
+
+        if auditor.public_contacts || self.full_access() {
+            contacts = auditor.contacts;
+        }
+        
+        PublicAuditor {
+            user_id: auditor.user_id.to_hex(),
+            avatar: auditor.avatar,
+            first_name: auditor.first_name,
+            last_name: auditor.last_name,
+            about: auditor.about,
+            company: auditor.company,
+            public_contacts: auditor.public_contacts,
+            contacts,
+            free_at: auditor.free_at,
+            price_range: auditor.price_range,
+            tags: auditor.tags,
         }
     }
 }
