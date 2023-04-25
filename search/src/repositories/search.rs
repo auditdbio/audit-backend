@@ -51,6 +51,19 @@ impl SearchRepo {
 
     pub async fn search(&self, mut query: SearchQuery) -> anyhow::Result<Vec<Document>> {
         let find_options = if let Some(sort_by) = query.sort_by {
+            let sort_order = query.sort_order.unwrap_or(1);
+            let mut sort = doc! {
+                sort_by.clone(): sort_order,
+            };
+
+            if &sort_by == "price" {
+                let sort_field = if sort_order == 1 {
+                    "price_range.end"
+                } else {
+                    "price_range.begin"
+                }.to_string();
+                sort.insert(sort_field, sort_order);
+            }
             Some(
                 FindOptions::builder()
                     .sort(doc! {
