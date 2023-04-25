@@ -89,13 +89,13 @@ impl SearchRepo {
                     Some(s.to_ascii_lowercase())
                 } else {
                     None
-                }
+                } // insensitive
             })
             .collect::<Vec<_>>();
 
         if !tags.is_empty() {
             docs.push(doc! {
-                "tags": {
+                "search_tags": {
                     "$all": tags,
                 },
             });
