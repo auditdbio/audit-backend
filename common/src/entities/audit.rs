@@ -27,6 +27,7 @@ pub struct Audit<Id> {
     pub tags: Vec<String>,
     pub last_modified: i64,
     pub report: Option<String>,
+    pub report_name: Option<String>,
     pub time: TimeRange,
 }
 
@@ -48,6 +49,7 @@ impl Audit<String> {
             tags: self.tags,
             last_modified: self.last_modified,
             report: self.report,
+            report_name: self.report_name,
             time: self.time,
         }
     }
@@ -71,6 +73,7 @@ impl Audit<ObjectId> {
             tags: self.tags,
             last_modified: self.last_modified,
             report: self.report,
+            report_name: self.report_name,
             time: self.time,
         }
     }

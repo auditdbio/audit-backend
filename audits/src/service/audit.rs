@@ -46,6 +46,7 @@ pub struct PublicAudit {
     pub tags: Vec<String>,
     pub last_modified: i64,
     pub report: Option<String>,
+    pub report_name: Option<String>,
     pub time: TimeRange,
 }
 
@@ -67,6 +68,7 @@ impl From<Audit<ObjectId>> for PublicAudit {
             tags: audit.tags,
             last_modified: audit.last_modified,
             report: audit.report,
+            report_name: audit.report_name,
             time: audit.time,
         }
     }
@@ -147,6 +149,7 @@ impl AuditService {
             tags: project.tags,
             last_modified: Utc::now().timestamp_micros(),
             report: None,
+            report_name: None,
             time: request.time,
         };
 
