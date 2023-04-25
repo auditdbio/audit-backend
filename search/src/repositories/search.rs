@@ -58,9 +58,9 @@ impl SearchRepo {
 
             if &sort_by == "price" {
                 let sort_field = if sort_order == 1 {
-                    "price_range.end"
+                    "price_range.to"
                 } else {
-                    "price_range.begin"
+                    "price_range.from"
                 }.to_string();
                 sort.insert(sort_field, sort_order);
             }
