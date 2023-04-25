@@ -5,7 +5,7 @@ use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
     context::Context,
-    entities::{customer::Customer, project::Project},
+    entities::{customer::{Customer, PublicCustomer}, project::Project},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -34,38 +34,6 @@ pub struct CustomerChange {
     tags: Option<Vec<String>>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PublicCustomer {
-    user_id: String,
-    avatar: String,
-    first_name: String,
-    last_name: String,
-    about: String,
-    company: String,
-    public_contacts: bool,
-    contacts: HashMap<String, String>,
-    tags: Vec<String>,
-}
-
-impl From<Customer<ObjectId>> for PublicCustomer {
-    fn from(customer: Customer<ObjectId>) -> Self {
-        let mut contacts = HashMap::new();
-        if customer.public_contacts {
-            contacts = customer.contacts;
-        }
-        Self {
-            user_id: customer.user_id.to_hex(),
-            avatar: customer.avatar,
-            first_name: customer.first_name,
-            last_name: customer.last_name,
-            about: customer.about,
-            company: customer.company,
-            public_contacts: customer.public_contacts,
-            contacts,
-            tags: customer.tags,
-        }
-    }
-}
 
 pub struct CustomerService {
     context: Context,
@@ -101,7 +69,7 @@ impl CustomerService {
 
         customers.insert(&customer).await?;
 
-        Ok(customer.into())
+        Ok(auth.public_customer(customer))
     }
 
     pub async fn find(&self, id: ObjectId) -> anyhow::Result<Option<PublicCustomer>> {
@@ -119,7 +87,7 @@ impl CustomerService {
             bail!("User is not available to change this customer")
         }
 
-        Ok(Some(customer.into()))
+        Ok(Some(auth.public_customer(customer)))
     }
 
     pub async fn my_customer(&self) -> anyhow::Result<Option<Customer<String>>> {
@@ -223,6 +191,6 @@ impl CustomerService {
             bail!("User is not available to delete this customer")
         }
 
-        Ok(customer.into())
+        Ok(auth.public_customer(customer))
     }
 }

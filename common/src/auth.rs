@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use anyhow::bail;
 use chrono::Utc;
 use jsonwebtoken::{decode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
@@ -5,7 +7,7 @@ use mongodb::bson::oid::ObjectId;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use crate::constants::DURATION;
+use crate::{constants::DURATION, entities::customer::{PublicCustomer, Customer}};
 
 pub static ENCODING_KEY: Lazy<EncodingKey> = Lazy::new(|| {
     let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
@@ -31,6 +33,33 @@ impl Auth {
             Auth::Admin(id) => Some(id),
             Auth::User(id) => Some(id),
             _ => None,
+        }
+    }
+
+    pub fn full_access(&self) -> bool {
+        match self {
+            Auth::Admin(_) | Auth::Service(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn public_customer(&self, customer: Customer<ObjectId>) -> PublicCustomer {
+        let mut contacts = HashMap::new();
+
+        if customer.public_contacts || self.full_access() {
+            contacts = customer.contacts;
+        }
+        
+        PublicCustomer {
+            user_id: customer.user_id.to_hex(),
+            avatar: customer.avatar,
+            first_name: customer.first_name,
+            last_name: customer.last_name,
+            about: customer.about,
+            company: customer.company,
+            public_contacts: customer.public_contacts,
+            contacts,
+            tags: customer.tags,
         }
     }
 }

@@ -73,3 +73,17 @@ impl From<Customer<ObjectId>> for Option<Document> {
         Some(document)
     }
 }
+
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PublicCustomer {
+    pub user_id: String,
+    pub avatar: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub about: String,
+    pub company: String,
+    pub public_contacts: bool,
+    pub contacts: HashMap<String, String>,
+    pub tags: Vec<String>,
+}

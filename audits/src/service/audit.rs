@@ -9,7 +9,7 @@ use common::{
         audit::Audit,
         audit_request::{AuditRequest, TimeRange},
         auditor::Auditor,
-        customer::Customer,
+        customer::PublicCustomer,
         project::PublicProject,
         role::Role,
     },
@@ -103,7 +103,7 @@ impl AuditService {
 
         let customer = self
             .context
-            .make_request::<Customer<String>>()
+            .make_request::<PublicCustomer>()
             .get(format!(
                 "{}://{}/api/customer/{}",
                 PROTOCOL.as_str(),
@@ -113,7 +113,7 @@ impl AuditService {
             .auth(self.context.server_auth())
             .send()
             .await?
-            .json::<Customer<String>>()
+            .json::<PublicCustomer>()
             .await?;
 
         let auditor = self

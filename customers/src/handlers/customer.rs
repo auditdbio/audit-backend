@@ -4,11 +4,11 @@ use actix_web::{
     HttpResponse,
 };
 
-use common::{context::Context, entities::customer::Customer, error};
+use common::{context::Context, entities::customer::{Customer, PublicCustomer}, error};
 
 use serde_json::json;
 
-use crate::service::customer::{CreateCustomer, CustomerChange, CustomerService, PublicCustomer};
+use crate::service::customer::{CreateCustomer, CustomerChange, CustomerService};
 
 #[post("/api/customer")]
 pub async fn post_customer(
