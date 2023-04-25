@@ -4,7 +4,7 @@ use common::repository::mongo_repository::MongoRepository;
 use futures::StreamExt;
 use mongodb::{
     bson::{doc, Document, Bson},
-    options::FindOptions,
+    options::{FindOptions, UpdateOptions},
     IndexModel,
 };
 
@@ -42,11 +42,12 @@ impl SearchRepo {
                     doc! {
                         "$set": doc,
                     },
-                    None,
+                    UpdateOptions::builder()
+                        .upsert(true)
+                        .build(),
                 )
                 .await?;
         }
-        self.0.collection.insert_many(query, None).await?;
         Ok(())
     }
 
