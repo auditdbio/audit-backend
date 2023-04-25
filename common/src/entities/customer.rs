@@ -68,7 +68,14 @@ impl From<Customer<ObjectId>> for Option<Document> {
             document.remove("contacts");
         }
         document.insert("id", customer.user_id);
-        document.insert("search_tags", customer.tags.iter().map(|tag| tag.to_lowercase()).collect::<Vec<String>>());
+        document.insert(
+            "search_tags",
+            customer
+                .tags
+                .iter()
+                .map(|tag| tag.to_lowercase())
+                .collect::<Vec<String>>(),
+        );
 
         document.remove("last_modified");
         document.insert("kind", "customer");

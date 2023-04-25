@@ -97,7 +97,14 @@ impl From<Auditor<ObjectId>> for Option<Document> {
             document.remove("contacts");
         }
         document.insert("id", auditor.user_id);
-        document.insert("search_tags", auditor.tags.iter().map(|tag| tag.to_lowercase()).collect::<Vec<String>>());
+        document.insert(
+            "search_tags",
+            auditor
+                .tags
+                .iter()
+                .map(|tag| tag.to_lowercase())
+                .collect::<Vec<String>>(),
+        );
 
         document.remove("last_modified");
         document.insert("kind", "auditor");
