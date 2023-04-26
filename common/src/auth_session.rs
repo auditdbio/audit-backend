@@ -5,11 +5,21 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use utoipa::ToSchema;
 
+use crate::services::USERS_SERVICE;
+
+#[derive(Debug, Serialize, Deserialize, ToSchema, Clone, PartialEq, Eq)]
+pub enum Role {
+    User,
+    Admin,
+    Service,
+}
+
 #[derive(Debug, Serialize, Deserialize, ToSchema, Clone)]
 pub struct AuthSession {
     pub user_id: ObjectId,
     pub token: String,
     pub exp: usize,
+    pub role: Role,
 }
 
 impl AuthSession {
@@ -30,7 +40,10 @@ pub fn jwt_from_header(req: &HttpRequest) -> Option<String> {
 pub async fn get_auth_session(jwt: String) -> Result<AuthSession, String> {
     let client = reqwest::Client::new();
     let req = client
-        .get("https://auditdb.io/api/auth/verify")
+        .get(format!(
+            "https://{}/api/auth/verify",
+            USERS_SERVICE.as_str()
+        ))
         .header("Authorization", format!("Bearer {}", jwt))
         .send()
         .await
@@ -58,6 +71,7 @@ pub trait SessionManager {
     type Error;
     type Payload: From<HttpRequest> + Send;
     async fn get_session(&self, req: Self::Payload) -> Result<AuthSession, Self::Error>;
+    async fn get_session_from_string(&self, str: String) -> Result<AuthSession, Self::Error>;
 }
 pub struct HttpSessionManager;
 
@@ -69,6 +83,10 @@ impl SessionManager for HttpSessionManager {
     async fn get_session(&self, req: Self::Payload) -> Result<AuthSession, Self::Error> {
         get_auth_session(req.jwt).await
     }
+
+    async fn get_session_from_string(&self, str: String) -> Result<AuthSession, Self::Error> {
+        get_auth_session(str).await
+    }
 }
 
 pub struct TestSessionManager(pub AuthSession);
@@ -79,6 +97,10 @@ impl SessionManager for TestSessionManager {
     type Payload = AuthPayload;
 
     async fn get_session(&self, _req: Self::Payload) -> Result<AuthSession, Self::Error> {
+        Ok(self.0.clone())
+    }
+
+    async fn get_session_from_string(&self, _str: String) -> Result<AuthSession, Self::Error> {
         Ok(self.0.clone())
     }
 }
@@ -104,5 +126,9 @@ impl SessionManager for AuthSessionManager {
 
     async fn get_session(&self, req: Self::Payload) -> Result<AuthSession, Self::Error> {
         self.0.get_session(req).await
+    }
+
+    async fn get_session_from_string(&self, str: String) -> Result<AuthSession, Self::Error> {
+        self.0.get_session_from_string(str).await
     }
 }

@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -11,18 +9,22 @@ pub struct User<Id> {
     pub id: Id,
     pub email: String,
     pub password: String,
+    pub salt: String,
     pub name: String,
     pub current_role: String,
+    pub last_modified: i64,
 }
 
 impl User<String> {
     pub fn parse(self) -> User<ObjectId> {
         User {
-            id: ObjectId::from_str(&self.id).unwrap(),
+            id: self.id.parse().unwrap(),
             email: self.email,
             password: self.password,
+            salt: self.salt,
             name: self.name,
             current_role: self.current_role,
+            last_modified: self.last_modified,
         }
     }
 }
@@ -33,8 +35,10 @@ impl User<ObjectId> {
             id: self.id.to_hex(),
             email: self.email,
             password: self.password,
+            salt: self.salt,
             name: self.name,
             current_role: self.current_role,
+            last_modified: self.last_modified,
         }
     }
 }

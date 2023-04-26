@@ -1,16 +1,14 @@
-use std::{collections::HashMap, str::FromStr};
+use std::collections::HashMap;
 
-use mongodb::bson::oid::ObjectId;
+use mongodb::bson::{self, oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::repository::{Entity, TaggableEntity};
+use crate::repository::Entity;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
 pub struct PublishOptions {
     pub publish: bool,
-    pub prise_from: String,
-    pub prise_to: String,
     pub ready_to_wait: bool,
 }
 
@@ -24,21 +22,27 @@ pub struct Project<Id> {
     pub tags: Vec<String>,
     pub publish_options: PublishOptions,
     pub status: String,
+    pub public_contacts: bool,
     pub creator_contacts: HashMap<String, String>,
+    pub last_modified: i64,
+    pub price: i64,
 }
 
 impl Project<String> {
     pub fn parse(self) -> Project<ObjectId> {
         Project {
-            id: ObjectId::from_str(&self.id).unwrap(),
-            customer_id: ObjectId::from_str(&self.customer_id).unwrap(),
+            id: self.id.parse().unwrap(),
+            customer_id: self.customer_id.parse().unwrap(),
             name: self.name,
             description: self.description,
             scope: self.scope,
             tags: self.tags,
             publish_options: self.publish_options,
             status: self.status,
+            public_contacts: self.public_contacts,
             creator_contacts: self.creator_contacts,
+            last_modified: self.last_modified,
+            price: self.price,
         }
     }
 }
@@ -54,7 +58,10 @@ impl Project<ObjectId> {
             tags: self.tags,
             publish_options: self.publish_options,
             status: self.status,
+            public_contacts: self.public_contacts,
             creator_contacts: self.creator_contacts,
+            last_modified: self.last_modified,
+            price: self.price,
         }
     }
 }
@@ -65,8 +72,57 @@ impl Entity for Project<ObjectId> {
     }
 }
 
-impl TaggableEntity for Project<ObjectId> {
-    fn tags(&self) -> &Vec<String> {
-        &self.tags
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PublicProject {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub scope: Vec<String>,
+    pub tags: Vec<String>,
+    pub publish_options: PublishOptions,
+    pub status: String,
+    pub public_contacts: bool,
+    pub creator_contacts: HashMap<String, String>,
+    pub price: i64,
+}
+
+impl From<Project<ObjectId>> for PublicProject {
+    fn from(project: Project<ObjectId>) -> Self {
+        let creator_contacts = if project.public_contacts {
+            project.creator_contacts
+        } else {
+            HashMap::new()
+        };
+
+        Self {
+            id: project.id.to_hex(),
+            name: project.name,
+            description: project.description,
+            scope: project.scope,
+            tags: project.tags,
+            publish_options: project.publish_options,
+            status: project.status,
+            public_contacts: project.public_contacts,
+            creator_contacts,
+            price: project.price,
+        }
+    }
+}
+
+impl From<Project<ObjectId>> for Option<Document> {
+    fn from(project: Project<ObjectId>) -> Self {
+        let project = project.stringify();
+        let mut document = bson::to_document(&project).unwrap();
+        document.insert(
+            "search_tags",
+            project
+                .tags
+                .iter()
+                .map(|tag| tag.to_lowercase())
+                .collect::<Vec<String>>(),
+        );
+        document.insert("kind", "project");
+        document.insert("private", !project.publish_options.publish);
+        Some(document)
     }
 }

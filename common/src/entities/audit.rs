@@ -1,15 +1,12 @@
-use std::{collections::HashMap, str::FromStr};
+use std::collections::HashMap;
 
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::repository::{Entity, TaggableEntity};
+use crate::repository::Entity;
 
-use super::{
-    audit_request::TimeRange,
-    view::{Source, View},
-};
+use super::audit_request::TimeRange;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, ToSchema)]
 pub struct Audit<Id> {
@@ -17,29 +14,30 @@ pub struct Audit<Id> {
     pub customer_id: Id,
     pub auditor_id: Id,
     pub project_id: Id,
+
     pub project_name: String,
     pub avatar: String,
-    pub description: Option<String>,
+    pub description: String,
     pub status: String,
+    pub scope: Vec<String>,
+    pub price: i64,
+
     pub auditor_contacts: HashMap<String, String>,
     pub customer_contacts: HashMap<String, String>,
-    pub scope: Vec<String>,
-    pub price: String,
-    pub report_link: Option<String>,
-    pub time_frame: String,
     pub tags: Vec<String>,
     pub last_modified: i64,
     pub report: Option<String>,
+    pub report_name: Option<String>,
     pub time: TimeRange,
 }
 
 impl Audit<String> {
     pub fn parse(self) -> Audit<ObjectId> {
         Audit {
-            id: ObjectId::from_str(&self.id).unwrap(),
-            customer_id: ObjectId::from_str(&self.customer_id).unwrap(),
-            auditor_id: ObjectId::from_str(&self.auditor_id).unwrap(),
-            project_id: ObjectId::from_str(&self.project_id).unwrap(),
+            id: self.id.parse().unwrap(),
+            customer_id: self.customer_id.parse().unwrap(),
+            auditor_id: self.auditor_id.parse().unwrap(),
+            project_id: self.project_id.parse().unwrap(),
             project_name: self.project_name,
             avatar: self.avatar,
             description: self.description,
@@ -48,11 +46,10 @@ impl Audit<String> {
             customer_contacts: self.customer_contacts,
             scope: self.scope,
             price: self.price,
-            report_link: self.report_link,
-            time_frame: self.time_frame,
             tags: self.tags,
             last_modified: self.last_modified,
             report: self.report,
+            report_name: self.report_name,
             time: self.time,
         }
     }
@@ -73,23 +70,11 @@ impl Audit<ObjectId> {
             customer_contacts: self.customer_contacts,
             scope: self.scope,
             price: self.price,
-            report_link: self.report_link,
-            time_frame: self.time_frame,
             tags: self.tags,
             last_modified: self.last_modified,
             report: self.report,
+            report_name: self.report_name,
             time: self.time,
-        }
-    }
-}
-
-impl Audit<ObjectId> {
-    pub fn to_view(self, name: String) -> View<ObjectId> {
-        View {
-            id: self.id,
-            name,
-            last_modified: self.last_modified,
-            source: Source::Audit,
         }
     }
 }
@@ -97,11 +82,5 @@ impl Audit<ObjectId> {
 impl Entity for Audit<ObjectId> {
     fn id(&self) -> ObjectId {
         self.id.clone()
-    }
-}
-
-impl TaggableEntity for Audit<ObjectId> {
-    fn tags(&self) -> &Vec<String> {
-        &self.tags
     }
 }

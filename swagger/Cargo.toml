@@ -19,4 +19,5 @@ customers = {path = "../customers"}
 audits = {path = "../audits"}
 auditors = {path = "../auditors"}
 files = {path = "../files"}
+search = {path = "../search"}
 common = {path="../common"}

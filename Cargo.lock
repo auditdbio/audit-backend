@@ -355,6 +355,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "anyhow"
+version = "1.0.70"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7de8ce5e0f9f8d88245311066a578d72b7af3e7088f32783804676302df237e4"
+
+[[package]]
 name = "askama_escape"
 version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -530,6 +536,8 @@ version = "0.1.0"
 dependencies = [
  "actix-cors",
  "actix-web",
+ "anyhow",
+ "chrono",
  "common",
  "derive_more",
  "env_logger",
@@ -537,6 +545,7 @@ dependencies = [
  "log",
  "mongodb",
  "serde",
+ "serde_json",
  "utoipa",
  "utoipa-swagger-ui",
 ]
@@ -547,6 +556,7 @@ version = "0.1.0"
 dependencies = [
  "actix-cors",
  "actix-web",
+ "anyhow",
  "awc",
  "chrono",
  "common",
@@ -768,17 +778,22 @@ dependencies = [
  "actix-web",
  "actix-web-httpauth",
  "alcoholic_jwt",
+ "anyhow",
  "async-trait",
  "awc",
  "chrono",
  "derive_more",
  "futures",
+ "futures-util",
  "jsonwebkey",
  "jsonwebtoken",
+ "lazy_static",
  "mongodb",
+ "once_cell",
  "reqwest",
  "serde",
  "serde_json",
+ "type-map",
  "utoipa",
 ]
 
@@ -905,6 +920,8 @@ version = "0.1.0"
 dependencies = [
  "actix-cors",
  "actix-web",
+ "anyhow",
+ "chrono",
  "common",
  "derive_more",
  "env_logger",
@@ -912,6 +929,7 @@ dependencies = [
  "log",
  "mongodb",
  "serde",
+ "serde_json",
  "utoipa",
  "utoipa-swagger-ui",
 ]
@@ -1242,6 +1260,7 @@ dependencies = [
  "actix-multipart",
  "actix-multipart-derive",
  "actix-web",
+ "anyhow",
  "chrono",
  "common",
  "derive_more",
@@ -1255,7 +1274,6 @@ dependencies = [
  "serde",
  "utoipa",
  "utoipa-swagger-ui",
- "uuid 1.2.2",
 ]
 
 [[package]]
@@ -1893,6 +1911,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "mail"
+version = "0.1.0"
+dependencies = [
+ "actix-cors",
+ "actix-web",
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "common",
+ "derive_more",
+ "env_logger",
+ "futures",
+ "futures-util",
+ "jsonwebtoken",
+ "lazy_static",
+ "lettre",
+ "log",
+ "mongodb",
+ "rand",
+ "regex",
+ "serde",
+ "serde_json",
+ "sha256",
+ "utoipa",
+ "utoipa-swagger-ui",
+ "uuid 1.2.2",
+]
+
+[[package]]
 name = "match_cfg"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2391,11 +2438,11 @@ checksum = "456c603be3e8d448b072f410900c09faf164fbce2d480456f50eea6e25f9c848"
 
 [[package]]
 name = "reqwest"
-version = "0.11.13"
+version = "0.11.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68cc60575865c7831548863cc02356512e3f1dc2f3f82cb837d7fc4cc8f3c97c"
+checksum = "27b71749df584b7f4cac2c426c127a7c785a5106cc98f7a8feb044115f0fa254"
 dependencies = [
- "base64 0.13.1",
+ "base64 0.21.0",
  "bytes",
  "encoding_rs",
  "futures-core",
@@ -2485,6 +2532,12 @@ dependencies = [
  "sha2 0.10.6",
  "walkdir",
 ]
+
+[[package]]
+name = "rustc-hash"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
 
 [[package]]
 name = "rustc_version"
@@ -2594,6 +2647,31 @@ checksum = "d53dcdb7c9f8158937a7981b48accfd39a43af418591a5d008c7b22b5e1b7ca4"
 dependencies = [
  "ring",
  "untrusted",
+]
+
+[[package]]
+name = "search"
+version = "0.1.0"
+dependencies = [
+ "actix-cors",
+ "actix-web",
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "common",
+ "derive_more",
+ "env_logger",
+ "futures",
+ "futures-util",
+ "jsonwebtoken",
+ "lazy_static",
+ "log",
+ "mongodb",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "utoipa",
+ "utoipa-swagger-ui",
 ]
 
 [[package]]
@@ -2771,6 +2849,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "sha256"
+version = "1.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "328169f167261957e83d82be47f9e36629e257c62308129033d7f7e7c173d180"
+dependencies = [
+ "hex",
+ "sha2 0.9.9",
+]
+
+[[package]]
 name = "shellexpand"
 version = "2.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2895,6 +2983,7 @@ dependencies = [
  "files",
  "futures",
  "log",
+ "search",
  "serde",
  "serde_json",
  "users",
@@ -3184,6 +3273,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "59547bce71d9c38b83d9c0e92b6066c4253371f15005def0c30d9657f50c7642"
 
 [[package]]
+name = "type-map"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "deb68604048ff8fa93347f02441e4487594adc20bb8a084f9e564d2b827a0a9f"
+dependencies = [
+ "rustc-hash",
+]
+
+[[package]]
 name = "typed-builder"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3265,6 +3363,7 @@ version = "0.1.0"
 dependencies = [
  "actix-cors",
  "actix-web",
+ "anyhow",
  "async-trait",
  "chrono",
  "common",
@@ -3277,9 +3376,11 @@ dependencies = [
  "lettre",
  "log",
  "mongodb",
+ "rand",
  "regex",
  "serde",
  "serde_json",
+ "sha256",
  "utoipa",
  "utoipa-swagger-ui",
  "uuid 1.2.2",

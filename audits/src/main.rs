@@ -1,12 +1,14 @@
 use std::env;
+use std::sync::Arc;
 
 use actix_web::HttpServer;
 use audits::create_app;
-use audits::repositories::closed_audits::ClosedAuditRepo;
-use audits::repositories::closed_request::ClosedAuditRequestRepo;
-use audits::repositories::{audit::AuditRepo, audit_request::AuditRequestRepo};
-use common::auth_session::{AuthSessionManager, HttpSessionManager};
+
+use common::context::ServiceState;
+use common::entities::audit::Audit;
+use common::entities::audit_request::AuditRequest;
 use common::repository::mongo_repository::MongoRepository;
+use mongodb::bson::oid::ObjectId;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -14,26 +16,18 @@ async fn main() -> std::io::Result<()> {
 
     let mongo_uri = env::var("MONGOURI").unwrap();
 
-    let audit_repo = AuditRepo::new(MongoRepository::new(&mongo_uri, "audits", "audits").await);
-    let audit_request_repo =
-        AuditRequestRepo::new(MongoRepository::new(&mongo_uri, "audits", "requests").await);
-    let closed_audit_repo =
-        ClosedAuditRepo::new(MongoRepository::new(&mongo_uri, "audits", "closed_audits").await);
-    let closed_audit_request_repo = ClosedAuditRequestRepo::new(
-        MongoRepository::new(&mongo_uri, "audits", "closed_requests").await,
-    );
-    let manager = AuthSessionManager::new(HttpSessionManager);
+    let audit_repo: MongoRepository<Audit<ObjectId>> =
+        MongoRepository::new(&mongo_uri, "audits", "audits").await;
+    let audit_request_repo: MongoRepository<AuditRequest<ObjectId>> =
+        MongoRepository::new(&mongo_uri, "audits", "requests").await;
 
-    HttpServer::new(move || {
-        create_app(
-            audit_repo.clone(),
-            audit_request_repo.clone(),
-            closed_audit_repo.clone(),
-            closed_audit_request_repo.clone(),
-            manager.clone(),
-        )
-    })
-    .bind(("0.0.0.0", 3003))?
-    .run()
-    .await
+    let mut state = ServiceState::new("audit".to_string());
+    state.insert(Arc::new(audit_repo));
+    state.insert(Arc::new(audit_request_repo));
+    let state = Arc::new(state);
+
+    HttpServer::new(move || create_app(state.clone()))
+        .bind(("0.0.0.0", 3003))?
+        .run()
+        .await
 }

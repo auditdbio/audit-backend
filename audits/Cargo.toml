@@ -17,7 +17,8 @@ chrono = "0.4.23"
 awc = {version = "3.0.1", features = ["openssl"]}
 utoipa = { version = "3.0.2", features = ["actix_extras"] }
 utoipa-swagger-ui = { version = "3.0.2", features = ["actix-web"] }
-serde_json = "1.0.94"
+serde_json = "1"
+anyhow = "1"
 common = {path = "../common"}
 
 [dependencies.mongodb]

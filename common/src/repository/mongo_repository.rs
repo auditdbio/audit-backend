@@ -6,7 +6,7 @@ use mongodb::{
 };
 use serde::{de::DeserializeOwned, Serialize};
 
-use super::{Entity, Repository, TaggableEntityRepository};
+use super::{Entity, Repository};
 
 pub struct MongoRepository<T> {
     pub collection: mongodb::Collection<T>,
@@ -14,13 +14,12 @@ pub struct MongoRepository<T> {
 
 impl<T> MongoRepository<T> {
     pub async fn new(mongo_uri: &str, database: &str, collection: &str) -> Self {
-        Self {
-            collection: mongodb::Client::with_uri_str(mongo_uri)
-                .await
-                .unwrap()
-                .database(database)
-                .collection(collection),
-        }
+        let collection = mongodb::Client::with_uri_str(mongo_uri)
+            .await
+            .unwrap()
+            .database(database)
+            .collection(collection);
+        Self { collection }
     }
 }
 
@@ -29,9 +28,7 @@ impl<T> Repository<T> for MongoRepository<T>
 where
     T: Entity + Serialize + DeserializeOwned + Unpin + Clone + Send + Sync,
 {
-    type Error = mongodb::error::Error;
-
-    async fn create(&self, item: &T) -> Result<bool, Self::Error> {
+    async fn insert(&self, item: &T) -> anyhow::Result<bool> {
         let result = self
             .collection
             .find_one(doc! {"id": item.id()}, None)
@@ -44,12 +41,12 @@ where
         Ok(result)
     }
 
-    async fn find(&self, field: &str, value: &Bson) -> Result<Option<T>, Self::Error> {
+    async fn find(&self, field: &str, value: &Bson) -> anyhow::Result<Option<T>> {
         let result = self.collection.find_one(doc! {field: value}, None).await?;
         Ok(result)
     }
 
-    async fn delete(&self, field: &str, item: &ObjectId) -> Result<Option<T>, Self::Error> {
+    async fn delete(&self, field: &str, item: &ObjectId) -> anyhow::Result<Option<T>> {
         let result = self
             .collection
             .find_one_and_delete(doc! {field: item}, None)
@@ -57,7 +54,7 @@ where
         Ok(result)
     }
 
-    async fn find_all(&self, skip: u32, limit: u32) -> Result<Vec<T>, Self::Error> {
+    async fn find_all(&self, skip: u32, limit: u32) -> anyhow::Result<Vec<T>> {
         let find_options = FindOptions::builder()
             .skip(skip as u64)
             .limit(limit as i64)
@@ -73,7 +70,7 @@ where
         Ok(results.into_iter().collect::<mongodb::error::Result<_>>()?)
     }
 
-    async fn find_many(&self, field: &str, value: &Bson) -> Result<Vec<T>, Self::Error> {
+    async fn find_many(&self, field: &str, value: &Bson) -> anyhow::Result<Vec<T>> {
         let result: Vec<mongodb::error::Result<T>> = self
             .collection
             .find(doc! {field: value}, None)
@@ -82,49 +79,24 @@ where
             .await;
         Ok(result.into_iter().collect::<mongodb::error::Result<_>>()?)
     }
-}
 
-#[async_trait]
-impl<T> TaggableEntityRepository<T> for MongoRepository<T>
-where
-    T: Entity + Serialize + DeserializeOwned + Unpin + Clone + Send + Sync,
-{
-    async fn find_by_tags(
-        &self,
-        tags: Vec<String>,
-        skip: u32,
-        limit: u32,
-    ) -> Result<Vec<T>, Self::Error> {
-        let tags = tags
-            .into_iter()
-            .filter(|tag| !tag.is_empty())
-            .map(|s| s.to_ascii_lowercase())
-            .collect::<Vec<_>>();
-
-        use mongodb::error::Result as MongoResult;
-        let find_options = FindOptions::builder()
-            .skip(skip as u64)
-            .limit(limit as i64)
-            .build();
-
-        let filter = if tags.is_empty() {
-            None
-        } else {
-            Some(doc! {
-                "tags": doc!{
-                    "$elemMatch": doc!{"$in": tags}
-                }
-            })
-        };
-
-        let result: Vec<T> = self
+    async fn get_all_since(&self, since: i64) -> anyhow::Result<Vec<T>> {
+        let result: Vec<mongodb::error::Result<T>> = self
             .collection
-            .find(filter, find_options)
+            .find(doc! {"last_modified": doc! {"$gt": since}}, None)
             .await?
-            .collect::<Vec<MongoResult<T>>>()
-            .await
-            .into_iter()
-            .collect::<MongoResult<_>>()?;
-        Ok(result)
+            .collect()
+            .await;
+        Ok(result.into_iter().collect::<mongodb::error::Result<_>>()?)
+    }
+
+    async fn find_all_by_ids(&self, ids: Vec<ObjectId>) -> anyhow::Result<Vec<T>> {
+        let result: Vec<mongodb::error::Result<T>> = self
+            .collection
+            .find(doc! {"id": doc! {"$in": ids}}, None)
+            .await?
+            .collect()
+            .await;
+        Ok(result.into_iter().collect::<mongodb::error::Result<_>>()?)
     }
 }

@@ -1,12 +1,15 @@
 extern crate lazy_static;
 
-use common::auth_session::{AuthSessionManager, HttpSessionManager};
+use common::context::ServiceState;
+use common::entities::user::User;
 use common::repository::mongo_repository::MongoRepository;
-use users::repositories::list_element::ListElementRepository;
-use users::repositories::{token::TokenRepo, user::UserRepo};
+use mongodb::bson::oid::ObjectId;
+use users::service::auth::Link;
+use users::service::waiting_list::WaitingListElement;
 use users::*;
 
 use std::env;
+use std::sync::Arc;
 
 use actix_web::HttpServer;
 
@@ -16,22 +19,19 @@ async fn main() -> std::io::Result<()> {
 
     let mongo_uri = env::var("MONGOURI").unwrap();
 
-    let user_repo = UserRepo::new(MongoRepository::new(&mongo_uri, "users", "users").await);
-    let token_repo = TokenRepo::new(MongoRepository::new(&mongo_uri, "users", "tokens").await);
-    let elem_repo = ListElementRepository::new(
-        MongoRepository::new(&mongo_uri, "users", "list_elements").await,
-    );
-    let manager = AuthSessionManager::new(HttpSessionManager);
+    let user_repo = MongoRepository::new(&mongo_uri, "users", "users").await;
+    let code_repo = MongoRepository::new(&mongo_uri, "users", "links").await;
+    let waiting_list_repo = MongoRepository::new(&mongo_uri, "users", "waiting_list").await;
 
-    HttpServer::new(move || {
-        create_app(
-            user_repo.clone(),
-            token_repo.clone(),
-            elem_repo.clone(),
-            manager.clone(),
-        )
-    })
-    .bind(("0.0.0.0", 3001))?
-    .run()
-    .await
+    let mut state = ServiceState::new("user".to_string());
+    state.insert::<User<ObjectId>>(Arc::new(user_repo));
+    state.insert::<Link>(Arc::new(code_repo));
+    state.insert::<WaitingListElement>(Arc::new(waiting_list_repo));
+
+    let state = Arc::new(state);
+
+    HttpServer::new(move || create_app(state.clone()))
+        .bind(("0.0.0.0", 3001))?
+        .run()
+        .await
 }

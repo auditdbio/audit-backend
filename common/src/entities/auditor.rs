@@ -1,10 +1,12 @@
-use std::{collections::HashMap, str::FromStr};
+use std::collections::HashMap;
 
-use mongodb::bson::oid::ObjectId;
+use mongodb::bson::{doc, oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::repository::{Entity, TaggableEntity};
+use crate::repository::Entity;
+
+use super::audit_request::PriceRange;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
 pub struct Auditor<Id> {
@@ -16,14 +18,16 @@ pub struct Auditor<Id> {
     pub company: String,
     pub free_at: String,
     pub tags: Vec<String>,
+    pub public_contacts: bool,
     pub contacts: HashMap<String, String>,
-    pub tax: String,
+    pub price_range: PriceRange,
+    pub last_modified: i64,
 }
 
 impl Auditor<String> {
     pub fn parse(self) -> Auditor<ObjectId> {
         Auditor {
-            user_id: ObjectId::from_str(&self.user_id).unwrap(),
+            user_id: self.user_id.parse().unwrap(),
             avatar: self.avatar,
             first_name: self.first_name,
             last_name: self.last_name,
@@ -31,8 +35,10 @@ impl Auditor<String> {
             company: self.company,
             free_at: self.free_at,
             tags: self.tags,
+            public_contacts: self.public_contacts,
             contacts: self.contacts,
-            tax: self.tax,
+            price_range: self.price_range,
+            last_modified: self.last_modified,
         }
     }
 }
@@ -48,9 +54,17 @@ impl Auditor<ObjectId> {
             company: self.company,
             free_at: self.free_at,
             tags: self.tags,
+            public_contacts: self.public_contacts,
             contacts: self.contacts,
-            tax: self.tax,
+            price_range: self.price_range,
+            last_modified: self.last_modified,
         }
+    }
+}
+
+impl From<Auditor<String>> for Auditor<ObjectId> {
+    fn from(auditor: Auditor<String>) -> Self {
+        auditor.parse()
     }
 }
 
@@ -60,8 +74,40 @@ impl Entity for Auditor<ObjectId> {
     }
 }
 
-impl TaggableEntity for Auditor<ObjectId> {
-    fn tags(&self) -> &Vec<String> {
-        &self.tags
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PublicAuditor {
+    pub user_id: String,
+    pub avatar: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub about: String,
+    pub company: String,
+    pub public_contacts: bool,
+    pub contacts: HashMap<String, String>,
+    pub free_at: String,
+    pub price_range: PriceRange,
+    pub tags: Vec<String>,
+}
+
+impl From<Auditor<ObjectId>> for Option<Document> {
+    fn from(auditor: Auditor<ObjectId>) -> Self {
+        let auditor = auditor.stringify();
+        let mut document = mongodb::bson::to_document(&auditor).unwrap();
+        if !auditor.public_contacts {
+            document.remove("contacts");
+        }
+        document.insert("id", auditor.user_id);
+        document.insert(
+            "search_tags",
+            auditor
+                .tags
+                .iter()
+                .map(|tag| tag.to_lowercase())
+                .collect::<Vec<String>>(),
+        );
+
+        document.remove("last_modified");
+        document.insert("kind", "auditor");
+        Some(document)
     }
 }

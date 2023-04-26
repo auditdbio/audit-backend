@@ -1,7 +1,7 @@
-pub mod error;
 pub mod handlers;
-pub mod repositories;
-pub mod ruleset;
+pub mod service;
+
+use std::sync::Arc;
 
 use actix_cors::Cors;
 use actix_web::{
@@ -9,16 +9,12 @@ use actix_web::{
     dev::{ServiceFactory, ServiceRequest, ServiceResponse},
     middleware, web, App,
 };
-use common::{
-    auth_session::{AuthSession, AuthSessionManager, TestSessionManager},
-    repository::test_repository::TestRepository,
-};
+use common::context::ServiceState;
 pub use handlers::auditor::*;
-use repositories::auditor::AuditorRepo;
+use handlers::indexer::provide_auditor_data;
 
 pub fn create_app(
-    auditor_repo: AuditorRepo,
-    manager: AuthSessionManager,
+    state: Arc<ServiceState>,
 ) -> App<
     impl ServiceFactory<
         ServiceRequest,
@@ -32,29 +28,12 @@ pub fn create_app(
     let app = App::new()
         .wrap(cors)
         .wrap(middleware::Logger::default())
-        .app_data(web::Data::new(auditor_repo))
-        .app_data(web::Data::new(manager))
+        .app_data(web::Data::new(state))
         .service(post_auditor)
         .service(get_auditor)
         .service(patch_auditor)
         .service(delete_auditor)
-        .service(get_auditors)
-        .service(auditor_by_id);
+        .service(provide_auditor_data)
+        .service(get_my_auditor);
     app
-}
-
-pub fn create_test_app(
-    user: AuthSession,
-) -> App<
-    impl ServiceFactory<
-        ServiceRequest,
-        Response = ServiceResponse<impl MessageBody>,
-        Config = (),
-        InitError = (),
-        Error = actix_web::Error,
-    >,
-> {
-    let auditor_repo = AuditorRepo::new(TestRepository::new());
-    let test_manager = AuthSessionManager::new(TestSessionManager(user));
-    create_app(auditor_repo, test_manager)
 }

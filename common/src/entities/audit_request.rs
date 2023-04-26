@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr};
+use std::collections::HashMap;
 
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -6,21 +6,18 @@ use utoipa::ToSchema;
 
 use crate::repository::Entity;
 
-use super::{
-    role::Role,
-    view::{Source, View},
-};
+use super::role::Role;
 
 #[derive(Debug, Serialize, Deserialize, ToSchema, PartialEq, Clone)]
 pub struct PriceRange {
-    pub lower_bound: String,
-    pub upper_bound: String,
+    pub from: i64,
+    pub to: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema, PartialEq, Clone)]
 pub struct TimeRange {
-    pub begin: String,
-    pub end: String,
+    pub from: i64,
+    pub to: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, ToSchema)]
@@ -29,14 +26,16 @@ pub struct AuditRequest<Id> {
     pub auditor_id: Id,
     pub customer_id: Id,
     pub project_id: Id,
+
     pub project_name: String,
     pub avatar: String,
-    pub description: Option<String>,
+    pub project_scope: Vec<String>,
     pub auditor_contacts: HashMap<String, String>,
     pub customer_contacts: HashMap<String, String>,
-    pub scope: Vec<String>,
-    pub price: Option<String>,
-    pub time_frame: String,
+
+    pub description: String,
+
+    pub price: i64,
     pub last_modified: i64,
     pub last_changer: Role,
     pub time: TimeRange,
@@ -45,18 +44,17 @@ pub struct AuditRequest<Id> {
 impl AuditRequest<String> {
     pub fn parse(self) -> AuditRequest<ObjectId> {
         AuditRequest {
-            id: ObjectId::from_str(&self.id).unwrap(),
-            auditor_id: ObjectId::from_str(&self.auditor_id).unwrap(),
-            customer_id: ObjectId::from_str(&self.customer_id).unwrap(),
-            project_id: ObjectId::from_str(&self.project_id).unwrap(),
+            id: self.id.parse().unwrap(),
+            auditor_id: self.auditor_id.parse().unwrap(),
+            customer_id: self.customer_id.parse().unwrap(),
+            project_id: self.project_id.parse().unwrap(),
             project_name: self.project_name,
             avatar: self.avatar,
             description: self.description,
             auditor_contacts: self.auditor_contacts,
             customer_contacts: self.customer_contacts,
-            scope: self.scope,
+            project_scope: self.project_scope,
             price: self.price,
-            time_frame: self.time_frame,
             last_modified: self.last_modified,
             last_changer: self.last_changer,
             time: self.time,
@@ -76,23 +74,11 @@ impl AuditRequest<ObjectId> {
             description: self.description,
             auditor_contacts: self.auditor_contacts,
             customer_contacts: self.customer_contacts,
-            scope: self.scope,
+            project_scope: self.project_scope,
             price: self.price,
-            time_frame: self.time_frame,
             last_modified: self.last_modified,
             last_changer: self.last_changer,
             time: self.time,
-        }
-    }
-}
-
-impl AuditRequest<ObjectId> {
-    pub fn to_view(self, name: String) -> View<ObjectId> {
-        View {
-            id: self.id,
-            name,
-            last_modified: self.last_modified,
-            source: Source::Request,
         }
     }
 }
