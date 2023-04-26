@@ -3,7 +3,7 @@ use common::context::Context;
 
 use crate::service::waiting_list::WaitingListService;
 
-#[get("/user/run_action/{secret}")]
+#[get("/api/run_action/{secret}")]
 pub async fn run_action(context: Context, secret: Path<String>) -> HttpResponse {
     WaitingListService::new(context)
         .run_action(secret.into_inner())
