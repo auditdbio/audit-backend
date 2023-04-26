@@ -80,7 +80,7 @@ impl SearchRepo {
 
         let mut docs = Vec::new();
 
-        if let Some(kind) = query.kind {
+        if let Some(kind) = query.kind.clone() {
             docs.push(doc! {
                 "kind": kind,
             });
@@ -115,6 +115,7 @@ impl SearchRepo {
             });
         }
 
+        if &query.kind != &Some("customer".to_string()) {
         let price_from = query.price_from.unwrap_or(0);
         let price_to = query.price_to.unwrap_or(i64::MAX);
         docs.push(doc! {
@@ -126,18 +127,17 @@ impl SearchRepo {
                     },
                 },
                 {
-                    "price_range": {
-                        "from": {
-                            "$gte": price_from,
-                        },
-                        "to": {
-                            "$lte": price_to,
-                        },
+                    "price_range.from": {
+                        "$gte": price_from,
+                    },
+                    "price_range.to": {
+                        "$lte": price_to,
                     },
                 },
 
             ]
         });
+    }
 
         if let (Some(time_from), Some(time_to)) = (query.time_from, query.time_to) {
             docs.push(doc! {
