@@ -25,6 +25,7 @@ pub struct AuditChange {
     pub avatar: Option<String>,
     pub status: Option<String>,
     pub scope: Option<Vec<String>>,
+    pub report_name: Option<String>,
     pub report: Option<String>,
     pub time: Option<TimeRange>,
 }
@@ -220,9 +221,6 @@ impl AuditService {
             bail!("User is not available to change this audit")
         }
 
-        if let Some(avatar) = change.avatar {
-            audit.avatar = avatar;
-        }
 
         if let Some(status) = change.status {
             audit.status = status;
@@ -236,8 +234,8 @@ impl AuditService {
             audit.report = Some(report);
         }
 
-        if let Some(time) = change.time {
-            audit.time = time;
+        if let Some(report_name) = change.report_name {
+            audit.report_name = Some(report_name);
         }
 
         audit.last_modified = Utc::now().timestamp_micros();
