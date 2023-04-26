@@ -221,7 +221,6 @@ impl AuditService {
             bail!("User is not available to change this audit")
         }
 
-
         if let Some(status) = change.status {
             audit.status = status;
         }
