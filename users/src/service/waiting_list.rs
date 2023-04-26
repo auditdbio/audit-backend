@@ -45,7 +45,7 @@ impl WaitingListService {
         for element in waiting_list.find_all(0, 100).await? {
             let letter = CreateLetter {
                 email: element.email,
-                subject: "Welcome to our service!".to_string(),
+                subject: "Invitation to AuditDB release!".to_string(),
                 message: include_str!("../../templates/welcome.txt").to_string(),
             };
 
