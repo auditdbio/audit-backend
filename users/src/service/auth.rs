@@ -85,10 +85,18 @@ impl AuthService {
             bail!("No user repository found")
         };
 
+        let Some(links) = self.context.get_repository::<Link>() else {
+            bail!("No code repository found")
+        };
+
         if users
             .find("email", &Bson::String(user.email.clone()))
             .await?
             .is_some()
+            || links
+                .find("user.email", &Bson::String(user.email.clone()))
+                .await?
+                .is_some()
         {
             bail!("User with email already exists")
         }
@@ -154,10 +162,6 @@ impl AuthService {
         let link = Link {
             user,
             code: code.clone(),
-        };
-
-        let Some(links) = self.context.get_repository::<Link>() else {
-            bail!("No code repository found")
         };
 
         if verify_email {

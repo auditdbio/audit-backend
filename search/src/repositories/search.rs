@@ -65,11 +65,7 @@ impl SearchRepo {
                 .to_string();
                 sort.insert(sort_field, sort_order);
             }
-            Some(
-                FindOptions::builder()
-                    .sort(sort)
-                    .build(),
-            )
+            Some(FindOptions::builder().sort(sort).build())
         } else {
             None
         };
@@ -114,29 +110,29 @@ impl SearchRepo {
         }
 
         if &query.kind != &Some("customer".to_string()) {
-        let price_from = query.price_from.unwrap_or(0);
-        let price_to = query.price_to.unwrap_or(i64::MAX);
-        docs.push(doc! {
-            "$or": [
-                {
-                    "price": {
-                        "$gte": price_from,
-                        "$lte": price_to,
+            let price_from = query.price_from.unwrap_or(0);
+            let price_to = query.price_to.unwrap_or(i64::MAX);
+            docs.push(doc! {
+                "$or": [
+                    {
+                        "price": {
+                            "$gte": price_from,
+                            "$lte": price_to,
+                        },
                     },
-                },
-                {
-                    "price_range.from": {
-                        "$lte": price_to,
+                    {
+                        "price_range.from": {
+                            "$lte": price_to,
 
+                        },
+                        "price_range.to": {
+                            "$gte": price_from,
+                        },
                     },
-                    "price_range.to": {
-                        "$gte": price_from,
-                    },
-                },
 
-            ]
-        });
-    }
+                ]
+            });
+        }
 
         if let (Some(time_from), Some(time_to)) = (query.time_from, query.time_to) {
             docs.push(doc! {

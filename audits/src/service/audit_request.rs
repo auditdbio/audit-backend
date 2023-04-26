@@ -117,7 +117,7 @@ impl RequestService {
                 CUSTOMERS_SERVICE.as_str(),
                 request.project_id
             ))
-            .auth(auth.clone())
+            .auth(self.context.server_auth())
             .send()
             .await?
             .json::<PublicProject>()
@@ -133,7 +133,7 @@ impl RequestService {
                 AUDITORS_SERVICE.as_str(),
                 request.auditor_id
             ))
-            .auth(self.context.server_auth())
+            .auth(auth.clone())
             .send()
             .await?
             .json::<PublicAuditor>()
