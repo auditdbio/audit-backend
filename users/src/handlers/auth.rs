@@ -45,6 +45,6 @@ pub async fn verify_link(context: Context, code: web::Path<String>) -> error::Re
     }
 
     Ok(HttpResponse::Found()
-        .append_header(("Location", "/"))
+        .append_header(("Location", "/sign-in"))
         .finish())
 }
