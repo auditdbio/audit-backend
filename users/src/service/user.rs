@@ -8,6 +8,7 @@ use common::{
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 
+use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 
 pub struct UserService {
@@ -126,8 +127,17 @@ impl UserService {
             user.email = email;
         }
 
-        if let Some(password) = change.password {
+        if let Some(mut password) = change.password {
+            let salt: String = rand::thread_rng()
+                .sample_iter(&Alphanumeric)
+                .take(10)
+                .map(char::from)
+                .collect();
+
+            password.push_str(&salt);
+            let password = sha256::digest(password);
             user.password = password;
+            user.salt = salt;
         }
 
         if let Some(name) = change.name {
