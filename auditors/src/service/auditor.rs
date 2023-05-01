@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use anyhow::bail;
 use chrono::Utc;
 use common::{
@@ -8,6 +6,7 @@ use common::{
     entities::{
         audit_request::PriceRange,
         auditor::{Auditor, PublicAuditor},
+        contacts::Contacts,
     },
 };
 use mongodb::bson::{oid::ObjectId, Bson};
@@ -20,8 +19,7 @@ pub struct CreateAuditor {
     last_name: String,
     about: String,
     company: String,
-    public_contacts: bool,
-    contacts: HashMap<String, String>,
+    contacts: Contacts,
     free_at: String,
     price_range: PriceRange,
     tags: Vec<String>,
@@ -34,8 +32,7 @@ pub struct AuditorChange {
     last_name: Option<String>,
     about: Option<String>,
     company: Option<String>,
-    public_contacts: Option<bool>,
-    contacts: Option<HashMap<String, String>>,
+    contacts: Option<Contacts>,
     free_at: Option<String>,
     price_range: Option<PriceRange>,
     tags: Option<Vec<String>>,
@@ -67,7 +64,6 @@ impl AuditorService {
             last_name: auditor.last_name,
             about: auditor.about,
             company: auditor.company,
-            public_contacts: auditor.public_contacts,
             contacts: auditor.contacts,
             tags: auditor.tags,
             last_modified: Utc::now().timestamp_micros(),
@@ -163,10 +159,6 @@ impl AuditorService {
 
         if let Some(price_range) = change.price_range {
             auditor.price_range = price_range;
-        }
-
-        if let Some(public_contacts) = change.public_contacts {
-            auditor.public_contacts = public_contacts;
         }
 
         auditor.last_modified = Utc::now().timestamp_micros();

@@ -1,11 +1,10 @@
-use std::collections::HashMap;
-
 use anyhow::bail;
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
     context::Context,
     entities::{
+        contacts::Contacts,
         customer::{Customer, PublicCustomer},
         project::Project,
     },
@@ -20,8 +19,7 @@ pub struct CreateCustomer {
     last_name: String,
     about: String,
     company: String,
-    public_contacts: bool,
-    contacts: HashMap<String, String>,
+    contacts: Contacts,
     tags: Vec<String>,
 }
 
@@ -32,8 +30,7 @@ pub struct CustomerChange {
     last_name: Option<String>,
     about: Option<String>,
     company: Option<String>,
-    public_contacts: Option<bool>,
-    contacts: Option<HashMap<String, String>>,
+    contacts: Option<Contacts>,
     tags: Option<Vec<String>>,
 }
 
@@ -66,7 +63,6 @@ impl CustomerService {
             contacts: customer.contacts,
             tags: customer.tags,
             last_modified: Utc::now().timestamp_micros(),
-            public_contacts: customer.public_contacts,
         };
 
         customers.insert(&customer).await?;
@@ -143,25 +139,22 @@ impl CustomerService {
             customer.company = company;
         }
 
-        if let Some(public_contacts) = change.public_contacts {
-            customer.public_contacts = public_contacts;
-
-            let Some(projects) = self.context.get_repository::<Project<ObjectId>>() else {
-                bail!("No project repository found")
-            };
-
-            let customer_projects = projects
-                .find_many("customer_id", &Bson::ObjectId(id))
-                .await?;
-
-            for mut project in customer_projects {
-                project.public_contacts = public_contacts;
-                projects.delete("id", &project.id).await?;
-                projects.insert(&project).await?;
-            }
-        }
-
         if let Some(contacts) = change.contacts {
+            if customer.contacts.public_contacts != contacts.public_contacts {
+                let Some(projects) = self.context.get_repository::<Project<ObjectId>>() else {
+                    bail!("No project repository found")
+                };
+
+                let customer_projects = projects
+                    .find_many("customer_id", &Bson::ObjectId(id))
+                    .await?;
+
+                for mut project in customer_projects {
+                    project.creator_contacts.public_contacts = contacts.public_contacts;
+                    projects.delete("id", &project.id).await?;
+                    projects.insert(&project).await?;
+                }
+            }
             customer.contacts = contacts;
         }
 

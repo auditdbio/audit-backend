@@ -1,12 +1,10 @@
-use std::collections::HashMap;
-
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::repository::Entity;
 
-use super::audit_request::TimeRange;
+use super::{audit_request::TimeRange, contacts::Contacts};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, ToSchema)]
 pub struct Audit<Id> {
@@ -22,8 +20,8 @@ pub struct Audit<Id> {
     pub scope: Vec<String>,
     pub price: i64,
 
-    pub auditor_contacts: HashMap<String, String>,
-    pub customer_contacts: HashMap<String, String>,
+    pub auditor_contacts: Contacts,
+    pub customer_contacts: Contacts,
     pub tags: Vec<String>,
     pub last_modified: i64,
     pub report: Option<String>,

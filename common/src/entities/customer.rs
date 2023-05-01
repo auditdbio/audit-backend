@@ -1,10 +1,10 @@
-use std::collections::HashMap;
-
 use mongodb::bson::{oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::repository::Entity;
+
+use super::contacts::Contacts;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
 pub struct Customer<Id> {
@@ -14,8 +14,7 @@ pub struct Customer<Id> {
     pub last_name: String,
     pub about: String,
     pub company: String,
-    pub public_contacts: bool,
-    pub contacts: HashMap<String, String>,
+    pub contacts: Contacts,
     pub tags: Vec<String>,
     pub last_modified: i64,
 }
@@ -29,7 +28,6 @@ impl Customer<String> {
             last_name: self.last_name,
             about: self.about,
             company: self.company,
-            public_contacts: self.public_contacts,
             contacts: self.contacts,
             tags: self.tags,
             last_modified: self.last_modified,
@@ -46,7 +44,6 @@ impl Customer<ObjectId> {
             last_name: self.last_name,
             about: self.about,
             company: self.company,
-            public_contacts: self.public_contacts,
             contacts: self.contacts,
             tags: self.tags,
             last_modified: self.last_modified,
@@ -64,7 +61,7 @@ impl From<Customer<ObjectId>> for Option<Document> {
     fn from(customer: Customer<ObjectId>) -> Self {
         let customer = customer.stringify();
         let mut document = mongodb::bson::to_document(&customer).unwrap();
-        if !customer.public_contacts {
+        if !customer.contacts.public_contacts {
             document.remove("contacts");
         }
         document.insert("id", customer.user_id);
@@ -91,7 +88,6 @@ pub struct PublicCustomer {
     pub last_name: String,
     pub about: String,
     pub company: String,
-    pub public_contacts: bool,
-    pub contacts: HashMap<String, String>,
+    pub contacts: Contacts,
     pub tags: Vec<String>,
 }

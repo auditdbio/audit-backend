@@ -6,6 +6,7 @@ use common::{
     access_rules::{AccessRules, Edit, Read},
     context::Context,
     entities::{
+        contacts::Contacts,
         customer::Customer,
         project::{Project, PublicProject, PublishOptions},
     },
@@ -60,11 +61,16 @@ impl ProjectService {
             .await?
             .unwrap();
 
-        let creator_contacts = if !project.publish_options.publish || customer.public_contacts {
-            customer.contacts
-        } else {
-            HashMap::new()
-        };
+        let creator_contacts =
+            if !project.publish_options.publish || customer.contacts.public_contacts {
+                customer.contacts
+            } else {
+                Contacts {
+                    email: None,
+                    telegram: None,
+                    public_contacts: false,
+                }
+            };
 
         let project = Project {
             id: ObjectId::new(),
@@ -81,7 +87,6 @@ impl ProjectService {
             creator_contacts,
             price: project.price,
             last_modified: Utc::now().timestamp_micros(),
-            public_contacts: customer.public_contacts,
         };
 
         projects.insert(&project).await?;
@@ -162,10 +167,6 @@ impl ProjectService {
 
         if let Some(status) = change.status {
             project.status = status;
-        }
-
-        if let Some(creator_contacts) = change.creator_contacts {
-            project.creator_contacts = creator_contacts;
         }
 
         if let Some(price) = change.price {

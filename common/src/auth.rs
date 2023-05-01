@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use anyhow::bail;
 use chrono::Utc;
 use jsonwebtoken::{decode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
@@ -11,6 +9,7 @@ use crate::{
     constants::DURATION,
     entities::{
         auditor::{Auditor, PublicAuditor},
+        contacts::Contacts,
         customer::{Customer, PublicCustomer},
     },
 };
@@ -50,9 +49,13 @@ impl Auth {
     }
 
     pub fn public_customer(&self, customer: Customer<ObjectId>) -> PublicCustomer {
-        let mut contacts = HashMap::new();
+        let mut contacts = Contacts {
+            telegram: None,
+            email: None,
+            public_contacts: false,
+        };
 
-        if customer.public_contacts || self.full_access() {
+        if customer.contacts.public_contacts || self.full_access() {
             contacts = customer.contacts;
         }
 
@@ -63,16 +66,19 @@ impl Auth {
             last_name: customer.last_name,
             about: customer.about,
             company: customer.company,
-            public_contacts: customer.public_contacts,
             contacts,
             tags: customer.tags,
         }
     }
 
     pub fn public_auditor(&self, auditor: Auditor<ObjectId>) -> PublicAuditor {
-        let mut contacts = HashMap::new();
+        let mut contacts = Contacts {
+            telegram: None,
+            email: None,
+            public_contacts: false,
+        };
 
-        if auditor.public_contacts || self.full_access() {
+        if auditor.contacts.public_contacts || self.full_access() {
             contacts = auditor.contacts;
         }
 
@@ -83,7 +89,6 @@ impl Auth {
             last_name: auditor.last_name,
             about: auditor.about,
             company: auditor.company,
-            public_contacts: auditor.public_contacts,
             contacts,
             free_at: auditor.free_at,
             price_range: auditor.price_range,

@@ -1,6 +1,7 @@
 pub mod audit;
 pub mod audit_request;
 pub mod auditor;
+pub mod contacts;
 pub mod customer;
 pub mod letter;
 pub mod project;

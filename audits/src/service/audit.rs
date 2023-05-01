@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use anyhow::bail;
 use chrono::Utc;
 use common::{
@@ -9,6 +7,7 @@ use common::{
         audit::Audit,
         audit_request::{AuditRequest, TimeRange},
         auditor::PublicAuditor,
+        contacts::Contacts,
         customer::PublicCustomer,
         project::PublicProject,
         role::Role,
@@ -42,8 +41,8 @@ pub struct PublicAudit {
     pub status: String,
     pub scope: Vec<String>,
     pub price: i64,
-    pub auditor_contacts: HashMap<String, String>,
-    pub customer_contacts: HashMap<String, String>,
+    pub auditor_contacts: Contacts,
+    pub customer_contacts: Contacts,
     pub tags: Vec<String>,
     pub last_modified: i64,
     pub report: Option<String>,

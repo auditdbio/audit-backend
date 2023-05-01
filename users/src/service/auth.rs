@@ -47,7 +47,6 @@ impl AuthService {
     }
 
     fn request_access(mut auth_password: String, correct_password: String, salt: String) -> bool {
-
         auth_password.push_str(&salt);
         sha256::digest(auth_password) == correct_password
     }

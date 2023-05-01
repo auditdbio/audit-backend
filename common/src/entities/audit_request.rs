@@ -1,12 +1,10 @@
-use std::collections::HashMap;
-
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::repository::Entity;
 
-use super::role::Role;
+use super::{contacts::Contacts, role::Role};
 
 #[derive(Debug, Serialize, Deserialize, ToSchema, PartialEq, Clone)]
 pub struct PriceRange {
@@ -30,8 +28,8 @@ pub struct AuditRequest<Id> {
     pub project_name: String,
     pub avatar: String,
     pub project_scope: Vec<String>,
-    pub auditor_contacts: HashMap<String, String>,
-    pub customer_contacts: HashMap<String, String>,
+    pub auditor_contacts: Contacts,
+    pub customer_contacts: Contacts,
 
     pub description: String,
 

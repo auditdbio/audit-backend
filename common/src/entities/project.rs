@@ -1,10 +1,10 @@
-use std::collections::HashMap;
-
 use mongodb::bson::{self, oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::repository::Entity;
+
+use super::contacts::Contacts;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
 pub struct PublishOptions {
@@ -22,8 +22,7 @@ pub struct Project<Id> {
     pub tags: Vec<String>,
     pub publish_options: PublishOptions,
     pub status: String,
-    pub public_contacts: bool,
-    pub creator_contacts: HashMap<String, String>,
+    pub creator_contacts: Contacts,
     pub last_modified: i64,
     pub price: i64,
 }
@@ -39,7 +38,6 @@ impl Project<String> {
             tags: self.tags,
             publish_options: self.publish_options,
             status: self.status,
-            public_contacts: self.public_contacts,
             creator_contacts: self.creator_contacts,
             last_modified: self.last_modified,
             price: self.price,
@@ -58,7 +56,6 @@ impl Project<ObjectId> {
             tags: self.tags,
             publish_options: self.publish_options,
             status: self.status,
-            public_contacts: self.public_contacts,
             creator_contacts: self.creator_contacts,
             last_modified: self.last_modified,
             price: self.price,
@@ -81,17 +78,20 @@ pub struct PublicProject {
     pub tags: Vec<String>,
     pub publish_options: PublishOptions,
     pub status: String,
-    pub public_contacts: bool,
-    pub creator_contacts: HashMap<String, String>,
+    pub creator_contacts: Contacts,
     pub price: i64,
 }
 
 impl From<Project<ObjectId>> for PublicProject {
     fn from(project: Project<ObjectId>) -> Self {
-        let creator_contacts = if project.public_contacts {
+        let creator_contacts = if project.creator_contacts.public_contacts {
             project.creator_contacts
         } else {
-            HashMap::new()
+            Contacts {
+                email: None,
+                telegram: None,
+                public_contacts: false,
+            }
         };
 
         Self {
@@ -102,7 +102,6 @@ impl From<Project<ObjectId>> for PublicProject {
             tags: project.tags,
             publish_options: project.publish_options,
             status: project.status,
-            public_contacts: project.public_contacts,
             creator_contacts,
             price: project.price,
         }

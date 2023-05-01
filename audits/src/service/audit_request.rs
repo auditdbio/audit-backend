@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use anyhow::bail;
 use chrono::Utc;
 use common::{
@@ -8,6 +6,7 @@ use common::{
     entities::{
         audit_request::{AuditRequest, PriceRange, TimeRange},
         auditor::PublicAuditor,
+        contacts::Contacts,
         project::PublicProject,
         role::Role,
     },
@@ -37,8 +36,8 @@ pub struct RequestChange {
     project_scope: Option<Vec<String>>,
     price_range: Option<PriceRange>,
     price: Option<i64>,
-    auditor_contacts: Option<HashMap<String, String>>,
-    customer_contacts: Option<HashMap<String, String>>,
+    auditor_contacts: Option<Contacts>,
+    customer_contacts: Option<Contacts>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -53,8 +52,8 @@ pub struct PublicRequest {
     pub avatar: String,
     pub project_scope: Vec<String>,
     pub price: i64,
-    pub auditor_contacts: HashMap<String, String>,
-    pub customer_contacts: HashMap<String, String>,
+    pub auditor_contacts: Contacts,
+    pub customer_contacts: Contacts,
 }
 
 impl From<AuditRequest<ObjectId>> for PublicRequest {
