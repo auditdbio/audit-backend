@@ -131,7 +131,7 @@ impl AuditorService {
             let mut iter = user.name.split(' ');
 
             let first_name = iter.next().unwrap();
-            let last_name = iter.next().unwrap_or_default();
+            let last_name = iter.last().unwrap_or_default();
 
             let auditor = CreateAuditor {
                 avatar: None,
