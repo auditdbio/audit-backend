@@ -19,7 +19,6 @@ pub struct Auditor<Id> {
     pub contacts: Contacts,
     pub price_range: PriceRange,
     pub last_modified: i64,
-    pub is_new: bool,
 }
 
 impl Auditor<String> {
@@ -36,7 +35,6 @@ impl Auditor<String> {
             contacts: self.contacts,
             price_range: self.price_range,
             last_modified: self.last_modified,
-            is_new: self.is_new,
         }
     }
 }
@@ -55,7 +53,6 @@ impl Auditor<ObjectId> {
             contacts: self.contacts,
             price_range: self.price_range,
             last_modified: self.last_modified,
-            is_new: self.is_new,
         }
     }
 }

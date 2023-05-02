@@ -17,7 +17,6 @@ pub struct Customer<Id> {
     pub contacts: Contacts,
     pub tags: Vec<String>,
     pub last_modified: i64,
-    pub is_new: bool,
 }
 
 impl Customer<String> {
@@ -32,7 +31,6 @@ impl Customer<String> {
             contacts: self.contacts,
             tags: self.tags,
             last_modified: self.last_modified,
-            is_new: self.is_new,
         }
     }
 }
@@ -49,7 +47,6 @@ impl Customer<ObjectId> {
             contacts: self.contacts,
             tags: self.tags,
             last_modified: self.last_modified,
-            is_new: self.is_new,
         }
     }
 }

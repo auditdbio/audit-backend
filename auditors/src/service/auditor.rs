@@ -71,7 +71,6 @@ impl AuditorService {
             last_modified: Utc::now().timestamp_micros(),
             free_at: auditor.free_at.unwrap_or_default(),
             price_range: auditor.price_range.unwrap_or_default(),
-            is_new: true,
         };
 
         auditors.insert(&auditor).await?;
@@ -206,7 +205,6 @@ impl AuditorService {
             auditor.price_range = price_range;
         }
 
-        auditor.is_new = false;
 
         auditor.last_modified = Utc::now().timestamp_micros();
 

@@ -30,6 +30,7 @@ pub struct UserChange {
     password: Option<String>,
     name: Option<String>,
     current_role: Option<String>,
+    is_new: Option<bool>,
 }
 
 impl UserService {
@@ -127,6 +128,10 @@ impl UserService {
 
         if let Some(current_role) = change.current_role {
             user.current_role = current_role;
+        }
+
+        if let Some(is_new) = change.is_new {
+            user.is_new = is_new;
         }
 
         user.last_modified = Utc::now().timestamp_micros();

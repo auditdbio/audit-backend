@@ -159,6 +159,7 @@ impl AuthService {
             password,
             current_role: user.current_role,
             last_modified: Utc::now().timestamp_micros(),
+            is_new: true,
         };
 
         let link = Link {

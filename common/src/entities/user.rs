@@ -13,6 +13,7 @@ pub struct User<Id> {
     pub name: String,
     pub current_role: String,
     pub last_modified: i64,
+    pub is_new: bool,
 }
 
 impl User<String> {
@@ -25,6 +26,7 @@ impl User<String> {
             name: self.name,
             current_role: self.current_role,
             last_modified: self.last_modified,
+            is_new: self.is_new,
         }
     }
 }
@@ -39,6 +41,7 @@ impl User<ObjectId> {
             name: self.name,
             current_role: self.current_role,
             last_modified: self.last_modified,
+            is_new: self.is_new,
         }
     }
 }
