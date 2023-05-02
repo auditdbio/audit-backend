@@ -7,7 +7,7 @@ use common::{
         contacts::Contacts,
         customer::{Customer, PublicCustomer},
         project::Project,
-        user::PublicUser,
+        user::PublicUser, auditor::PublicAuditor,
     },
     services::{PROTOCOL, USERS_SERVICE},
 };
@@ -119,7 +119,27 @@ impl CustomerService {
                 .await?;
 
             if user.current_role.to_lowercase() != "customer" {
-                bail!("User can be created only with corresponding current role")
+                return Ok(None)
+            }
+
+
+            let has_auditor = self
+                .context
+                .make_request::<PublicAuditor>()
+                .auth(auth.clone())
+                .get(format!(
+                    "{}://{}/api/auditor/{}",
+                    PROTOCOL.as_str(),
+                    USERS_SERVICE.as_str(),
+                    auth.id().unwrap()
+                ))
+                .send()
+                .await?
+                .json::<PublicAuditor>()
+                .await.is_ok();
+
+            if has_auditor {
+                return Ok(None)
             }
 
             let mut iter = user.name.split(' ');

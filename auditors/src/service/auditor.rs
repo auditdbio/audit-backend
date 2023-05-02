@@ -7,7 +7,7 @@ use common::{
         audit_request::PriceRange,
         auditor::{Auditor, PublicAuditor},
         contacts::Contacts,
-        user::PublicUser,
+        user::PublicUser, customer::PublicCustomer,
     },
     services::{PROTOCOL, USERS_SERVICE},
 };
@@ -125,7 +125,26 @@ impl AuditorService {
                 .await?;
 
             if user.current_role.to_lowercase() != "auditor" {
-                bail!("User can be created only with corresponding current role")
+                return Ok(None)
+            }
+
+            let has_customer = self
+                .context
+                .make_request::<PublicCustomer>()
+                .auth(auth.clone())
+                .get(format!(
+                    "{}://{}/api/customer/{}",
+                    PROTOCOL.as_str(),
+                    USERS_SERVICE.as_str(),
+                    auth.id().unwrap()
+                ))
+                .send()
+                .await?
+                .json::<PublicCustomer>()
+                .await.is_ok();
+
+            if has_customer {
+                return Ok(None)
             }
 
             let mut iter = user.name.split(' ');
