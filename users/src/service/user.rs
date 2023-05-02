@@ -4,7 +4,7 @@ use common::{
     access_rules::{AccessRules, Edit, Read},
     auth::Auth,
     context::Context,
-    entities::user::User,
+    entities::user::{PublicUser, User},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 
@@ -22,25 +22,6 @@ pub struct CreateUser {
     pub name: String,
     pub current_role: String,
     pub use_email: Option<bool>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PublicUser {
-    id: String,
-    email: String,
-    name: String,
-    current_role: String,
-}
-
-impl From<User<ObjectId>> for PublicUser {
-    fn from(user: User<ObjectId>) -> Self {
-        Self {
-            id: user.id.to_hex(),
-            email: user.email,
-            name: user.name,
-            current_role: user.current_role,
-        }
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

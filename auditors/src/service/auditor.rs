@@ -7,22 +7,24 @@ use common::{
         audit_request::PriceRange,
         auditor::{Auditor, PublicAuditor},
         contacts::Contacts,
+        user::PublicUser,
     },
+    services::{PROTOCOL, USERS_SERVICE},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateAuditor {
-    avatar: String,
+    avatar: Option<String>,
     first_name: String,
     last_name: String,
-    about: String,
-    company: String,
+    about: Option<String>,
+    company: Option<String>,
     contacts: Contacts,
-    free_at: String,
-    price_range: PriceRange,
-    tags: Vec<String>,
+    free_at: Option<String>,
+    price_range: Option<PriceRange>,
+    tags: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -47,7 +49,7 @@ impl AuditorService {
         Self { context }
     }
 
-    pub async fn create(&self, auditor: CreateAuditor) -> anyhow::Result<PublicAuditor> {
+    pub async fn create(&self, auditor: CreateAuditor) -> anyhow::Result<Auditor<String>> {
         let auth = self.context.auth();
 
         let Some(auditors) = self.context.get_repository::<Auditor<ObjectId>>() else {
@@ -59,21 +61,22 @@ impl AuditorService {
                 .id()
                 .ok_or(anyhow::anyhow!("No user id found"))?
                 .clone(),
-            avatar: auditor.avatar,
+            avatar: auditor.avatar.unwrap_or_default(),
             first_name: auditor.first_name,
             last_name: auditor.last_name,
-            about: auditor.about,
-            company: auditor.company,
+            about: auditor.about.unwrap_or_default(),
+            company: auditor.company.unwrap_or_default(),
             contacts: auditor.contacts,
-            tags: auditor.tags,
+            tags: auditor.tags.unwrap_or_default(),
             last_modified: Utc::now().timestamp_micros(),
-            free_at: auditor.free_at,
-            price_range: auditor.price_range,
+            free_at: auditor.free_at.unwrap_or_default(),
+            price_range: auditor.price_range.unwrap_or_default(),
+            is_new: true,
         };
 
         auditors.insert(&auditor).await?;
 
-        Ok(auth.public_auditor(auditor))
+        Ok(auditor.stringify())
     }
 
     pub async fn find(&self, id: ObjectId) -> anyhow::Result<Option<PublicAuditor>> {
@@ -105,6 +108,48 @@ impl AuditorService {
             .find("user_id", &Bson::ObjectId(auth.id().unwrap().clone()))
             .await?
             .map(Auditor::stringify);
+
+        if let None = auditor {
+            let user = self
+                .context
+                .make_request::<PublicUser>()
+                .auth(auth.clone())
+                .get(format!(
+                    "{}://{}/api/user/{}",
+                    PROTOCOL.as_str(),
+                    USERS_SERVICE.as_str(),
+                    auth.id().unwrap()
+                ))
+                .send()
+                .await?
+                .json::<PublicUser>()
+                .await?;
+
+            let mut iter = user.name.split(' ');
+
+            let first_name = iter.next().unwrap();
+            let last_name = iter.next().unwrap_or_default();
+
+            let auditor = CreateAuditor {
+                avatar: None,
+                first_name: first_name.to_string(),
+                last_name: last_name.to_string(),
+                about: None,
+                company: None,
+                contacts: Contacts {
+                    email: Some(user.email),
+                    telegram: None,
+                    public_contacts: true,
+                },
+                tags: None,
+                free_at: None,
+                price_range: None,
+            };
+
+            let auditor = self.create(auditor).await?;
+
+            return Ok(Some(auditor));
+        }
 
         Ok(auditor)
     }
@@ -160,6 +205,8 @@ impl AuditorService {
         if let Some(price_range) = change.price_range {
             auditor.price_range = price_range;
         }
+
+        auditor.is_new = false;
 
         auditor.last_modified = Utc::now().timestamp_micros();
 

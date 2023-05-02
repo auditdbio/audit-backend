@@ -3,10 +3,10 @@ use actix_web::{
     web::{Json, Path},
     HttpResponse,
 };
-use common::{context::Context, error};
+use common::{context::Context, entities::user::PublicUser, error};
 use serde_json::json;
 
-use crate::service::user::{PublicUser, UserChange, UserService};
+use crate::service::user::{UserChange, UserService};
 
 #[get("/api/user/{id}")]
 pub async fn find_user(context: Context, id: Path<String>) -> error::Result<HttpResponse> {

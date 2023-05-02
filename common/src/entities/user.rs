@@ -48,3 +48,22 @@ impl Entity for User<ObjectId> {
         self.id
     }
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PublicUser {
+    id: String,
+    pub email: String,
+    pub name: String,
+    current_role: String,
+}
+
+impl From<User<ObjectId>> for PublicUser {
+    fn from(user: User<ObjectId>) -> Self {
+        Self {
+            id: user.id.to_hex(),
+            email: user.email,
+            name: user.name,
+            current_role: user.current_role,
+        }
+    }
+}

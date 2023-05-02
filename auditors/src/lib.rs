@@ -11,7 +11,7 @@ use actix_web::{
 };
 use common::context::ServiceState;
 pub use handlers::auditor::*;
-use handlers::indexer::{provide_auditor_data, get_auditor_data};
+use handlers::indexer::{get_auditor_data, provide_auditor_data};
 
 pub fn create_app(
     state: Arc<ServiceState>,

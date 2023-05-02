@@ -3,11 +3,11 @@ use actix_web::{
     web::{self, Json},
     HttpResponse,
 };
-use common::{context::Context, error};
+use common::{context::Context, entities::user::PublicUser, error};
 
 use crate::service::{
     auth::{AuthService, Login, Token},
-    user::{CreateUser, PublicUser},
+    user::CreateUser,
 };
 
 #[post("/api/auth/login")]
@@ -38,9 +38,8 @@ pub async fn create_user(
 
 #[get("/api/auth/verify/{code}")]
 pub async fn verify_link(context: Context, code: web::Path<String>) -> error::Result<HttpResponse> {
-    let result = AuthService::new(context)
-        .verify_link(code.into_inner())
-        .await?;
+    let service = AuthService::new(context);
+    let result = service.verify_link(code.into_inner()).await?;
 
     if !result {
         return Ok(HttpResponse::NotFound().finish());

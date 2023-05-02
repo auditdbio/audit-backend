@@ -17,12 +17,9 @@ pub struct Read;
 pub struct Edit;
 
 impl<'a, 'b> AccessRules<&'a Auth, &'b User<ObjectId>> for Read {
-    fn get_access(auth: &'a Auth, user: &'b User<ObjectId>) -> bool {
+    fn get_access(auth: &'a Auth, _user: &'b User<ObjectId>) -> bool {
         match auth {
-            Auth::Service(_) => true,
-            Auth::Admin(_) => true,
-            Auth::User(id) => id == &user.id,
-            Auth::None => true,
+            _ => true,
         }
     }
 }

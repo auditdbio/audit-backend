@@ -18,7 +18,7 @@ use crate::service::auditor::{AuditorChange, AuditorService, CreateAuditor};
 pub async fn post_auditor(
     context: Context,
     Json(data): web::Json<CreateAuditor>,
-) -> error::Result<Json<PublicAuditor>> {
+) -> error::Result<Json<Auditor<String>>> {
     Ok(Json(AuditorService::new(context).create(data).await?))
 }
 

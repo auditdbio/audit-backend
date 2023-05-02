@@ -1,9 +1,13 @@
 use actix_web::{
-    get,
-    web::{self, Json}, post,
+    get, post,
+    web::{self, Json},
 };
-use common::{context::Context, error, entities::{customer::PublicCustomer, project::PublicProject}};
-use mongodb::bson::{Document, oid::ObjectId};
+use common::{
+    context::Context,
+    entities::{customer::PublicCustomer, project::PublicProject},
+    error,
+};
+use mongodb::bson::{oid::ObjectId, Document};
 
 use crate::service::indexer::IndexerService;
 
@@ -37,21 +41,14 @@ pub async fn get_customer_data(
     Json(ids): web::Json<Vec<ObjectId>>,
 ) -> error::Result<Json<Vec<PublicCustomer>>> {
     Ok(Json(
-        IndexerService::new(context)
-            .find_customers(ids)
-            .await?,
+        IndexerService::new(context).find_customers(ids).await?,
     ))
 }
-
 
 #[post("/api/project/data")]
 pub async fn get_project_data(
     context: Context,
     Json(ids): web::Json<Vec<ObjectId>>,
 ) -> error::Result<Json<Vec<PublicProject>>> {
-    Ok(Json(
-        IndexerService::new(context)
-            .find_projects(ids)
-            .await?,
-    ))
+    Ok(Json(IndexerService::new(context).find_projects(ids).await?))
 }

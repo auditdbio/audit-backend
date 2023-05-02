@@ -2,7 +2,10 @@ use anyhow::bail;
 use common::{
     access_rules::{AccessRules, GetData},
     context::Context,
-    entities::{customer::{Customer, PublicCustomer}, project::{Project, PublicProject}},
+    entities::{
+        customer::{Customer, PublicCustomer},
+        project::{Project, PublicProject},
+    },
 };
 use mongodb::bson::{oid::ObjectId, Document};
 
@@ -65,10 +68,7 @@ impl IndexerService {
 
         let customers = customers.find_all_by_ids(ids).await?;
 
-        Ok(customers
-            .into_iter()
-            .map(|x| x.into())
-            .collect::<Vec<_>>())
+        Ok(customers.into_iter().map(|x| x.into()).collect::<Vec<_>>())
     }
 
     pub async fn find_projects(&self, ids: Vec<ObjectId>) -> anyhow::Result<Vec<PublicProject>> {

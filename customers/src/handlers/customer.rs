@@ -18,7 +18,7 @@ use crate::service::customer::{CreateCustomer, CustomerChange, CustomerService};
 pub async fn post_customer(
     context: Context,
     Json(data): web::Json<CreateCustomer>,
-) -> error::Result<Json<PublicCustomer>> {
+) -> error::Result<Json<Customer<String>>> {
     Ok(Json(CustomerService::new(context).create(data).await?))
 }
 

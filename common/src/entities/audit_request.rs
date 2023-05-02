@@ -6,7 +6,7 @@ use crate::repository::Entity;
 
 use super::{contacts::Contacts, role::Role};
 
-#[derive(Debug, Serialize, Deserialize, ToSchema, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, ToSchema, PartialEq, Clone, Default)]
 pub struct PriceRange {
     pub from: i64,
     pub to: i64,

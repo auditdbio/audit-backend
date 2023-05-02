@@ -7,20 +7,22 @@ use common::{
         contacts::Contacts,
         customer::{Customer, PublicCustomer},
         project::Project,
+        user::PublicUser,
     },
+    services::{PROTOCOL, USERS_SERVICE},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateCustomer {
-    avatar: String,
+    avatar: Option<String>,
     first_name: String,
     last_name: String,
-    about: String,
-    company: String,
+    about: Option<String>,
+    company: Option<String>,
     contacts: Contacts,
-    tags: Vec<String>,
+    tags: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -43,7 +45,7 @@ impl CustomerService {
         Self { context }
     }
 
-    pub async fn create(&self, customer: CreateCustomer) -> anyhow::Result<PublicCustomer> {
+    pub async fn create(&self, customer: CreateCustomer) -> anyhow::Result<Customer<String>> {
         let auth = self.context.auth();
 
         let Some(customers) = self.context.get_repository::<Customer<ObjectId>>() else {
@@ -55,19 +57,20 @@ impl CustomerService {
                 .id()
                 .ok_or(anyhow::anyhow!("No user id found"))?
                 .clone(),
-            avatar: customer.avatar,
+            avatar: customer.avatar.unwrap_or_default(),
             first_name: customer.first_name,
             last_name: customer.last_name,
-            about: customer.about,
-            company: customer.company,
+            about: customer.about.unwrap_or_default(),
+            company: customer.company.unwrap_or_default(),
             contacts: customer.contacts,
-            tags: customer.tags,
+            tags: customer.tags.unwrap_or_default(),
             last_modified: Utc::now().timestamp_micros(),
+            is_new: true,
         };
 
         customers.insert(&customer).await?;
 
-        Ok(auth.public_customer(customer))
+        Ok(customer.stringify())
     }
 
     pub async fn find(&self, id: ObjectId) -> anyhow::Result<Option<PublicCustomer>> {
@@ -99,6 +102,46 @@ impl CustomerService {
             .find("user_id", &Bson::ObjectId(auth.id().unwrap().clone()))
             .await?
             .map(Customer::stringify);
+
+        if let None = customer {
+            let user = self
+                .context
+                .make_request::<PublicUser>()
+                .auth(auth.clone())
+                .get(format!(
+                    "{}://{}/api/user/{}",
+                    PROTOCOL.as_str(),
+                    USERS_SERVICE.as_str(),
+                    auth.id().unwrap()
+                ))
+                .send()
+                .await?
+                .json::<PublicUser>()
+                .await?;
+
+            let mut iter = user.name.split(' ');
+
+            let first_name = iter.next().unwrap();
+            let last_name = iter.next().unwrap_or_default();
+
+            let customer = CreateCustomer {
+                avatar: None,
+                first_name: first_name.to_string(),
+                last_name: last_name.to_string(),
+                about: None,
+                company: None,
+                contacts: Contacts {
+                    email: Some(user.email),
+                    telegram: None,
+                    public_contacts: true,
+                },
+                tags: None,
+            };
+
+            let customer = self.create(customer).await?;
+
+            return Ok(Some(customer));
+        }
 
         Ok(customer)
     }
@@ -161,6 +204,8 @@ impl CustomerService {
         if let Some(tags) = change.tags {
             customer.tags = tags;
         }
+
+        customer.is_new = false;
 
         customer.last_modified = Utc::now().timestamp_micros();
 

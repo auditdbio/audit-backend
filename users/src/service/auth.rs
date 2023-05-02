@@ -3,7 +3,10 @@ use chrono::Utc;
 use common::{
     auth::Auth,
     context::Context,
-    entities::{letter::CreateLetter, user::User},
+    entities::{
+        letter::CreateLetter,
+        user::{PublicUser, User},
+    },
     repository::Entity,
     services::{MAIL_SERVICE, PROTOCOL, USERS_SERVICE},
 };
@@ -11,7 +14,7 @@ use mongodb::bson::{oid::ObjectId, Bson};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 
-use super::user::{CreateUser, PublicUser};
+use super::user::CreateUser;
 
 pub struct AuthService {
     context: Context,
