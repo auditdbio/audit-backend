@@ -33,7 +33,6 @@ pub struct ProjectChange {
     pub tags: Option<Vec<String>>,
     pub publish_options: Option<PublishOptions>,
     pub status: Option<String>,
-    pub creator_contacts: Option<HashMap<String, String>>,
     pub price: Option<i64>,
 }
 
