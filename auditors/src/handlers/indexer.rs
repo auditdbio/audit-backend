@@ -1,9 +1,9 @@
 use actix_web::{
     get,
-    web::{self, Json},
+    web::{self, Json}, post,
 };
-use common::{context::Context, error};
-use mongodb::bson::Document;
+use common::{context::Context, error, entities::auditor::PublicAuditor};
+use mongodb::bson::{Document, oid::ObjectId};
 
 use crate::service::indexer::IndexerService;
 
@@ -15,6 +15,18 @@ pub async fn provide_auditor_data(
     Ok(Json(
         IndexerService::new(context)
             .index_auditor(since.into_inner())
+            .await?,
+    ))
+}
+
+#[post("/api/auditor/data")]
+pub async fn get_auditor_data(
+    context: Context,
+    Json(ids): web::Json<Vec<ObjectId>>,
+) -> error::Result<Json<Vec<PublicAuditor>>> {
+    Ok(Json(
+        IndexerService::new(context)
+            .find_auditors(ids)
             .await?,
     ))
 }

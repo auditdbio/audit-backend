@@ -13,6 +13,8 @@ use actix_web::web;
 use actix_web::App;
 
 use common::context::ServiceState;
+use handlers::indexer::get_customer_data;
+use handlers::indexer::get_project_data;
 use handlers::indexer::provide_customer_data;
 use handlers::indexer::provide_project_data;
 
@@ -46,6 +48,8 @@ pub fn create_app(
         .service(provide_customer_data)
         .service(provide_project_data)
         .service(my_customer)
-        .service(my_project);
+        .service(my_project)
+        .service(get_customer_data)
+        .service(get_project_data);
     app
 }
