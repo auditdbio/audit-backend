@@ -54,10 +54,10 @@ impl Entity for User<ObjectId> {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PublicUser {
-    id: String,
+    pub id: String,
     pub email: String,
     pub name: String,
-    current_role: String,
+    pub current_role: String,
 }
 
 impl From<User<ObjectId>> for PublicUser {

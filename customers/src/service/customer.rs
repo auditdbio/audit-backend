@@ -118,6 +118,10 @@ impl CustomerService {
                 .json::<PublicUser>()
                 .await?;
 
+            if user.current_role.to_lowercase() != "customer" {
+                bail!("User can be created only with corresponding current role")
+            }
+
             let mut iter = user.name.split(' ');
 
             let first_name = iter.next().unwrap();
@@ -203,7 +207,6 @@ impl CustomerService {
         if let Some(tags) = change.tags {
             customer.tags = tags;
         }
-
 
         customer.last_modified = Utc::now().timestamp_micros();
 

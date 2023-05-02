@@ -124,6 +124,10 @@ impl AuditorService {
                 .json::<PublicUser>()
                 .await?;
 
+            if user.current_role.to_lowercase() != "auditor" {
+                bail!("User can be created only with corresponding current role")
+            }
+
             let mut iter = user.name.split(' ');
 
             let first_name = iter.next().unwrap();
@@ -204,7 +208,6 @@ impl AuditorService {
         if let Some(price_range) = change.price_range {
             auditor.price_range = price_range;
         }
-
 
         auditor.last_modified = Utc::now().timestamp_micros();
 

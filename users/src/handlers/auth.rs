@@ -3,7 +3,7 @@ use actix_web::{
     web::{self, Json},
     HttpResponse,
 };
-use common::{context::Context, entities::user::{User}, error};
+use common::{context::Context, entities::user::User, error};
 
 use crate::service::{
     auth::{AuthService, Login, Token},

@@ -3,10 +3,7 @@ use chrono::Utc;
 use common::{
     auth::Auth,
     context::Context,
-    entities::{
-        letter::CreateLetter,
-        user::{PublicUser, User},
-    },
+    entities::{letter::CreateLetter, user::User},
     repository::Entity,
     services::{MAIL_SERVICE, PROTOCOL, USERS_SERVICE},
 };
