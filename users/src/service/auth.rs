@@ -29,7 +29,7 @@ pub struct Login {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Token {
     pub token: String,
-    pub user: PublicUser,
+    pub user: User<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -73,7 +73,7 @@ impl AuthService {
         let auth = Auth::User(user.id);
 
         Ok(Token {
-            user: user.into(),
+            user: user.stringify(),
             token: auth.to_token()?,
         })
     }
@@ -82,7 +82,7 @@ impl AuthService {
         &self,
         mut user: CreateUser,
         verify_email: bool,
-    ) -> anyhow::Result<PublicUser> {
+    ) -> anyhow::Result<User<String>> {
         let Some(users) = self.context.get_repository::<User<ObjectId>>() else {
             bail!("No user repository found")
         };
@@ -173,7 +173,7 @@ impl AuthService {
             users.insert(&link.user).await?;
         }
 
-        Ok(link.user.into())
+        Ok(link.user.stringify())
     }
 
     pub async fn verify_link(&self, code: String) -> anyhow::Result<bool> {

@@ -3,7 +3,7 @@ use actix_web::{
     web::{self, Json},
     HttpResponse,
 };
-use common::{context::Context, entities::user::PublicUser, error};
+use common::{context::Context, entities::user::{User}, error};
 
 use crate::service::{
     auth::{AuthService, Login, Token},
@@ -19,7 +19,7 @@ pub async fn login(context: Context, login: Json<Login>) -> error::Result<Json<T
 pub async fn create_user(
     context: Context,
     Json(user): web::Json<CreateUser>,
-) -> error::Result<Json<PublicUser>> {
+) -> error::Result<Json<User<String>>> {
     #[allow(unused_mut)]
     let mut use_email = true;
 
