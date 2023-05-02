@@ -25,6 +25,7 @@ pub async fn create_user(
     #[cfg(feature = "test_server")]
     if user.use_email == Some(false) {
         use_email = false;
+        log::info!("this registration is not using email verification")
     }
 
     Ok(Json(
