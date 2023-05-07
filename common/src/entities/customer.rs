@@ -2,7 +2,10 @@ use mongodb::bson::{oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::repository::Entity;
+use crate::{
+    repository::Entity,
+    services::{CUSTOMERS_SERVICE, PROTOCOL},
+};
 
 use super::contacts::Contacts;
 
@@ -65,6 +68,14 @@ impl From<Customer<ObjectId>> for Option<Document> {
             document.remove("contacts");
         }
         document.insert("id", customer.user_id);
+        document.insert(
+            "request_url",
+            format!(
+                "{}://{}/data",
+                PROTOCOL.as_str(),
+                CUSTOMERS_SERVICE.as_str()
+            ),
+        );
         document.insert(
             "search_tags",
             customer

@@ -7,7 +7,8 @@ use common::{
         audit_request::PriceRange,
         auditor::{Auditor, PublicAuditor},
         contacts::Contacts,
-        user::PublicUser, customer::PublicCustomer,
+        customer::PublicCustomer,
+        user::PublicUser,
     },
     services::{PROTOCOL, USERS_SERVICE},
 };
@@ -125,7 +126,7 @@ impl AuditorService {
                 .await?;
 
             if user.current_role.to_lowercase() != "auditor" {
-                return Ok(None)
+                return Ok(None);
             }
 
             let has_customer = self
@@ -141,10 +142,11 @@ impl AuditorService {
                 .send()
                 .await?
                 .json::<PublicCustomer>()
-                .await.is_ok();
+                .await
+                .is_ok();
 
             if has_customer {
-                return Ok(None)
+                return Ok(None);
             }
 
             let mut iter = user.name.split(' ');

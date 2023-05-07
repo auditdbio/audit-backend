@@ -2,7 +2,7 @@ use mongodb::bson::{doc, oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::repository::Entity;
+use crate::{repository::Entity, services::{AUDITORS_SERVICE, PROTOCOL}};
 
 use super::{audit_request::PriceRange, contacts::Contacts};
 
@@ -91,6 +91,14 @@ impl From<Auditor<ObjectId>> for Option<Document> {
             document.remove("contacts");
         }
         document.insert("id", auditor.user_id);
+        document.insert(
+            "request_url",
+            format!(
+                "{}://{}/data",
+                PROTOCOL.as_str(),
+                AUDITORS_SERVICE.as_str()
+            ),
+        );
         document.insert(
             "search_tags",
             auditor

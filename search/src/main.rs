@@ -8,7 +8,7 @@ use log::info;
 use mongodb::bson::Bson;
 use search::create_app;
 use search::repositories::search::SearchRepo;
-use search::repositories::since::Since;
+use search::repositories::since::{Since, SinceRepo};
 use search::service::search::fetch_data;
 
 use std::env;
@@ -24,7 +24,8 @@ async fn main() -> std::io::Result<()> {
     let mongo_uri = env::var("MONGOURI").unwrap();
     let search_repo = SearchRepo::new(mongo_uri.clone()).await;
 
-    let since_repo = Arc::new(MongoRepository::new(&mongo_uri, "search", "meta").await);
+    let since_repo = SinceRepo::new(MongoRepository::new(&mongo_uri, "search", "meta").await);
+
     if since_repo
         .find("name", &Bson::String("since".to_string()))
         .await

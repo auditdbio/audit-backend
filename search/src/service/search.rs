@@ -1,12 +1,14 @@
+use std::collections::HashMap;
+
 use actix_web::web;
 use chrono::Utc;
-use common::{auth::Auth, context::Context, repository::RepositoryObject};
+use common::{auth::Auth, context::Context, repository::Repository};
 
-use mongodb::bson::{Bson, Document};
+use mongodb::bson::{oid::ObjectId, Bson, Document};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-use crate::repositories::{search::SearchRepo, since::Since};
+use crate::repositories::{search::SearchRepo, since::SinceRepo};
 
 pub(super) async fn get_data(client: &Client, url: &str, since: i64) -> Option<Vec<Document>> {
     let request = client.get(format!("{url}/{since}"));
@@ -19,12 +21,52 @@ pub(super) async fn get_data(client: &Client, url: &str, since: i64) -> Option<V
         log::error!("Error while parsing response");
         return None;
     };
-    Some(body)
+
+    let mut ids: HashMap<String, (Vec<ObjectId>, Vec<usize>)> = HashMap::new();
+
+    for (i, doc) in body.iter().enumerate() {
+        let id = doc.get_object_id("id").unwrap();
+        let service = doc.get_str("request_url").unwrap();
+        let vecs = ids
+            .entry(service.to_string())
+            .or_insert((Vec::new(), Vec::new()));
+
+        vecs.0.push(id);
+        vecs.1.push(i);
+    }
+
+    let mut responces: Vec<Document> = Vec::new();
+    let mut indexes: Vec<usize> = Vec::new();
+
+    for (service, ids) in ids.into_iter() {
+        let request = client.post(service).json(&ids.0);
+
+        let Ok(res) = request.send().await else {
+            log::error!("Error while sending request");
+            return None;
+        };
+
+        let Ok(body) = res.json::<Vec<Document>>().await else {
+            log::error!("Error while parsing response");
+            return None;
+        };
+
+        responces.extend_from_slice(&body);
+        indexes.extend(ids.1);
+    }
+
+    let mut result: Vec<Document> = Vec::new();
+
+    for i in indexes {
+        result.push(responces[i].clone());
+    }
+
+    Some(result)
 }
 
 pub async fn fetch_data(
     auth: &Auth,
-    since_repo: RepositoryObject<Since>,
+    since_repo: SinceRepo,
     search_repo: SearchRepo,
 ) -> anyhow::Result<()> {
     let mut headers = reqwest::header::HeaderMap::new();
@@ -36,8 +78,7 @@ pub async fn fetch_data(
     let client = Client::builder().default_headers(headers).build()?;
     let mut data = since_repo
         .find("name", &Bson::String("since".to_string()))
-        .await
-        .unwrap()
+        .await?
         .unwrap();
 
     for since in data.dict.iter_mut() {
@@ -50,8 +91,7 @@ pub async fn fetch_data(
         if docs.is_empty() {
             continue;
         }
-        log::info!("Documents {:?}", docs);
-        search_repo.insert(docs).await.unwrap();
+        search_repo.insert(docs).await?;
     }
 
     since_repo.delete("id", &data.id).await.unwrap();

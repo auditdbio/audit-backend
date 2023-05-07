@@ -4,10 +4,11 @@ use common::{
     access_rules::{AccessRules, Edit, Read},
     context::Context,
     entities::{
+        auditor::PublicAuditor,
         contacts::Contacts,
         customer::{Customer, PublicCustomer},
         project::Project,
-        user::PublicUser, auditor::PublicAuditor,
+        user::PublicUser,
     },
     services::{PROTOCOL, USERS_SERVICE},
 };
@@ -119,9 +120,8 @@ impl CustomerService {
                 .await?;
 
             if user.current_role.to_lowercase() != "customer" {
-                return Ok(None)
+                return Ok(None);
             }
-
 
             let has_auditor = self
                 .context
@@ -136,10 +136,11 @@ impl CustomerService {
                 .send()
                 .await?
                 .json::<PublicAuditor>()
-                .await.is_ok();
+                .await
+                .is_ok();
 
             if has_auditor {
-                return Ok(None)
+                return Ok(None);
             }
 
             let mut iter = user.name.split(' ');

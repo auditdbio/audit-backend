@@ -2,7 +2,7 @@ use mongodb::bson::{self, oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::repository::Entity;
+use crate::{repository::Entity, services::{PROTOCOL, CUSTOMERS_SERVICE}};
 
 use super::contacts::Contacts;
 
@@ -119,6 +119,14 @@ impl From<Project<ObjectId>> for Option<Document> {
                 .iter()
                 .map(|tag| tag.to_lowercase())
                 .collect::<Vec<String>>(),
+        );
+        document.insert(
+            "request_url",
+            format!(
+                "{}://{}/data",
+                PROTOCOL.as_str(),
+                CUSTOMERS_SERVICE.as_str()
+            ),
         );
         document.insert("kind", "project");
         document.insert("private", !project.publish_options.publish);
