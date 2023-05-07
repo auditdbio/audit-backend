@@ -123,7 +123,7 @@ impl From<Project<ObjectId>> for Option<Document> {
         document.insert(
             "request_url",
             format!(
-                "{}://{}/data",
+                "{}://{}/project/data",
                 PROTOCOL.as_str(),
                 CUSTOMERS_SERVICE.as_str()
             ),
