@@ -9,5 +9,6 @@ members = [
     "swagger",
     "users",
     "search",
-    "mail"
+    "mail",
+    "notification"
 ]

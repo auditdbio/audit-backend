@@ -192,4 +192,64 @@ impl AuthService {
 
         Ok(true)
     }
+
+    pub async fn forgot_password(&self, email: String) -> anyhow::Result<()> {
+        let Some(users) = self.context.get_repository::<User<ObjectId>>() else {
+            bail!("No user repository found")
+        };
+
+        let Some(mut user) = users.find("email", &Bson::String(email.clone())).await? else {
+            bail!("No user found")
+        };
+
+        let new_password: String = rand::thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(10)
+            .map(char::from)
+            .collect();
+
+        let message = include_str!("../../templates/password_change.txt")
+            .to_string()
+            .replace(
+                "{new_password}",
+                &new_password
+                .as_str(),
+            );
+
+        let letter = CreateLetter {
+            email: user.email.clone(),
+            message,
+            subject: "Password reset at auditdb.io".to_string(),
+        };
+
+        self.context
+            .make_request()
+            .auth(self.context.server_auth())
+            .post(format!(
+                "{}://{}/api/mail",
+                PROTOCOL.as_str(),
+                MAIL_SERVICE.as_str()
+            ))
+            .json(&letter)
+            .send()
+            .await?;
+
+        let salt: String = rand::thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(10)
+            .map(char::from)
+            .collect();
+
+        
+
+        let new_password = sha256::digest(new_password + &salt);
+
+        user.password = new_password;
+        user.salt = salt;
+
+        users.delete("id", &user.id).await?;
+        users.insert(&user).await?;
+
+        Ok(())
+    }
 }
