@@ -71,7 +71,7 @@ impl From<Customer<ObjectId>> for Option<Document> {
         document.insert(
             "request_url",
             format!(
-                "{}://{}/customer/data",
+                "{}://{}/api/customer/data",
                 PROTOCOL.as_str(),
                 CUSTOMERS_SERVICE.as_str()
             ),

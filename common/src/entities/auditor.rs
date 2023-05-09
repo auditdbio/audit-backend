@@ -97,7 +97,7 @@ impl From<Auditor<ObjectId>> for Option<Document> {
         document.insert(
             "request_url",
             format!(
-                "{}://{}/auditor/data",
+                "{}://{}/api/auditor/data",
                 PROTOCOL.as_str(),
                 AUDITORS_SERVICE.as_str()
             ),
