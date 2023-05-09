@@ -1,8 +1,8 @@
 use actix::{Actor, StreamHandler};
-use actix_web::{get, HttpRequest, web, HttpResponse};
+use actix_web::{get, web, HttpRequest, HttpResponse};
 use actix_web_actors::ws;
-use common::error;
 use anyhow::anyhow;
+use common::error;
 use ws::Message;
 
 pub struct Notification {
@@ -20,7 +20,6 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for NotificationsActo
         match msg {
             Ok(Message::Text(text)) => ctx.text(text),
             Ok(Message::Close(x)) => {
-                
                 ctx.close(x);
             }
             _ => (),

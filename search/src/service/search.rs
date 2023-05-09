@@ -124,19 +124,26 @@ impl SearchService {
                 .send()
                 .await?;
 
-
             let docs = docs.json::<Vec<Document>>().await?;
 
+            for doc in &docs {
+                let id = ObjectId::from_str(doc.get_str("id").unwrap()).unwrap();
+                let index = ids.0.iter().position(|x| x == &id).unwrap();
+                indexes.push(ids.1[index]);
+            }
+
             responces.extend_from_slice(&docs);
-            indexes.extend(ids.1);
         }
 
-        let mut result: Vec<Document> = Vec::new();
+        let mut result: Vec<Document> = vec![Document::new(); indexes.len()];
 
-        for i in indexes {
-            result.push(responces[i].clone());
+        for (j, i) in indexes.into_iter().enumerate() {
+            result[i] = responces[j].clone();
         }
 
-        Ok(result)
+        Ok(result
+            .into_iter()
+            .filter(Document::is_empty)
+            .collect::<Vec<Document>>())
     }
 }
