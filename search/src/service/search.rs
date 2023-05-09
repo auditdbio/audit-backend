@@ -137,6 +137,9 @@ impl SearchService {
 
         let mut result: Vec<Document> = vec![Document::new(); indexes.len()];
 
+        log::info!("Indexes: {:?}", indexes);
+        log::info!("Responces: {:?}", responces);
+
         for (j, i) in indexes.into_iter().enumerate() {
             result[i] = responces[j].clone();
         }
