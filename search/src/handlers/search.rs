@@ -27,6 +27,10 @@ pub async fn insert(
 pub async fn search(
     query: web::Query<SearchQuery>,
     repo: web::Data<SearchRepo>,
+    context: Context,
 ) -> error::Result<Json<Vec<Document>>> {
-    Ok(Json(repo.search(query.into_inner()).await?))
+    let results = SearchService::new(repo, context)
+        .search(query.into_inner())
+        .await?;
+    Ok(Json(results))
 }
