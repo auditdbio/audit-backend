@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
 use actix_web::web;
 use chrono::Utc;
@@ -101,7 +101,7 @@ impl SearchService {
         let mut ids: HashMap<String, (Vec<ObjectId>, Vec<usize>)> = HashMap::new();
 
         for (i, doc) in results.iter().enumerate() {
-            let id = doc.get_object_id("id").unwrap();
+            let id = ObjectId::from_str(doc.get_str("id").unwrap()).unwrap();
             let service = doc.get_str("request_url").unwrap();
             let vecs = ids
                 .entry(service.to_string())
