@@ -91,11 +91,11 @@ where
             .collect())
     }
 
-    async fn find_all_by_ids(&self, ids: Vec<ObjectId>) -> anyhow::Result<Vec<T>> {
+    async fn find_all_by_ids(&self, id: &str, ids: Vec<ObjectId>) -> anyhow::Result<Vec<T>> {
         let db = self.db.lock().unwrap();
         Ok(db
             .iter()
-            .filter(|x| ids.contains(&x.as_document().unwrap().get_object_id("id").unwrap()))
+            .filter(|x| ids.contains(&x.as_document().unwrap().get_object_id(id).unwrap()))
             .map(|x| bson::from_bson(x.clone()).unwrap())
             .collect())
     }

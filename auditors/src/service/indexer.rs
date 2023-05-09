@@ -45,7 +45,7 @@ impl IndexerService {
             bail!("No customer repository found")
         };
 
-        let auditors = auditors.find_all_by_ids(ids).await?;
+        let auditors = auditors.find_all_by_ids("user_id", ids).await?;
 
         Ok(auditors.into_iter().map(|x| x.into()).collect::<Vec<_>>())
     }

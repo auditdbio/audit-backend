@@ -64,8 +64,8 @@ pub async fn fetch_data(
 pub struct SearchQuery {
     pub query: String,
     pub tags: String,
-    pub page: u32,
-    pub per_page: u32,
+    pub page: u64,
+    pub per_page: u64,
     pub price_from: Option<i64>,
     pub price_to: Option<i64>,
     pub time_from: Option<i64>,
@@ -98,21 +98,22 @@ impl SearchService {
 
     pub async fn search(&self, query: SearchQuery) -> anyhow::Result<Vec<Document>> {
         let results = self.repo.search(query).await?;
-        let mut ids: HashMap<String, (Vec<ObjectId>, Vec<usize>)> = HashMap::new();
+        let mut ids: HashMap<String, Vec<ObjectId>> = HashMap::new();
+
+        let mut indexes: HashMap<ObjectId, usize> = HashMap::new();
 
         for (i, doc) in results.iter().enumerate() {
             let id = ObjectId::from_str(doc.get_str("id").unwrap()).unwrap();
             let service = doc.get_str("request_url").unwrap();
             let vecs = ids
                 .entry(service.to_string())
-                .or_insert((Vec::new(), Vec::new()));
+                .or_insert(Vec::new());
 
-            vecs.0.push(id);
-            vecs.1.push(i);
+            indexes.insert(id, i);
+            vecs.push(id);
         }
 
         let mut responces: Vec<Document> = Vec::new();
-        let mut indexes: Vec<usize> = Vec::new();
 
         for (service, ids) in ids.into_iter() {
             let docs = self
@@ -120,33 +121,24 @@ impl SearchService {
                 .make_request()
                 .auth(self.context.server_auth())
                 .post(service)
-                .json(&ids.0)
+                .json(&ids)
                 .send()
                 .await?;
 
             let docs = docs.json::<Vec<Document>>().await?;
-
-            for doc in &docs {
-                let id = ObjectId::from_str(doc.get_str("id").unwrap()).unwrap();
-                let index = ids.0.iter().position(|x| x == &id).unwrap();
-                indexes.push(ids.1[index]);
-            }
-
             responces.extend_from_slice(&docs);
         }
 
-        let mut result: Vec<Document> = vec![Document::new(); indexes.len()];
+        let mut results = vec![Document::new(); results.len()];
 
-        log::info!("Indexes: {:?}", indexes);
-        log::info!("Responces: {:?}", responces);
-
-        for (j, i) in indexes.into_iter().enumerate() {
-            result[i] = responces[j].clone();
+        for doc in responces.iter() {
+            let id = ObjectId::from_str(doc.get_str("id").unwrap_or_else(|_| doc.get_str("user_id").unwrap())).unwrap();
+            let index = indexes.get(&id).unwrap();
+            results[*index] = doc.clone();
         }
 
-        Ok(result
-            .into_iter()
-            .filter(Document::is_empty)
-            .collect::<Vec<Document>>())
+        log::info!("Responces: {:?}", results);
+
+        Ok(results.into_iter().filter(|doc| !doc.is_empty()).collect())
     }
 }
