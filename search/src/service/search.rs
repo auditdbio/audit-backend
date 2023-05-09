@@ -22,46 +22,7 @@ pub(super) async fn get_data(client: &Client, url: &str, since: i64) -> Option<V
         return None;
     };
 
-    let mut ids: HashMap<String, (Vec<ObjectId>, Vec<usize>)> = HashMap::new();
-
-    for (i, doc) in body.iter().enumerate() {
-        let id = doc.get_object_id("id").unwrap();
-        let service = doc.get_str("request_url").unwrap();
-        let vecs = ids
-            .entry(service.to_string())
-            .or_insert((Vec::new(), Vec::new()));
-
-        vecs.0.push(id);
-        vecs.1.push(i);
-    }
-
-    let mut responces: Vec<Document> = Vec::new();
-    let mut indexes: Vec<usize> = Vec::new();
-
-    for (service, ids) in ids.into_iter() {
-        let request = client.post(service).json(&ids.0);
-
-        let Ok(res) = request.send().await else {
-            log::error!("Error while sending request");
-            return None;
-        };
-
-        let Ok(body) = res.json::<Vec<Document>>().await else {
-            log::error!("Error while parsing response");
-            return None;
-        };
-
-        responces.extend_from_slice(&body);
-        indexes.extend(ids.1);
-    }
-
-    let mut result: Vec<Document> = Vec::new();
-
-    for i in indexes {
-        result.push(responces[i].clone());
-    }
-
-    Some(result)
+    return Some(body);
 }
 
 pub async fn fetch_data(
@@ -136,6 +97,46 @@ impl SearchService {
     }
 
     pub async fn search(&self, query: SearchQuery) -> anyhow::Result<Vec<Document>> {
-        self.repo.search(query).await
+        let results = self.repo.search(query).await?;
+        let mut ids: HashMap<String, (Vec<ObjectId>, Vec<usize>)> = HashMap::new();
+
+        for (i, doc) in results.iter().enumerate() {
+            let id = doc.get_object_id("id").unwrap();
+            let service = doc.get_str("request_url").unwrap();
+            let vecs = ids
+                .entry(service.to_string())
+                .or_insert((Vec::new(), Vec::new()));
+
+            vecs.0.push(id);
+            vecs.1.push(i);
+        }
+
+        let mut responces: Vec<Document> = Vec::new();
+        let mut indexes: Vec<usize> = Vec::new();
+
+        for (service, ids) in ids.into_iter() {
+            let docs = self
+                .context
+                .make_request()
+                .auth(self.context.server_auth())
+                .post(service)
+                .json(&ids.0)
+                .send()
+                .await?;
+
+
+            let docs = docs.json::<Vec<Document>>().await?;
+
+            responces.extend_from_slice(&docs);
+            indexes.extend(ids.1);
+        }
+
+        let mut result: Vec<Document> = Vec::new();
+
+        for i in indexes {
+            result.push(responces[i].clone());
+        }
+
+        Ok(result)
     }
 }

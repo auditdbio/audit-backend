@@ -2,7 +2,10 @@ use mongodb::bson::{doc, oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::{repository::Entity, services::{AUDITORS_SERVICE, PROTOCOL}};
+use crate::{
+    repository::Entity,
+    services::{AUDITORS_SERVICE, PROTOCOL},
+};
 
 use super::{audit_request::PriceRange, contacts::Contacts};
 

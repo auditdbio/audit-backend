@@ -51,7 +51,12 @@ pub async fn verify_link(context: Context, code: web::Path<String>) -> error::Re
 }
 
 #[get("/api/auth/forgot_password/{email}")]
-pub async fn forgot_password(context: Context, email: web::Path<String>) -> error::Result<HttpResponse> {
-    AuthService::new(context).forgot_password(email.into_inner()).await?;
+pub async fn forgot_password(
+    context: Context,
+    email: web::Path<String>,
+) -> error::Result<HttpResponse> {
+    AuthService::new(context)
+        .forgot_password(email.into_inner())
+        .await?;
     Ok(HttpResponse::Ok().finish())
 }

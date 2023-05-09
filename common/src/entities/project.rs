@@ -2,7 +2,10 @@ use mongodb::bson::{self, oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::{repository::Entity, services::{PROTOCOL, CUSTOMERS_SERVICE}};
+use crate::{
+    repository::Entity,
+    services::{CUSTOMERS_SERVICE, PROTOCOL},
+};
 
 use super::contacts::Contacts;
 

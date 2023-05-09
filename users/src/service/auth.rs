@@ -210,11 +210,7 @@ impl AuthService {
 
         let message = include_str!("../../templates/password_change.txt")
             .to_string()
-            .replace(
-                "{new_password}",
-                &new_password
-                .as_str(),
-            );
+            .replace("{new_password}", &new_password.as_str());
 
         let letter = CreateLetter {
             email: user.email.clone(),
@@ -239,8 +235,6 @@ impl AuthService {
             .take(10)
             .map(char::from)
             .collect();
-
-        
 
         let new_password = sha256::digest(new_password + &salt);
 
