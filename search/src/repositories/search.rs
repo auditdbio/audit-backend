@@ -67,7 +67,7 @@ impl SearchRepo {
             }
 
             let mut skip = (query.page - 1) * query.per_page;
-            let mut limit = (query.per_page * query.pages) as i64;
+            let mut limit = (query.per_page * query.pages.unwrap_or(1)) as i64;
 
             if query.page == 0 {
                 skip = 0;

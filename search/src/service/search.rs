@@ -65,7 +65,7 @@ pub struct SearchQuery {
     pub query: String,
     pub tags: String,
     pub page: u64,
-    pub pages: u64,
+    pub pages: Option<u64>,
     pub per_page: u64,
     pub price_from: Option<i64>,
     pub price_to: Option<i64>,
