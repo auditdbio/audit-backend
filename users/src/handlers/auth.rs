@@ -58,7 +58,7 @@ pub async fn forgot_password(
     AuthService::new(context)
         .forgot_password(email.into_inner())
         .await?;
-    Ok(HttpResponse::Found().finish())
+    Ok(HttpResponse::Ok().finish())
 }
 
 #[post("/api/auth/reset_password")]
@@ -68,5 +68,5 @@ pub async fn reset_password(
 ) -> error::Result<HttpResponse> {
     AuthService::new(context).reset_password(code).await?;
 
-    Ok(HttpResponse::Found().finish())
+    Ok(HttpResponse::Ok().finish())
 }
