@@ -231,7 +231,7 @@ impl AuthService {
             .replace(
                 "{link}",
                 format!(
-                    "{}://{}/change-password/{}",
+                    "{}://{}/restore-password/{}",
                     PROTOCOL.as_str(),
                     FRONTEND.as_str(),
                     code
