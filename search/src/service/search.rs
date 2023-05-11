@@ -78,6 +78,13 @@ pub struct SearchQuery {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchResult {
+    pub result: Vec<Document>,
+    #[serde(rename = "totalDocuments")]
+    pub total_documents: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchInsertRequest {
     documents: Vec<Document>,
 }
@@ -97,13 +104,16 @@ impl SearchService {
         Ok(())
     }
 
-    pub async fn search(&self, query: SearchQuery) -> anyhow::Result<Vec<Document>> {
-        let results = self.repo.search(query).await?;
+    pub async fn search(&self, query: SearchQuery) -> anyhow::Result<SearchResult> {
+        let SearchResult {
+            total_documents,
+            result,
+        } = self.repo.search(query).await?;
         let mut ids: HashMap<String, Vec<ObjectId>> = HashMap::new();
 
         let mut indexes: HashMap<ObjectId, usize> = HashMap::new();
 
-        for (i, doc) in results.iter().enumerate() {
+        for (i, doc) in result.iter().enumerate() {
             let id = ObjectId::from_str(doc.get_str("id").unwrap()).unwrap();
             let service = doc.get_str("request_url").unwrap();
             let vecs = ids.entry(service.to_string()).or_insert(Vec::new());
@@ -128,7 +138,7 @@ impl SearchService {
             responces.extend_from_slice(&docs);
         }
 
-        let mut results = vec![Document::new(); results.len()];
+        let mut results = vec![Document::new(); result.len()];
 
         for doc in responces.iter() {
             let id = ObjectId::from_str(
@@ -142,6 +152,11 @@ impl SearchService {
 
         log::info!("Responces: {:?}", results);
 
-        Ok(results.into_iter().filter(|doc| !doc.is_empty()).collect())
+        let result = results.into_iter().filter(|doc| !doc.is_empty()).collect();
+
+        Ok(SearchResult {
+            result,
+            total_documents,
+        })
     }
 }

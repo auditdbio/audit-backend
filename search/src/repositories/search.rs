@@ -8,7 +8,7 @@ use mongodb::{
     IndexModel,
 };
 
-use crate::service::search::SearchQuery;
+use crate::service::search::{SearchQuery, SearchResult};
 
 #[derive(Clone)]
 pub struct SearchRepo(Arc<MongoRepository<Document>>);
@@ -49,7 +49,7 @@ impl SearchRepo {
         Ok(())
     }
 
-    pub async fn search(&self, mut query: SearchQuery) -> anyhow::Result<Vec<Document>> {
+    pub async fn search(&self, mut query: SearchQuery) -> anyhow::Result<SearchResult> {
         let find_options = if let Some(sort_by) = query.sort_by {
             let sort_order = query.sort_order.unwrap_or(1);
             let mut sort = doc! {
@@ -177,18 +177,28 @@ impl SearchRepo {
 
         log::info!("Search query: {:?}", docs);
 
-        let cursor = self
+        let result: Vec<Document> = self
             .0
             .collection
-            .find(doc! { "$and": docs}, find_options)
+            .find(doc! { "$and": docs.clone()}, find_options)
             .await
-            .unwrap();
-
-        Ok(cursor
+            .unwrap()
             .collect::<Vec<Result<Document, _>>>()
             .await
             .into_iter()
             .map(|x| x.unwrap())
-            .collect())
+            .collect();
+
+        let total_documents = self
+            .0
+            .collection
+            .count_documents(doc! { "$and": docs}, None)
+            .await
+            .unwrap();
+
+        Ok(SearchResult {
+            result,
+            total_documents,
+        })
     }
 }

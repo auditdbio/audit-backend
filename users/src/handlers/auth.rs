@@ -59,8 +59,8 @@ pub async fn forgot_password(
         .forgot_password(email.into_inner())
         .await?;
     Ok(HttpResponse::Found()
-    .append_header(("Location", "/sign-in"))
-    .finish())
+        .append_header(("Location", "/sign-in"))
+        .finish())
 }
 
 #[post("/api/auth/reset_password")]
