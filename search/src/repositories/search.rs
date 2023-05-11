@@ -66,7 +66,6 @@ impl SearchRepo {
                 sort.insert(sort_field, sort_order);
             }
 
-
             let mut skip = (query.page - 1) * query.per_page;
             let mut limit = query.per_page as i64;
 
@@ -75,7 +74,13 @@ impl SearchRepo {
                 limit = 1000;
             }
 
-            Some(FindOptions::builder().sort(sort).skip(skip).limit(limit).build())
+            Some(
+                FindOptions::builder()
+                    .sort(sort)
+                    .skip(skip)
+                    .limit(limit)
+                    .build(),
+            )
         } else {
             None
         };

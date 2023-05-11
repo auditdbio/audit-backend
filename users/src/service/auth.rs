@@ -5,7 +5,7 @@ use common::{
     context::Context,
     entities::{letter::CreateLetter, user::User},
     repository::Entity,
-    services::{MAIL_SERVICE, PROTOCOL, USERS_SERVICE},
+    services::{FRONTEND, MAIL_SERVICE, PROTOCOL, USERS_SERVICE},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use rand::{distributions::Alphanumeric, Rng};
@@ -39,6 +39,24 @@ impl Entity for Link {
     fn id(&self) -> ObjectId {
         ObjectId::new()
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Code {
+    pub code: String,
+    pub user: ObjectId,
+}
+
+impl Entity for Code {
+    fn id(&self) -> ObjectId {
+        self.user.clone()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChangePassword {
+    pub code: String,
+    pub password: String,
 }
 
 impl AuthService {
@@ -198,11 +216,11 @@ impl AuthService {
             bail!("No user repository found")
         };
 
-        let Some(mut user) = users.find("email", &Bson::String(email.clone())).await? else {
+        let Some(user) = users.find("email", &Bson::String(email.clone())).await? else {
             bail!("No user found")
         };
 
-        let new_password: String = rand::thread_rng()
+        let code: String = rand::thread_rng()
             .sample_iter(&Alphanumeric)
             .take(10)
             .map(char::from)
@@ -210,12 +228,32 @@ impl AuthService {
 
         let message = include_str!("../../templates/password_change.txt")
             .to_string()
-            .replace("{new_password}", &new_password.as_str());
+            .replace(
+                "{link}",
+                format!(
+                    "{}://{}/change-password/{}",
+                    PROTOCOL.as_str(),
+                    FRONTEND.as_str(),
+                    code
+                )
+                .as_str(),
+            );
+
+        let code = Code {
+            code: code.clone(),
+            user: user.id,
+        };
+
+        let Some(codes) = self.context.get_repository::<Code>() else {
+            bail!("No code repository found")
+        };
+
+        codes.insert(&code).await?;
 
         let letter = CreateLetter {
             email: user.email.clone(),
             message,
-            subject: "Password reset at auditdb.io".to_string(),
+            subject: "Password change at auditdb.io".to_string(),
         };
 
         self.context
@@ -230,20 +268,38 @@ impl AuthService {
             .send()
             .await?;
 
+        Ok(())
+    }
+
+    pub async fn reset_password(&self, token: ChangePassword) -> anyhow::Result<()> {
+        let Some(codes) = self.context.get_repository::<Code>() else {
+            bail!("No code repository found")
+        };
+
+        let Some(code) = codes.find("code", &Bson::String(token.code.clone())).await? else {
+            bail!("No code found")
+        };
+
+        let Some(users) = self.context.get_repository::<User<ObjectId>>() else {
+            bail!("No user repository found")
+        };
+
+        let Some(mut user) = users.delete("id", &code.user).await? else {
+            bail!("No user found")
+        };
+
         let salt: String = rand::thread_rng()
             .sample_iter(&Alphanumeric)
             .take(10)
             .map(char::from)
             .collect();
 
-        let new_password = sha256::digest(new_password + &salt);
+        let new_password = sha256::digest(format!("{}{}", token.password, salt));
 
         user.password = new_password;
         user.salt = salt;
 
-        users.delete("id", &user.id).await?;
         users.insert(&user).await?;
-
         Ok(())
     }
 }

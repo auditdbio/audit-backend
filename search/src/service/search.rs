@@ -105,9 +105,7 @@ impl SearchService {
         for (i, doc) in results.iter().enumerate() {
             let id = ObjectId::from_str(doc.get_str("id").unwrap()).unwrap();
             let service = doc.get_str("request_url").unwrap();
-            let vecs = ids
-                .entry(service.to_string())
-                .or_insert(Vec::new());
+            let vecs = ids.entry(service.to_string()).or_insert(Vec::new());
 
             indexes.insert(id, i);
             vecs.push(id);
@@ -132,7 +130,11 @@ impl SearchService {
         let mut results = vec![Document::new(); results.len()];
 
         for doc in responces.iter() {
-            let id = ObjectId::from_str(doc.get_str("id").unwrap_or_else(|_| doc.get_str("user_id").unwrap())).unwrap();
+            let id = ObjectId::from_str(
+                doc.get_str("id")
+                    .unwrap_or_else(|_| doc.get_str("user_id").unwrap()),
+            )
+            .unwrap();
             let index = indexes.get(&id).unwrap();
             results[*index] = doc.clone();
         }
