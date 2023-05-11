@@ -68,7 +68,5 @@ pub async fn reset_password(
 ) -> error::Result<HttpResponse> {
     AuthService::new(context).reset_password(code).await?;
 
-    Ok(HttpResponse::Found()
-        .append_header(("Location", "/sign-in"))
-        .finish())
+    Ok(HttpResponse::Found().finish())
 }
