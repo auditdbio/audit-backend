@@ -6,9 +6,18 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+tokio = { version = "1.26.0" }
 actix-web-actors = "4.2.0"
 actix-web = "4.2.1"
 actix-cors = "0.6.4"
 actix = "0.13.0"
 anyhow = "1"
 common = { path = "../common" }
+serde = { version = "1", features = ["derive"] }
+env_logger = "0.10.0"
+log = "0.4.17"
+
+[dependencies.mongodb]
+version = "2.3.1"
+default-features = false
+features = ["bson-chrono-0_4"]

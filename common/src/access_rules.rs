@@ -154,3 +154,14 @@ impl<'a, 'b> AccessRules<&'a Auth, ()> for SendMail {
         }
     }
 }
+
+pub struct SendNotification;
+
+impl<'a, 'b> AccessRules<&'a Auth, ()> for SendNotification {
+    fn get_access(auth: &'a Auth, _user: ()) -> bool {
+        match auth {
+            Auth::Service(_) | Auth::Admin(_) => true,
+            _ => false,
+        }
+    }
+}

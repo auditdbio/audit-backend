@@ -1,36 +1,32 @@
-use actix::{Actor, StreamHandler};
-use actix_web::{get, web, HttpRequest, HttpResponse};
-use actix_web_actors::ws;
-use anyhow::anyhow;
-use common::error;
-use ws::Message;
+use actix_web::{
+    get, post,
+    web::{self, Json},
+    HttpRequest, HttpResponse,
+};
 
-pub struct Notification {
-    message: String,
-}
+use common::{context::Context, error};
 
-struct NotificationsActor;
-
-impl Actor for NotificationsActor {
-    type Context = ws::WebsocketContext<Self>;
-}
-
-impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for NotificationsActor {
-    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
-        match msg {
-            Ok(Message::Text(text)) => ctx.text(text),
-            Ok(Message::Close(x)) => {
-                ctx.close(x);
-            }
-            _ => (),
-        }
-    }
-}
+use crate::service::notifications::{
+    subscribe_to_notifications, NotificationPayload, NotificationsManager,
+};
 
 #[get("/api/notifications")]
-async fn index(req: HttpRequest, stream: web::Payload) -> error::Result<HttpResponse> {
-    let Ok(resp)  = ws::start(NotificationsActor, &req, stream) else {
-        return Err(anyhow!("Failed to start websocket").into());
-    };
-    Ok(resp)
+pub async fn notifications(
+    req: HttpRequest,
+    stream: web::Payload,
+    context: Context,
+    manager: web::Data<NotificationsManager>,
+) -> error::Result<HttpResponse> {
+    Ok(subscribe_to_notifications(req, stream, context, manager).await?)
+}
+
+#[post("/api/send_notification")]
+pub async fn send_notification(
+    context: Context,
+    manager: web::Data<NotificationsManager>,
+    Json(send_notification): web::Json<NotificationPayload>,
+) -> error::Result<HttpResponse> {
+    crate::service::notifications::send_notification(context, manager, send_notification).await?;
+
+    Ok(HttpResponse::Ok().finish())
 }
