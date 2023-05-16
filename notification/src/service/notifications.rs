@@ -4,10 +4,7 @@ use actix::{Actor, ActorContext, Handler, Message, Recipient, StreamHandler};
 use actix_web::{web, HttpRequest, HttpResponse};
 use actix_web_actors::ws::{self, WsResponseBuilder};
 use anyhow::anyhow;
-use common::{
-    access_rules::{AccessRules},
-    context::Context,
-};
+use common::{access_rules::AccessRules, context::Context};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
@@ -100,7 +97,7 @@ pub async fn send_notification(
     let user_id = send_notification.user_id.parse()?;
     let auth = context.auth();
 
-    if SendNotification::get_access(auth, &user_id) {
+    if !SendNotification::get_access(auth, &user_id) {
         return Err(anyhow!("No access to send notification"));
     }
 

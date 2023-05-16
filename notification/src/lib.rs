@@ -1,13 +1,17 @@
 use std::sync::Arc;
 
 use actix_cors::Cors;
-use actix_web::{App, dev::{ServiceFactory, ServiceRequest, ServiceResponse}, body::MessageBody, middleware, web};
+use actix_web::{
+    body::MessageBody,
+    dev::{ServiceFactory, ServiceRequest, ServiceResponse},
+    middleware, web, App,
+};
 use common::context::ServiceState;
-use handlers::notifications::{send_notification, notifications};
+use handlers::notifications::{notifications, send_notification};
 
+pub mod access_rules;
 pub mod handlers;
 pub mod service;
-pub mod access_rules;
 
 pub fn create_app(
     state: Arc<ServiceState>,

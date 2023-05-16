@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use actix_web::HttpServer;
 use common::context::ServiceState;
-use notification::{service::notifications::NotificationsManager, create_app};
+use notification::{create_app, service::notifications::NotificationsManager};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
