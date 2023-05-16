@@ -8,6 +8,7 @@ use actix_web::{
 };
 use common::context::ServiceState;
 use handlers::notifications::{notifications, send_notification};
+use repositories::notifications::NotificationsRepository;
 
 pub mod access_rules;
 pub mod handlers;
@@ -16,6 +17,7 @@ pub mod service;
 
 pub fn create_app(
     state: Arc<ServiceState>,
+    repo: Arc<NotificationsRepository>,
     manager: Arc<service::notifications::NotificationsManager>,
 ) -> App<
     impl ServiceFactory<
@@ -32,6 +34,7 @@ pub fn create_app(
         .wrap(middleware::Logger::default())
         .app_data(web::Data::from(manager))
         .app_data(web::Data::new(state))
+        .app_data(web::Data::from(repo))
         .service(send_notification)
         .service(notifications);
     app
