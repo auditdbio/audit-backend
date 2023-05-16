@@ -5,11 +5,13 @@ use actix_web::{web, HttpRequest, HttpResponse};
 use actix_web_actors::ws::{self, WsResponseBuilder};
 use anyhow::anyhow;
 use common::{
-    access_rules::{AccessRules, SendNotification},
+    access_rules::{AccessRules},
     context::Context,
 };
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
+
+use crate::access_rules::SendNotification;
 
 #[derive(Message, Clone, Deserialize, Serialize, Debug)]
 #[rtype(result = "()")]
@@ -86,8 +88,8 @@ pub async fn subscribe_to_notifications(
 
 #[derive(Deserialize, Debug)]
 pub struct NotificationPayload {
-    user_id: String,
-    notification: Notification,
+    pub user_id: String,
+    pub notification: Notification,
 }
 
 pub async fn send_notification(
@@ -98,7 +100,7 @@ pub async fn send_notification(
     let user_id = send_notification.user_id.parse()?;
     let auth = context.auth();
 
-    if SendNotification::get_access(auth, ()) {
+    if SendNotification::get_access(auth, &user_id) {
         return Err(anyhow!("No access to send notification"));
     }
 

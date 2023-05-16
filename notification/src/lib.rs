@@ -7,6 +7,7 @@ use handlers::notifications::{send_notification, notifications};
 
 pub mod handlers;
 pub mod service;
+pub mod access_rules;
 
 pub fn create_app(
     state: Arc<ServiceState>,
