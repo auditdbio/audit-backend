@@ -11,7 +11,7 @@ use notification::{
 async fn main() -> std::io::Result<()> {
     env_logger::init();
 
-    let mongo_uri = env::var("MONGO_URI").expect("MONGO_URI must be set");
+    let mongo_uri = env::var("MONGOURI").expect("MONGOURI must be set");
 
     let state = ServiceState::new("notification".to_string());
 
