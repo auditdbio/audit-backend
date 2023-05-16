@@ -2158,9 +2158,11 @@ dependencies = [
  "anyhow",
  "common",
  "env_logger",
+ "futures",
  "log",
  "mongodb",
  "serde",
+ "serde_json",
  "tokio",
 ]
 

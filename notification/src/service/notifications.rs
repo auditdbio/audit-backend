@@ -4,16 +4,57 @@ use actix::{Actor, ActorContext, Handler, Message, Recipient, StreamHandler};
 use actix_web::{web, HttpRequest, HttpResponse};
 use actix_web_actors::ws::{self, WsResponseBuilder};
 use anyhow::anyhow;
-use common::{access_rules::AccessRules, context::Context};
+use common::{access_rules::AccessRules, context::Context, repository::Entity};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-use crate::access_rules::SendNotification;
+use crate::{
+    access_rules::{ReadNotification, SendNotification},
+    repositories::notifications::NotificationsRepository,
+};
 
 #[derive(Message, Clone, Deserialize, Serialize, Debug)]
 #[rtype(result = "()")]
 pub struct Notification {
+    id: ObjectId,
+    user_id: ObjectId,
+    inner: NotificationInner,
+}
+
+impl Notification {
+    pub fn serialize(self) -> PublicNotification {
+        PublicNotification {
+            id: self.id.to_hex(),
+            user_id: self.user_id.to_hex(),
+            inner: self.inner,
+        }
+    }
+}
+
+impl Entity for Notification {
+    fn id(&self) -> ObjectId {
+        self.id.clone()
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct PublicNotification {
+    id: String,
+    user_id: String,
+    inner: NotificationInner,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct NotificationInner {
     message: String,
+    is_read: bool,
+    is_sound: bool,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct CreateNotification {
+    pub user_id: ObjectId,
+    pub inner: NotificationInner,
 }
 
 pub struct NotificationsManager {
@@ -30,6 +71,7 @@ impl NotificationsManager {
 
 struct NotificationsActor {
     session_id: ObjectId,
+    initial: Vec<Notification>,
     manager: web::Data<NotificationsManager>,
 }
 
@@ -45,6 +87,10 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for NotificationsActo
         }
     }
 
+    fn started(&mut self, ctx: &mut Self::Context) {
+        ctx.text(serde_json::to_string(&self.initial).unwrap());
+    }
+
     fn finished(&mut self, _ctx: &mut Self::Context) {
         self.manager
             .subscribers
@@ -58,7 +104,7 @@ impl Handler<Notification> for NotificationsActor {
     type Result = ();
 
     fn handle(&mut self, msg: Notification, ctx: &mut Self::Context) {
-        ctx.text(msg.message);
+        ctx.text(serde_json::to_string(&msg.serialize()).unwrap());
     }
 }
 
@@ -67,11 +113,19 @@ pub async fn subscribe_to_notifications(
     stream: web::Payload,
     context: Context,
     manager: web::Data<NotificationsManager>,
+    notifications: &NotificationsRepository,
 ) -> anyhow::Result<HttpResponse> {
     let user_id = context.auth().id().unwrap().clone();
     let session_id = ObjectId::new();
+    let initial = notifications.get_unread(&user_id).await?;
 
-    let Ok((addr, resp)) = WsResponseBuilder::new(NotificationsActor {session_id: session_id.clone(), manager: manager.clone()}, &req, stream).start_with_addr() else{
+    let actor = NotificationsActor {
+        session_id: session_id.clone(),
+        manager: manager.clone(),
+        initial,
+    };
+
+    let Ok((addr, resp)) = WsResponseBuilder::new(actor, &req, stream).start_with_addr() else{
         return Err(anyhow!("Failed to start websocket"))
     };
 
@@ -83,31 +137,48 @@ pub async fn subscribe_to_notifications(
     Ok(resp)
 }
 
-#[derive(Deserialize, Debug)]
-pub struct NotificationPayload {
-    pub user_id: String,
-    pub notification: Notification,
-}
-
 pub async fn send_notification(
     context: Context,
     manager: web::Data<NotificationsManager>,
-    send_notification: NotificationPayload,
+    notif: CreateNotification,
+    notifications: &NotificationsRepository,
 ) -> anyhow::Result<()> {
-    let user_id = send_notification.user_id.parse()?;
+    let notif = Notification {
+        id: ObjectId::new(),
+        user_id: notif.user_id.clone(),
+        inner: notif.inner,
+    };
     let auth = context.auth();
 
-    if !SendNotification::get_access(auth, &user_id) {
+    if !SendNotification::get_access(auth, &notif.user_id) {
         return Err(anyhow!("No access to send notification"));
     }
 
     let map_lock = manager.subscribers.lock().unwrap();
 
-    if let Some(subscribers) = map_lock.get(&user_id) {
+    notifications.insert(&notif).await?;
+
+    if let Some(subscribers) = map_lock.get(&notif.user_id) {
         for (_, recipient) in subscribers {
-            recipient.do_send(send_notification.notification.clone());
+            recipient.do_send(notif.clone());
         }
     }
+
+    Ok(())
+}
+
+pub async fn read(
+    context: Context,
+    notifications: &NotificationsRepository,
+    id: ObjectId,
+) -> anyhow::Result<()> {
+    let auth = context.auth();
+
+    if !ReadNotification::get_access(auth, &id) {
+        return Err(anyhow!("No access to read notification"));
+    }
+
+    notifications.read(id).await?;
 
     Ok(())
 }

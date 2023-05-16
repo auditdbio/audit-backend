@@ -12,3 +12,15 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b ObjectId> for SendNotification {
         }
     }
 }
+
+pub struct ReadNotification;
+
+impl<'a, 'b> AccessRules<&'a Auth, &'b ObjectId> for ReadNotification {
+    fn get_access(auth: &'a Auth, user_id: &'b ObjectId) -> bool {
+        match auth {
+            Auth::Service(_) | Auth::Admin(_) => false,
+            Auth::User(id) => id == user_id,
+            _ => false,
+        }
+    }
+}

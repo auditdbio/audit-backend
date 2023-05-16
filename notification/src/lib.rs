@@ -11,6 +11,7 @@ use handlers::notifications::{notifications, send_notification};
 
 pub mod access_rules;
 pub mod handlers;
+pub mod repositories;
 pub mod service;
 
 pub fn create_app(
