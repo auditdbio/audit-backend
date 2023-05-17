@@ -13,15 +13,15 @@ use crate::{
     },
 };
 
-#[get("/api/notifications")]
+#[get("/api/notifications/{user_id}")]
 pub async fn notifications(
     req: HttpRequest,
     stream: web::Payload,
-    context: Context,
     manager: web::Data<NotificationsManager>,
     notifications: web::Data<NotificationsRepository>,
+    user_id: web::Path<String>,
 ) -> error::Result<HttpResponse> {
-    Ok(subscribe_to_notifications(req, stream, context, manager, &notifications).await?)
+    Ok(subscribe_to_notifications(req, stream, manager, user_id.parse()?, &notifications).await?)
 }
 
 #[post("/api/send_notification")]

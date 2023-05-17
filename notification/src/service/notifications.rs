@@ -4,7 +4,7 @@ use actix::{Actor, ActorContext, Handler, Message, Recipient, StreamHandler};
 use actix_web::{web, HttpRequest, HttpResponse};
 use actix_web_actors::ws::{self, WsResponseBuilder};
 use anyhow::anyhow;
-use common::{access_rules::AccessRules, context::Context, repository::Entity};
+use common::{access_rules::AccessRules, context::Context, repository::Entity, auth::Auth};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
@@ -73,6 +73,7 @@ struct NotificationsActor {
     session_id: ObjectId,
     initial: Vec<Notification>,
     manager: web::Data<NotificationsManager>,
+    auth: bool,
 }
 
 impl Actor for NotificationsActor {
@@ -83,12 +84,22 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for NotificationsActo
     fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
         match msg {
             Ok(ws::Message::Close(_)) => ctx.stop(),
+            Ok(ws::Message::Text(text)) => {
+                let token = text.to_string();
+                let auth = Auth::from_token(&token);
+
+                if auth.is_err() || auth.unwrap().id().unwrap() != &self.session_id {
+                    return;
+                }
+                if !self.auth {
+                    self.auth = true;
+                    ctx.text(serde_json::to_string(&self.initial).unwrap());
+                }
+
+            },
+
             _ => (),
         }
-    }
-
-    fn started(&mut self, ctx: &mut Self::Context) {
-        ctx.text(serde_json::to_string(&self.initial).unwrap());
     }
 
     fn finished(&mut self, _ctx: &mut Self::Context) {
@@ -104,18 +115,19 @@ impl Handler<Notification> for NotificationsActor {
     type Result = ();
 
     fn handle(&mut self, msg: Notification, ctx: &mut Self::Context) {
-        ctx.text(serde_json::to_string(&msg.serialize()).unwrap());
+        if self.auth {
+            ctx.text(serde_json::to_string(&msg.serialize()).unwrap());
+        }
     }
 }
 
 pub async fn subscribe_to_notifications(
     req: HttpRequest,
     stream: web::Payload,
-    context: Context,
     manager: web::Data<NotificationsManager>,
+    user_id: ObjectId,
     notifications: &NotificationsRepository,
 ) -> anyhow::Result<HttpResponse> {
-    let user_id = context.auth().id().unwrap().clone();
     let session_id = ObjectId::new();
     let initial = notifications.get_unread(&user_id).await?;
 
@@ -123,6 +135,7 @@ pub async fn subscribe_to_notifications(
         session_id: session_id.clone(),
         manager: manager.clone(),
         initial,
+        auth: false,
     };
 
     let Ok((addr, resp)) = WsResponseBuilder::new(actor, &req, stream).start_with_addr() else{

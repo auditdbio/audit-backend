@@ -6,7 +6,6 @@ members = [
     "customers",
     "common",
     "files",
-    "swagger",
     "users",
     "search",
     "mail",
