@@ -74,6 +74,7 @@ struct NotificationsActor {
     initial: Vec<Notification>,
     manager: web::Data<NotificationsManager>,
     auth: bool,
+    user_id: ObjectId,
 }
 
 impl Actor for NotificationsActor {
@@ -88,7 +89,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for NotificationsActo
                 let token = text.to_string();
                 let auth = Auth::from_token(&token);
 
-                if auth.is_err() || auth.unwrap().id().unwrap() != &self.session_id {
+                if auth.is_err() || auth.unwrap().id().unwrap() != &self.user_id {
                     return;
                 }
                 if !self.auth {
@@ -136,6 +137,7 @@ pub async fn subscribe_to_notifications(
         manager: manager.clone(),
         initial,
         auth: false,
+        user_id: user_id.clone(),
     };
 
     let Ok((addr, resp)) = WsResponseBuilder::new(actor, &req, stream).start_with_addr() else{
