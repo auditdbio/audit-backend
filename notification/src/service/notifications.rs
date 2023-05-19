@@ -81,7 +81,7 @@ struct NotificationsActor {
 
 impl NotificationsActor {
     pub fn hb(&self, ctx: &mut <Self as Actor>::Context) {
-        ctx.run_interval(Duration::from_secs(10), |act, ctx| {
+        ctx.run_interval(Duration::from_secs(5), |act, ctx| {
             if Instant::now().duration_since(act.hb) > Duration::from_secs(10) {
                 ctx.close(None);
                 ctx.stop();
