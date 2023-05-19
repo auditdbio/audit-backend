@@ -1,4 +1,4 @@
-use common::{entities::audit::Audit, access_rules::AccessRules, auth::Auth};
+use common::{access_rules::AccessRules, auth::Auth, entities::audit::Audit};
 use mongodb::bson::oid::ObjectId;
 
 pub struct Issue<Id> {
@@ -29,7 +29,6 @@ pub struct IssueUpdate {
     feedback: Option<String>,
 }
 
-
 pub struct Event<Id> {
     timestamp: i64,
     user: Id,
@@ -37,15 +36,11 @@ pub struct Event<Id> {
     message: String,
 }
 
-pub enum EventKind {
+pub enum EventKind {}
 
-}
+pub struct UpdateEvent {}
 
-pub struct UpdateEvent {
-
-}
-
-pub struct ChangeInAudit<'a> (&'a Audit<ObjectId>);
+pub struct ChangeInAudit<'a>(&'a Audit<ObjectId>);
 
 impl<'a, 'b, 'c> AccessRules<&'a ObjectId, &'b Auth> for ChangeInAudit<'c> {
     fn get_access(object: &'a ObjectId, subject: &'b Auth) -> bool {

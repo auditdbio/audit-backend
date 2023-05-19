@@ -1,17 +1,18 @@
-use std::{collections::HashMap, sync::Mutex, time::{Instant, Duration}};
+use std::{
+    collections::HashMap,
+    sync::Mutex,
+    time::{Duration, Instant},
+};
 
-use actix::{Actor, ActorContext, Handler, Message, Recipient, StreamHandler, AsyncContext};
+use actix::{Actor, ActorContext, AsyncContext, Handler, Message, Recipient, StreamHandler};
 use actix_web::{web, HttpRequest, HttpResponse};
 use actix_web_actors::ws::{self, WsResponseBuilder};
 use anyhow::anyhow;
-use common::{access_rules::AccessRules, context::Context, repository::Entity, auth::Auth};
+use common::{access_rules::AccessRules, auth::Auth, context::Context, repository::Entity};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    access_rules::{SendNotification},
-    repositories::notifications::NotificationsRepository,
-};
+use crate::{access_rules::SendNotification, repositories::notifications::NotificationsRepository};
 
 #[derive(Message, Clone, Deserialize, Serialize, Debug)]
 #[rtype(result = "()")]
@@ -80,7 +81,7 @@ struct NotificationsActor {
 
 impl NotificationsActor {
     pub fn hb(&self, ctx: &mut <Self as Actor>::Context) {
-        ctx.run_interval(Duration::from_secs(5), |act, ctx| {
+        ctx.run_interval(Duration::from_secs(10), |act, ctx| {
             if Instant::now().duration_since(act.hb) > Duration::from_secs(10) {
                 ctx.close(None);
                 ctx.stop();
@@ -90,7 +91,6 @@ impl NotificationsActor {
         });
     }
 }
-
 
 impl Actor for NotificationsActor {
     type Context = ws::WebsocketContext<Self>;
@@ -102,7 +102,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for NotificationsActo
             Ok(ws::Message::Close(reason)) => {
                 ctx.close(reason);
                 ctx.stop();
-            },
+            }
             Ok(ws::Message::Text(text)) => {
                 let token = text.to_string();
                 let auth = Auth::from_token(&token);
@@ -114,8 +114,8 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for NotificationsActo
                     self.auth = true;
                     ctx.text(serde_json::to_string(&self.initial).unwrap());
                 }
-
-            },
+            }
+            Ok(ws::Message::Pong(_)) => self.hb = Instant::now(),
             Ok(ws::Message::Ping(msg)) => ctx.pong(&msg),
             _ => (),
         }
