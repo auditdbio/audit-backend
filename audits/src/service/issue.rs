@@ -1,8 +1,8 @@
 use common::{entities::audit::Audit, access_rules::AccessRules, auth::Auth};
 use mongodb::bson::oid::ObjectId;
 
-pub struct Issue {
-    pub id: ObjectId,
+pub struct Issue<Id> {
+    pub id: Id,
     pub name: String,
     pub description: String,
 
@@ -13,7 +13,7 @@ pub struct Issue {
     include: bool,
 
     feedback: String,
-
+    event: Vec<Event<Id>>,
 }
 
 pub struct IssueUpdate {
@@ -27,10 +27,21 @@ pub struct IssueUpdate {
     include: Option<bool>,
 
     feedback: Option<String>,
-    events: Vec<Event>,
 }
 
-pub struct Event {
+
+pub struct Event<Id> {
+    timestamp: i64,
+    user: Id,
+    kind: EventKind,
+    message: String,
+}
+
+pub enum EventKind {
+
+}
+
+pub struct UpdateEvent {
 
 }
 
