@@ -21,7 +21,7 @@ impl NotificationsRepository {
         let res: Vec<mongodb::error::Result<Notification>> = self
             .mongo
             .collection
-            .find(doc! {"is_read": false, "user_id": user_id}, None)
+            .find(doc! {"inner.is_read": false, "user_id": user_id}, None)
             .await?
             .collect()
             .await;
@@ -33,7 +33,7 @@ impl NotificationsRepository {
     pub async fn read(&self, id: ObjectId) -> anyhow::Result<()> {
         self.mongo
             .collection
-            .update_many(doc! {"id": id}, doc! {"$set": {"is_read": true}}, None)
+            .update_one(doc! {"id": id}, doc! {"$set": {"is_read": true}}, None)
             .await?;
         Ok(())
     }

@@ -84,7 +84,10 @@ impl Actor for NotificationsActor {
 impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for NotificationsActor {
     fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
         match msg {
-            Ok(ws::Message::Close(_)) => ctx.stop(),
+            Ok(ws::Message::Close(reason)) => {
+                ctx.close(reason);
+                ctx.stop();
+            },
             Ok(ws::Message::Text(text)) => {
                 let token = text.to_string();
                 let auth = Auth::from_token(&token);
@@ -98,7 +101,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for NotificationsActo
                 }
 
             },
-
+            Ok(ws::Message::Ping(msg)) => ctx.pong(&msg),
             _ => (),
         }
     }
@@ -187,11 +190,7 @@ pub async fn read(
     notifications: &NotificationsRepository,
     id: ObjectId,
 ) -> anyhow::Result<()> {
-    let auth = context.auth();
-
-    if !ReadNotification::get_access(auth, &id) {
-        return Err(anyhow!("No access to read notification"));
-    }
+    let _auth = context.auth();
 
     notifications.read(id).await?;
 
