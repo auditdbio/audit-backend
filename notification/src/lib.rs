@@ -7,7 +7,7 @@ use actix_web::{
     middleware, web, App,
 };
 use common::context::ServiceState;
-use handlers::notifications::{notifications, send_notification};
+use handlers::notifications::{notifications, send_notification, read_notification};
 use repositories::notifications::NotificationsRepository;
 
 pub mod access_rules;
@@ -36,6 +36,7 @@ pub fn create_app(
         .app_data(web::Data::new(state))
         .app_data(web::Data::from(repo))
         .service(send_notification)
-        .service(notifications);
+        .service(notifications)
+        .service(read_notification);
     app
 }
