@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use anyhow::bail;
 use chrono::Utc;
 use common::{
@@ -9,6 +11,7 @@ use common::{
         auditor::PublicAuditor,
         contacts::Contacts,
         customer::PublicCustomer,
+        issue::{Issue, Status},
         project::PublicProject,
         role::Role,
     },
@@ -74,8 +77,21 @@ impl From<Audit<ObjectId>> for PublicAudit {
     }
 }
 
+pub struct CreateIssue {
+    pub name: String,
+    pub description: String,
+    pub status: Status,
+    pub severity: String,
+    pub category: String,
+    pub link: String,
+}
+
 pub struct AuditService {
     context: Context,
+}
+
+pub struct CreateEvent {
+
 }
 
 impl AuditService {
@@ -151,6 +167,7 @@ impl AuditService {
             report: None,
             report_name: None,
             time: request.time,
+            issues: HashMap::new(),
         };
 
         audits.insert(&audit).await?;
@@ -262,4 +279,26 @@ impl AuditService {
 
         Ok(audit.into())
     }
+
+    pub fn create_issue(&self, audit_id: ObjectId, issue: CreateIssue) -> anyhow::Result<()> {
+        let issue: Issue<ObjectId> = Issue {
+            id: 0,
+            name: issue.name,
+            description: issue.description,
+            status: Status::Draft,
+            severity: issue.severity,
+            events: Vec::new(),
+            category: issue.category,
+            link: issue.link,
+            include: true,
+            feedback: String::new(),
+        };
+        Ok(())
+    }
+
+    pub fn change_issue(&self, audit_id: ObjectId, issue_id: ObjectId) {}
+
+    pub fn create_event(&self, audit_id: ObjectId, issue_id: ObjectId, event: CreateEvent) {}
+
+    pub fn change_event() {}
 }

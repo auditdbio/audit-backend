@@ -33,7 +33,7 @@ impl NotificationsRepository {
     pub async fn read(&self, id: ObjectId) -> anyhow::Result<()> {
         self.mongo
             .collection
-            .update_one(doc! {"id": id}, doc! {"$set": {"is_read": true}}, None)
+            .update_one(doc! {"id": id}, doc! {"$set": {"inner.is_read": true}}, None)
             .await?;
         Ok(())
     }

@@ -45,6 +45,16 @@ pub struct PublicNotification {
     inner: NotificationInner,
 }
 
+impl From<Notification> for PublicNotification {
+    fn from(notification: Notification) -> Self {
+        Self {
+            id: notification.id.to_hex(),
+            user_id: notification.user_id.to_hex(),
+            inner: notification.inner,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct NotificationInner {
     message: String,
@@ -72,7 +82,7 @@ impl NotificationsManager {
 
 struct NotificationsActor {
     session_id: ObjectId,
-    initial: Vec<Notification>,
+    initial: Vec<PublicNotification>,
     manager: web::Data<NotificationsManager>,
     auth: bool,
     user_id: ObjectId,
@@ -139,7 +149,10 @@ impl Handler<Notification> for NotificationsActor {
 
     fn handle(&mut self, msg: Notification, ctx: &mut Self::Context) {
         if self.auth {
-            ctx.text(serde_json::to_string(&msg.serialize()).unwrap());
+            let msg: PublicNotification = msg.into();
+            ctx.text(serde_json::to_string(&msg).unwrap());
+        } else {
+            self.initial.push(msg.into())
         }
     }
 }
@@ -152,7 +165,12 @@ pub async fn subscribe_to_notifications(
     notifications: &NotificationsRepository,
 ) -> anyhow::Result<HttpResponse> {
     let session_id = ObjectId::new();
-    let initial = notifications.get_unread(&user_id).await?;
+    let initial = notifications
+        .get_unread(&user_id)
+        .await?
+        .into_iter()
+        .map(|n| n.into())
+        .collect();
 
     let actor = NotificationsActor {
         session_id: session_id.clone(),

@@ -1,13 +1,16 @@
+use std::collections::HashMap;
+use std::hash::Hash;
+
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::repository::Entity;
 
-use super::{audit_request::TimeRange, contacts::Contacts};
+use super::{audit_request::TimeRange, contacts::Contacts, issue::Issue};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, ToSchema)]
-pub struct Audit<Id> {
+pub struct Audit<Id: Eq + Hash> {
     pub id: Id,
     pub customer_id: Id,
     pub auditor_id: Id,
@@ -27,6 +30,9 @@ pub struct Audit<Id> {
     pub report: Option<String>,
     pub report_name: Option<String>,
     pub time: TimeRange,
+
+    #[serde(default)]
+    pub issues: HashMap<Id, Issue<Id>>,
 }
 
 impl Audit<String> {
@@ -49,6 +55,7 @@ impl Audit<String> {
             report: self.report,
             report_name: self.report_name,
             time: self.time,
+            issues: Issue::parse_map(self.issues),
         }
     }
 }
@@ -73,6 +80,7 @@ impl Audit<ObjectId> {
             report: self.report,
             report_name: self.report_name,
             time: self.time,
+            issues: Issue::to_string_map(self.issues),
         }
     }
 }
