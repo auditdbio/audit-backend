@@ -227,10 +227,10 @@ pub async fn read(
     context: Context,
     notifications: &NotificationsRepository,
     id: ObjectId,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<String> {
     let _auth = context.auth();
 
-    notifications.read(id).await?;
+    notifications.read(id.clone()).await?;
 
-    Ok(())
+    Ok(id.to_hex())
 }

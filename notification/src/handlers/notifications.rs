@@ -5,6 +5,7 @@ use actix_web::{
 };
 
 use common::{context::Context, error};
+use mongodb::bson::doc;
 
 use crate::{
     repositories::notifications::NotificationsRepository,
@@ -43,7 +44,7 @@ pub async fn read_notification(
     notifs: web::Data<NotificationsRepository>,
     id: web::Path<String>,
 ) -> error::Result<HttpResponse> {
-    read(context, &notifs, id.parse()?).await?;
+    let id = read(context, &notifs, id.parse()?).await?;
 
-    Ok(HttpResponse::Ok().finish())
+    Ok(HttpResponse::Ok().json(doc!{"id": id}))
 }
