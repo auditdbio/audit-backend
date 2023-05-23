@@ -59,7 +59,7 @@ impl Auth {
             contacts = customer.contacts;
         }
 
-        if &Auth::None == self {
+        if &Auth::None == self || &Auth::Service("search".to_string()) == self {
             contacts.telegram = None;
             contacts.email = None;
         }
@@ -87,7 +87,7 @@ impl Auth {
             contacts = auditor.contacts;
         }
 
-        if &Auth::None == self {
+        if &Auth::None == self || &Auth::Service("search".to_string()) == self {
             contacts.telegram = None;
             contacts.email = None;
         }
@@ -118,7 +118,7 @@ impl Auth {
             contacts = project.creator_contacts;
         }
 
-        if &Auth::None == self {
+        if &Auth::None == self || &Auth::Service("search".to_string()) == self {
             contacts.telegram = None;
             contacts.email = None;
         }
