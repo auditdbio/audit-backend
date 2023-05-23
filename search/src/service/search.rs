@@ -105,6 +105,12 @@ impl SearchService {
     }
 
     pub async fn search(&self, query: SearchQuery) -> anyhow::Result<SearchResult> {
+        let mut auth = self.context.server_auth();
+        if &Auth::None != self.context.auth() {
+            auth = auth.authorized();
+        }
+
+
         let SearchResult {
             total_documents,
             result,
@@ -128,7 +134,7 @@ impl SearchService {
             let docs = self
                 .context
                 .make_request()
-                .auth(self.context.server_auth().authorized())
+                .auth(auth.clone())
                 .post(service)
                 .json(&ids)
                 .send()
