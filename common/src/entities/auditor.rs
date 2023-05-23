@@ -117,20 +117,20 @@ impl From<Auditor<ObjectId>> for Option<Document> {
     }
 }
 
-impl From<Auditor<ObjectId>> for PublicAuditor {
-    fn from(auditor: Auditor<ObjectId>) -> Self {
-        let auditor = auditor.stringify();
-        PublicAuditor {
-            user_id: auditor.user_id,
-            avatar: auditor.avatar,
-            first_name: auditor.first_name,
-            last_name: auditor.last_name,
-            about: auditor.about,
-            company: auditor.company,
-            contacts: auditor.contacts,
-            free_at: auditor.free_at,
-            price_range: auditor.price_range,
-            tags: auditor.tags,
-        }
-    }
-}
+// impl From<Auditor<ObjectId>> for PublicAuditor {
+//     fn from(auditor: Auditor<ObjectId>) -> Self {
+//         let auditor = auditor.stringify();
+//         PublicAuditor {
+//             user_id: auditor.user_id,
+//             avatar: auditor.avatar,
+//             first_name: auditor.first_name,
+//             last_name: auditor.last_name,
+//             about: auditor.about,
+//             company: auditor.company,
+//             contacts: auditor.contacts,
+//             free_at: auditor.free_at,
+//             price_range: auditor.price_range,
+//             tags: auditor.tags,
+//         }
+//     }
+// }

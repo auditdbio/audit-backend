@@ -9,6 +9,7 @@ pub struct Letter {
     pub email: String,
     pub message: String,
     pub subject: String,
+    pub sender: Option<String>,
 }
 
 impl Entity for Letter {

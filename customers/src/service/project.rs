@@ -88,7 +88,7 @@ impl ProjectService {
 
         projects.insert(&project).await?;
 
-        Ok(project.into())
+        Ok(auth.public_project(project))
     }
 
     pub async fn find(&self, id: ObjectId) -> anyhow::Result<Option<PublicProject>> {
@@ -106,7 +106,7 @@ impl ProjectService {
             bail!("User is not available to read this project")
         }
 
-        Ok(Some(project.into()))
+        Ok(Some(auth.public_project(project)))
     }
 
     pub async fn my_projects(&self) -> anyhow::Result<Vec<Project<String>>> {
@@ -175,7 +175,7 @@ impl ProjectService {
         projects.delete("id", &id).await?;
         projects.insert(&project).await?;
 
-        Ok(project.into())
+        Ok(auth.public_project(project))
     }
 
     pub async fn delete(&self, id: ObjectId) -> anyhow::Result<PublicProject> {
@@ -194,6 +194,6 @@ impl ProjectService {
             bail!("User is not available to delete this project")
         }
 
-        Ok(project.into())
+        Ok(auth.public_project(project))
     }
 }

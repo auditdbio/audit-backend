@@ -103,17 +103,17 @@ pub struct PublicCustomer {
     pub tags: Vec<String>,
 }
 
-impl From<Customer<ObjectId>> for PublicCustomer {
-    fn from(value: Customer<ObjectId>) -> Self {
-        PublicCustomer {
-            user_id: value.user_id.to_hex(),
-            avatar: value.avatar,
-            first_name: value.first_name,
-            last_name: value.last_name,
-            about: value.about,
-            company: value.company,
-            contacts: value.contacts,
-            tags: value.tags,
-        }
-    }
-}
+// impl From<Customer<ObjectId>> for PublicCustomer {
+//     fn from(value: Customer<ObjectId>) -> Self {
+//         PublicCustomer {
+//             user_id: value.user_id.to_hex(),
+//             avatar: value.avatar,
+//             first_name: value.first_name,
+//             last_name: value.last_name,
+//             about: value.about,
+//             company: value.company,
+//             contacts: value.contacts,
+//             tags: value.tags,
+//         }
+//     }
+// }

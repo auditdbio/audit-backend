@@ -85,31 +85,31 @@ pub struct PublicProject {
     pub price: i64,
 }
 
-impl From<Project<ObjectId>> for PublicProject {
-    fn from(project: Project<ObjectId>) -> Self {
-        let creator_contacts = if project.creator_contacts.public_contacts {
-            project.creator_contacts
-        } else {
-            Contacts {
-                email: None,
-                telegram: None,
-                public_contacts: false,
-            }
-        };
+// impl From<Project<ObjectId>> for PublicProject {
+//     fn from(project: Project<ObjectId>) -> Self {
+//         let creator_contacts = if project.creator_contacts.public_contacts {
+//             project.creator_contacts
+//         } else {
+//             Contacts {
+//                 email: None,
+//                 telegram: None,
+//                 public_contacts: false,
+//             }
+//         };
 
-        Self {
-            id: project.id.to_hex(),
-            name: project.name,
-            description: project.description,
-            scope: project.scope,
-            tags: project.tags,
-            publish_options: project.publish_options,
-            status: project.status,
-            creator_contacts,
-            price: project.price,
-        }
-    }
-}
+//         Self {
+//             id: project.id.to_hex(),
+//             name: project.name,
+//             description: project.description,
+//             scope: project.scope,
+//             tags: project.tags,
+//             publish_options: project.publish_options,
+//             status: project.status,
+//             creator_contacts,
+//             price: project.price,
+//         }
+//     }
+// }
 
 impl From<Project<ObjectId>> for Option<Document> {
     fn from(project: Project<ObjectId>) -> Self {

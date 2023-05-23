@@ -10,7 +10,7 @@ use crate::{
     entities::{
         auditor::{Auditor, PublicAuditor},
         contacts::Contacts,
-        customer::{Customer, PublicCustomer},
+        customer::{Customer, PublicCustomer}, project::{Project, PublicProject},
     },
 };
 
@@ -24,7 +24,7 @@ pub static DECODING_KEY: Lazy<DecodingKey> = Lazy::new(|| {
     DecodingKey::from_secret(secret.as_bytes())
 });
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Auth {
     Service(String),
     Admin(ObjectId),
@@ -59,6 +59,11 @@ impl Auth {
             contacts = customer.contacts;
         }
 
+        if &Auth::None == self {
+            contacts.telegram = None;
+            contacts.email = None;
+        }
+
         PublicCustomer {
             user_id: customer.user_id.to_hex(),
             avatar: customer.avatar,
@@ -82,6 +87,11 @@ impl Auth {
             contacts = auditor.contacts;
         }
 
+        if &Auth::None == self {
+            contacts.telegram = None;
+            contacts.email = None;
+        }
+
         PublicAuditor {
             user_id: auditor.user_id.to_hex(),
             avatar: auditor.avatar,
@@ -93,6 +103,36 @@ impl Auth {
             free_at: auditor.free_at,
             price_range: auditor.price_range,
             tags: auditor.tags,
+        }
+    }
+
+
+    pub fn public_project(&self, project: Project<ObjectId>) -> PublicProject {
+        let mut contacts = Contacts {
+            telegram: None,
+            email: None,
+            public_contacts: false,
+        };
+
+        if project.creator_contacts.public_contacts || self.full_access() {
+            contacts = project.creator_contacts;
+        }
+
+        if &Auth::None == self {
+            contacts.telegram = None;
+            contacts.email = None;
+        }
+
+        PublicProject {
+            id: project.id.to_hex(),
+            name: project.name,
+            description: project.description,
+            scope: project.scope,
+            tags: project.tags,
+            publish_options: project.publish_options,
+            status: project.status,
+            creator_contacts: contacts,
+            price: project.price,
         }
     }
 }

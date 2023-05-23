@@ -47,6 +47,6 @@ impl IndexerService {
 
         let auditors = auditors.find_all_by_ids("user_id", ids).await?;
 
-        Ok(auditors.into_iter().map(|x| x.into()).collect::<Vec<_>>())
+        Ok(auditors.into_iter().map(|x| auth.public_auditor(x)).collect::<Vec<_>>())
     }
 }

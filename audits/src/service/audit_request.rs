@@ -98,6 +98,10 @@ impl RequestService {
         let customer_id = request.customer_id.parse()?;
         let auditor_id = request.auditor_id.parse()?;
 
+        if &customer_id == &auditor_id {
+            bail!("You can't create audit with yourself")
+        }
+
         let last_changer = if user_id == &customer_id {
             Role::Customer
         } else if user_id == &auditor_id {

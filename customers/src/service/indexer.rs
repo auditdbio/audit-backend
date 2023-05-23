@@ -68,7 +68,7 @@ impl IndexerService {
 
         let customers = customers.find_all_by_ids("user_id", ids).await?;
 
-        Ok(customers.into_iter().map(|x| x.into()).collect::<Vec<_>>())
+        Ok(customers.into_iter().map(|x| auth.public_customer(x)).collect::<Vec<_>>())
     }
 
     pub async fn find_projects(&self, ids: Vec<ObjectId>) -> anyhow::Result<Vec<PublicProject>> {
@@ -86,7 +86,7 @@ impl IndexerService {
 
         Ok(projects
             .into_iter()
-            .map(|x| x.into())
+            .map(|x| auth.public_project(x))
             .filter(|x: &PublicProject| x.publish_options.publish)
             .collect::<Vec<_>>())
     }

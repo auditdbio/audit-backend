@@ -50,8 +50,10 @@ impl MailService {
     async fn send_email(&self, letter: Letter) -> anyhow::Result<()> {
         let email = letter.email.parse()?;
 
+        let sender_email = letter.sender.clone().unwrap_or(EMAIL_ADDRESS.to_string());
+
         let Ok(email) = Message::builder()
-                .from(EMAIL_ADDRESS.to_string().parse().unwrap())
+                .from(sender_email.parse().unwrap())
                 .to(email)
                 .subject(letter.subject.clone())
                 .body(letter.message.clone()) else {
@@ -81,6 +83,7 @@ impl MailService {
                 "{} ({}) from {} send feedback",
                 feedback.name, feedback.email, feedback.company
             ),
+            sender: Some(feedback.email.clone()),
         };
 
         self.send_email(letter).await?;
@@ -111,6 +114,7 @@ impl MailService {
             subject: letter.subject,
             email: letter.email,
             message: letter.message,
+            sender: Some(EMAIL_ADDRESS.to_string()),
         };
 
         letters.insert(&letter).await?;
