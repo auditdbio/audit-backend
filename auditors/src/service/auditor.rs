@@ -90,7 +90,7 @@ impl AuditorService {
             return Ok(None);
         };
 
-        if !Read::get_access(auth, &auditor) {
+        if !Read.get_access(auth, &auditor) {
             bail!("User is not available to change this auditor")
         }
 
@@ -190,7 +190,7 @@ impl AuditorService {
             bail!("No auditor found")
         };
 
-        if !Edit::get_access(auth, &auditor) {
+        if !Edit.get_access(auth, &auditor) {
             bail!("User is not available to change this auditor")
         }
 
@@ -249,7 +249,7 @@ impl AuditorService {
             bail!("No auditor found")
         };
 
-        if !Edit::get_access(auth, &auditor) {
+        if !Edit.get_access(auth, &auditor) {
             auditors.insert(&auditor).await?;
             bail!("User is not available to delete this auditor")
         }

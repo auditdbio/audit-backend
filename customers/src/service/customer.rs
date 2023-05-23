@@ -84,7 +84,7 @@ impl CustomerService {
             return Ok(None);
         };
 
-        if !Read::get_access(auth, &customer) {
+        if !Read.get_access(auth, &customer) {
             bail!("User is not available to change this customer")
         }
 
@@ -182,7 +182,7 @@ impl CustomerService {
             bail!("No customer found")
         };
 
-        if !Edit::get_access(auth, &customer) {
+        if !Edit.get_access(auth, &customer) {
             bail!("User is not available to change this customer")
         }
 
@@ -248,7 +248,7 @@ impl CustomerService {
             bail!("No customer found")
         };
 
-        if !Edit::get_access(auth, &customer) {
+        if !Edit.get_access(auth, &customer) {
             customers.insert(&customer).await?;
             bail!("User is not available to delete this customer")
         }

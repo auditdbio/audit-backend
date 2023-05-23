@@ -8,7 +8,7 @@ use common::{
     context::Context,
     entities::{
         audit::Audit,
-        issue::{ChangeIssue, CreateEvent, Issue},
+        issue::ChangeIssue,
         role::Role,
     },
     error,
@@ -76,7 +76,10 @@ pub async fn post_audit_issue(
     id: web::Path<String>,
     Json(data): Json<CreateIssue>,
 ) -> error::Result<HttpResponse> {
-    Ok(HttpResponse::Ok().finish())
+    let result = AuditService::new(context)
+        .create_issue(id.parse()?, data)
+        .await?;
+    Ok(HttpResponse::Ok().json(result))
 }
 
 #[patch("/api/audit/{id}/issue/{issue_id}")]
@@ -85,5 +88,8 @@ pub async fn patch_audit_issue(
     id: web::Path<(String, usize)>,
     Json(data): Json<ChangeIssue>,
 ) -> error::Result<HttpResponse> {
-    Ok(HttpResponse::Ok().finish())
+    let result = AuditService::new(context)
+        .change_issue(id.0.parse()?, id.1, data)
+        .await?;
+    Ok(HttpResponse::Ok().json(result))
 }

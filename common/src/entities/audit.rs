@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::hash::Hash;
 
 use mongodb::bson::oid::ObjectId;
@@ -32,7 +31,7 @@ pub struct Audit<Id: Eq + Hash> {
     pub time: TimeRange,
 
     #[serde(default)]
-    pub issues: HashMap<Id, Issue<Id>>,
+    pub issues: Vec<Issue<Id>>,
 }
 
 impl Audit<String> {

@@ -69,7 +69,7 @@ impl UserService {
             return Ok(None);
         };
 
-        if !Read::get_access(auth, &user) {
+        if !Read.get_access(auth, &user) {
             bail!("User is not available to read this user")
         }
 
@@ -101,7 +101,7 @@ impl UserService {
             bail!("No user found")
         };
 
-        if !Edit::get_access(auth, &user) {
+        if !Edit.get_access(auth, &user) {
             bail!("User is not available to change this user")
         }
 
@@ -153,7 +153,7 @@ impl UserService {
             bail!("No user found")
         };
 
-        if !Edit::get_access(auth, &user) {
+        if !Edit.get_access(auth, &user) {
             users.insert(&user).await?;
             bail!("User is not available to delete this user")
         }

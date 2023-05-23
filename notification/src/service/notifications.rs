@@ -208,7 +208,7 @@ pub async fn send_notification(
     };
     let auth = context.auth();
 
-    if !SendNotification::get_access(auth, &notif.user_id) {
+    if !SendNotification.get_access(auth, &notif.user_id) {
         return Err(anyhow!("No access to send notification"));
     }
 

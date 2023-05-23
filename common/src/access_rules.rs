@@ -9,7 +9,7 @@ use crate::{
 };
 
 pub trait AccessRules<Object, Subject> {
-    fn get_access(object: Object, subject: Subject) -> bool;
+    fn get_access(&self, object: Object, subject: Subject) -> bool;
 }
 
 pub struct Read;
@@ -17,7 +17,7 @@ pub struct Read;
 pub struct Edit;
 
 impl<'a, 'b> AccessRules<&'a Auth, &'b User<ObjectId>> for Read {
-    fn get_access(auth: &'a Auth, _user: &'b User<ObjectId>) -> bool {
+    fn get_access(&self, auth: &'a Auth, _user: &'b User<ObjectId>) -> bool {
         match auth {
             _ => true,
         }
@@ -25,7 +25,7 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b User<ObjectId>> for Read {
 }
 
 impl<'a, 'b> AccessRules<&'a Auth, &'b User<ObjectId>> for Edit {
-    fn get_access(auth: &'a Auth, user: &'b User<ObjectId>) -> bool {
+    fn get_access(&self, auth: &'a Auth, user: &'b User<ObjectId>) -> bool {
         match auth {
             Auth::Service(_) => true,
             Auth::Admin(_) => true,
@@ -36,7 +36,7 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b User<ObjectId>> for Edit {
 }
 
 impl<'a, 'b> AccessRules<&'a Auth, &'b Customer<ObjectId>> for Read {
-    fn get_access(auth: &'a Auth, _customer: &'b Customer<ObjectId>) -> bool {
+    fn get_access(&self, auth: &'a Auth, _customer: &'b Customer<ObjectId>) -> bool {
         match auth {
             _ => true,
         }
@@ -44,7 +44,7 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b Customer<ObjectId>> for Read {
 }
 
 impl<'a, 'b> AccessRules<&'a Auth, &'b Customer<ObjectId>> for Edit {
-    fn get_access(auth: &'a Auth, customer: &'b Customer<ObjectId>) -> bool {
+    fn get_access(&self, auth: &'a Auth, customer: &'b Customer<ObjectId>) -> bool {
         match auth {
             Auth::Service(_) | Auth::Admin(_) => true,
             Auth::User(id) => id == &customer.user_id,
@@ -54,7 +54,7 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b Customer<ObjectId>> for Edit {
 }
 
 impl<'a, 'b> AccessRules<&'a Auth, &'b Auditor<ObjectId>> for Read {
-    fn get_access(auth: &'a Auth, _auditor: &'b Auditor<ObjectId>) -> bool {
+    fn get_access(&self, auth: &'a Auth, _auditor: &'b Auditor<ObjectId>) -> bool {
         match auth {
             _ => true,
         }
@@ -62,7 +62,7 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b Auditor<ObjectId>> for Read {
 }
 
 impl<'a, 'b> AccessRules<&'a Auth, &'b Auditor<ObjectId>> for Edit {
-    fn get_access(auth: &'a Auth, auditor: &'b Auditor<ObjectId>) -> bool {
+    fn get_access(&self, auth: &'a Auth, auditor: &'b Auditor<ObjectId>) -> bool {
         match auth {
             Auth::Service(_) | Auth::Admin(_) => true,
             Auth::User(id) => id == &auditor.user_id,
@@ -72,7 +72,7 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b Auditor<ObjectId>> for Edit {
 }
 
 impl<'a, 'b> AccessRules<&'a Auth, &'b Project<ObjectId>> for Read {
-    fn get_access(auth: &'a Auth, project: &'b Project<ObjectId>) -> bool {
+    fn get_access(&self, auth: &'a Auth, project: &'b Project<ObjectId>) -> bool {
         match auth {
             Auth::Service(_) | Auth::Admin(_) => true,
             Auth::User(id) => project.publish_options.publish || id == &project.customer_id,
@@ -82,7 +82,7 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b Project<ObjectId>> for Read {
 }
 
 impl<'a, 'b> AccessRules<&'a Auth, &'b Project<ObjectId>> for Edit {
-    fn get_access(auth: &'a Auth, project: &'b Project<ObjectId>) -> bool {
+    fn get_access(&self, auth: &'a Auth, project: &'b Project<ObjectId>) -> bool {
         match auth {
             Auth::Service(_) | Auth::Admin(_) => true,
             Auth::User(id) => project.publish_options.publish || &project.customer_id == id,
@@ -92,7 +92,7 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b Project<ObjectId>> for Edit {
 }
 
 impl<'a, 'b> AccessRules<&'a Auth, &'b AuditRequest<ObjectId>> for Read {
-    fn get_access(auth: &'a Auth, request: &'b AuditRequest<ObjectId>) -> bool {
+    fn get_access(&self, auth: &'a Auth, request: &'b AuditRequest<ObjectId>) -> bool {
         match auth {
             Auth::Service(_) | Auth::Admin(_) => true,
             Auth::User(id) => &request.customer_id == id || &request.auditor_id == id,
@@ -102,7 +102,7 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b AuditRequest<ObjectId>> for Read {
 }
 
 impl<'a, 'b> AccessRules<&'a Auth, &'b AuditRequest<ObjectId>> for Edit {
-    fn get_access(auth: &'a Auth, request: &'b AuditRequest<ObjectId>) -> bool {
+    fn get_access(&self, auth: &'a Auth, request: &'b AuditRequest<ObjectId>) -> bool {
         match auth {
             Auth::Service(_) | Auth::Admin(_) => true,
             Auth::User(id) => &request.customer_id == id || &request.auditor_id == id,
@@ -112,7 +112,7 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b AuditRequest<ObjectId>> for Edit {
 }
 
 impl<'a, 'b> AccessRules<&'a Auth, &'b Audit<ObjectId>> for Read {
-    fn get_access(auth: &'a Auth, request: &'b Audit<ObjectId>) -> bool {
+    fn get_access(&self, auth: &'a Auth, request: &'b Audit<ObjectId>) -> bool {
         match auth {
             Auth::Service(_) | Auth::Admin(_) => true,
             Auth::User(id) => &request.customer_id == id || &request.auditor_id == id,
@@ -122,7 +122,7 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b Audit<ObjectId>> for Read {
 }
 
 impl<'a, 'b> AccessRules<&'a Auth, &'b Audit<ObjectId>> for Edit {
-    fn get_access(auth: &'a Auth, request: &'b Audit<ObjectId>) -> bool {
+    fn get_access(&self, auth: &'a Auth, request: &'b Audit<ObjectId>) -> bool {
         match auth {
             Auth::Service(_) | Auth::Admin(_) => true,
             Auth::User(id) => &request.customer_id == id || &request.auditor_id == id,
@@ -134,7 +134,7 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b Audit<ObjectId>> for Edit {
 pub struct GetData;
 
 impl<'a, 'b> AccessRules<&'a Auth, ()> for GetData {
-    fn get_access(auth: &'a Auth, _user: ()) -> bool {
+    fn get_access(&self, auth: &'a Auth, _user: ()) -> bool {
         match auth {
             Auth::Service(_) | Auth::Admin(_) => true,
             Auth::User(_) => false,
@@ -146,7 +146,7 @@ impl<'a, 'b> AccessRules<&'a Auth, ()> for GetData {
 pub struct SendMail;
 
 impl<'a, 'b> AccessRules<&'a Auth, ()> for SendMail {
-    fn get_access(auth: &'a Auth, _user: ()) -> bool {
+    fn get_access(&self, auth: &'a Auth, _user: ()) -> bool {
         match auth {
             Auth::Service(_) | Auth::Admin(_) => true,
             Auth::User(_) => false,

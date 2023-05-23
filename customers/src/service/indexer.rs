@@ -21,7 +21,7 @@ impl IndexerService {
     pub async fn index_customer(&self, since: i64) -> anyhow::Result<Vec<Document>> {
         let auth = self.context.auth();
 
-        if !GetData::get_access(auth, ()) {
+        if !GetData.get_access(auth, ()) {
             bail!("No access to get customer data {:?}", auth)
         }
 
@@ -40,7 +40,7 @@ impl IndexerService {
     pub async fn index_project(&self, since: i64) -> anyhow::Result<Vec<Document>> {
         let auth = self.context.auth();
 
-        if !GetData::get_access(auth, ()) {
+        if !GetData.get_access(auth, ()) {
             bail!("No access to get customer data: {:?}", auth)
         }
         let Some(customers) = self.context.get_repository::<Project<ObjectId>>() else {
@@ -58,7 +58,7 @@ impl IndexerService {
     pub async fn find_customers(&self, ids: Vec<ObjectId>) -> anyhow::Result<Vec<PublicCustomer>> {
         let auth = self.context.auth();
 
-        if !GetData::get_access(auth, ()) {
+        if !GetData.get_access(auth, ()) {
             bail!("No access to get customer data: {:?}", auth)
         }
 
@@ -74,7 +74,7 @@ impl IndexerService {
     pub async fn find_projects(&self, ids: Vec<ObjectId>) -> anyhow::Result<Vec<PublicProject>> {
         let auth = self.context.auth();
 
-        if !GetData::get_access(auth, ()) {
+        if !GetData.get_access(auth, ()) {
             bail!("No access to get customer data: {:?}", auth)
         }
 

@@ -186,7 +186,7 @@ impl RequestService {
             return Ok(None);
         };
 
-        if !Read::get_access(auth, &request) {
+        if !Read.get_access(auth, &request) {
             bail!("User is not available to change this customer")
         }
 
@@ -234,7 +234,7 @@ impl RequestService {
             bail!("No customer found")
         };
 
-        if !Edit::get_access(auth, &request) {
+        if !Edit.get_access(auth, &request) {
             bail!("User is not available to change this customer")
         }
 
@@ -299,7 +299,7 @@ impl RequestService {
             bail!("No customer found")
         };
 
-        if !Edit::get_access(auth, &request) {
+        if !Edit.get_access(auth, &request) {
             requests.insert(&request).await?;
             bail!("User is not available to delete this customer")
         }

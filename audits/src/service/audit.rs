@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use anyhow::bail;
 use chrono::Utc;
 use common::{
@@ -11,7 +9,7 @@ use common::{
         auditor::PublicAuditor,
         contacts::Contacts,
         customer::PublicCustomer,
-        issue::{CreateEvent, Issue, Status},
+        issue::{ChangeIssue, Issue, Status},
         project::PublicProject,
         role::Role,
     },
@@ -164,7 +162,7 @@ impl AuditService {
             report: None,
             report_name: None,
             time: request.time,
-            issues: HashMap::new(),
+            issues: Vec::new(),
         };
 
         audits.insert(&audit).await?;
@@ -178,7 +176,7 @@ impl AuditService {
         Ok(audit.into())
     }
 
-    pub async fn find(&self, id: ObjectId) -> anyhow::Result<Option<PublicAudit>> {
+    async fn get_audit(&self, id: ObjectId) -> anyhow::Result<Option<Audit<ObjectId>>> {
         let auth = self.context.auth();
 
         let Some(audits) = self.context.get_repository::<Audit<ObjectId>>() else {
@@ -189,11 +187,15 @@ impl AuditService {
             return Ok(None);
         };
 
-        if !Read::get_access(auth, &audit) {
+        if !Read.get_access(auth, &audit) {
             bail!("User is not available to change this audit")
         }
 
-        Ok(Some(audit.into()))
+        Ok(Some(audit))
+    }
+
+    pub async fn find(&self, id: ObjectId) -> anyhow::Result<Option<PublicAudit>> {
+        Ok(self.get_audit(id).await?.map(|x| x.into()))
     }
 
     pub async fn my_audit(&self, role: Role) -> anyhow::Result<Vec<Audit<String>>> {
@@ -230,7 +232,7 @@ impl AuditService {
             bail!("No audit found")
         };
 
-        if !Edit::get_access(auth, &audit) {
+        if !Edit.get_access(auth, &audit) {
             bail!("User is not available to change this audit")
         }
 
@@ -269,7 +271,7 @@ impl AuditService {
             bail!("No audit found")
         };
 
-        if !Edit::get_access(auth, &audit) {
+        if !Edit.get_access(auth, &audit) {
             audits.insert(&audit).await?;
             bail!("User is not available to delete this audit")
         }
@@ -277,12 +279,20 @@ impl AuditService {
         Ok(audit.into())
     }
 
-    pub fn create_issue(&self, audit_id: ObjectId, issue: CreateIssue) -> anyhow::Result<()> {
+    pub async fn create_issue(
+        &self,
+        audit_id: ObjectId,
+        issue: CreateIssue,
+    ) -> anyhow::Result<Issue<String>> {
+        let Some(mut audit) = self.get_audit(audit_id).await? else {
+            bail!("No audit found")
+        };
+
         let issue: Issue<ObjectId> = Issue {
-            id: 0,
+            id: audit.issues.len(),
             name: issue.name,
             description: issue.description,
-            status: Status::Draft,
+            status: issue.status,
             severity: issue.severity,
             events: Vec::new(),
             category: issue.category,
@@ -290,12 +300,81 @@ impl AuditService {
             include: true,
             feedback: String::new(),
         };
-        Ok(())
+
+        audit.issues.push(issue.clone());
+
+        let Some(audits) = self.context.get_repository::<Audit<ObjectId>>() else {
+            bail!("No audit repository found")
+        };
+
+        audits.delete("id", &audit_id).await?;
+
+        audits.insert(&audit).await?;
+
+        Ok(issue.to_string())
     }
 
-    pub fn change_issue(&self, audit_id: ObjectId, issue_id: ObjectId) {}
+    pub async fn change_issue(
+        &self,
+        audit_id: ObjectId,
+        issue_id: usize,
+        change: ChangeIssue,
+    ) -> anyhow::Result<Issue<String>> {
+        let Some(audit) = self.get_audit(audit_id).await? else {
+            bail!("No audit found")
+        };
 
-    pub fn create_event(&self, audit_id: ObjectId, issue_id: ObjectId, event: CreateEvent) {}
+        if !change.get_access(&audit, self.context.auth()) {
+            bail!("User is not available to change this issue")
+        }
 
-    pub fn change_event() {}
+        let Some(mut issue) = audit.issues.get(issue_id).cloned() else {
+            bail!("No issue found")
+        };
+
+        if let Some(name) = change.name {
+            issue.name = name;
+        }
+
+        if let Some(description) = change.description {
+            issue.description = description;
+        }
+
+        if let Some(action) = change.status {
+            let Some(new_state) = issue.status.apply(&action) else {
+                bail!("Invalid action")
+            };
+            issue.status = new_state;
+        }
+
+        if let Some(severity) = change.severity {
+            issue.severity = severity;
+        }
+
+        if let Some(category) = change.category {
+            issue.category = category;
+        }
+
+        if let Some(link) = change.link {
+            issue.link = link;
+        }
+
+        if let Some(include) = change.include {
+            issue.include = include;
+        }
+
+        if let Some(feedback) = change.feedback {
+            issue.feedback = feedback;
+        }
+
+        let Some(audits) = self.context.get_repository::<Audit<ObjectId>>() else {
+            bail!("No audit repository found")
+        };
+
+        audits.delete("id", &audit_id).await?;
+
+        audits.insert(&audit).await?;
+
+        Ok(issue.to_string())
+    }
 }

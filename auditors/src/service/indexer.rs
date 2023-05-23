@@ -18,7 +18,7 @@ impl IndexerService {
     pub async fn index_auditor(&self, since: i64) -> anyhow::Result<Vec<Document>> {
         let auth = self.context.auth();
 
-        if !GetData::get_access(auth, ()) {
+        if !GetData.get_access(auth, ()) {
             bail!("No access to get auditor data {:?}", auth)
         }
 
@@ -37,7 +37,7 @@ impl IndexerService {
     pub async fn find_auditors(&self, ids: Vec<ObjectId>) -> anyhow::Result<Vec<PublicAuditor>> {
         let auth = self.context.auth();
 
-        if !GetData::get_access(auth, ()) {
+        if !GetData.get_access(auth, ()) {
             bail!("No access to get auditor data: {:?}", auth)
         }
 

@@ -102,7 +102,7 @@ impl ProjectService {
             return Ok(None)
         };
 
-        if !Read::get_access(auth, &project) {
+        if !Read.get_access(auth, &project) {
             bail!("User is not available to read this project")
         }
 
@@ -138,7 +138,7 @@ impl ProjectService {
             bail!("No project found")
         };
 
-        if !Edit::get_access(auth, &project) {
+        if !Edit.get_access(auth, &project) {
             bail!("User is not available to change this project")
         }
 
@@ -189,7 +189,7 @@ impl ProjectService {
             bail!("No project found")
         };
 
-        if !Edit::get_access(auth, &project) {
+        if !Edit.get_access(auth, &project) {
             projects.insert(&project).await?;
             bail!("User is not available to delete this project")
         }

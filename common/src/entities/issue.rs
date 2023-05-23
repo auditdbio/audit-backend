@@ -1,8 +1,11 @@
-use std::collections::HashMap;
 use std::hash::Hash;
 
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
+
+use crate::{access_rules::AccessRules, auth::Auth};
+
+use super::audit::Audit;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
 pub enum Status {
@@ -13,12 +16,55 @@ pub enum Status {
     Fixed,
 }
 
+impl Status {
+    pub fn apply(&self, action: &Action) -> Option<Status> {
+        match (self, action) {
+            (Status::Draft, Action::Begin) => todo!(),
+            (Status::Draft, Action::Fixed) => todo!(),
+            (Status::Draft, Action::NotFixed) => todo!(),
+            (Status::Draft, Action::Discard) => todo!(),
+            (Status::InProgress, Action::Begin) => todo!(),
+            (Status::InProgress, Action::Fixed) => todo!(),
+            (Status::InProgress, Action::NotFixed) => todo!(),
+            (Status::InProgress, Action::Discard) => todo!(),
+            (Status::Verification, Action::Begin) => todo!(),
+            (Status::Verification, Action::Fixed) => todo!(),
+            (Status::Verification, Action::NotFixed) => todo!(),
+            (Status::Verification, Action::Discard) => todo!(),
+            (Status::WillNotFix, Action::Begin) => todo!(),
+            (Status::WillNotFix, Action::Fixed) => todo!(),
+            (Status::WillNotFix, Action::NotFixed) => todo!(),
+            (Status::WillNotFix, Action::Discard) => todo!(),
+            (Status::Fixed, Action::Begin) => todo!(),
+            (Status::Fixed, Action::Fixed) => todo!(),
+            (Status::Fixed, Action::NotFixed) => todo!(),
+            (Status::Fixed, Action::Discard) => todo!(),
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum Action {
     Begin,
     Fixed,
     NotFixed,
     Discard,
+}
+
+impl Action {
+    pub fn is_customer(&self) -> bool {
+        match self {
+            Action::Begin | Action::NotFixed => false,
+            Action::Fixed |Action::Discard => true,
+        }
+    }
+
+    pub fn is_auditor(&self) -> bool {
+        match self {
+            Action::Begin | Action::NotFixed |Action::Fixed => true,
+            Action::Discard => false,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -54,10 +100,8 @@ impl Issue<String> {
         }
     }
 
-    pub fn parse_map(map: HashMap<String, Self>) -> HashMap<ObjectId, Issue<ObjectId>> {
-        map.into_iter()
-            .map(|(k, v)| (k.parse().unwrap(), v.parse()))
-            .collect()
+    pub fn parse_map(map: Vec<Self>) -> Vec<Issue<ObjectId>> {
+        map.into_iter().map(|v| v.parse()).collect()
     }
 }
 
@@ -77,10 +121,8 @@ impl Issue<ObjectId> {
         }
     }
 
-    pub fn to_string_map(map: HashMap<ObjectId, Self>) -> HashMap<String, Issue<String>> {
-        map.into_iter()
-            .map(|(k, v)| (k.to_string(), v.to_string()))
-            .collect()
+    pub fn to_string_map(map: Vec<Self>) -> Vec<Issue<String>> {
+        map.into_iter().map(|v| v.to_string()).collect()
     }
 }
 
@@ -98,11 +140,52 @@ pub struct ChangeIssue {
     pub category: Option<String>,
     pub link: Option<String>,
 
-    pub status: Option<Action>,
-    include: Option<bool>,
+    pub severity: Option<String>,
 
-    feedback: Option<String>,
-    events: Option<Vec<CreateEvent>>,
+    pub status: Option<Action>,
+    pub include: Option<bool>,
+
+    pub feedback: Option<String>,
+    pub events: Option<Vec<CreateEvent>>,
+}
+
+impl ChangeIssue {
+    pub fn get_access_auditor(&self, _audit: &Audit<ObjectId>) -> bool {
+        let status = if let Some(action) = &self.status {
+            action.is_auditor()
+        } else {
+            true
+        };
+        status
+    }
+
+    pub fn get_access_customer(&self, _audit: &Audit<ObjectId>) -> bool {
+        let status = if let Some(action) = &self.status {
+            action.is_customer()
+        } else {
+            true
+        };
+        self.include.is_none() && status
+    }
+}
+
+impl<'a, 'b> AccessRules<&'a Audit<ObjectId>, &'b Auth> for ChangeIssue {
+    fn get_access(&self, object: &'a Audit<ObjectId>, subject: &'b Auth) -> bool {
+        match subject {
+            Auth::Service(_) => true,
+            Auth::Admin(_) => true,
+            Auth::User(id) => {
+                if &object.auditor_id == id {
+                    self.get_access_auditor(&object)
+                } else if &object.customer_id == id {
+                    self.get_access_customer(&object)
+                } else {
+                    false
+                }
+            }
+            Auth::None => false,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]

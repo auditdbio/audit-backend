@@ -28,7 +28,7 @@ impl Entity for Metadata {
 }
 
 impl<'a, 'b> AccessRules<&'a Auth, &'b Metadata> for Read {
-    fn get_access(auth: &'a Auth, subject: &'b Metadata) -> bool {
+    fn get_access(&self, auth: &'a Auth, subject: &'b Metadata) -> bool {
         match auth {
             Auth::User(id) => {
                 if subject.private {
@@ -44,7 +44,7 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b Metadata> for Read {
 }
 
 impl<'a, 'b> AccessRules<&'a Auth, &'b Metadata> for Edit {
-    fn get_access(auth: &'a Auth, subject: &'b Metadata) -> bool {
+    fn get_access(&self, auth: &'a Auth, subject: &'b Metadata) -> bool {
         match auth {
             Auth::User(id) => {
                 if subject.private {
@@ -132,7 +132,7 @@ impl FileService {
             bail!("File not found")
         };
 
-        if !Read::get_access(auth, &meta) {
+        if !Read.get_access(auth, &meta) {
             bail!("Access denied for this user")
         }
         let file = actix_files::NamedFile::open_async(format!("{}.{}", path, meta.extension))
@@ -153,7 +153,7 @@ impl FileService {
             bail!("File not found")
         };
 
-        if !Edit::get_access(auth, &meta) {
+        if !Edit.get_access(auth, &meta) {
             bail!("Access denied for this user")
         }
 
