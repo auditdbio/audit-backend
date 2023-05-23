@@ -132,6 +132,7 @@ impl Auth {
 
         PublicProject {
             id: project.id.to_hex(),
+            customer_id: project.customer_id.to_hex(),
             name: project.name,
             description: project.description,
             scope: project.scope,

@@ -75,6 +75,7 @@ impl Entity for Project<ObjectId> {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PublicProject {
     pub id: String,
+    pub customer_id: String,
     pub name: String,
     pub description: String,
     pub scope: Vec<String>,
