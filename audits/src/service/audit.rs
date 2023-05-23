@@ -320,7 +320,7 @@ impl AuditService {
         issue_id: usize,
         change: ChangeIssue,
     ) -> anyhow::Result<Issue<String>> {
-        let Some(audit) = self.get_audit(audit_id).await? else {
+        let Some(mut audit) = self.get_audit(audit_id).await? else {
             bail!("No audit found")
         };
 
@@ -366,6 +366,8 @@ impl AuditService {
         if let Some(feedback) = change.feedback {
             issue.feedback = feedback;
         }
+
+        audit.issues[issue_id] = issue.clone();
 
         let Some(audits) = self.context.get_repository::<Audit<ObjectId>>() else {
             bail!("No audit repository found")

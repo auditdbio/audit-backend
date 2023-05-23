@@ -19,26 +19,26 @@ pub enum Status {
 impl Status {
     pub fn apply(&self, action: &Action) -> Option<Status> {
         match (self, action) {
-            (Status::Draft, Action::Begin) => todo!(),
-            (Status::Draft, Action::Fixed) => todo!(),
-            (Status::Draft, Action::NotFixed) => todo!(),
-            (Status::Draft, Action::Discard) => todo!(),
-            (Status::InProgress, Action::Begin) => todo!(),
-            (Status::InProgress, Action::Fixed) => todo!(),
-            (Status::InProgress, Action::NotFixed) => todo!(),
-            (Status::InProgress, Action::Discard) => todo!(),
-            (Status::Verification, Action::Begin) => todo!(),
-            (Status::Verification, Action::Fixed) => todo!(),
-            (Status::Verification, Action::NotFixed) => todo!(),
-            (Status::Verification, Action::Discard) => todo!(),
-            (Status::WillNotFix, Action::Begin) => todo!(),
-            (Status::WillNotFix, Action::Fixed) => todo!(),
-            (Status::WillNotFix, Action::NotFixed) => todo!(),
-            (Status::WillNotFix, Action::Discard) => todo!(),
-            (Status::Fixed, Action::Begin) => todo!(),
-            (Status::Fixed, Action::Fixed) => todo!(),
-            (Status::Fixed, Action::NotFixed) => todo!(),
-            (Status::Fixed, Action::Discard) => todo!(),
+            (Status::Draft, Action::Begin) => None,
+            (Status::Draft, Action::Fixed) => None,
+            (Status::Draft, Action::NotFixed) => None,
+            (Status::Draft, Action::Discard) => None,
+            (Status::InProgress, Action::Begin) => None,
+            (Status::InProgress, Action::Fixed) => None,
+            (Status::InProgress, Action::NotFixed) => None,
+            (Status::InProgress, Action::Discard) => None,
+            (Status::Verification, Action::Begin) => None,
+            (Status::Verification, Action::Fixed) => None,
+            (Status::Verification, Action::NotFixed) => None,
+            (Status::Verification, Action::Discard) => None,
+            (Status::WillNotFix, Action::Begin) => None,
+            (Status::WillNotFix, Action::Fixed) => None,
+            (Status::WillNotFix, Action::NotFixed) => None,
+            (Status::WillNotFix, Action::Discard) => None,
+            (Status::Fixed, Action::Begin) => None,
+            (Status::Fixed, Action::Fixed) => None,
+            (Status::Fixed, Action::NotFixed) => None,
+            (Status::Fixed, Action::Discard) => None,
         }
     }
 }
@@ -241,3 +241,8 @@ pub enum EventKind {
 }
 
 pub struct UpdateEvent {}
+
+/*
+{"auditor_id":"644263518a7b483205de945b","auditor_contacts":{"email":"1@custoooooooooooooooooooooooooooooooooooooomer.com","telegram":"tkoh","public_contacts":true},"customer_contacts":{"email":null,"telegram":null,"public_contacts":true},"last_changer":"auditor","price":46,"description":"fewfewfwefw ewf ewf","price_range":{"from":46,"to":46},"time":{"from":1684855963362,"to":1684855963362},"project_id":"644fc914a133a244b4839c5d","scope":["https://qwerty.qwe"],"time_frame":""}
+
+ */
