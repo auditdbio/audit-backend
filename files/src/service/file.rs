@@ -37,7 +37,7 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b Metadata> for Read {
                     true
                 }
             }
-            Auth::Admin(_) | Auth::Service(_) => true,
+            Auth::Admin(_) | Auth::Service(_, _) => true,
             Auth::None => !subject.private,
         }
     }
@@ -53,7 +53,7 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b Metadata> for Edit {
                     true
                 }
             }
-            Auth::Admin(_) | Auth::Service(_) => true,
+            Auth::Admin(_) | Auth::Service(_, _) => true,
             Auth::None => false,
         }
     }
