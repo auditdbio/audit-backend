@@ -165,12 +165,14 @@ pub async fn subscribe_to_notifications(
     notifications: &NotificationsRepository,
 ) -> anyhow::Result<HttpResponse> {
     let session_id = ObjectId::new();
-    let initial = notifications
+    let mut initial: Vec<PublicNotification> = notifications
         .get_unread(&user_id)
         .await?
         .into_iter()
         .map(|n| n.into())
         .collect();
+
+    initial.reverse();
 
     let actor = NotificationsActor {
         session_id: session_id.clone(),

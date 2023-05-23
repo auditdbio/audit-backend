@@ -7,7 +7,7 @@ use actix_web::{
     middleware, web, App,
 };
 use common::context::ServiceState;
-use handlers::notifications::{notifications, send_notification, read_notification};
+use handlers::notifications::{notifications, read_notification, send_notification};
 use repositories::notifications::NotificationsRepository;
 
 pub mod access_rules;

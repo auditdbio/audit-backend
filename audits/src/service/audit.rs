@@ -11,7 +11,7 @@ use common::{
         auditor::PublicAuditor,
         contacts::Contacts,
         customer::PublicCustomer,
-        issue::{Issue, Status},
+        issue::{CreateEvent, Issue, Status},
         project::PublicProject,
         role::Role,
     },
@@ -77,6 +77,7 @@ impl From<Audit<ObjectId>> for PublicAudit {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CreateIssue {
     pub name: String,
     pub description: String,
@@ -88,10 +89,6 @@ pub struct CreateIssue {
 
 pub struct AuditService {
     context: Context,
-}
-
-pub struct CreateEvent {
-
 }
 
 impl AuditService {

@@ -46,5 +46,5 @@ pub async fn read_notification(
 ) -> error::Result<HttpResponse> {
     let id = read(context, &notifs, id.parse()?).await?;
 
-    Ok(HttpResponse::Ok().json(doc!{"id": id}))
+    Ok(HttpResponse::Ok().json(doc! {"id": id}))
 }

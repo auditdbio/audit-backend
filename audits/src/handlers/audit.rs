@@ -6,14 +6,18 @@ use actix_web::{
 
 use common::{
     context::Context,
-    entities::{audit::Audit, role::Role},
+    entities::{
+        audit::Audit,
+        issue::{ChangeIssue, CreateEvent, Issue},
+        role::Role,
+    },
     error,
 };
 
 use serde_json::json;
 
 use crate::service::{
-    audit::{AuditChange, AuditService, PublicAudit},
+    audit::{AuditChange, AuditService, CreateIssue, PublicAudit},
     audit_request::PublicRequest,
 };
 
@@ -64,4 +68,22 @@ pub async fn delete_audit(
     id: web::Path<String>,
 ) -> error::Result<Json<PublicAudit>> {
     Ok(Json(AuditService::new(context).delete(id.parse()?).await?))
+}
+
+#[post("/api/audit/{id}/issue")]
+pub async fn post_audit_issue(
+    context: Context,
+    id: web::Path<String>,
+    Json(data): Json<CreateIssue>,
+) -> error::Result<HttpResponse> {
+    Ok(HttpResponse::Ok().finish())
+}
+
+#[patch("/api/audit/{id}/issue/{issue_id}")]
+pub async fn patch_audit_issue(
+    context: Context,
+    id: web::Path<(String, usize)>,
+    Json(data): Json<ChangeIssue>,
+) -> error::Result<HttpResponse> {
+    Ok(HttpResponse::Ok().finish())
 }

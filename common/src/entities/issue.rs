@@ -13,6 +13,7 @@ pub enum Status {
     Fixed,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum Action {
     Begin,
     Fixed,
@@ -83,7 +84,14 @@ impl Issue<ObjectId> {
     }
 }
 
-pub struct IssueUpdate {
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct CreateEvent {
+    pub kind: EventKind,
+    pub message: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct ChangeIssue {
     pub name: Option<String>,
     pub description: Option<String>,
 
@@ -94,6 +102,7 @@ pub struct IssueUpdate {
     include: Option<bool>,
 
     feedback: Option<String>,
+    events: Option<Vec<CreateEvent>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -117,9 +126,7 @@ impl Event<String> {
     }
 
     pub fn parse_map(map: Vec<Self>) -> Vec<Event<ObjectId>> {
-        map.into_iter()
-            .map(|v| v.parse())
-            .collect()
+        map.into_iter().map(|v| v.parse()).collect()
     }
 }
 
@@ -135,9 +142,7 @@ impl Event<ObjectId> {
     }
 
     pub fn to_string_map(map: Vec<Self>) -> Vec<Event<String>> {
-        map.into_iter()
-            .map(|v| v.to_string())
-            .collect()
+        map.into_iter().map(|v| v.to_string()).collect()
     }
 }
 

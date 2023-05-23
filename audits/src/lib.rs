@@ -41,7 +41,9 @@ pub fn create_app(
         .service(patch_audit_request)
         .service(delete_audit_request)
         .service(get_my_audit)
-        .service(get_my_audit_request);
+        .service(get_my_audit_request)
+        .service(post_audit_issue)
+        .service(patch_audit_issue);
 
     app
 }
