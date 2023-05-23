@@ -172,7 +172,7 @@ impl ChangeIssue {
 impl<'a, 'b> AccessRules<&'a Audit<ObjectId>, &'b Auth> for ChangeIssue {
     fn get_access(&self, object: &'a Audit<ObjectId>, subject: &'b Auth) -> bool {
         match subject {
-            Auth::Service(_) => true,
+            Auth::Service(_, _) => true,
             Auth::Admin(_) => true,
             Auth::User(id) => {
                 if &object.auditor_id == id {

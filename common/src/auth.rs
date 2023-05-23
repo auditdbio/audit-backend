@@ -26,7 +26,7 @@ pub static DECODING_KEY: Lazy<DecodingKey> = Lazy::new(|| {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Auth {
-    Service(String),
+    Service(String, bool),
     Admin(ObjectId),
     User(ObjectId),
     None,
@@ -41,9 +41,16 @@ impl Auth {
         }
     }
 
+    pub fn authorized(self) -> Self {
+        match self {
+            Auth::Service(name, _) => Auth::Service(name, true),
+            a => a,
+        }
+    }
+
     pub fn full_access(&self) -> bool {
         match self {
-            Auth::Admin(_) | Auth::Service(_) => true,
+            Auth::Admin(_) | Auth::Service(_, _) => true,
             _ => false,
         }
     }
@@ -59,7 +66,7 @@ impl Auth {
             contacts = customer.contacts;
         }
 
-        if &Auth::None == self || &Auth::Service("search".to_string()) == self {
+        if &Auth::None == self || &Auth::Service("search".to_string(), false) == self {
             contacts.telegram = None;
             contacts.email = None;
         }
@@ -87,7 +94,7 @@ impl Auth {
             contacts = auditor.contacts;
         }
 
-        if &Auth::None == self || &Auth::Service("search".to_string()) == self {
+        if &Auth::None == self || &Auth::Service("search".to_string(), false) == self {
             contacts.telegram = None;
             contacts.email = None;
         }
@@ -118,7 +125,7 @@ impl Auth {
             contacts = project.creator_contacts;
         }
 
-        if &Auth::None == self || &Auth::Service("search".to_string()) == self {
+        if &Auth::None == self || &Auth::Service("search".to_string(), false) == self {
             contacts.telegram = None;
             contacts.email = None;
         }
@@ -149,6 +156,7 @@ struct Claims {
     role: Role,
     user_id: Option<String>,
     service_name: Option<String>,
+    user_authorized: Option<bool>,
     exp: i64,
 }
 
@@ -168,7 +176,8 @@ impl Auth {
                     }
                     Role::Service => {
                         let name = claims.service_name.unwrap();
-                        Ok(Auth::Service(name))
+                        let user_authorized = claims.user_authorized.unwrap_or(false);
+                        Ok(Auth::Service(name, user_authorized))
                     }
                 }
             }
@@ -185,23 +194,26 @@ impl Auth {
         };
         let exp = Utc::now().timestamp() + DURATION.num_seconds();
         let claims = match self {
-            Auth::Service(name) => Claims {
+            Auth::Service(name, user_auth) => Claims {
                 role: Role::Service,
                 user_id: None,
                 service_name: Some(name.clone()),
                 exp,
+                user_authorized: Some(*user_auth),
             },
             Auth::Admin(id) => Claims {
                 role: Role::Admin,
                 user_id: Some(id.to_hex()),
                 service_name: None,
                 exp,
+                user_authorized: None,
             },
             Auth::User(id) => Claims {
                 role: Role::User,
                 user_id: Some(id.to_hex()),
                 service_name: None,
                 exp,
+                user_authorized: None,
             },
             Auth::None => bail!("Cannot create token for Auth::None"),
         };

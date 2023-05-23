@@ -128,7 +128,7 @@ impl SearchService {
             let docs = self
                 .context
                 .make_request()
-                .auth(self.context.server_auth())
+                .auth(self.context.server_auth().authorized())
                 .post(service)
                 .json(&ids)
                 .send()

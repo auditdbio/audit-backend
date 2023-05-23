@@ -41,7 +41,7 @@ async fn main() -> std::io::Result<()> {
         .unwrap();
 
     let search_repo_clone = search_repo.clone();
-    let auth = Auth::Service("search".to_string());
+    let auth = Auth::Service("search".to_string(), false);
     spawn(async move {
         let mut interval = time::interval(Duration::from_secs(timeout));
         loop {

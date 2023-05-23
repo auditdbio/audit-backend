@@ -22,7 +22,7 @@ impl ServiceState {
         Self {
             repositories: TypeMap::new(),
             client: reqwest::Client::new(),
-            service_auth: Auth::Service(service_name),
+            service_auth: Auth::Service(service_name, false),
         }
     }
 

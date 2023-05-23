@@ -43,7 +43,7 @@ impl UserService {
 
         // TODO: rewrite with get_access framework
 
-        if let Auth::Service(_) = auth {
+        if let Auth::Service(_, _) = auth {
             bail!("Only services can create users")
         }
 
