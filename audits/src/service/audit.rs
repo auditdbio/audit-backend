@@ -193,7 +193,7 @@ impl AuditService {
         Ok(None)
     }
 
-    pub async fn my_audit(&self, role: Role) -> error::Result<Vec<Audit<String>>> {
+    pub async fn my_audit(&self, role: Role) -> error::Result<Vec<PublicAudit>> {
         let auth = self.context.auth();
 
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
@@ -211,7 +211,13 @@ impl AuditService {
             }
         };
 
-        Ok(audits.into_iter().map(Audit::stringify).collect())
+        let mut public_audits = Vec::new();
+
+        for audit in audits {
+            public_audits.push(PublicAudit::new(&self.context, audit).await?);
+        }
+
+        Ok(public_audits)
     }
 
     pub async fn change(&self, id: ObjectId, change: AuditChange) -> error::Result<PublicAudit> {

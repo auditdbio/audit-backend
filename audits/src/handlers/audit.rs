@@ -6,7 +6,7 @@ use actix_web::{
 
 use common::{
     context::Context,
-    entities::{audit::Audit, issue::ChangeIssue, role::Role},
+    entities::{issue::ChangeIssue, role::Role},
     error,
 };
 
@@ -39,7 +39,7 @@ pub async fn get_audit(context: Context, id: web::Path<String>) -> error::Result
 pub async fn get_my_audit(
     context: Context,
     role: web::Path<Role>,
-) -> error::Result<Json<Vec<Audit<String>>>> {
+) -> error::Result<Json<Vec<PublicAudit>>> {
     Ok(Json(
         AuditService::new(context)
             .my_audit(role.into_inner())
