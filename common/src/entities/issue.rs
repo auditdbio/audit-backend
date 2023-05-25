@@ -88,7 +88,12 @@ pub struct Issue<Id> {
 
     pub feedback: String,
     pub events: Vec<Event<Id>>,
+    #[serde(default = "default_timestamp")]
     pub last_modified: i64,
+}
+
+fn default_timestamp() -> i64 {
+    chrono::Utc::now().timestamp()
 }
 
 impl Issue<String> {
