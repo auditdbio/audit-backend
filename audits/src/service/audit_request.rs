@@ -39,6 +39,8 @@ pub struct RequestChange {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PublicRequest {
     pub id: String,
+    pub auditor_first_name: String,
+    pub auditor_last_name: String,
     pub customer_id: String,
     pub auditor_id: String,
     pub project_id: String,
@@ -92,6 +94,8 @@ impl PublicRequest {
             customer_id: request.customer_id.to_hex(),
             auditor_id: request.auditor_id.to_hex(),
             project_id: request.project_id.to_hex(),
+            auditor_first_name: auditor.first_name,
+            auditor_last_name: auditor.last_name,
             description: request.description,
             time: request.time,
             project_name: project.name,

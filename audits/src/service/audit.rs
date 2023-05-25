@@ -7,7 +7,7 @@ use common::{
         audit_request::{AuditRequest, TimeRange},
         auditor::PublicAuditor,
         contacts::Contacts,
-        issue::{ChangeIssue, Issue, Status},
+        issue::{ChangeIssue, Issue, Status, Event},
         project::PublicProject,
         role::Role,
     },
@@ -298,6 +298,7 @@ impl AuditService {
             link: issue.link,
             include: true,
             feedback: String::new(),
+            last_modified: Utc::now().timestamp(),
         };
 
         audit.issues.push(issue.clone());
@@ -363,6 +364,23 @@ impl AuditService {
         if let Some(feedback) = change.feedback {
             issue.feedback = feedback;
         }
+
+        if let Some(events) = change.events {
+            for create_event in events {
+                let event = Event {
+                    timestamp: Utc::now().timestamp(),
+                    user: self.context.auth().id().unwrap().clone(),
+                    kind: create_event.kind,
+                    message: create_event.message,
+                    id: issue.events.len(),
+                };
+
+                issue.events.push(event);
+            }
+        }
+
+
+        issue.last_modified = Utc::now().timestamp();
 
         audit.issues[issue_id] = issue.clone();
 

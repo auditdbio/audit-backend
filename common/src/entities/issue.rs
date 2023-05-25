@@ -88,6 +88,7 @@ pub struct Issue<Id> {
 
     pub feedback: String,
     pub events: Vec<Event<Id>>,
+    pub last_modified: i64,
 }
 
 impl Issue<String> {
@@ -103,6 +104,7 @@ impl Issue<String> {
             include: self.include,
             feedback: self.feedback,
             events: Event::parse_map(self.events),
+            last_modified: self.last_modified,
         }
     }
 
@@ -124,6 +126,7 @@ impl Issue<ObjectId> {
             include: self.include,
             feedback: self.feedback,
             events: Event::to_string_map(self.events),
+            last_modified: self.last_modified,
         }
     }
 
@@ -196,11 +199,11 @@ impl<'a, 'b> AccessRules<&'a Audit<ObjectId>, &'b Auth> for ChangeIssue {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Event<Id> {
-    id: usize,
-    timestamp: i64,
-    user: Id,
-    kind: EventKind,
-    message: String,
+    pub id: usize,
+    pub timestamp: i64,
+    pub user: Id,
+    pub kind: EventKind,
+    pub message: String,
 }
 
 impl Event<String> {
