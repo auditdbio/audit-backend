@@ -58,14 +58,13 @@ impl Entity for Code {
 pub struct ChangePasswordData {
     pub code: String,
     pub password: String,
-    pub current_password: String,
 }
 
 pub struct ChangePassword;
 
-impl<'a, 'b> AccessRules<&'a ChangePasswordData, &'b User<ObjectId>> for ChangePassword {
-    fn get_access(&self, data: &'a ChangePasswordData, user: &'b User<ObjectId>) -> bool {
-        AuthService::request_access(data.current_password.clone(), &user.password, &user.salt)
+impl<'b> AccessRules<String, &'b User<ObjectId>> for ChangePassword {
+    fn get_access(&self, new_password: String, user: &'b User<ObjectId>) -> bool {
+        AuthService::request_access(new_password, &user.password, &user.salt)
     }
 }
 
