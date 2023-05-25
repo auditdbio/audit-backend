@@ -7,7 +7,6 @@ use common::{
         audit_request::{AuditRequest, TimeRange},
         auditor::PublicAuditor,
         contacts::Contacts,
-        customer::PublicCustomer,
         issue::{ChangeIssue, Issue, Status},
         project::PublicProject,
         role::Role,

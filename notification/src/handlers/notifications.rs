@@ -48,3 +48,23 @@ pub async fn read_notification(
 
     Ok(HttpResponse::Ok().json(doc! {"id": id}))
 }
+
+#[get("/api/notifications/info")]
+pub async fn info() -> error::Result<HttpResponse> {
+    Ok(HttpResponse::Ok().json(doc! {
+        "states": [
+            "Draft",
+            "InProgress",
+            "Verification",
+            "Fixed",
+            "WillNotFix",
+        ],
+        "actions": [
+            "Begin",
+            "Fixed",
+            "Verified",
+            "NotFixed",
+            "Discard",
+        ],
+    }))
+}

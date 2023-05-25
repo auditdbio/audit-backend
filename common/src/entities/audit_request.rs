@@ -4,7 +4,7 @@ use utoipa::ToSchema;
 
 use crate::repository::Entity;
 
-use super::{contacts::Contacts, role::Role};
+use super::role::Role;
 
 #[derive(Debug, Serialize, Deserialize, ToSchema, PartialEq, Clone, Default)]
 pub struct PriceRange {
@@ -25,11 +25,7 @@ pub struct AuditRequest<Id> {
     pub customer_id: Id,
     pub project_id: Id,
 
-    pub project_name: String,
-    pub avatar: String,
     pub project_scope: Vec<String>,
-    pub auditor_contacts: Contacts,
-    pub customer_contacts: Contacts,
 
     pub description: String,
 
@@ -46,11 +42,7 @@ impl AuditRequest<String> {
             auditor_id: self.auditor_id.parse().unwrap(),
             customer_id: self.customer_id.parse().unwrap(),
             project_id: self.project_id.parse().unwrap(),
-            project_name: self.project_name,
-            avatar: self.avatar,
             description: self.description,
-            auditor_contacts: self.auditor_contacts,
-            customer_contacts: self.customer_contacts,
             project_scope: self.project_scope,
             price: self.price,
             last_modified: self.last_modified,
@@ -67,11 +59,7 @@ impl AuditRequest<ObjectId> {
             auditor_id: self.auditor_id.to_hex(),
             customer_id: self.customer_id.to_hex(),
             project_id: self.project_id.to_hex(),
-            project_name: self.project_name,
-            avatar: self.avatar,
             description: self.description,
-            auditor_contacts: self.auditor_contacts,
-            customer_contacts: self.customer_contacts,
             project_scope: self.project_scope,
             price: self.price,
             last_modified: self.last_modified,

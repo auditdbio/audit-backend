@@ -12,7 +12,7 @@ use common::{
     error::{self, AddCode},
     services::{AUDITORS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL},
 };
-use log::info;
+
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
 
@@ -31,13 +31,9 @@ pub struct CreateRequest {
 pub struct RequestChange {
     description: Option<String>,
     time: Option<TimeRange>,
-    project_name: Option<String>,
-    avatar: Option<String>,
     project_scope: Option<Vec<String>>,
     price_range: Option<PriceRange>,
     price: Option<i64>,
-    auditor_contacts: Option<Contacts>,
-    customer_contacts: Option<Contacts>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -56,22 +52,55 @@ pub struct PublicRequest {
     pub customer_contacts: Contacts,
 }
 
-impl From<AuditRequest<ObjectId>> for PublicRequest {
-    fn from(request: AuditRequest<ObjectId>) -> Self {
-        Self {
+impl PublicRequest {
+    pub async fn new(
+        context: &Context,
+        request: AuditRequest<ObjectId>,
+    ) -> error::Result<PublicRequest> {
+        let project = context
+            .make_request::<PublicProject>()
+            .auth(context.server_auth())
+            .get(format!(
+                "{}://{}/api/project/{}",
+                PROTOCOL.as_str(),
+                CUSTOMERS_SERVICE.as_str(),
+                request.project_id
+            ))
+            .auth(context.server_auth())
+            .send()
+            .await?
+            .json::<PublicProject>()
+            .await?;
+
+        let auditor = context
+            .make_request::<PublicAuditor>()
+            .auth(context.server_auth())
+            .get(format!(
+                "{}://{}/api/auditor/{}",
+                PROTOCOL.as_str(),
+                AUDITORS_SERVICE.as_str(),
+                request.auditor_id
+            ))
+            .auth(context.server_auth())
+            .send()
+            .await?
+            .json::<PublicAuditor>()
+            .await?;
+
+        Ok(PublicRequest {
             id: request.id.to_hex(),
             customer_id: request.customer_id.to_hex(),
             auditor_id: request.auditor_id.to_hex(),
             project_id: request.project_id.to_hex(),
             description: request.description,
             time: request.time,
-            project_name: request.project_name,
-            avatar: request.avatar,
-            project_scope: request.project_scope,
+            project_name: project.name,
+            avatar: auditor.avatar,
+            project_scope: project.scope,
             price: request.price,
-            auditor_contacts: request.auditor_contacts,
-            customer_contacts: request.customer_contacts,
-        }
+            auditor_contacts: auditor.contacts,
+            customer_contacts: project.creator_contacts,
+        })
     }
 }
 
@@ -127,23 +156,6 @@ impl RequestService {
             .await?
             .json::<PublicProject>()
             .await?;
-        info!("Project: {:?}", project);
-        let auditor = self
-            .context
-            .make_request::<PublicAuditor>()
-            .auth(auth.clone())
-            .get(format!(
-                "{}://{}/api/auditor/{}",
-                PROTOCOL.as_str(),
-                AUDITORS_SERVICE.as_str(),
-                request.auditor_id
-            ))
-            .auth(auth.clone())
-            .send()
-            .await?
-            .json::<PublicAuditor>()
-            .await?;
-        info!("Auditor: {:?}", auditor);
 
         let request = AuditRequest {
             id: ObjectId::new(),
@@ -152,12 +164,8 @@ impl RequestService {
             project_id: request.project_id.parse()?,
             description: request.description,
             time: request.time,
-            project_name: project.name,
-            avatar: auditor.avatar,
             project_scope: project.scope,
             price: request.price,
-            auditor_contacts: auditor.contacts,
-            customer_contacts: project.creator_contacts,
             last_modified: Utc::now().timestamp_micros(),
             last_changer,
         };
@@ -178,7 +186,9 @@ impl RequestService {
 
         requests.insert(&request).await?;
 
-        Ok(request.into())
+        let public_request = PublicRequest::new(&self.context, request).await?;
+
+        Ok(public_request)
     }
 
     pub async fn find(&self, id: ObjectId) -> error::Result<Option<PublicRequest>> {
@@ -196,10 +206,12 @@ impl RequestService {
             return Err(anyhow::anyhow!("User is not available to change this customer").code(400));
         }
 
-        Ok(Some(request.into()))
+        let public_request = PublicRequest::new(&self.context, request).await?;
+
+        Ok(Some(public_request))
     }
 
-    pub async fn my_request(&self, role: Role) -> error::Result<Vec<AuditRequest<String>>> {
+    pub async fn my_request(&self, role: Role) -> error::Result<Vec<PublicRequest>> {
         let auth = self.context.auth();
 
         let requests = self
@@ -217,12 +229,17 @@ impl RequestService {
 
         let result = requests
             .find_many(id, &Bson::ObjectId(user_id.clone()))
-            .await?
-            .into_iter()
-            .map(AuditRequest::stringify)
-            .collect();
+            .await?;
 
-        Ok(result)
+        let mut public_requests = Vec::new();
+
+        for req in result {
+            let public_request = PublicRequest::new(&self.context, req).await?;
+
+            public_requests.push(public_request);
+        }
+
+        Ok(public_requests)
     }
 
     pub async fn change(
@@ -252,28 +269,12 @@ impl RequestService {
             request.time = time;
         }
 
-        if let Some(project_name) = change.project_name {
-            request.project_name = project_name;
-        }
-
-        if let Some(avatar) = change.avatar {
-            request.avatar = avatar;
-        }
-
         if let Some(project_scope) = change.project_scope {
             request.project_scope = project_scope;
         }
 
         if let Some(price) = change.price {
             request.price = price;
-        }
-
-        if let Some(auditor_contacts) = change.auditor_contacts {
-            request.auditor_contacts = auditor_contacts;
-        }
-
-        if let Some(customer_contacts) = change.customer_contacts {
-            request.customer_contacts = customer_contacts;
         }
 
         let role = if auth.id() == Some(&request.customer_id) {
@@ -291,7 +292,9 @@ impl RequestService {
         requests.delete("id", &id).await?;
         requests.insert(&request).await?;
 
-        Ok(request.into())
+        let public_request = PublicRequest::new(&self.context, request).await?;
+
+        Ok(public_request)
     }
 
     pub async fn delete(&self, id: ObjectId) -> error::Result<PublicRequest> {
@@ -310,6 +313,8 @@ impl RequestService {
             return Err(anyhow::anyhow!("User is not available to delete this customer").code(400));
         }
 
-        Ok(request.into())
+        let public_request = PublicRequest::new(&self.context, request).await?;
+
+        Ok(public_request)
     }
 }
