@@ -6,7 +6,8 @@ use common::{
         contacts::Contacts,
         customer::Customer,
         project::{Project, PublicProject, PublishOptions},
-    }, error::{AddCode, self},
+    },
+    error::{self, AddCode},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};

@@ -7,7 +7,7 @@ use type_map::concurrent::TypeMap;
 
 use crate::{
     auth::Auth,
-    error::{self, ServiceError, AddCode},
+    error::{self, AddCode, ServiceError},
     repository::RepositoryObject,
 };
 
@@ -158,10 +158,13 @@ impl Context {
             .repositories
             .get::<RepositoryObject<T>>()
             .cloned()
-            .ok_or(anyhow!(
-                "Repository for type {} not found",
-                std::any::type_name::<T>()
-            ).code(500))
+            .ok_or(
+                anyhow!(
+                    "Repository for type {} not found",
+                    std::any::type_name::<T>()
+                )
+                .code(500),
+            )
     }
 
     pub fn auth(&self) -> &Auth {

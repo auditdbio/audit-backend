@@ -9,7 +9,8 @@ use common::{
         project::Project,
         user::PublicUser,
     },
-    services::{PROTOCOL, USERS_SERVICE}, error::{self, AddCode},
+    error::{self, AddCode},
+    services::{PROTOCOL, USERS_SERVICE},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};

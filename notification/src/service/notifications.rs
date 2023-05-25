@@ -8,7 +8,13 @@ use actix::{Actor, ActorContext, AsyncContext, Handler, Message, Recipient, Stre
 use actix_web::{web, HttpRequest, HttpResponse};
 use actix_web_actors::ws::{self, WsResponseBuilder};
 use anyhow::anyhow;
-use common::{access_rules::AccessRules, auth::Auth, context::Context, repository::Entity, error::{self, AddCode}};
+use common::{
+    access_rules::AccessRules,
+    auth::Auth,
+    context::Context,
+    error::{self, AddCode},
+    repository::Entity,
+};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 

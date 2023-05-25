@@ -2,7 +2,8 @@ use common::{
     access_rules::{AccessRules, SendMail},
     context::Context,
     entities::letter::{CreateLetter, Letter},
-    repository::Entity, error::{AddCode, self},
+    error::{self, AddCode},
+    repository::Entity,
 };
 use lettre::{transport::smtp::authentication::Credentials, Message, SmtpTransport, Transport};
 use mongodb::bson::oid::ObjectId;

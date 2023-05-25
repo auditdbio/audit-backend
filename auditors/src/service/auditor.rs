@@ -1,4 +1,3 @@
-
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
@@ -10,7 +9,8 @@ use common::{
         customer::PublicCustomer,
         user::PublicUser,
     },
-    services::{PROTOCOL, USERS_SERVICE}, error::{self, AddCode},
+    error::{self, AddCode},
+    services::{PROTOCOL, USERS_SERVICE},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -87,7 +87,7 @@ impl AuditorService {
         };
 
         if !Read.get_access(auth, &auditor) {
-            return Err(anyhow::anyhow!("User is not available to change this auditor").code(400))
+            return Err(anyhow::anyhow!("User is not available to change this auditor").code(400));
         }
 
         Ok(Some(auth.public_auditor(auditor)))
@@ -183,7 +183,7 @@ impl AuditorService {
         };
 
         if !Edit.get_access(auth, &auditor) {
-            return Err(anyhow::anyhow!("User is not available to change this auditor").code(400))
+            return Err(anyhow::anyhow!("User is not available to change this auditor").code(400));
         }
 
         if let Some(avatar) = change.avatar {
@@ -241,7 +241,7 @@ impl AuditorService {
 
         if !Edit.get_access(auth, &auditor) {
             auditors.insert(&auditor).await?;
-            return Err(anyhow::anyhow!("User is not available to delete this auditor").code(400))
+            return Err(anyhow::anyhow!("User is not available to delete this auditor").code(400));
         }
 
         Ok(auth.public_auditor(auditor))

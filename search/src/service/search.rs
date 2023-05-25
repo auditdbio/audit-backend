@@ -2,7 +2,7 @@ use std::{collections::HashMap, str::FromStr};
 
 use actix_web::web;
 use chrono::Utc;
-use common::{auth::Auth, context::Context, repository::Repository, error};
+use common::{auth::Auth, context::Context, error, repository::Repository};
 
 use mongodb::bson::{oid::ObjectId, Bson, Document};
 use reqwest::Client;
@@ -109,7 +109,6 @@ impl SearchService {
         if &Auth::None != self.context.auth() {
             auth = auth.authorized();
         }
-
 
         let SearchResult {
             total_documents,

@@ -5,7 +5,8 @@ use common::{
     access_rules::{AccessRules, Edit, Read},
     auth::Auth,
     context::Context,
-    repository::Entity, error::{AddCode, self},
+    error::{self, AddCode},
+    repository::Entity,
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};

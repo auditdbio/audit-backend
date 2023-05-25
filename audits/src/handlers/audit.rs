@@ -6,11 +6,7 @@ use actix_web::{
 
 use common::{
     context::Context,
-    entities::{
-        audit::Audit,
-        issue::ChangeIssue,
-        role::Role,
-    },
+    entities::{audit::Audit, issue::ChangeIssue, role::Role},
     error,
 };
 

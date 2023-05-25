@@ -9,8 +9,10 @@ use crate::{
     entities::{
         auditor::{Auditor, PublicAuditor},
         contacts::Contacts,
-        customer::{Customer, PublicCustomer}, project::{Project, PublicProject},
-    }, error::{self, AddCode},
+        customer::{Customer, PublicCustomer},
+        project::{Project, PublicProject},
+    },
+    error::{self, AddCode},
 };
 
 pub static ENCODING_KEY: Lazy<EncodingKey> = Lazy::new(|| {
@@ -112,7 +114,6 @@ impl Auth {
             tags: auditor.tags,
         }
     }
-
 
     pub fn public_project(&self, project: Project<ObjectId>) -> PublicProject {
         let mut contacts = Contacts {
@@ -216,7 +217,9 @@ impl Auth {
                 exp,
                 user_authorized: None,
             },
-            Auth::None => return Err(anyhow::anyhow!("Cannot create token for Auth::None").code(500)),
+            Auth::None => {
+                return Err(anyhow::anyhow!("Cannot create token for Auth::None").code(500))
+            }
         };
 
         let token = match jsonwebtoken::encode(&header, &claims, &ENCODING_KEY) {

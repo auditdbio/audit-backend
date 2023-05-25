@@ -19,26 +19,31 @@ pub enum Status {
 impl Status {
     pub fn apply(&self, action: &Action) -> Option<Status> {
         match (self, action) {
-            (Status::Draft, Action::Begin) => None,
+            (Status::Draft, Action::Begin) => Some(Status::InProgress),
             (Status::Draft, Action::Fixed) => None,
             (Status::Draft, Action::NotFixed) => None,
             (Status::Draft, Action::Discard) => None,
             (Status::InProgress, Action::Begin) => None,
-            (Status::InProgress, Action::Fixed) => None,
+            (Status::InProgress, Action::Fixed) => Some(Status::Verification),
             (Status::InProgress, Action::NotFixed) => None,
-            (Status::InProgress, Action::Discard) => None,
+            (Status::InProgress, Action::Discard) => Some(Status::WillNotFix),
             (Status::Verification, Action::Begin) => None,
-            (Status::Verification, Action::Fixed) => None,
-            (Status::Verification, Action::NotFixed) => None,
+            (Status::Verification, Action::Fixed) => Some(Status::InProgress),
+            (Status::Verification, Action::NotFixed) => Some(Status::InProgress),
             (Status::Verification, Action::Discard) => None,
             (Status::WillNotFix, Action::Begin) => None,
             (Status::WillNotFix, Action::Fixed) => None,
             (Status::WillNotFix, Action::NotFixed) => None,
-            (Status::WillNotFix, Action::Discard) => None,
+            (Status::WillNotFix, Action::Discard) => Some(Status::InProgress),
             (Status::Fixed, Action::Begin) => None,
             (Status::Fixed, Action::Fixed) => None,
             (Status::Fixed, Action::NotFixed) => None,
             (Status::Fixed, Action::Discard) => None,
+            (Status::Draft, Action::Verified) => None,
+            (Status::InProgress, Action::Verified) => None,
+            (Status::Verification, Action::Verified) => Some(Status::Fixed),
+            (Status::WillNotFix, Action::Verified) => None,
+            (Status::Fixed, Action::Verified) => Some(Status::Verification),
         }
     }
 }
@@ -47,6 +52,7 @@ impl Status {
 pub enum Action {
     Begin,
     Fixed,
+    Verified,
     NotFixed,
     Discard,
 }
@@ -54,15 +60,15 @@ pub enum Action {
 impl Action {
     pub fn is_customer(&self) -> bool {
         match self {
-            Action::Begin | Action::NotFixed => false,
-            Action::Fixed |Action::Discard => true,
+            Action::Begin | Action::NotFixed | Action::Verified => false,
+            Action::Fixed | Action::Discard => true,
         }
     }
 
     pub fn is_auditor(&self) -> bool {
         match self {
-            Action::Begin | Action::NotFixed |Action::Fixed => true,
-            Action::Discard => false,
+            Action::Begin | Action::NotFixed | Action::Verified => true,
+            Action::Discard | Action::Fixed => false,
         }
     }
 }

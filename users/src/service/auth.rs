@@ -3,8 +3,9 @@ use common::{
     auth::Auth,
     context::Context,
     entities::{letter::CreateLetter, user::User},
+    error::{self, AddCode},
     repository::Entity,
-    services::{FRONTEND, MAIL_SERVICE, PROTOCOL, USERS_SERVICE}, error::{AddCode, self},
+    services::{FRONTEND, MAIL_SERVICE, PROTOCOL, USERS_SERVICE},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use rand::{distributions::Alphanumeric, Rng};

@@ -12,7 +12,8 @@ use common::{
         project::PublicProject,
         role::Role,
     },
-    services::{CUSTOMERS_SERVICE, PROTOCOL}, error::{self, AddCode},
+    error::{self, AddCode},
+    services::{CUSTOMERS_SERVICE, PROTOCOL},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -35,12 +36,17 @@ pub struct PublicAudit {
     pub auditor_id: String,
     pub customer_id: String,
     pub project_id: String,
+
+    pub auditor_first_name: String,
+    pub auditor_last_name: String,
+
     pub project_name: String,
     pub avatar: String,
     pub description: String,
     pub status: String,
     pub scope: Vec<String>,
     pub price: i64,
+
     pub auditor_contacts: Contacts,
     pub customer_contacts: Contacts,
     pub tags: Vec<String>,
@@ -48,29 +54,64 @@ pub struct PublicAudit {
     pub report: Option<String>,
     pub report_name: Option<String>,
     pub time: TimeRange,
+
+    pub issues: Vec<Issue<String>>,
 }
 
-impl From<Audit<ObjectId>> for PublicAudit {
-    fn from(audit: Audit<ObjectId>) -> Self {
-        Self {
+impl PublicAudit {
+    pub async fn new(context: &Context, audit: Audit<ObjectId>) -> error::Result<PublicAudit> {
+        let auditor = context
+            .make_request::<PublicAuditor>()
+            .get(format!(
+                "{}://{}/api/auditor/{}",
+                PROTOCOL.as_str(),
+                CUSTOMERS_SERVICE.as_str(),
+                audit.auditor_id
+            ))
+            .auth(context.server_auth())
+            .send()
+            .await?
+            .json::<PublicAuditor>()
+            .await?;
+
+        let project = context
+            .make_request::<PublicProject>()
+            .get(format!(
+                "{}://{}/api/project/{}",
+                PROTOCOL.as_str(),
+                CUSTOMERS_SERVICE.as_str(),
+                audit.project_id
+            ))
+            .auth(context.server_auth())
+            .send()
+            .await?
+            .json::<PublicProject>()
+            .await?;
+
+        let public_audit = PublicAudit {
             id: audit.id.to_hex(),
-            customer_id: audit.customer_id.to_hex(),
             auditor_id: audit.auditor_id.to_hex(),
+            customer_id: audit.customer_id.to_hex(),
             project_id: audit.project_id.to_hex(),
-            project_name: audit.project_name,
-            avatar: audit.avatar,
+            auditor_first_name: auditor.first_name,
+            auditor_last_name: auditor.last_name,
+            project_name: project.name,
+            avatar: auditor.avatar,
             description: audit.description,
             status: audit.status,
             scope: audit.scope,
             price: audit.price,
-            auditor_contacts: audit.auditor_contacts,
-            customer_contacts: audit.customer_contacts,
-            tags: audit.tags,
+            auditor_contacts: auditor.contacts,
+            customer_contacts: project.creator_contacts,
+            tags: project.tags,
             last_modified: audit.last_modified,
             report: audit.report,
             report_name: audit.report_name,
             time: audit.time,
-        }
+            issues: Issue::to_string_map(audit.issues),
+        };
+
+        Ok(public_audit)
     }
 }
 
@@ -96,65 +137,15 @@ impl AuditService {
     pub async fn create(&self, request: PublicRequest) -> error::Result<PublicAudit> {
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
-        let project = self
-            .context
-            .make_request::<PublicProject>()
-            .get(format!(
-                "{}://{}/api/project/{}",
-                PROTOCOL.as_str(),
-                CUSTOMERS_SERVICE.as_str(),
-                request.project_id
-            ))
-            .auth(self.context.server_auth())
-            .send()
-            .await?
-            .json::<PublicProject>()
-            .await?;
-
-        let customer = self
-            .context
-            .make_request::<PublicCustomer>()
-            .get(format!(
-                "{}://{}/api/customer/{}",
-                PROTOCOL.as_str(),
-                CUSTOMERS_SERVICE.as_str(),
-                request.customer_id
-            ))
-            .auth(self.context.server_auth())
-            .send()
-            .await?
-            .json::<PublicCustomer>()
-            .await?;
-
-        let auditor = self
-            .context
-            .make_request::<PublicAuditor>()
-            .get(format!(
-                "{}://{}/api/auditor/{}",
-                PROTOCOL.as_str(),
-                CUSTOMERS_SERVICE.as_str(),
-                request.auditor_id
-            ))
-            .auth(self.context.server_auth())
-            .send()
-            .await?
-            .json::<PublicAuditor>()
-            .await?;
-
         let audit = Audit {
             id: ObjectId::new(),
             customer_id: request.customer_id.parse()?,
             auditor_id: request.auditor_id.parse()?,
             project_id: request.project_id.parse()?,
-            project_name: request.project_name,
-            avatar: request.avatar,
             description: request.description,
             status: "pending".to_string(),
             scope: request.project_scope,
             price: request.price,
-            auditor_contacts: auditor.contacts,
-            customer_contacts: customer.contacts,
-            tags: project.tags,
             last_modified: Utc::now().timestamp_micros(),
             report: None,
             report_name: None,
@@ -164,11 +155,15 @@ impl AuditService {
 
         audits.insert(&audit).await?;
 
-        let requests = self.context.try_get_repository::<AuditRequest<ObjectId>>()?;
+        let requests = self
+            .context
+            .try_get_repository::<AuditRequest<ObjectId>>()?;
 
         requests.delete("id", &request.id.parse()?).await?;
 
-        Ok(audit.into())
+        let public_audit = PublicAudit::new(&self.context, audit).await?;
+
+        Ok(public_audit)
     }
 
     async fn get_audit(&self, id: ObjectId) -> error::Result<Option<Audit<ObjectId>>> {
@@ -188,7 +183,15 @@ impl AuditService {
     }
 
     pub async fn find(&self, id: ObjectId) -> error::Result<Option<PublicAudit>> {
-        Ok(self.get_audit(id).await?.map(|x| x.into()))
+        let audit = self.get_audit(id).await?;
+
+        if let Some(audit) = audit {
+            let public_audit = PublicAudit::new(&self.context, audit).await?;
+
+            return Ok(Some(public_audit));
+        }
+
+        Ok(None)
     }
 
     pub async fn my_audit(&self, role: Role) -> error::Result<Vec<Audit<String>>> {
@@ -246,7 +249,9 @@ impl AuditService {
         audits.delete("id", &id).await?;
         audits.insert(&audit).await?;
 
-        Ok(audit.into())
+        let public_audit = PublicAudit::new(&self.context, audit).await?;
+
+        Ok(public_audit)
     }
 
     pub async fn delete(&self, id: ObjectId) -> error::Result<PublicAudit> {
@@ -263,7 +268,9 @@ impl AuditService {
             return Err(anyhow::anyhow!("User is not available to delete this audit").code(403));
         }
 
-        Ok(audit.into())
+        let public_audit = PublicAudit::new(&self.context, audit).await?;
+
+        Ok(public_audit)
     }
 
     pub async fn create_issue(

@@ -1,4 +1,7 @@
-use common::{repository::{mongo_repository::MongoRepository, Repository}, error};
+use common::{
+    error,
+    repository::{mongo_repository::MongoRepository, Repository},
+};
 use futures::StreamExt;
 use mongodb::bson::{doc, oid::ObjectId};
 

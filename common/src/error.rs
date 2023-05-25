@@ -18,7 +18,10 @@ impl actix_web::error::ResponseError for ServiceError {
 
 impl<E: Into<anyhow::Error>> From<E> for ServiceError {
     fn from(err: E) -> ServiceError {
-        ServiceError { code: 400, err: err.into() }
+        ServiceError {
+            code: 400,
+            err: err.into(),
+        }
     }
 }
 
@@ -26,12 +29,10 @@ pub trait AddCode {
     fn code(self, code: u16) -> ServiceError;
 }
 
-
 impl AddCode for anyhow::Error {
     fn code(self, code: u16) -> ServiceError {
         ServiceError { code, err: self }
     }
 }
-
 
 pub type Result<T> = std::result::Result<T, ServiceError>;

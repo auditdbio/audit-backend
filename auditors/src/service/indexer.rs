@@ -1,8 +1,8 @@
-
 use common::{
     access_rules::{AccessRules, GetData},
     context::Context,
-    entities::auditor::{Auditor, PublicAuditor}, error::{self, AddCode},
+    entities::auditor::{Auditor, PublicAuditor},
+    error::{self, AddCode},
 };
 use mongodb::bson::{oid::ObjectId, Document};
 
@@ -43,6 +43,9 @@ impl IndexerService {
 
         let auditors = auditors.find_all_by_ids("user_id", ids).await?;
 
-        Ok(auditors.into_iter().map(|x| auth.public_auditor(x)).collect::<Vec<_>>())
+        Ok(auditors
+            .into_iter()
+            .map(|x| auth.public_auditor(x))
+            .collect::<Vec<_>>())
     }
 }

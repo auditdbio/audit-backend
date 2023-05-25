@@ -4,7 +4,8 @@ use common::{
     entities::{
         customer::{Customer, PublicCustomer},
         project::{Project, PublicProject},
-    }, error::{AddCode, self},
+    },
+    error::{self, AddCode},
 };
 use mongodb::bson::{oid::ObjectId, Document};
 
@@ -61,7 +62,10 @@ impl IndexerService {
 
         let customers = customers.find_all_by_ids("user_id", ids).await?;
 
-        Ok(customers.into_iter().map(|x| auth.public_customer(x)).collect::<Vec<_>>())
+        Ok(customers
+            .into_iter()
+            .map(|x| auth.public_customer(x))
+            .collect::<Vec<_>>())
     }
 
     pub async fn find_projects(&self, ids: Vec<ObjectId>) -> error::Result<Vec<PublicProject>> {

@@ -1,8 +1,9 @@
 use common::{
     context::Context,
     entities::letter::CreateLetter,
+    error,
     repository::Entity,
-    services::{MAIL_SERVICE, PROTOCOL}, error,
+    services::{MAIL_SERVICE, PROTOCOL},
 };
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};

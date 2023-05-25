@@ -9,7 +9,8 @@ use common::{
         project::PublicProject,
         role::Role,
     },
-    services::{AUDITORS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL}, error::{self, AddCode},
+    error::{self, AddCode},
+    services::{AUDITORS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL},
 };
 use log::info;
 use mongodb::bson::{oid::ObjectId, Bson};
@@ -86,7 +87,9 @@ impl RequestService {
     pub async fn create(&self, request: CreateRequest) -> error::Result<PublicRequest> {
         let auth = self.context.auth();
 
-        let requests = self.context.try_get_repository::<AuditRequest<ObjectId>>()?;
+        let requests = self
+            .context
+            .try_get_repository::<AuditRequest<ObjectId>>()?;
 
         let Some(user_id) = auth.id() else {
             return Err(anyhow::anyhow!("Audit can be created only by authenticated user").code(400));
@@ -104,7 +107,9 @@ impl RequestService {
         } else if user_id == &auditor_id {
             Role::Auditor
         } else {
-            return Err(anyhow::anyhow!("Audit can be created only by customer or auditor").code(400));
+            return Err(
+                anyhow::anyhow!("Audit can be created only by customer or auditor").code(400),
+            );
         };
 
         let project = self
@@ -179,14 +184,16 @@ impl RequestService {
     pub async fn find(&self, id: ObjectId) -> error::Result<Option<PublicRequest>> {
         let auth = self.context.auth();
 
-        let requests = self.context.try_get_repository::<AuditRequest<ObjectId>>()?;
+        let requests = self
+            .context
+            .try_get_repository::<AuditRequest<ObjectId>>()?;
 
         let Some(request) = requests.find("id", &Bson::ObjectId(id)).await? else {
             return Ok(None);
         };
 
         if !Read.get_access(auth, &request) {
-            return Err(anyhow::anyhow!("User is not available to change this customer").code(400))
+            return Err(anyhow::anyhow!("User is not available to change this customer").code(400));
         }
 
         Ok(Some(request.into()))
@@ -195,7 +202,9 @@ impl RequestService {
     pub async fn my_request(&self, role: Role) -> error::Result<Vec<AuditRequest<String>>> {
         let auth = self.context.auth();
 
-        let requests = self.context.try_get_repository::<AuditRequest<ObjectId>>()?;
+        let requests = self
+            .context
+            .try_get_repository::<AuditRequest<ObjectId>>()?;
 
         let Some(user_id) = auth.id() else {
             return Err(anyhow::anyhow!("Audit can be created only by authenticated user").code(400));
@@ -223,7 +232,9 @@ impl RequestService {
     ) -> error::Result<PublicRequest> {
         let auth = self.context.auth();
 
-        let requests = self.context.try_get_repository::<AuditRequest<ObjectId>>()?;
+        let requests = self
+            .context
+            .try_get_repository::<AuditRequest<ObjectId>>()?;
 
         let Some(mut request) = requests.find("id", &Bson::ObjectId(id)).await? else {
             return Err(anyhow::anyhow!("No customer found").code(404));
@@ -286,7 +297,9 @@ impl RequestService {
     pub async fn delete(&self, id: ObjectId) -> error::Result<PublicRequest> {
         let auth = self.context.auth();
 
-        let requests = self.context.try_get_repository::<AuditRequest<ObjectId>>()?;
+        let requests = self
+            .context
+            .try_get_repository::<AuditRequest<ObjectId>>()?;
 
         let Some(request) = requests.delete("id", &id).await? else {
             return Err(anyhow::anyhow!("No customer found").code(404));

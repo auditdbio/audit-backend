@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use common::{repository::mongo_repository::MongoRepository, error};
+use common::{error, repository::mongo_repository::MongoRepository};
 use futures::StreamExt;
 use mongodb::{
     bson::{doc, Bson, Document},

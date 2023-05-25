@@ -2,7 +2,8 @@ use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
     context::Context,
-    entities::user::{PublicUser, User}, error::{AddCode, self},
+    entities::user::{PublicUser, User},
+    error::{self, AddCode},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 
