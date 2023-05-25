@@ -52,6 +52,7 @@ pub struct PublicRequest {
     pub price: i64,
     pub auditor_contacts: Contacts,
     pub customer_contacts: Contacts,
+    pub last_changer: Role,
 }
 
 impl PublicRequest {
@@ -104,6 +105,7 @@ impl PublicRequest {
             price: request.price,
             auditor_contacts: auditor.contacts,
             customer_contacts: project.creator_contacts,
+            last_changer: request.last_changer,
         })
     }
 }
