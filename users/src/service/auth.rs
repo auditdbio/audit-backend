@@ -1,5 +1,6 @@
 use chrono::Utc;
 use common::{
+    access_rules::AccessRules,
     auth::Auth,
     context::Context,
     entities::{letter::CreateLetter, user::User},
@@ -54,9 +55,18 @@ impl Entity for Code {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ChangePassword {
+pub struct ChangePasswordData {
     pub code: String,
     pub password: String,
+    pub current_password: String,
+}
+
+pub struct ChangePassword;
+
+impl<'a, 'b> AccessRules<&'a ChangePasswordData, &'b User<ObjectId>> for ChangePassword {
+    fn get_access(&self, data: &'a ChangePasswordData, user: &'b User<ObjectId>) -> bool {
+        AuthService::request_access(data.current_password.clone(), &user.password, &user.salt)
+    }
 }
 
 impl AuthService {
@@ -64,9 +74,9 @@ impl AuthService {
         Self { context }
     }
 
-    fn request_access(mut auth_password: String, correct_password: String, salt: String) -> bool {
-        auth_password.push_str(&salt);
-        sha256::digest(auth_password) == correct_password
+    fn request_access(mut auth_password: String, correct_password: &String, salt: &String) -> bool {
+        auth_password.push_str(salt);
+        &sha256::digest(auth_password) == correct_password
     }
 
     pub async fn login(&self, login: &Login) -> error::Result<Token> {
@@ -76,11 +86,7 @@ impl AuthService {
             return Err(anyhow::anyhow!("No user found").code(404));
         };
 
-        if !Self::request_access(
-            login.password.clone(),
-            user.password.clone(),
-            user.salt.clone(),
-        ) {
+        if !Self::request_access(login.password.clone(), &user.password, &user.salt) {
             return Err(anyhow::anyhow!("Incorrect password").code(401));
         }
         let auth = Auth::User(user.id);
@@ -257,7 +263,7 @@ impl AuthService {
         Ok(())
     }
 
-    pub async fn reset_password(&self, token: ChangePassword) -> error::Result<()> {
+    pub async fn reset_password(&self, token: ChangePasswordData) -> error::Result<()> {
         let codes = self.context.try_get_repository::<Code>()?;
 
         let Some(code) = codes.find("code", &Bson::String(token.code.clone())).await? else {

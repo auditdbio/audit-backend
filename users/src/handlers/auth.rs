@@ -6,7 +6,7 @@ use actix_web::{
 use common::{context::Context, entities::user::User, error};
 
 use crate::service::{
-    auth::{AuthService, ChangePassword, Login, Token},
+    auth::{AuthService, ChangePasswordData, Login, Token},
     user::CreateUser,
 };
 
@@ -64,7 +64,7 @@ pub async fn forgot_password(
 #[post("/api/auth/reset_password")]
 pub async fn reset_password(
     context: Context,
-    Json(code): web::Json<ChangePassword>,
+    Json(code): web::Json<ChangePasswordData>,
 ) -> error::Result<HttpResponse> {
     AuthService::new(context).reset_password(code).await?;
 
