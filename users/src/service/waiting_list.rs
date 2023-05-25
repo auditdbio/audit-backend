@@ -1,9 +1,8 @@
-use anyhow::bail;
 use common::{
     context::Context,
     entities::letter::CreateLetter,
     repository::Entity,
-    services::{MAIL_SERVICE, PROTOCOL},
+    services::{MAIL_SERVICE, PROTOCOL}, error,
 };
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -33,14 +32,12 @@ impl WaitingListService {
         Self { context }
     }
 
-    pub async fn run_action(&self, secret: String) -> anyhow::Result<()> {
+    pub async fn run_action(&self, secret: String) -> error::Result<()> {
         if secret != *RUN_ACTION_SECRET {
             return Ok(());
         }
 
-        let Some(waiting_list) = self.context.get_repository::<WaitingListElement>() else {
-            bail!("No waiting list repository found")
-        };
+        let waiting_list = self.context.try_get_repository::<WaitingListElement>()?;
 
         for element in waiting_list.find_all(0, 100).await? {
             let letter = CreateLetter {

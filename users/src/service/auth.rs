@@ -1,11 +1,10 @@
-use anyhow::bail;
 use chrono::Utc;
 use common::{
     auth::Auth,
     context::Context,
     entities::{letter::CreateLetter, user::User},
     repository::Entity,
-    services::{FRONTEND, MAIL_SERVICE, PROTOCOL, USERS_SERVICE},
+    services::{FRONTEND, MAIL_SERVICE, PROTOCOL, USERS_SERVICE}, error::{AddCode, self},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use rand::{distributions::Alphanumeric, Rng};
@@ -69,13 +68,11 @@ impl AuthService {
         sha256::digest(auth_password) == correct_password
     }
 
-    pub async fn login(&self, login: &Login) -> anyhow::Result<Token> {
-        let Some(users) = self.context.get_repository::<User<ObjectId>>() else {
-            bail!("No user repository found")
-        };
+    pub async fn login(&self, login: &Login) -> error::Result<Token> {
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
 
         let Some(user) = users.find("email", &Bson::String(login.email.clone())).await? else {
-            bail!("No user found")
+            return Err(anyhow::anyhow!("No user found").code(404));
         };
 
         if !Self::request_access(
@@ -83,7 +80,7 @@ impl AuthService {
             user.password.clone(),
             user.salt.clone(),
         ) {
-            bail!("Incorrect password")
+            return Err(anyhow::anyhow!("Incorrect password").code(401));
         }
         let auth = Auth::User(user.id);
 
@@ -97,14 +94,10 @@ impl AuthService {
         &self,
         mut user: CreateUser,
         verify_email: bool,
-    ) -> anyhow::Result<User<String>> {
-        let Some(users) = self.context.get_repository::<User<ObjectId>>() else {
-            bail!("No user repository found")
-        };
+    ) -> error::Result<User<String>> {
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
 
-        let Some(links) = self.context.get_repository::<Link>() else {
-            bail!("No code repository found")
-        };
+        let links = self.context.try_get_repository::<Link>()?;
 
         if users
             .find("email", &Bson::String(user.email.clone()))
@@ -115,7 +108,7 @@ impl AuthService {
                 .await?
                 .is_some()
         {
-            bail!("User with email already exists")
+            return Err(anyhow::anyhow!("User with email already exists").code(409));
         }
 
         let code: String = rand::thread_rng()
@@ -191,10 +184,8 @@ impl AuthService {
         Ok(link.user.stringify())
     }
 
-    pub async fn verify_link(&self, code: String) -> anyhow::Result<bool> {
-        let Some(codes) = self.context.get_repository::<Link>() else {
-            bail!("No code repository found")
-        };
+    pub async fn verify_link(&self, code: String) -> error::Result<bool> {
+        let codes = self.context.try_get_repository::<Link>()?;
 
         // TODO: rewrite this with get_access
 
@@ -202,22 +193,18 @@ impl AuthService {
             return Ok(false);
         };
 
-        let Some(users) = self.context.get_repository::<User<ObjectId>>() else {
-            bail!("No user repository found")
-        };
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
 
         users.insert(&link.user).await?;
 
         Ok(true)
     }
 
-    pub async fn forgot_password(&self, email: String) -> anyhow::Result<()> {
-        let Some(users) = self.context.get_repository::<User<ObjectId>>() else {
-            bail!("No user repository found")
-        };
+    pub async fn forgot_password(&self, email: String) -> error::Result<()> {
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
 
         let Some(user) = users.find("email", &Bson::String(email.clone())).await? else {
-            bail!("No user found")
+            return Err(anyhow::anyhow!("No user found").code(404));
         };
 
         let code: String = rand::thread_rng()
@@ -244,9 +231,7 @@ impl AuthService {
             user: user.id,
         };
 
-        let Some(codes) = self.context.get_repository::<Code>() else {
-            bail!("No code repository found")
-        };
+        let codes = self.context.try_get_repository::<Code>()?;
 
         codes.insert(&code).await?;
 
@@ -271,21 +256,17 @@ impl AuthService {
         Ok(())
     }
 
-    pub async fn reset_password(&self, token: ChangePassword) -> anyhow::Result<()> {
-        let Some(codes) = self.context.get_repository::<Code>() else {
-            bail!("No code repository found")
-        };
+    pub async fn reset_password(&self, token: ChangePassword) -> error::Result<()> {
+        let codes = self.context.try_get_repository::<Code>()?;
 
         let Some(code) = codes.find("code", &Bson::String(token.code.clone())).await? else {
-            bail!("No code found")
+            return Err(anyhow::anyhow!("No code found").code(404));
         };
 
-        let Some(users) = self.context.get_repository::<User<ObjectId>>() else {
-            bail!("No user repository found")
-        };
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
 
         let Some(mut user) = users.delete("id", &code.user).await? else {
-            bail!("No user found")
+            return Err(anyhow::anyhow!("No user found").code(404));
         };
 
         let salt: String = rand::thread_rng()

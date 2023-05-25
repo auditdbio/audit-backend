@@ -1,6 +1,5 @@
 pub mod access_rules;
 pub mod auth;
-pub mod auth_session;
 pub mod constants;
 pub mod context;
 pub mod entities;

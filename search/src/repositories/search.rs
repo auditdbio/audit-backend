@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use common::repository::mongo_repository::MongoRepository;
+use common::{repository::mongo_repository::MongoRepository, error};
 use futures::StreamExt;
 use mongodb::{
     bson::{doc, Bson, Document},
@@ -30,7 +30,7 @@ impl SearchRepo {
         Self(Arc::new(repo))
     }
 
-    pub async fn insert(&self, query: Vec<Document>) -> anyhow::Result<()> {
+    pub async fn insert(&self, query: Vec<Document>) -> error::Result<()> {
         for doc in query.iter() {
             self.0
                 .collection
@@ -49,7 +49,7 @@ impl SearchRepo {
         Ok(())
     }
 
-    pub async fn search(&self, mut query: SearchQuery) -> anyhow::Result<SearchResult> {
+    pub async fn search(&self, mut query: SearchQuery) -> error::Result<SearchResult> {
         let find_options = if let Some(sort_by) = query.sort_by {
             let sort_order = query.sort_order.unwrap_or(1);
             let mut sort = doc! {

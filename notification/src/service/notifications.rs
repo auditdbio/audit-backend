@@ -8,7 +8,7 @@ use actix::{Actor, ActorContext, AsyncContext, Handler, Message, Recipient, Stre
 use actix_web::{web, HttpRequest, HttpResponse};
 use actix_web_actors::ws::{self, WsResponseBuilder};
 use anyhow::anyhow;
-use common::{access_rules::AccessRules, auth::Auth, context::Context, repository::Entity};
+use common::{access_rules::AccessRules, auth::Auth, context::Context, repository::Entity, error::{self, AddCode}};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
@@ -163,7 +163,7 @@ pub async fn subscribe_to_notifications(
     manager: web::Data<NotificationsManager>,
     user_id: ObjectId,
     notifications: &NotificationsRepository,
-) -> anyhow::Result<HttpResponse> {
+) -> error::Result<HttpResponse> {
     let session_id = ObjectId::new();
     let mut initial: Vec<PublicNotification> = notifications
         .get_unread(&user_id)
@@ -184,7 +184,7 @@ pub async fn subscribe_to_notifications(
     };
 
     let Ok((addr, resp)) = WsResponseBuilder::new(actor, &req, stream).start_with_addr() else{
-        return Err(anyhow!("Failed to start websocket"))
+        return Err(anyhow!("Failed to start websocket").code(500))
     };
 
     let mut map_lock = manager.subscribers.lock().unwrap();
@@ -200,7 +200,7 @@ pub async fn send_notification(
     manager: web::Data<NotificationsManager>,
     notif: CreateNotification,
     notifications: &NotificationsRepository,
-) -> anyhow::Result<()> {
+) -> error::Result<()> {
     let notif = Notification {
         id: ObjectId::new(),
         user_id: notif.user_id.clone(),
@@ -209,7 +209,7 @@ pub async fn send_notification(
     let auth = context.auth();
 
     if !SendNotification.get_access(auth, &notif.user_id) {
-        return Err(anyhow!("No access to send notification"));
+        return Err(anyhow!("No access to send notification").code(500));
     }
 
     let map_lock = manager.subscribers.lock().unwrap();
@@ -229,7 +229,7 @@ pub async fn read(
     context: Context,
     notifications: &NotificationsRepository,
     id: ObjectId,
-) -> anyhow::Result<String> {
+) -> error::Result<String> {
     let _auth = context.auth();
 
     notifications.read(id.clone()).await?;

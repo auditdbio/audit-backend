@@ -1,4 +1,3 @@
-use anyhow::bail;
 use chrono::Utc;
 use jsonwebtoken::{decode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use mongodb::bson::oid::ObjectId;
@@ -11,7 +10,7 @@ use crate::{
         auditor::{Auditor, PublicAuditor},
         contacts::Contacts,
         customer::{Customer, PublicCustomer}, project::{Project, PublicProject},
-    },
+    }, error::{self, AddCode},
 };
 
 pub static ENCODING_KEY: Lazy<EncodingKey> = Lazy::new(|| {
@@ -50,7 +49,8 @@ impl Auth {
 
     pub fn full_access(&self) -> bool {
         match self {
-            Auth::Admin(_) | Auth::Service(_, _) => true,
+            Auth::Admin(_) => true,
+            Auth::Service(name, _) => name != "search",
             _ => false,
         }
     }
@@ -162,7 +162,7 @@ struct Claims {
 }
 
 impl Auth {
-    pub fn from_token(token: &str) -> anyhow::Result<Self> {
+    pub fn from_token(token: &str) -> error::Result<Self> {
         match decode::<Claims>(&token, &DECODING_KEY, &Validation::new(Algorithm::HS512)) {
             Ok(c) => {
                 let claims = c.claims;
@@ -188,7 +188,7 @@ impl Auth {
         }
     }
 
-    pub fn to_token(&self) -> anyhow::Result<String> {
+    pub fn to_token(&self) -> error::Result<String> {
         let header = Header {
             alg: Algorithm::HS512,
             ..Default::default()
@@ -216,12 +216,12 @@ impl Auth {
                 exp,
                 user_authorized: None,
             },
-            Auth::None => bail!("Cannot create token for Auth::None"),
+            Auth::None => return Err(anyhow::anyhow!("Cannot create token for Auth::None").code(500)),
         };
 
         let token = match jsonwebtoken::encode(&header, &claims, &ENCODING_KEY) {
             Ok(t) => t,
-            Err(_) => bail!("Failed to encode token"),
+            Err(_) => return Err(anyhow::anyhow!("Failed to encode token").code(500)),
         };
         Ok(token)
     }

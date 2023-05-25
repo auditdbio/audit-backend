@@ -1,4 +1,4 @@
-use anyhow::bail;
+
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
@@ -10,7 +10,7 @@ use common::{
         customer::PublicCustomer,
         user::PublicUser,
     },
-    services::{PROTOCOL, USERS_SERVICE},
+    services::{PROTOCOL, USERS_SERVICE}, error::{self, AddCode},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -50,12 +50,10 @@ impl AuditorService {
         Self { context }
     }
 
-    pub async fn create(&self, auditor: CreateAuditor) -> anyhow::Result<Auditor<String>> {
+    pub async fn create(&self, auditor: CreateAuditor) -> error::Result<Auditor<String>> {
         let auth = self.context.auth();
 
-        let Some(auditors) = self.context.get_repository::<Auditor<ObjectId>>() else {
-            bail!("No auditor repository found")
-        };
+        let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
 
         let auditor = Auditor {
             user_id: auth
@@ -79,30 +77,26 @@ impl AuditorService {
         Ok(auditor.stringify())
     }
 
-    pub async fn find(&self, id: ObjectId) -> anyhow::Result<Option<PublicAuditor>> {
+    pub async fn find(&self, id: ObjectId) -> error::Result<Option<PublicAuditor>> {
         let auth = self.context.auth();
 
-        let Some(auditors) = self.context.get_repository::<Auditor<ObjectId>>() else {
-            bail!("No auditor repository found")
-        };
+        let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
 
         let Some(auditor) = auditors.find("user_id", &Bson::ObjectId(id)).await? else {
             return Ok(None);
         };
 
         if !Read.get_access(auth, &auditor) {
-            bail!("User is not available to change this auditor")
+            return Err(anyhow::anyhow!("User is not available to change this auditor").code(400))
         }
 
         Ok(Some(auth.public_auditor(auditor)))
     }
 
-    pub async fn my_auditor(&self) -> anyhow::Result<Option<Auditor<String>>> {
+    pub async fn my_auditor(&self) -> error::Result<Option<Auditor<String>>> {
         let auth = self.context.auth();
 
-        let Some(auditors) = self.context.get_repository::<Auditor<ObjectId>>() else {
-            bail!("No auditor repository found")
-        };
+        let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
 
         let auditor = auditors
             .find("user_id", &Bson::ObjectId(auth.id().unwrap().clone()))
@@ -178,20 +172,18 @@ impl AuditorService {
         Ok(auditor)
     }
 
-    pub async fn change(&self, change: AuditorChange) -> anyhow::Result<Auditor<String>> {
+    pub async fn change(&self, change: AuditorChange) -> error::Result<Auditor<String>> {
         let auth = self.context.auth();
         let id = auth.id().unwrap().clone();
 
-        let Some(auditors) = self.context.get_repository::<Auditor<ObjectId>>() else {
-            bail!("No auditor repository found")
-        };
+        let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
 
         let Some(mut auditor) = auditors.find("user_id", &Bson::ObjectId(id)).await? else {
-            bail!("No auditor found")
+            return Err(anyhow::anyhow!("No auditor found").code(400));
         };
 
         if !Edit.get_access(auth, &auditor) {
-            bail!("User is not available to change this auditor")
+            return Err(anyhow::anyhow!("User is not available to change this auditor").code(400))
         }
 
         if let Some(avatar) = change.avatar {
@@ -238,20 +230,18 @@ impl AuditorService {
         Ok(auditor.stringify())
     }
 
-    pub async fn delete(&self, id: ObjectId) -> anyhow::Result<PublicAuditor> {
+    pub async fn delete(&self, id: ObjectId) -> error::Result<PublicAuditor> {
         let auth = self.context.auth();
 
-        let Some(auditors) = self.context.get_repository::<Auditor<ObjectId>>() else {
-            bail!("No auditor repository found")
-        };
+        let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
 
         let Some(auditor) = auditors.delete("user_id", &id).await? else {
-            bail!("No auditor found")
+            return Err(anyhow::anyhow!("No auditor found").code(400));
         };
 
         if !Edit.get_access(auth, &auditor) {
             auditors.insert(&auditor).await?;
-            bail!("User is not available to delete this auditor")
+            return Err(anyhow::anyhow!("User is not available to delete this auditor").code(400))
         }
 
         Ok(auth.public_auditor(auditor))

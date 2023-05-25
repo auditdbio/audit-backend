@@ -1,4 +1,3 @@
-use anyhow::bail;
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
@@ -10,7 +9,7 @@ use common::{
         project::PublicProject,
         role::Role,
     },
-    services::{AUDITORS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL},
+    services::{AUDITORS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL}, error::{self, AddCode},
 };
 use log::info;
 use mongodb::bson::{oid::ObjectId, Bson};
@@ -84,22 +83,20 @@ impl RequestService {
         Self { context }
     }
 
-    pub async fn create(&self, request: CreateRequest) -> anyhow::Result<PublicRequest> {
+    pub async fn create(&self, request: CreateRequest) -> error::Result<PublicRequest> {
         let auth = self.context.auth();
 
-        let Some(requests) = self.context.get_repository::<AuditRequest<ObjectId>>() else {
-            bail!("No customer repository found")
-        };
+        let requests = self.context.try_get_repository::<AuditRequest<ObjectId>>()?;
 
         let Some(user_id) = auth.id() else {
-            bail!("Audit can be created only by authenticated user")
+            return Err(anyhow::anyhow!("Audit can be created only by authenticated user").code(400));
         };
 
         let customer_id = request.customer_id.parse()?;
         let auditor_id = request.auditor_id.parse()?;
 
         if &customer_id == &auditor_id {
-            bail!("You can't create audit with yourself")
+            return Err(anyhow::anyhow!("You can't create audit with yourself").code(400));
         }
 
         let last_changer = if user_id == &customer_id {
@@ -107,7 +104,7 @@ impl RequestService {
         } else if user_id == &auditor_id {
             Role::Auditor
         } else {
-            bail!("Audit can be created only by customer or auditor")
+            return Err(anyhow::anyhow!("Audit can be created only by customer or auditor").code(400));
         };
 
         let project = self
@@ -179,33 +176,29 @@ impl RequestService {
         Ok(request.into())
     }
 
-    pub async fn find(&self, id: ObjectId) -> anyhow::Result<Option<PublicRequest>> {
+    pub async fn find(&self, id: ObjectId) -> error::Result<Option<PublicRequest>> {
         let auth = self.context.auth();
 
-        let Some(requests) = self.context.get_repository::<AuditRequest<ObjectId>>() else {
-            bail!("No customer repository found")
-        };
+        let requests = self.context.try_get_repository::<AuditRequest<ObjectId>>()?;
 
         let Some(request) = requests.find("id", &Bson::ObjectId(id)).await? else {
             return Ok(None);
         };
 
         if !Read.get_access(auth, &request) {
-            bail!("User is not available to change this customer")
+            return Err(anyhow::anyhow!("User is not available to change this customer").code(400))
         }
 
         Ok(Some(request.into()))
     }
 
-    pub async fn my_request(&self, role: Role) -> anyhow::Result<Vec<AuditRequest<String>>> {
+    pub async fn my_request(&self, role: Role) -> error::Result<Vec<AuditRequest<String>>> {
         let auth = self.context.auth();
 
-        let Some(requests) = self.context.get_repository::<AuditRequest<ObjectId>>() else {
-            bail!("No customer repository found")
-        };
+        let requests = self.context.try_get_repository::<AuditRequest<ObjectId>>()?;
 
         let Some(user_id) = auth.id() else {
-            bail!("Audit can be created only by authenticated user")
+            return Err(anyhow::anyhow!("Audit can be created only by authenticated user").code(400));
         };
 
         let id = match role {
@@ -227,19 +220,17 @@ impl RequestService {
         &self,
         id: ObjectId,
         change: RequestChange,
-    ) -> anyhow::Result<PublicRequest> {
+    ) -> error::Result<PublicRequest> {
         let auth = self.context.auth();
 
-        let Some(requests) = self.context.get_repository::<AuditRequest<ObjectId>>() else {
-            bail!("No customer repository found")
-        };
+        let requests = self.context.try_get_repository::<AuditRequest<ObjectId>>()?;
 
         let Some(mut request) = requests.find("id", &Bson::ObjectId(id)).await? else {
-            bail!("No customer found")
+            return Err(anyhow::anyhow!("No customer found").code(404));
         };
 
         if !Edit.get_access(auth, &request) {
-            bail!("User is not available to change this customer")
+            return Err(anyhow::anyhow!("User is not available to change this customer").code(400));
         }
 
         if let Some(description) = change.description {
@@ -279,7 +270,7 @@ impl RequestService {
         } else if auth.id() == Some(&request.auditor_id) {
             Role::Auditor
         } else {
-            bail!("User is not available to change this customer")
+            return Err(anyhow::anyhow!("User is not available to change this customer").code(400));
         };
 
         request.last_changer = role;
@@ -292,20 +283,18 @@ impl RequestService {
         Ok(request.into())
     }
 
-    pub async fn delete(&self, id: ObjectId) -> anyhow::Result<PublicRequest> {
+    pub async fn delete(&self, id: ObjectId) -> error::Result<PublicRequest> {
         let auth = self.context.auth();
 
-        let Some(requests) = self.context.get_repository::<AuditRequest<ObjectId>>() else {
-            bail!("No customer repository found")
-        };
+        let requests = self.context.try_get_repository::<AuditRequest<ObjectId>>()?;
 
         let Some(request) = requests.delete("id", &id).await? else {
-            bail!("No customer found")
+            return Err(anyhow::anyhow!("No customer found").code(404));
         };
 
         if !Edit.get_access(auth, &request) {
             requests.insert(&request).await?;
-            bail!("User is not available to delete this customer")
+            return Err(anyhow::anyhow!("User is not available to delete this customer").code(400));
         }
 
         Ok(request.into())

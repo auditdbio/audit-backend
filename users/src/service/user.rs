@@ -1,10 +1,8 @@
-use anyhow::bail;
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
-    auth::Auth,
     context::Context,
-    entities::user::{PublicUser, User},
+    entities::user::{PublicUser, User}, error::{AddCode, self},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 
@@ -38,19 +36,8 @@ impl UserService {
         Self { context }
     }
 
-    pub async fn create(&self, user: User<String>) -> anyhow::Result<PublicUser> {
-        let auth = self.context.auth();
-
-        // TODO: rewrite with get_access framework
-
-        if let Auth::Service(_, _) = auth {
-            bail!("Only services can create users")
-        }
-
-        let Some(users) = self.context.get_repository::<User<ObjectId>>() else {
-            bail!("No user repository found")
-        };
-
+    pub async fn create(&self, user: User<String>) -> error::Result<PublicUser> {
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
         let user = user.parse();
 
         users.insert(&user).await?;
@@ -58,30 +45,26 @@ impl UserService {
         Ok(user.into())
     }
 
-    pub async fn find(&self, id: ObjectId) -> anyhow::Result<Option<PublicUser>> {
+    pub async fn find(&self, id: ObjectId) -> error::Result<Option<PublicUser>> {
         let auth = self.context.auth();
 
-        let Some(users) = self.context.get_repository::<User<ObjectId>>() else {
-            bail!("No user repository found")
-        };
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
 
         let Some(user) = users.find("id", &Bson::ObjectId(id)).await? else {
             return Ok(None);
         };
 
         if !Read.get_access(auth, &user) {
-            bail!("User is not available to read this user")
+            return Err(anyhow::anyhow!("User is not available to read this user").code(403));
         }
 
         Ok(Some(user.into()))
     }
 
-    pub async fn my_user(&self) -> anyhow::Result<Option<User<String>>> {
+    pub async fn my_user(&self) -> error::Result<Option<User<String>>> {
         let auth = self.context.auth();
 
-        let Some(users) = self.context.get_repository::<User<ObjectId>>() else {
-            bail!("No user repository found")
-        };
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
 
         let Some(user) = users.find("id", &Bson::ObjectId(auth.id().unwrap().clone())).await? else {
             return Ok(None);
@@ -90,19 +73,17 @@ impl UserService {
         Ok(Some(user.stringify()))
     }
 
-    pub async fn change(&self, id: ObjectId, change: UserChange) -> anyhow::Result<PublicUser> {
+    pub async fn change(&self, id: ObjectId, change: UserChange) -> error::Result<PublicUser> {
         let auth = self.context.auth();
 
-        let Some(users) = self.context.get_repository::<User<ObjectId>>() else {
-            bail!("No user repository found")
-        };
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
 
         let Some(mut user) = users.find("id", &Bson::ObjectId(id)).await? else {
-            bail!("No user found")
+            return Err(anyhow::anyhow!("No user found").code(404));
         };
 
         if !Edit.get_access(auth, &user) {
-            bail!("User is not available to change this user")
+            return Err(anyhow::anyhow!("User is not available to change this user").code(403));
         }
 
         if let Some(email) = change.email {
@@ -142,20 +123,18 @@ impl UserService {
         Ok(user.into())
     }
 
-    pub async fn delete(&self, id: ObjectId) -> anyhow::Result<PublicUser> {
+    pub async fn delete(&self, id: ObjectId) -> error::Result<PublicUser> {
         let auth = self.context.auth();
 
-        let Some(users) = self.context.get_repository::<User<ObjectId>>() else {
-            bail!("No user repository found")
-        };
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
 
         let Some(user) = users.delete("id", &id).await? else {
-            bail!("No user found")
+            return Err(anyhow::anyhow!("No user found").code(404));
         };
 
         if !Edit.get_access(auth, &user) {
             users.insert(&user).await?;
-            bail!("User is not available to delete this user")
+            return Err(anyhow::anyhow!("User is not available to delete this user").code(403));
         }
 
         Ok(user.into())

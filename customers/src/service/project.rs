@@ -1,4 +1,3 @@
-use anyhow::bail;
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
@@ -7,7 +6,7 @@ use common::{
         contacts::Contacts,
         customer::Customer,
         project::{Project, PublicProject, PublishOptions},
-    },
+    }, error::{AddCode, self},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -43,16 +42,13 @@ impl ProjectService {
         Self { context }
     }
 
-    pub async fn create(&self, project: CreateProject) -> anyhow::Result<PublicProject> {
+    pub async fn create(&self, project: CreateProject) -> error::Result<PublicProject> {
         let auth = self.context.auth();
 
-        let Some(projects) = self.context.get_repository::<Project<ObjectId>>() else {
-            bail!("No project repository found")
-        };
+        let projects = self.context.try_get_repository::<Project<ObjectId>>()?;
 
-        let Some(customers) = self.context.get_repository::<Customer<ObjectId>>() else {
-            bail!("No customer repository found")
-        };
+        let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
+
         let customer = customers
             .find("user_id", &Bson::ObjectId(auth.id().unwrap().clone()))
             .await?
@@ -91,30 +87,26 @@ impl ProjectService {
         Ok(auth.public_project(project))
     }
 
-    pub async fn find(&self, id: ObjectId) -> anyhow::Result<Option<PublicProject>> {
+    pub async fn find(&self, id: ObjectId) -> error::Result<Option<PublicProject>> {
         let auth = self.context.auth();
 
-        let Some(projects) = self.context.get_repository::<Project<ObjectId>>() else {
-            bail!("No project repository found")
-        };
+        let projects = self.context.try_get_repository::<Project<ObjectId>>()?;
 
         let Some(project) = projects.find("id",&Bson::ObjectId(id)).await? else {
             return Ok(None)
         };
 
         if !Read.get_access(auth, &project) {
-            bail!("User is not available to read this project")
+            return Err(anyhow::anyhow!("User is not available to read this project").code(403));
         }
 
         Ok(Some(auth.public_project(project)))
     }
 
-    pub async fn my_projects(&self) -> anyhow::Result<Vec<Project<String>>> {
+    pub async fn my_projects(&self) -> error::Result<Vec<Project<String>>> {
         let auth = self.context.auth();
 
-        let Some(projects) = self.context.get_repository::<Project<ObjectId>>() else {
-            bail!("No project repository found")
-        };
+        let projects = self.context.try_get_repository::<Project<ObjectId>>()?;
 
         let projects = projects
             .find_many("customer_id", &Bson::ObjectId(auth.id().unwrap().clone()))
@@ -127,19 +119,17 @@ impl ProjectService {
         &self,
         id: ObjectId,
         change: ProjectChange,
-    ) -> anyhow::Result<PublicProject> {
+    ) -> error::Result<PublicProject> {
         let auth = self.context.auth();
 
-        let Some(projects) = self.context.get_repository::<Project<ObjectId>>() else {
-            bail!("No project repository found")
-        };
+        let projects = self.context.try_get_repository::<Project<ObjectId>>()?;
 
         let Some(mut project) = projects.find("id", &Bson::ObjectId(id)).await? else {
-            bail!("No project found")
+            return Err(anyhow::anyhow!("No project found").code(404));
         };
 
         if !Edit.get_access(auth, &project) {
-            bail!("User is not available to change this project")
+            return Err(anyhow::anyhow!("User is not available to change this project").code(403));
         }
 
         if let Some(name) = change.name {
@@ -178,20 +168,18 @@ impl ProjectService {
         Ok(auth.public_project(project))
     }
 
-    pub async fn delete(&self, id: ObjectId) -> anyhow::Result<PublicProject> {
+    pub async fn delete(&self, id: ObjectId) -> error::Result<PublicProject> {
         let auth = self.context.auth();
 
-        let Some(projects) = self.context.get_repository::<Project<ObjectId>>() else {
-            bail!("No project repository found")
-        };
+        let projects = self.context.try_get_repository::<Project<ObjectId>>()?;
 
         let Some(project) = projects.delete("id", &id).await? else {
-            bail!("No project found")
+            return Err(anyhow::anyhow!("No project found").code(404));
         };
 
         if !Edit.get_access(auth, &project) {
             projects.insert(&project).await?;
-            bail!("User is not available to delete this project")
+            return Err(anyhow::anyhow!("User is not available to delete this project").code(403));
         }
 
         Ok(auth.public_project(project))

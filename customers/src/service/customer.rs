@@ -1,4 +1,3 @@
-use anyhow::bail;
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
@@ -10,7 +9,7 @@ use common::{
         project::Project,
         user::PublicUser,
     },
-    services::{PROTOCOL, USERS_SERVICE},
+    services::{PROTOCOL, USERS_SERVICE}, error::{self, AddCode},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -46,12 +45,10 @@ impl CustomerService {
         Self { context }
     }
 
-    pub async fn create(&self, customer: CreateCustomer) -> anyhow::Result<Customer<String>> {
+    pub async fn create(&self, customer: CreateCustomer) -> error::Result<Customer<String>> {
         let auth = self.context.auth();
 
-        let Some(customers) = self.context.get_repository::<Customer<ObjectId>>() else {
-            bail!("No customer repository found")
-        };
+        let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
 
         let customer = Customer {
             user_id: auth
@@ -73,30 +70,26 @@ impl CustomerService {
         Ok(customer.stringify())
     }
 
-    pub async fn find(&self, id: ObjectId) -> anyhow::Result<Option<PublicCustomer>> {
+    pub async fn find(&self, id: ObjectId) -> error::Result<Option<PublicCustomer>> {
         let auth = self.context.auth();
 
-        let Some(customers) = self.context.get_repository::<Customer<ObjectId>>() else {
-            bail!("No customer repository found")
-        };
+        let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
 
         let Some(customer) = customers.find("user_id", &Bson::ObjectId(id)).await? else {
             return Ok(None);
         };
 
         if !Read.get_access(auth, &customer) {
-            bail!("User is not available to change this customer")
+            return Err(anyhow::anyhow!("User is not available to change this customer").code(403));
         }
 
         Ok(Some(auth.public_customer(customer)))
     }
 
-    pub async fn my_customer(&self) -> anyhow::Result<Option<Customer<String>>> {
+    pub async fn my_customer(&self) -> error::Result<Option<Customer<String>>> {
         let auth = self.context.auth();
 
-        let Some(customers) = self.context.get_repository::<Customer<ObjectId>>() else {
-            bail!("No customer repository found")
-        };
+        let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
 
         let customer = customers
             .find("user_id", &Bson::ObjectId(auth.id().unwrap().clone()))
@@ -170,20 +163,18 @@ impl CustomerService {
         Ok(customer)
     }
 
-    pub async fn change(&self, change: CustomerChange) -> anyhow::Result<Customer<String>> {
+    pub async fn change(&self, change: CustomerChange) -> error::Result<Customer<String>> {
         let auth = self.context.auth();
         let id = auth.id().unwrap().clone();
 
-        let Some(customers) = self.context.get_repository::<Customer<ObjectId>>() else {
-            bail!("No customer repository found")
-        };
+        let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
 
         let Some(mut customer) = customers.find("user_id", &Bson::ObjectId(id)).await? else {
-            bail!("No customer found")
+            return Err(anyhow::anyhow!("No customer found").code(404));
         };
 
         if !Edit.get_access(auth, &customer) {
-            bail!("User is not available to change this customer")
+            return Err(anyhow::anyhow!("User is not available to change this customer").code(403));
         }
 
         if let Some(avatar) = change.avatar {
@@ -208,9 +199,7 @@ impl CustomerService {
 
         if let Some(contacts) = change.contacts {
             if customer.contacts.public_contacts != contacts.public_contacts {
-                let Some(projects) = self.context.get_repository::<Project<ObjectId>>() else {
-                    bail!("No project repository found")
-                };
+                let projects = self.context.try_get_repository::<Project<ObjectId>>()?;
 
                 let customer_projects = projects
                     .find_many("customer_id", &Bson::ObjectId(id))
@@ -237,20 +226,18 @@ impl CustomerService {
         Ok(customer.stringify())
     }
 
-    pub async fn delete(&self, id: ObjectId) -> anyhow::Result<PublicCustomer> {
+    pub async fn delete(&self, id: ObjectId) -> error::Result<PublicCustomer> {
         let auth = self.context.auth();
 
-        let Some(customers) = self.context.get_repository::<Customer<ObjectId>>() else {
-            bail!("No customer repository found")
-        };
+        let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
 
         let Some(customer) = customers.delete("user_id", &id).await? else {
-            bail!("No customer found")
+            return Err(anyhow::anyhow!("No customer found").code(404));
         };
 
         if !Edit.get_access(auth, &customer) {
             customers.insert(&customer).await?;
-            bail!("User is not available to delete this customer")
+            return Err(anyhow::anyhow!("User is not available to delete this customer").code(403));
         }
 
         Ok(auth.public_customer(customer))

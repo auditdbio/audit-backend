@@ -2,7 +2,7 @@ use std::{collections::HashMap, str::FromStr};
 
 use actix_web::web;
 use chrono::Utc;
-use common::{auth::Auth, context::Context, repository::Repository};
+use common::{auth::Auth, context::Context, repository::Repository, error};
 
 use mongodb::bson::{oid::ObjectId, Bson, Document};
 use reqwest::Client;
@@ -29,7 +29,7 @@ pub async fn fetch_data(
     auth: &Auth,
     since_repo: SinceRepo,
     search_repo: SearchRepo,
-) -> anyhow::Result<()> {
+) -> error::Result<()> {
     let mut headers = reqwest::header::HeaderMap::new();
     headers.insert(
         "Authorization",
@@ -99,12 +99,12 @@ impl SearchService {
         Self { repo, context }
     }
 
-    pub async fn insert(&self, request: SearchInsertRequest) -> anyhow::Result<()> {
+    pub async fn insert(&self, request: SearchInsertRequest) -> error::Result<()> {
         self.repo.insert(request.documents).await?;
         Ok(())
     }
 
-    pub async fn search(&self, query: SearchQuery) -> anyhow::Result<SearchResult> {
+    pub async fn search(&self, query: SearchQuery) -> error::Result<SearchResult> {
         let mut auth = self.context.server_auth();
         if &Auth::None != self.context.auth() {
             auth = auth.authorized();

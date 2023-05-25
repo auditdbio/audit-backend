@@ -1,11 +1,10 @@
-use anyhow::bail;
 use common::{
     access_rules::{AccessRules, GetData},
     context::Context,
     entities::{
         customer::{Customer, PublicCustomer},
         project::{Project, PublicProject},
-    },
+    }, error::{AddCode, self},
 };
 use mongodb::bson::{oid::ObjectId, Document};
 
@@ -18,16 +17,14 @@ impl IndexerService {
         Self { context }
     }
 
-    pub async fn index_customer(&self, since: i64) -> anyhow::Result<Vec<Document>> {
+    pub async fn index_customer(&self, since: i64) -> error::Result<Vec<Document>> {
         let auth = self.context.auth();
 
         if !GetData.get_access(auth, ()) {
-            bail!("No access to get customer data {:?}", auth)
+            return Err(anyhow::anyhow!("No access to get customer data {:?}", auth).code(400));
         }
 
-        let Some(customers) = self.context.get_repository::<Customer<ObjectId>>() else {
-            bail!("No customer repository found")
-        };
+        let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
 
         let customers = customers.get_all_since(since).await?;
 
@@ -37,15 +34,13 @@ impl IndexerService {
             .collect::<Vec<_>>())
     }
 
-    pub async fn index_project(&self, since: i64) -> anyhow::Result<Vec<Document>> {
+    pub async fn index_project(&self, since: i64) -> error::Result<Vec<Document>> {
         let auth = self.context.auth();
 
         if !GetData.get_access(auth, ()) {
-            bail!("No access to get customer data: {:?}", auth)
+            return Err(anyhow::anyhow!("No access to get customer data: {:?}", auth).code(400));
         }
-        let Some(customers) = self.context.get_repository::<Project<ObjectId>>() else {
-            bail!("No project repository found")
-        };
+        let customers = self.context.try_get_repository::<Project<ObjectId>>()?;
 
         let customers = customers.get_all_since(since).await?;
 
@@ -55,32 +50,28 @@ impl IndexerService {
             .collect::<Vec<_>>())
     }
 
-    pub async fn find_customers(&self, ids: Vec<ObjectId>) -> anyhow::Result<Vec<PublicCustomer>> {
+    pub async fn find_customers(&self, ids: Vec<ObjectId>) -> error::Result<Vec<PublicCustomer>> {
         let auth = self.context.auth();
 
         if !GetData.get_access(auth, ()) {
-            bail!("No access to get customer data: {:?}", auth)
+            return Err(anyhow::anyhow!("No access to get customer data: {:?}", auth).code(400));
         }
 
-        let Some(customers) = self.context.get_repository::<Customer<ObjectId>>() else {
-            bail!("No customer repository found")
-        };
+        let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
 
         let customers = customers.find_all_by_ids("user_id", ids).await?;
 
         Ok(customers.into_iter().map(|x| auth.public_customer(x)).collect::<Vec<_>>())
     }
 
-    pub async fn find_projects(&self, ids: Vec<ObjectId>) -> anyhow::Result<Vec<PublicProject>> {
+    pub async fn find_projects(&self, ids: Vec<ObjectId>) -> error::Result<Vec<PublicProject>> {
         let auth = self.context.auth();
 
         if !GetData.get_access(auth, ()) {
-            bail!("No access to get customer data: {:?}", auth)
+            return Err(anyhow::anyhow!("No access to get customer data: {:?}", auth).code(400));
         }
 
-        let Some(projects) = self.context.get_repository::<Project<ObjectId>>() else {
-            bail!("No project repository found")
-        };
+        let projects = self.context.try_get_repository::<Project<ObjectId>>()?;
 
         let projects = projects.find_all_by_ids("id", ids).await?;
 

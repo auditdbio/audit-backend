@@ -7,7 +7,7 @@ use type_map::concurrent::TypeMap;
 
 use crate::{
     auth::Auth,
-    error::{self, ServiceError},
+    error::{self, ServiceError, AddCode},
     repository::RepositoryObject,
 };
 
@@ -121,7 +121,7 @@ impl<'a, 'b, T: Serialize> ServiceRequest<'a, 'b, T> {
         self
     }
 
-    pub async fn send(self) -> anyhow::Result<reqwest::Response> {
+    pub async fn send(self) -> error::Result<reqwest::Response> {
         let url = self.url.as_ref().unwrap();
         let mut request = self
             .client
@@ -153,7 +153,7 @@ impl Context {
         self.0.repositories.get::<T>().cloned()
     }
 
-    pub fn try_get_repository<T: 'static>(&self) -> anyhow::Result<RepositoryObject<T>> {
+    pub fn try_get_repository<T: 'static>(&self) -> error::Result<RepositoryObject<T>> {
         self.0
             .repositories
             .get::<RepositoryObject<T>>()
@@ -161,7 +161,7 @@ impl Context {
             .ok_or(anyhow!(
                 "Repository for type {} not found",
                 std::any::type_name::<T>()
-            ))
+            ).code(500))
     }
 
     pub fn auth(&self) -> &Auth {

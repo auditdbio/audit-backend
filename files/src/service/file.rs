@@ -1,12 +1,11 @@
 use std::{fs::File, io::Write, path::Path};
 
 use actix_files::NamedFile;
-use anyhow::bail;
 use common::{
     access_rules::{AccessRules, Edit, Read},
     auth::Auth,
     context::Context,
-    repository::Entity,
+    repository::Entity, error::{AddCode, self},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -80,10 +79,8 @@ impl FileService {
         private: bool,
         original_name: String,
         content: Vec<u8>,
-    ) -> anyhow::Result<()> {
-        let Some(metas) = self.context.get_repository::<Metadata>() else {
-            bail!("No metadata repository found")
-        };
+    ) -> error::Result<()> {
+        let metas = self.context.try_get_repository::<Metadata>()?;
 
         let path = format!("/auditdb-files/{}", path);
 
@@ -96,7 +93,7 @@ impl FileService {
         let os_path = Path::new(&path);
 
         let Some(prefix) = os_path.parent() else {
-            bail!("No parent directory")
+            return Err(anyhow::anyhow!("No parent directory").code(500));
         };
 
         std::fs::create_dir_all(prefix)?;
@@ -120,20 +117,19 @@ impl FileService {
         Ok(())
     }
 
-    pub async fn find_file(&self, path: String) -> anyhow::Result<NamedFile> {
+    pub async fn find_file(&self, path: String) -> error::Result<NamedFile> {
         let auth = self.context.auth();
 
         let path = format!("/auditdb-files/{}", path);
 
-        let Some(metas) = self.context.get_repository::<Metadata>() else {
-            bail!("No metadata repository found")
-        };
+        let metas = self.context.try_get_repository::<Metadata>()?;
+
         let Some(meta) = metas.find("path", &Bson::String(path.clone())).await? else {
-            bail!("File not found")
+            return Err(anyhow::anyhow!("File not found").code(404));
         };
 
         if !Read.get_access(auth, &meta) {
-            bail!("Access denied for this user")
+            return Err(anyhow::anyhow!("Access denied for this user").code(403));
         }
         let file = actix_files::NamedFile::open_async(format!("{}.{}", path, meta.extension))
             .await
@@ -142,19 +138,17 @@ impl FileService {
         Ok(file)
     }
 
-    pub async fn delete_file(&self, path: String) -> anyhow::Result<()> {
+    pub async fn delete_file(&self, path: String) -> error::Result<()> {
         let auth = self.context.auth();
 
-        let Some(metas) = self.context.get_repository::<Metadata>() else {
-            bail!("No metadata repository found")
-        };
+        let metas = self.context.try_get_repository::<Metadata>()?;
 
         let Some(meta) = metas.find("path", &Bson::String(path.clone())).await? else {
-            bail!("File not found")
+            return Err(anyhow::anyhow!("File not found").code(404));
         };
 
         if !Edit.get_access(auth, &meta) {
-            bail!("Access denied for this user")
+            return Err(anyhow::anyhow!("Access denied for this user").code(403));
         }
 
         let path = format!("/auditdb-files/{}", path);
@@ -164,17 +158,11 @@ impl FileService {
         Ok(())
     }
 
-    pub async fn create_file_token(&self) -> anyhow::Result<String> {
-        todo!()
-    }
-
-    pub async fn file_by_token(&self, token: String) -> anyhow::Result<NamedFile> {
-        let Some(tokens) = self.context.get_repository::<FileToken>() else {
-            bail!("No token repository found")
-        };
+    pub async fn file_by_token(&self, token: String) -> error::Result<NamedFile> {
+        let tokens = self.context.try_get_repository::<FileToken>()?;
 
         let Some(token) = tokens.find("token", &Bson::String(token.clone())).await? else {
-            bail!("File not found")
+            return Err(anyhow::anyhow!("File not found").code(404));
         };
 
         let path = format!("/auditdb-files/{}", token.path);

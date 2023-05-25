@@ -1,9 +1,8 @@
-use anyhow::bail;
 use common::{
     access_rules::{AccessRules, SendMail},
     context::Context,
     entities::letter::{CreateLetter, Letter},
-    repository::Entity,
+    repository::Entity, error::{AddCode, self},
 };
 use lettre::{transport::smtp::authentication::Credentials, Message, SmtpTransport, Transport};
 use mongodb::bson::oid::ObjectId;
@@ -47,7 +46,7 @@ impl MailService {
         MailService { context }
     }
 
-    async fn send_email(&self, letter: Letter) -> anyhow::Result<()> {
+    async fn send_email(&self, letter: Letter) -> error::Result<()> {
         let email = letter.email.parse()?;
 
         let sender_email = letter.sender.clone().unwrap_or(EMAIL_ADDRESS.to_string());
@@ -57,7 +56,7 @@ impl MailService {
                 .to(email)
                 .subject(letter.subject.clone())
                 .body(letter.message.clone()) else {
-                    bail!("Error building email");
+                    return Err(anyhow::anyhow!("Error building email").code(500));
                 };
         let mailer = SmtpTransport::relay("smtp.gmail.com")
             .unwrap()
@@ -67,12 +66,12 @@ impl MailService {
             ))
             .build();
         if let Err(err) = mailer.send(&email) {
-            bail!("Error sending email: {}", err);
+            return Err(anyhow::anyhow!("Error sending email: {}", err).code(500));
         }
         Ok(())
     }
 
-    pub async fn feedback(&self, feedback: CreateFeedback) -> anyhow::Result<()> {
+    pub async fn feedback(&self, feedback: CreateFeedback) -> error::Result<()> {
         let feedbacks = self.context.try_get_repository::<Feedback>()?;
 
         let letter = Letter {
@@ -100,13 +99,13 @@ impl MailService {
         Ok(())
     }
 
-    pub async fn send_letter(&self, letter: CreateLetter) -> anyhow::Result<()> {
+    pub async fn send_letter(&self, letter: CreateLetter) -> error::Result<()> {
         let auth = self.context.auth();
 
         let letters = self.context.try_get_repository::<Letter>()?;
 
         if !SendMail.get_access(auth, ()) {
-            bail!("Users can't send mail: {:?}", auth);
+            return Err(anyhow::anyhow!("Users can't send mail: {:?}", auth).code(403));
         }
 
         let letter = Letter {

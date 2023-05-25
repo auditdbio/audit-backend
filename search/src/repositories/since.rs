@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::Arc;
 
+use common::error;
 use common::repository::mongo_repository::MongoRepository;
 use common::repository::Entity;
 use common::services::{AUDITORS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL};
@@ -72,7 +73,7 @@ impl SinceRepo {
         }
     }
 
-    pub async fn update(&self, dict: HashMap<String, i64>) -> anyhow::Result<()> {
+    pub async fn update(&self, dict: HashMap<String, i64>) -> error::Result<()> {
         let doc: Document = dict.into_iter().map(|(k, v)| (k, Bson::Int64(v))).collect();
         self.repo
             .collection
