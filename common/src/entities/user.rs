@@ -14,6 +14,8 @@ pub struct User<Id> {
     pub current_role: String,
     pub last_modified: i64,
     pub is_new: bool,
+    #[serde(default)]
+    pub is_admin: bool,
 }
 
 impl User<String> {
@@ -27,6 +29,7 @@ impl User<String> {
             current_role: self.current_role,
             last_modified: self.last_modified,
             is_new: self.is_new,
+            is_admin: self.is_admin,
         }
     }
 }
@@ -42,6 +45,7 @@ impl User<ObjectId> {
             current_role: self.current_role,
             last_modified: self.last_modified,
             is_new: self.is_new,
+            is_admin: self.is_admin,
         }
     }
 }

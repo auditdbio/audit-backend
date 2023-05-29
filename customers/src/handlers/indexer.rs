@@ -1,6 +1,7 @@
 use actix_web::{
     get, post,
     web::{self, Json},
+    HttpResponse,
 };
 use common::{
     context::Context,
@@ -51,4 +52,9 @@ pub async fn get_project_data(
     Json(ids): web::Json<Vec<ObjectId>>,
 ) -> error::Result<Json<Vec<PublicProject>>> {
     Ok(Json(IndexerService::new(context).find_projects(ids).await?))
+}
+
+#[get("/api/customers/ping")]
+pub async fn ping() -> HttpResponse {
+    HttpResponse::Ok().finish()
 }

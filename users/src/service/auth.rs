@@ -14,6 +14,10 @@ use serde::{Deserialize, Serialize};
 
 use super::user::CreateUser;
 
+lazy_static::lazy_static! {
+    static ref ADMIN_CREATION_PASSWORD: String = std::env::var("ADMIN_CREATION_PASSWORD").unwrap();
+}
+
 pub struct AuthService {
     context: Context,
 }
@@ -88,7 +92,11 @@ impl AuthService {
         if !Self::request_access(login.password.clone(), &user.password, &user.salt) {
             return Err(anyhow::anyhow!("Incorrect password").code(401));
         }
-        let auth = Auth::User(user.id);
+        let auth = if user.is_admin {
+            Auth::Admin(user.id)
+        } else {
+            Auth::User(user.id)
+        };
 
         Ok(Token {
             user: user.stringify(),
@@ -101,6 +109,9 @@ impl AuthService {
         mut user: CreateUser,
         verify_email: bool,
     ) -> error::Result<User<String>> {
+        let is_admin: bool =
+            user.admin_creation_password == Some(ADMIN_CREATION_PASSWORD.to_string());
+
         let users = self.context.try_get_repository::<User<ObjectId>>()?;
 
         let links = self.context.try_get_repository::<Link>()?;
@@ -174,6 +185,7 @@ impl AuthService {
             current_role: user.current_role,
             last_modified: Utc::now().timestamp_micros(),
             is_new: true,
+            is_admin,
         };
 
         let link = Link {

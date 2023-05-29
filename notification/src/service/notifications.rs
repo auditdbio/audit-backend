@@ -61,11 +61,17 @@ impl From<Notification> for PublicNotification {
     }
 }
 
+use common::default_timestamp;
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct NotificationInner {
     message: String,
     is_read: bool,
     is_sound: bool,
+    link: Option<String>,
+
+    #[serde(default = "default_timestamp")]
+    timestamp: i64,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -247,4 +253,17 @@ pub async fn read(
     notifications.read(id).await?;
 
     Ok(id.to_hex())
+}
+
+pub async fn get_unread_notifications(
+    context: Context,
+    notifications: &NotificationsRepository,
+) -> error::Result<Vec<PublicNotification>> {
+    let auth = context.auth();
+
+    let user_id = auth.id().unwrap();
+
+    let notifications = notifications.get_unread(user_id).await?;
+
+    Ok(notifications.into_iter().map(|n| n.into()).collect())
 }

@@ -1,17 +1,19 @@
-pub mod handlers;
+pub mod handler;
 pub mod service;
 
 use std::sync::Arc;
 
 use actix_cors::Cors;
-use actix_web::{
-    body::MessageBody,
-    dev::{ServiceFactory, ServiceRequest, ServiceResponse},
-    middleware, web, App,
-};
+use actix_web::body::MessageBody;
+use actix_web::dev::ServiceFactory;
+use actix_web::dev::ServiceRequest;
+use actix_web::dev::ServiceResponse;
+use actix_web::middleware;
+use actix_web::web;
+use actix_web::App;
 use common::context::ServiceState;
-pub use handlers::auditor::*;
-use handlers::indexer::{get_auditor_data, ping, provide_auditor_data};
+use handler::ping::status;
+use service::ping::services;
 
 pub fn create_app(
     state: Arc<ServiceState>,
@@ -31,13 +33,7 @@ pub fn create_app(
         .wrap(cors)
         .wrap(middleware::Logger::default())
         .app_data(web::Data::new(state))
-        .service(post_auditor)
-        .service(get_auditor)
-        .service(patch_auditor)
-        .service(delete_auditor)
-        .service(provide_auditor_data)
-        .service(get_my_auditor)
-        .service(get_auditor_data)
-        .service(ping);
+        .app_data(web::Data::new(services()))
+        .service(status);
     app
 }

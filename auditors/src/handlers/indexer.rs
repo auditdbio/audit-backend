@@ -1,6 +1,7 @@
 use actix_web::{
     get, post,
     web::{self, Json},
+    HttpResponse,
 };
 use common::{context::Context, entities::auditor::PublicAuditor, error};
 use mongodb::bson::{oid::ObjectId, Document};
@@ -25,4 +26,9 @@ pub async fn get_auditor_data(
     Json(ids): web::Json<Vec<ObjectId>>,
 ) -> error::Result<Json<Vec<PublicAuditor>>> {
     Ok(Json(IndexerService::new(context).find_auditors(ids).await?))
+}
+
+#[get("/api/auditors/ping")]
+pub async fn ping() -> HttpResponse {
+    HttpResponse::Ok().finish()
 }

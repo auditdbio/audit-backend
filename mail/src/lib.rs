@@ -7,7 +7,10 @@ use actix_web::{
     middleware, web, App,
 };
 use common::context::ServiceState;
-use handlers::mail::{send_feedback, send_mail};
+use handlers::{
+    indexer::ping,
+    mail::{send_feedback, send_mail},
+};
 
 pub mod handlers;
 pub mod service;
@@ -31,6 +34,7 @@ pub fn create_app(
         .wrap(middleware::Logger::default())
         .app_data(web::Data::new(state))
         .service(send_mail)
-        .service(send_feedback);
+        .service(send_feedback)
+        .service(ping);
     app
 }

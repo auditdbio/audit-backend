@@ -7,8 +7,11 @@ use actix_web::{
     middleware, web, App,
 };
 use common::context::ServiceState;
-use handlers::file::{create_file, delete_file, find_file};
 pub use handlers::*;
+use handlers::{
+    file::{create_file, delete_file, find_file},
+    indexer::ping,
+};
 
 pub mod handlers;
 pub mod service;
@@ -33,7 +36,8 @@ pub fn create_app(
         .app_data(web::Data::new(state))
         .service(create_file)
         .service(find_file)
-        .service(delete_file);
+        .service(delete_file)
+        .service(ping);
 
     app
 }

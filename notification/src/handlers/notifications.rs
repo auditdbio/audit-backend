@@ -10,7 +10,8 @@ use mongodb::bson::doc;
 use crate::{
     repositories::notifications::NotificationsRepository,
     service::notifications::{
-        read, subscribe_to_notifications, CreateNotification, NotificationsManager,
+        get_unread_notifications, read, subscribe_to_notifications, CreateNotification,
+        NotificationsManager, PublicNotification,
     },
 };
 
@@ -47,4 +48,12 @@ pub async fn read_notification(
     let id = read(context, &notifs, id.parse()?).await?;
 
     Ok(HttpResponse::Ok().json(doc! {"id": id}))
+}
+
+#[get("/api/unread_notifications")]
+pub async fn unread_notifications(
+    context: Context,
+    notifs: web::Data<NotificationsRepository>,
+) -> error::Result<Json<Vec<PublicNotification>>> {
+    Ok(Json(get_unread_notifications(context, &notifs).await?))
 }
