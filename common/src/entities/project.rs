@@ -68,7 +68,7 @@ impl Project<ObjectId> {
 
 impl Entity for Project<ObjectId> {
     fn id(&self) -> ObjectId {
-        self.id.clone()
+        self.id
     }
 }
 

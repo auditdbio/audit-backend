@@ -7,7 +7,7 @@ use common::{
         audit_request::{AuditRequest, TimeRange},
         auditor::PublicAuditor,
         contacts::Contacts,
-        issue::{ChangeIssue, Issue, Status, Event},
+        issue::{ChangeIssue, Event, Issue, Status},
         project::PublicProject,
         role::Role,
     },
@@ -201,12 +201,12 @@ impl AuditService {
         let audits = match role {
             Role::Auditor => {
                 audits
-                    .find_many("auditor_id", &Bson::ObjectId(auth.id().unwrap().clone()))
+                    .find_many("auditor_id", &Bson::ObjectId(*auth.id().unwrap()))
                     .await?
             }
             Role::Customer => {
                 audits
-                    .find_many("customer_id", &Bson::ObjectId(auth.id().unwrap().clone()))
+                    .find_many("customer_id", &Bson::ObjectId(*auth.id().unwrap()))
                     .await?
             }
         };
@@ -369,7 +369,7 @@ impl AuditService {
             for create_event in events {
                 let event = Event {
                     timestamp: Utc::now().timestamp(),
-                    user: self.context.auth().id().unwrap().clone(),
+                    user: *self.context.auth().id().unwrap(),
                     kind: create_event.kind,
                     message: create_event.message,
                     id: issue.events.len(),
@@ -378,7 +378,6 @@ impl AuditService {
                 issue.events.push(event);
             }
         }
-
 
         issue.last_modified = Utc::now().timestamp();
 

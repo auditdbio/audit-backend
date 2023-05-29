@@ -22,7 +22,7 @@ pub async fn notifications(
     notifications: web::Data<NotificationsRepository>,
     user_id: web::Path<String>,
 ) -> error::Result<HttpResponse> {
-    Ok(subscribe_to_notifications(req, stream, manager, user_id.parse()?, &notifications).await?)
+    subscribe_to_notifications(req, stream, manager, user_id.parse()?, &notifications).await
 }
 
 #[post("/api/send_notification")]

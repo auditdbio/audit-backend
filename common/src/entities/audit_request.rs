@@ -71,6 +71,6 @@ impl AuditRequest<ObjectId> {
 
 impl Entity for AuditRequest<ObjectId> {
     fn id(&self) -> ObjectId {
-        self.id.clone()
+        self.id
     }
 }

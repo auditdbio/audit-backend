@@ -68,7 +68,7 @@ impl From<Auditor<String>> for Auditor<ObjectId> {
 
 impl Entity for Auditor<ObjectId> {
     fn id(&self) -> ObjectId {
-        self.user_id.clone()
+        self.user_id
     }
 }
 

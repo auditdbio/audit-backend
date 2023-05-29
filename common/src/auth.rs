@@ -164,7 +164,7 @@ struct Claims {
 
 impl Auth {
     pub fn from_token(token: &str) -> error::Result<Self> {
-        match decode::<Claims>(&token, &DECODING_KEY, &Validation::new(Algorithm::HS512)) {
+        match decode::<Claims>(token, &DECODING_KEY, &Validation::new(Algorithm::HS512)) {
             Ok(c) => {
                 let claims = c.claims;
                 match claims.role {

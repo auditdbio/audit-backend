@@ -71,6 +71,6 @@ impl Audit<ObjectId> {
 
 impl Entity for Audit<ObjectId> {
     fn id(&self) -> ObjectId {
-        self.id.clone()
+        self.id
     }
 }

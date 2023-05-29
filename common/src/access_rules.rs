@@ -18,6 +18,7 @@ pub struct Edit;
 
 impl<'a, 'b> AccessRules<&'a Auth, &'b User<ObjectId>> for Read {
     fn get_access(&self, auth: &'a Auth, _user: &'b User<ObjectId>) -> bool {
+        #[allow(clippy::match_single_binding)]
         match auth {
             _ => true,
         }
@@ -37,6 +38,7 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b User<ObjectId>> for Edit {
 
 impl<'a, 'b> AccessRules<&'a Auth, &'b Customer<ObjectId>> for Read {
     fn get_access(&self, auth: &'a Auth, _customer: &'b Customer<ObjectId>) -> bool {
+        #[allow(clippy::match_single_binding)]
         match auth {
             _ => true,
         }
@@ -55,6 +57,7 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b Customer<ObjectId>> for Edit {
 
 impl<'a, 'b> AccessRules<&'a Auth, &'b Auditor<ObjectId>> for Read {
     fn get_access(&self, auth: &'a Auth, _auditor: &'b Auditor<ObjectId>) -> bool {
+        #[allow(clippy::match_single_binding)]
         match auth {
             _ => true,
         }
@@ -133,7 +136,7 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b Audit<ObjectId>> for Edit {
 
 pub struct GetData;
 
-impl<'a, 'b> AccessRules<&'a Auth, ()> for GetData {
+impl<'a> AccessRules<&'a Auth, ()> for GetData {
     fn get_access(&self, auth: &'a Auth, _user: ()) -> bool {
         match auth {
             Auth::Service(_, _) | Auth::Admin(_) => true,
@@ -145,7 +148,7 @@ impl<'a, 'b> AccessRules<&'a Auth, ()> for GetData {
 
 pub struct SendMail;
 
-impl<'a, 'b> AccessRules<&'a Auth, ()> for SendMail {
+impl<'a> AccessRules<&'a Auth, ()> for SendMail {
     fn get_access(&self, auth: &'a Auth, _user: ()) -> bool {
         match auth {
             Auth::Service(_, _) | Auth::Admin(_) => true,

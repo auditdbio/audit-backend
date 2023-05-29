@@ -133,7 +133,7 @@ impl RequestService {
         let customer_id = request.customer_id.parse()?;
         let auditor_id = request.auditor_id.parse()?;
 
-        if &customer_id == &auditor_id {
+        if customer_id == auditor_id {
             return Err(anyhow::anyhow!("You can't create audit with yourself").code(400));
         }
 
@@ -233,9 +233,7 @@ impl RequestService {
             Role::Customer => "customer_id",
         };
 
-        let result = requests
-            .find_many(id, &Bson::ObjectId(user_id.clone()))
-            .await?;
+        let result = requests.find_many(id, &Bson::ObjectId(*user_id)).await?;
 
         let mut public_requests = Vec::new();
 

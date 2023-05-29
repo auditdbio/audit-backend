@@ -77,14 +77,14 @@ pub async fn create_file(context: Context, mut payload: Multipart) -> error::Res
 
 #[get("/api/file/{filename:.*}")]
 pub async fn find_file(context: Context, filename: Path<String>) -> error::Result<NamedFile> {
-    Ok(FileService::new(context)
+    FileService::new(context)
         .find_file(filename.into_inner())
-        .await?)
+        .await
 }
 
 #[delete("/api/file/{filename:.*}")]
 pub async fn delete_file(context: Context, filename: Path<String>) -> error::Result<NamedFile> {
-    Ok(FileService::new(context)
+    FileService::new(context)
         .find_file(filename.into_inner())
-        .await?)
+        .await
 }

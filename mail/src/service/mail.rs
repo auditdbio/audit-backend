@@ -26,7 +26,7 @@ pub struct Feedback {
 
 impl Entity for Feedback {
     fn id(&self) -> ObjectId {
-        self.id.clone()
+        self.id
     }
 }
 
@@ -56,7 +56,7 @@ impl MailService {
                 .from(sender_email.parse().unwrap())
                 .to(email)
                 .subject(letter.subject.clone())
-                .body(letter.message.clone()) else {
+                .body(letter.message) else {
                     return Err(anyhow::anyhow!("Error building email").code(500));
                 };
         let mailer = SmtpTransport::relay("smtp.gmail.com")

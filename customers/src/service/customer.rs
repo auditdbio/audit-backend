@@ -52,10 +52,7 @@ impl CustomerService {
         let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
 
         let customer = Customer {
-            user_id: auth
-                .id()
-                .ok_or(anyhow::anyhow!("No user id found"))?
-                .clone(),
+            user_id: *auth.id().ok_or(anyhow::anyhow!("No user id found"))?,
             avatar: customer.avatar.unwrap_or_default(),
             first_name: customer.first_name,
             last_name: customer.last_name,
@@ -93,11 +90,11 @@ impl CustomerService {
         let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
 
         let customer = customers
-            .find("user_id", &Bson::ObjectId(auth.id().unwrap().clone()))
+            .find("user_id", &Bson::ObjectId(*auth.id().unwrap()))
             .await?
             .map(Customer::stringify);
 
-        if let None = customer {
+        if customer.is_none() {
             let user = self
                 .context
                 .make_request::<PublicUser>()
@@ -166,7 +163,7 @@ impl CustomerService {
 
     pub async fn change(&self, change: CustomerChange) -> error::Result<Customer<String>> {
         let auth = self.context.auth();
-        let id = auth.id().unwrap().clone();
+        let id = *auth.id().unwrap();
 
         let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
 

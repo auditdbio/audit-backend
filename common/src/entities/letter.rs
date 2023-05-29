@@ -14,7 +14,7 @@ pub struct Letter {
 
 impl Entity for Letter {
     fn id(&self) -> ObjectId {
-        self.id.clone()
+        self.id
     }
 }
 

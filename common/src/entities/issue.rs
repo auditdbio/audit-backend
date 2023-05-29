@@ -165,12 +165,11 @@ pub struct ChangeIssue {
 
 impl ChangeIssue {
     pub fn get_access_auditor(&self, _audit: &Audit<ObjectId>) -> bool {
-        let status = if let Some(action) = &self.status {
+        if let Some(action) = &self.status {
             action.is_auditor()
         } else {
             true
-        };
-        status
+        }
     }
 
     pub fn get_access_customer(&self, _audit: &Audit<ObjectId>) -> bool {
@@ -190,9 +189,9 @@ impl<'a, 'b> AccessRules<&'a Audit<ObjectId>, &'b Auth> for ChangeIssue {
             Auth::Admin(_) => true,
             Auth::User(id) => {
                 if &object.auditor_id == id {
-                    self.get_access_auditor(&object)
+                    self.get_access_auditor(object)
                 } else if &object.customer_id == id {
-                    self.get_access_customer(&object)
+                    self.get_access_customer(object)
                 } else {
                     false
                 }

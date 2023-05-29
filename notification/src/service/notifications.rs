@@ -40,7 +40,7 @@ impl Notification {
 
 impl Entity for Notification {
     fn id(&self) -> ObjectId {
-        self.id.clone()
+        self.id
     }
 }
 
@@ -76,6 +76,12 @@ pub struct CreateNotification {
 
 pub struct NotificationsManager {
     subscribers: Mutex<HashMap<ObjectId, HashMap<ObjectId, Recipient<Notification>>>>,
+}
+
+impl Default for NotificationsManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl NotificationsManager {
@@ -181,11 +187,11 @@ pub async fn subscribe_to_notifications(
     initial.reverse();
 
     let actor = NotificationsActor {
-        session_id: session_id.clone(),
+        session_id,
         manager: manager.clone(),
         initial,
         auth: false,
-        user_id: user_id.clone(),
+        user_id,
         hb: Instant::now(),
     };
 
@@ -209,7 +215,7 @@ pub async fn send_notification(
 ) -> error::Result<()> {
     let notif = Notification {
         id: ObjectId::new(),
-        user_id: notif.user_id.clone(),
+        user_id: notif.user_id,
         inner: notif.inner,
     };
     let auth = context.auth();
@@ -223,7 +229,7 @@ pub async fn send_notification(
     notifications.insert(&notif).await?;
 
     if let Some(subscribers) = map_lock.get(&notif.user_id) {
-        for (_, recipient) in subscribers {
+        for recipient in subscribers.values() {
             recipient.do_send(notif.clone());
         }
     }
@@ -238,7 +244,7 @@ pub async fn read(
 ) -> error::Result<String> {
     let _auth = context.auth();
 
-    notifications.read(id.clone()).await?;
+    notifications.read(id).await?;
 
     Ok(id.to_hex())
 }

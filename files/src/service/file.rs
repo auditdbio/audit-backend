@@ -100,7 +100,7 @@ impl FileService {
         std::fs::create_dir_all(prefix)?;
 
         let extension = original_name.split('.').last().unwrap().to_string();
-        let mut file = File::create(&format!("{}.{}", path, extension))?;
+        let mut file = File::create(format!("{}.{}", path, extension))?;
 
         file.write_all(&content).unwrap();
 

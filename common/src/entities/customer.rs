@@ -56,7 +56,7 @@ impl Customer<ObjectId> {
 
 impl Entity for Customer<ObjectId> {
     fn id(&self) -> ObjectId {
-        self.user_id.clone()
+        self.user_id
     }
 }
 

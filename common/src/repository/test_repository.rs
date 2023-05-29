@@ -13,6 +13,12 @@ pub struct TestRepository<T> {
     pub db: Mutex<Vec<Bson>>,
 }
 
+impl<T> Default for TestRepository<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> TestRepository<T> {
     pub fn new() -> Self {
         Self {

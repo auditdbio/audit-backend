@@ -51,7 +51,7 @@ impl ProjectService {
         let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
 
         let customer = customers
-            .find("user_id", &Bson::ObjectId(auth.id().unwrap().clone()))
+            .find("user_id", &Bson::ObjectId(*auth.id().unwrap()))
             .await?
             .unwrap();
 
@@ -68,10 +68,7 @@ impl ProjectService {
 
         let project = Project {
             id: ObjectId::new(),
-            customer_id: auth
-                .id()
-                .ok_or(anyhow::anyhow!("No customer id found"))?
-                .clone(),
+            customer_id: *auth.id().ok_or(anyhow::anyhow!("No customer id found"))?,
             name: project.name,
             description: project.description,
             scope: project.scope,
@@ -110,7 +107,7 @@ impl ProjectService {
         let projects = self.context.try_get_repository::<Project<ObjectId>>()?;
 
         let projects = projects
-            .find_many("customer_id", &Bson::ObjectId(auth.id().unwrap().clone()))
+            .find_many("customer_id", &Bson::ObjectId(*auth.id().unwrap()))
             .await?;
 
         Ok(projects.into_iter().map(Project::stringify).collect())
