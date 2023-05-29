@@ -24,7 +24,7 @@ pub struct WaitingListElement {
 
 impl Entity for WaitingListElement {
     fn id(&self) -> ObjectId {
-        self.id.clone()
+        self.id
     }
 }
 

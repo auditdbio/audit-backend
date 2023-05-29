@@ -70,7 +70,7 @@ impl UserService {
 
         let users = self.context.try_get_repository::<User<ObjectId>>()?;
 
-        let Some(user) = users.find("id", &Bson::ObjectId(auth.id().unwrap().clone())).await? else {
+        let Some(user) = users.find("id", &Bson::ObjectId(*auth.id().unwrap())).await? else {
             return Ok(None);
         };
 

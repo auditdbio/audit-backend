@@ -50,7 +50,7 @@ pub struct Code {
 
 impl Entity for Code {
     fn id(&self) -> ObjectId {
-        self.user.clone()
+        self.user
     }
 }
 
@@ -73,7 +73,7 @@ impl AuthService {
         Self { context }
     }
 
-    fn request_access(mut auth_password: String, correct_password: &String, salt: &String) -> bool {
+    fn request_access(mut auth_password: String, correct_password: &String, salt: &str) -> bool {
         auth_password.push_str(salt);
         &sha256::digest(auth_password) == correct_password
     }

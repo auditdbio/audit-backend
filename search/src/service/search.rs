@@ -22,7 +22,7 @@ pub(super) async fn get_data(client: &Client, url: &str, since: i64) -> Option<V
         return None;
     };
 
-    return Some(body);
+    Some(body)
 }
 
 pub async fn fetch_data(
@@ -44,7 +44,7 @@ pub async fn fetch_data(
 
     for since in data.dict.iter_mut() {
         let timestamp = Utc::now().timestamp_micros();
-        let Some(docs) = get_data(&client, &since.0 ,*since.1).await else {
+        let Some(docs) = get_data(&client, since.0 ,*since.1).await else {
             log::info!("No data for {}", since.0);
             continue;
         };

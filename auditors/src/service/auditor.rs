@@ -56,10 +56,7 @@ impl AuditorService {
         let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
 
         let auditor = Auditor {
-            user_id: auth
-                .id()
-                .ok_or(anyhow::anyhow!("No user id found"))?
-                .clone(),
+            user_id: *auth.id().ok_or(anyhow::anyhow!("No user id found"))?,
             avatar: auditor.avatar.unwrap_or_default(),
             first_name: auditor.first_name,
             last_name: auditor.last_name,
@@ -99,11 +96,11 @@ impl AuditorService {
         let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
 
         let auditor = auditors
-            .find("user_id", &Bson::ObjectId(auth.id().unwrap().clone()))
+            .find("user_id", &Bson::ObjectId(*auth.id().unwrap()))
             .await?
             .map(Auditor::stringify);
 
-        if let None = auditor {
+        if auditor.is_none() {
             let user = self
                 .context
                 .make_request::<PublicUser>()
@@ -174,7 +171,7 @@ impl AuditorService {
 
     pub async fn change(&self, change: AuditorChange) -> error::Result<Auditor<String>> {
         let auth = self.context.auth();
-        let id = auth.id().unwrap().clone();
+        let id = *auth.id().unwrap();
 
         let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
 

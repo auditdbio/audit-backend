@@ -28,6 +28,8 @@ pub fn create_app(
     >,
 > {
     let cors = Cors::permissive();
+
+    #[allow(clippy::let_and_return)]
     let app = App::new()
         .wrap(cors)
         .wrap(middleware::Logger::default())

@@ -106,7 +106,7 @@ impl SearchRepo {
 
         let tags = query
             .tags
-            .split(" ")
+            .split(' ')
             .filter_map(|s| {
                 if !s.is_empty() {
                     Some(s.to_ascii_lowercase())
@@ -124,7 +124,7 @@ impl SearchRepo {
             });
         }
 
-        if &query.kind != &Some("customer".to_string()) {
+        if query.kind != Some("customer".to_string()) {
             let price_from = query.price_from.unwrap_or(0);
             let price_to = query.price_to.unwrap_or(i64::MAX);
             docs.push(doc! {
