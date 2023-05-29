@@ -30,7 +30,6 @@ pub struct CreateUser {
 pub struct UserChange {
     email: Option<String>,
     password: Option<String>,
-    current_password: Option<String>,
     name: Option<String>,
     current_role: Option<String>,
     is_new: Option<bool>,
@@ -96,17 +95,6 @@ impl UserService {
         }
 
         if let Some(mut password) = change.password {
-            let Some(current_password) = change.current_password else {
-                return Err(anyhow::anyhow!("Current password is required").code(400));
-            };
-
-            if !ChangePassword.get_access(current_password, &user) {
-                return Err(anyhow::anyhow!(
-                    "User is not available to change this user's password"
-                )
-                .code(403));
-            }
-
             let salt: String = rand::thread_rng()
                 .sample_iter(&Alphanumeric)
                 .take(10)
