@@ -30,6 +30,7 @@ pub struct CreateUser {
 pub struct UserChange {
     email: Option<String>,
     password: Option<String>,
+    current_password: Option<String>,
     name: Option<String>,
     current_role: Option<String>,
     is_new: Option<bool>,
