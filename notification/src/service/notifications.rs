@@ -12,6 +12,7 @@ use common::{
     access_rules::AccessRules,
     auth::Auth,
     context::Context,
+    entities::notification::{CreateNotification, NotificationInner},
     error::{self, AddCode},
     repository::Entity,
 };
@@ -59,25 +60,6 @@ impl From<Notification> for PublicNotification {
             inner: notification.inner,
         }
     }
-}
-
-use common::default_timestamp;
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct NotificationInner {
-    message: String,
-    is_read: bool,
-    is_sound: bool,
-    link: Option<String>,
-
-    #[serde(default = "default_timestamp")]
-    timestamp: i64,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct CreateNotification {
-    pub user_id: ObjectId,
-    pub inner: NotificationInner,
 }
 
 pub struct NotificationsManager {

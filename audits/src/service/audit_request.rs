@@ -1,6 +1,7 @@
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
+    api::{send_notification, NewNotification},
     context::Context,
     entities::{
         audit_request::{AuditRequest, PriceRange, TimeRange},
@@ -188,6 +189,13 @@ impl RequestService {
             requests
                 .delete("id", &old_version_of_this_request.id)
                 .await?;
+        } else if last_changer == Role::Auditor {
+            let new_notification: NewNotification =
+                serde_json::from_str(include_str!("../../templates/new_audit_request.txt"))?;
+            send_notification(&self.context, true, true, new_notification).await?;
+        } else {
+            let new_notification: NewNotification =
+                serde_json::from_str(include_str!("../../templates/new_audit_offer.txt"))?;
         }
 
         requests.insert(&request).await?;

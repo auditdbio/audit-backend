@@ -5,6 +5,7 @@ pub mod contacts;
 pub mod customer;
 pub mod issue;
 pub mod letter;
+pub mod notification;
 pub mod project;
 pub mod role;
 pub mod user;

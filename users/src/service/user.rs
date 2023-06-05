@@ -101,10 +101,7 @@ impl UserService {
             };
 
             if !ChangePassword.get_access(current_password, &user) {
-                return Err(anyhow::anyhow!(
-                    "User is not available to change this user's password"
-                )
-                .code(403));
+                return Err(anyhow::anyhow!("You wrote old password incorrectly.").code(403));
             }
 
             let salt: String = rand::thread_rng()
