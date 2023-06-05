@@ -4,14 +4,14 @@ use actix_web::{
     HttpRequest, HttpResponse,
 };
 
-use common::{context::Context, error};
+use common::{context::Context, entities::notification::CreateNotification, error};
 use mongodb::bson::doc;
 
 use crate::{
     repositories::notifications::NotificationsRepository,
     service::notifications::{
-        get_unread_notifications, read, subscribe_to_notifications, CreateNotification,
-        NotificationsManager, PublicNotification,
+        get_unread_notifications, read, subscribe_to_notifications, NotificationsManager,
+        PublicNotification,
     },
 };
 

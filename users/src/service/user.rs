@@ -95,6 +95,14 @@ impl UserService {
         }
 
         if let Some(mut password) = change.password {
+            let Some(current_password) = change.current_password else {
+                return Err(anyhow::anyhow!("Current password is required").code(400));
+            };
+
+            if !ChangePassword.get_access(current_password, &user) {
+                return Err(anyhow::anyhow!("You wrote old password incorrectly.").code(403));
+            }
+
             let salt: String = rand::thread_rng()
                 .sample_iter(&Alphanumeric)
                 .take(10)

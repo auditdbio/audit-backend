@@ -183,9 +183,7 @@ impl Auth {
                     }
                 }
             }
-            Err(err) => {
-                panic!("Error: {:?}", err);
-            }
+            Err(err) => Ok(Auth::None),
         }
     }
 

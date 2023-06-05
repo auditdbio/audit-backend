@@ -78,7 +78,9 @@ impl CustomerService {
         };
 
         if !Read.get_access(auth, &customer) {
-            return Err(anyhow::anyhow!("User is not available to change this customer").code(403));
+            return Err(
+                anyhow::anyhow!("User is not available to get data from this customer").code(403),
+            );
         }
 
         Ok(Some(auth.public_customer(customer)))
