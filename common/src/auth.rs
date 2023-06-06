@@ -1,5 +1,3 @@
-use std::error::Error;
-
 use chrono::Utc;
 use jsonwebtoken::{
     decode, errors::ErrorKind, Algorithm, DecodingKey, EncodingKey, Header, Validation,

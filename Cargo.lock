@@ -841,6 +841,7 @@ dependencies = [
  "jsonwebkey",
  "jsonwebtoken",
  "lazy_static",
+ "log",
  "mongodb",
  "once_cell",
  "reqwest",

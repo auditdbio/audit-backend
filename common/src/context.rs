@@ -55,10 +55,23 @@ impl FromRequest for Context {
                 .and_then(|x| x.strip_prefix("Bearer ")) // remove prefix
                 .map(Auth::from_token);
 
-            let user_auth = if let Some(Ok(Some(auth))) = auth {
-                auth
-            } else {
-                Auth::None
+            let user_auth = match auth {
+                Some(Ok(Some(res))) => {
+                    log::info!("Token parsed successfully");
+                    res
+                }
+                Some(Ok(None)) => {
+                    log::error!("Token expired");
+                    Auth::None
+                }
+                Some(err) => {
+                    log::error!("Error parsing token: {:?}", err);
+                    Auth::None
+                }
+                None => {
+                    log::error!("No header provided");
+                    Auth::None
+                }
             };
 
             let Some(state) = req
