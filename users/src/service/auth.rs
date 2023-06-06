@@ -73,6 +73,11 @@ impl<'b> AccessRules<String, &'b User<ObjectId>> for ChangePassword {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TokenResponce {
+    pub token: String,
+}
+
 impl AuthService {
     pub fn new(context: Context) -> Self {
         Self { context }
@@ -303,12 +308,17 @@ impl AuthService {
         Ok(())
     }
 
-    pub async fn restore(&self, req: HttpRequest) -> error::Result<()> {
+    pub async fn restore(&self, req: HttpRequest) -> error::Result<TokenResponce> {
         let Some(token) = req.headers().get("Authorization") else {
-            return Ok(());
+            return Err(anyhow::anyhow!("No token found").code(401));
         };
         let token = token.to_str()?.strip_prefix("Bearer ").unwrap();
         let auth = Auth::from_token(token)?;
-        Ok(())
+        if auth.is_some() && auth != Some(Auth::None) {
+            return Ok(TokenResponce {
+                token: auth.unwrap().to_token()?,
+            });
+        }
+        Err(anyhow::anyhow!("Invalid token").code(401))
     }
 }

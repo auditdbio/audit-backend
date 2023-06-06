@@ -1,12 +1,12 @@
 use actix_web::{
     get, post,
     web::{self, Json},
-    HttpResponse,
+    HttpRequest, HttpResponse,
 };
 use common::{context::Context, entities::user::User, error};
 
 use crate::service::{
-    auth::{AuthService, ChangePasswordData, Login, Token},
+    auth::{AuthService, ChangePasswordData, Login, Token, TokenResponce},
     user::CreateUser,
 };
 
@@ -69,4 +69,12 @@ pub async fn reset_password(
     AuthService::new(context).reset_password(code).await?;
 
     Ok(HttpResponse::Ok().finish())
+}
+
+#[get("/api/auth/restore_token")]
+pub async fn restore_token(
+    context: Context,
+    req: HttpRequest,
+) -> error::Result<Json<TokenResponce>> {
+    Ok(Json(AuthService::new(context).restore(req).await?))
 }
