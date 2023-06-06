@@ -1,3 +1,4 @@
+use actix_web::HttpRequest;
 use chrono::Utc;
 use common::{
     access_rules::AccessRules,
@@ -299,6 +300,15 @@ impl AuthService {
         user.salt = salt;
 
         users.insert(&user).await?;
+        Ok(())
+    }
+
+    pub async fn restore(&self, req: HttpRequest) -> error::Result<()> {
+        let Some(token) = req.headers().get("Authorization") else {
+            return Ok(());
+        };
+        let token = token.to_str()?.strip_prefix("Bearer ").unwrap();
+        let auth = Auth::from_token(token)?;
         Ok(())
     }
 }

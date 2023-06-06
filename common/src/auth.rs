@@ -1,5 +1,9 @@
+use std::error::Error;
+
 use chrono::Utc;
-use jsonwebtoken::{decode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{
+    decode, errors::ErrorKind, Algorithm, DecodingKey, EncodingKey, Header, Validation,
+};
 use mongodb::bson::oid::ObjectId;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
@@ -163,27 +167,33 @@ struct Claims {
 }
 
 impl Auth {
-    pub fn from_token(token: &str) -> error::Result<Self> {
+    pub fn from_token(token: &str) -> error::Result<Option<Self>> {
         match decode::<Claims>(token, &DECODING_KEY, &Validation::new(Algorithm::HS512)) {
             Ok(c) => {
                 let claims = c.claims;
                 match claims.role {
                     Role::Admin => {
                         let id = claims.user_id.unwrap().parse()?;
-                        Ok(Auth::Admin(id))
+                        Ok(Some(Auth::Admin(id)))
                     }
                     Role::User => {
                         let id = claims.user_id.unwrap().parse()?;
-                        Ok(Auth::User(id))
+                        Ok(Some(Auth::User(id)))
                     }
                     Role::Service => {
                         let name = claims.service_name.unwrap();
                         let user_authorized = claims.user_authorized.unwrap_or(false);
-                        Ok(Auth::Service(name, user_authorized))
+                        Ok(Some(Auth::Service(name, user_authorized)))
                     }
                 }
             }
-            Err(err) => Ok(Auth::None),
+            Err(err) => {
+                if err.kind() == &ErrorKind::ExpiredSignature {
+                    Ok(None)
+                } else {
+                    Err(err.into())
+                }
+            }
         }
     }
 

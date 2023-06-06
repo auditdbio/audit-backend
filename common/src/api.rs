@@ -15,10 +15,10 @@ use crate::{
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NewNotification {
-    user_id: ObjectId,
-    subject: String,
-    message: String,
-    link: Option<String>,
+    pub user_id: Option<ObjectId>,
+    pub subject: String,
+    pub message: String,
+    pub link: Option<String>,
 }
 
 pub async fn send_notification(
@@ -33,6 +33,7 @@ pub async fn send_notification(
         message,
         link,
     } = new_notification;
+    let user_id = user_id.unwrap();
     let user = context
         .make_request::<PublicUser>()
         .auth(context.server_auth())

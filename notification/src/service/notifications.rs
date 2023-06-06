@@ -115,11 +115,14 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for NotificationsActo
             }
             Ok(ws::Message::Text(text)) => {
                 let token = text.to_string();
-                let auth = Auth::from_token(&token);
+                let Ok(Some(auth)) = Auth::from_token(&token) else {
+                    return;
+                };
 
-                if auth.is_err() || auth.unwrap().id().unwrap() != &self.user_id {
+                if auth.id().unwrap() != &self.user_id {
                     return;
                 }
+
                 if !self.auth {
                     self.auth = true;
                     ctx.text(serde_json::to_string(&self.initial).unwrap());

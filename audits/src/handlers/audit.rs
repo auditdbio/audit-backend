@@ -89,3 +89,12 @@ pub async fn patch_audit_issue(
         .await?;
     Ok(HttpResponse::Ok().json(result))
 }
+
+#[get("/api/audit/{id}/issue")]
+pub async fn get_audit_issue(
+    context: Context,
+    id: web::Path<String>,
+) -> error::Result<HttpResponse> {
+    let result = AuditService::new(context).get_issues(id.parse()?).await?;
+    Ok(HttpResponse::Ok().json(result))
+}

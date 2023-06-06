@@ -1,13 +1,14 @@
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
+    api::{send_notification, NewNotification},
     context::Context,
     entities::{
         audit::Audit,
         audit_request::{AuditRequest, TimeRange},
         auditor::PublicAuditor,
         contacts::Contacts,
-        issue::{ChangeIssue, Event, Issue, Status},
+        issue::{ChangeIssue, Event, EventKind, Issue, Status},
         project::PublicProject,
         role::Role,
     },
@@ -309,6 +310,13 @@ impl AuditService {
 
         audits.insert(&audit).await?;
 
+        let mut new_notification: NewNotification =
+            serde_json::from_str(include_str!("../../templates/audit_issue_disclosed.txt"))?;
+
+        new_notification.user_id = Some(audit.customer_id);
+
+        send_notification(&self.context, true, true, new_notification).await?;
+
         Ok(issue.to_string())
     }
 
@@ -318,11 +326,12 @@ impl AuditService {
         issue_id: usize,
         change: ChangeIssue,
     ) -> error::Result<Issue<String>> {
+        let auth = self.context.auth();
         let Some(mut audit) = self.get_audit(audit_id).await? else {
             return Err(anyhow::anyhow!("No audit found").code(404));
         };
 
-        if !change.get_access(&audit, self.context.auth()) {
+        if !change.get_access(&audit, auth) {
             return Err(anyhow::anyhow!("User is not available to change this issue").code(403));
         }
 
@@ -338,10 +347,23 @@ impl AuditService {
             issue.description = description;
         }
 
+        let receiver_id = if auth.id().unwrap() == &audit.customer_id {
+            audit.auditor_id
+        } else {
+            audit.customer_id
+        };
+
         if let Some(action) = change.status {
             let Some(new_state) = issue.status.apply(&action) else {
                 return Err(anyhow::anyhow!("Invalid action").code(400));
             };
+            let mut new_notification: NewNotification = serde_json::from_str(include_str!(
+                "../../templates/audit_issue_status_change.txt"
+            ))?;
+
+            new_notification.user_id = Some(receiver_id);
+
+            send_notification(&self.context, true, true, new_notification).await?;
             issue.status = new_state;
         }
 
@@ -375,6 +397,16 @@ impl AuditService {
                     id: issue.events.len(),
                 };
 
+                if event.kind == EventKind::Comment {
+                    let mut new_notification: NewNotification = serde_json::from_str(
+                        include_str!("../../templates/audit_issue_comment.txt"),
+                    )?;
+
+                    new_notification.user_id = Some(receiver_id);
+
+                    send_notification(&self.context, true, true, new_notification).await?;
+                }
+
                 issue.events.push(event);
             }
         }
@@ -390,5 +422,22 @@ impl AuditService {
         audits.insert(&audit).await?;
 
         Ok(issue.to_string())
+    }
+
+    pub async fn get_issues(&self, audit_id: ObjectId) -> error::Result<Vec<Issue<String>>> {
+        let audit = self.get_audit(audit_id).await?;
+
+        if let Some(audit) = audit {
+            let issues = audit.issues;
+
+            let issues: Vec<Issue<String>> = issues
+                .into_iter()
+                .map(|issue| issue.to_string())
+                .collect::<Vec<Issue<String>>>();
+
+            return Ok(issues);
+        }
+
+        Ok(Vec::new())
     }
 }

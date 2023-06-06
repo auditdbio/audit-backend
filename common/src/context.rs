@@ -55,8 +55,8 @@ impl FromRequest for Context {
                 .and_then(|x| x.strip_prefix("Bearer ")) // remove prefix
                 .map(Auth::from_token);
 
-            let user_auth = if let Some(auth) = auth {
-                auth?
+            let user_auth = if let Some(Ok(Some(auth))) = auth {
+                auth
             } else {
                 Auth::None
             };

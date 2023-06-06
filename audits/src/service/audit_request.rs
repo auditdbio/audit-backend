@@ -189,13 +189,20 @@ impl RequestService {
             requests
                 .delete("id", &old_version_of_this_request.id)
                 .await?;
-        } else if last_changer == Role::Auditor {
-            let new_notification: NewNotification =
+        } else if last_changer == Role::Customer {
+            let mut new_notification: NewNotification =
                 serde_json::from_str(include_str!("../../templates/new_audit_request.txt"))?;
+
+            new_notification.user_id = Some(request.auditor_id);
+
             send_notification(&self.context, true, true, new_notification).await?;
         } else {
-            let new_notification: NewNotification =
+            let mut new_notification: NewNotification =
                 serde_json::from_str(include_str!("../../templates/new_audit_offer.txt"))?;
+
+            new_notification.user_id = Some(request.customer_id);
+
+            send_notification(&self.context, true, true, new_notification).await?;
         }
 
         requests.insert(&request).await?;
