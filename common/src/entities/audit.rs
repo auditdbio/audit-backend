@@ -9,9 +9,13 @@ use super::{audit_request::TimeRange, issue::Issue};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum AuditStatus {
+    #[serde(rename = "Waiting for audit", alias = "WaitingForAudit")]
     WaitingForAudit,
+    #[serde(rename = "In progress", alias = "InProgress")]
     InProgress,
+    #[serde(rename = "Issues workflow", alias = "IssuesWorkflow")]
     IssuesWorkflow,
+    #[serde(rename = "Resolved", alias = "Resolved")]
     Resolved,
 }
 

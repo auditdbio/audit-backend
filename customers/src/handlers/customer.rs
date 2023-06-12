@@ -63,7 +63,7 @@ pub async fn delete_customer(
     ))
 }
 
-#[get("/api/customer/project/{id}")]
+#[get("/api/customer/{id}/project")]
 pub async fn get_customer_projects(
     context: Context,
     id: web::Path<String>,
