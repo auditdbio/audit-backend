@@ -6,7 +6,10 @@ use actix_web::{
 
 use common::{
     context::Context,
-    entities::customer::{Customer, PublicCustomer},
+    entities::{
+        customer::{Customer, PublicCustomer},
+        project::PublicProject,
+    },
     error,
 };
 
@@ -57,5 +60,17 @@ pub async fn delete_customer(
 ) -> error::Result<Json<PublicCustomer>> {
     Ok(Json(
         CustomerService::new(context).delete(id.parse()?).await?,
+    ))
+}
+
+#[get("/api/customer/project/{id}")]
+pub async fn get_customer_projects(
+    context: Context,
+    id: web::Path<String>,
+) -> error::Result<Json<Vec<PublicProject>>> {
+    Ok(Json(
+        CustomerService::new(context)
+            .get_projects(id.parse()?)
+            .await?,
     ))
 }

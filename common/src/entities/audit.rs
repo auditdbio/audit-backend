@@ -2,13 +2,20 @@ use std::hash::Hash;
 
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
 use crate::repository::Entity;
 
 use super::{audit_request::TimeRange, issue::Issue};
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum AuditStatus {
+    WaitingForAudit,
+    InProgress,
+    IssuesWorkflow,
+    Resolved,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Audit<Id: Eq + Hash> {
     pub id: Id,
     pub customer_id: Id,
@@ -16,7 +23,7 @@ pub struct Audit<Id: Eq + Hash> {
     pub project_id: Id,
 
     pub description: String,
-    pub status: String,
+    pub status: AuditStatus,
     pub scope: Vec<String>,
     pub price: i64,
 

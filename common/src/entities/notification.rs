@@ -8,7 +8,8 @@ pub struct NotificationInner {
     pub message: String,
     pub is_read: bool,
     pub is_sound: bool,
-    pub link: Option<String>,
+    #[serde(default)]
+    pub links: Vec<String>,
 
     #[serde(default = "default_timestamp")]
     pub timestamp: i64,

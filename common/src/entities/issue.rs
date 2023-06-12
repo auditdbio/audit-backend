@@ -94,6 +94,12 @@ pub struct Issue<Id> {
     pub last_modified: i64,
 }
 
+impl<T> Issue<T> {
+    pub fn is_resolved(&self) -> bool {
+        !self.include || self.status == Status::Fixed || self.status == Status::WillNotFix
+    }
+}
+
 impl Issue<String> {
     pub fn parse(self) -> Issue<ObjectId> {
         Issue {

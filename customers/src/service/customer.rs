@@ -6,7 +6,7 @@ use common::{
         auditor::PublicAuditor,
         contacts::Contacts,
         customer::{Customer, PublicCustomer},
-        project::Project,
+        project::{Project, PublicProject},
         user::PublicUser,
     },
     error::{self, AddCode},
@@ -241,5 +241,23 @@ impl CustomerService {
         }
 
         Ok(auth.public_customer(customer))
+    }
+
+    pub async fn get_projects(&self, id: ObjectId) -> error::Result<Vec<PublicProject>> {
+        let auth = self.context.auth();
+
+        let projects = self.context.try_get_repository::<Project<ObjectId>>()?;
+
+        let projects = projects
+            .find_many("customer_id", &Bson::ObjectId(id))
+            .await?;
+
+        let projects = projects
+            .into_iter()
+            .filter(|project| Read.get_access(auth, project))
+            .map(|project| auth.public_project(project))
+            .collect();
+
+        Ok(projects)
     }
 }

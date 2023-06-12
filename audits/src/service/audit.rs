@@ -4,7 +4,7 @@ use common::{
     api::{send_notification, NewNotification},
     context::Context,
     entities::{
-        audit::Audit,
+        audit::{Audit, AuditStatus},
         audit_request::{AuditRequest, TimeRange},
         auditor::PublicAuditor,
         contacts::Contacts,
@@ -43,7 +43,7 @@ pub struct PublicAudit {
     pub project_name: String,
     pub avatar: String,
     pub description: String,
-    pub status: String,
+    pub status: AuditStatus,
     pub scope: Vec<String>,
     pub price: i64,
 
@@ -143,7 +143,7 @@ impl AuditService {
             auditor_id: request.auditor_id.parse()?,
             project_id: request.project_id.parse()?,
             description: request.description,
-            status: "pending".to_string(),
+            status: AuditStatus::WaitingForAudit,
             scope: request.project_scope,
             price: request.price,
             last_modified: Utc::now().timestamp_micros(),
@@ -234,10 +234,6 @@ impl AuditService {
             return Err(anyhow::anyhow!("User is not available to change this audit").code(403));
         }
 
-        if let Some(status) = change.status {
-            audit.status = status;
-        }
-
         if let Some(scope) = change.scope {
             audit.scope = scope;
         }
@@ -248,6 +244,16 @@ impl AuditService {
 
         if let Some(report_name) = change.report_name {
             audit.report_name = Some(report_name);
+        }
+
+        if audit.report.is_some() {
+            audit.status = AuditStatus::Resolved;
+        } else if audit.issues.is_empty() {
+            audit.status = AuditStatus::WaitingForAudit;
+        } else if audit.issues.iter().all(|issue| issue.is_resolved()) {
+            audit.status = AuditStatus::Resolved;
+        } else {
+            audit.status = AuditStatus::IssuesWorkflow;
         }
 
         audit.last_modified = Utc::now().timestamp_micros();
@@ -439,5 +445,23 @@ impl AuditService {
         }
 
         Ok(Vec::new())
+    }
+
+    pub async fn get_issue_by_id(
+        &self,
+        audit_id: ObjectId,
+        issue_id: usize,
+    ) -> error::Result<Issue<String>> {
+        let audit = self.get_audit(audit_id).await?;
+
+        if let Some(audit) = audit {
+            let issue = audit.issues.get(issue_id).cloned();
+
+            if let Some(issue) = issue {
+                return Ok(issue.to_string());
+            }
+        }
+
+        Err(anyhow::anyhow!("No issue found").code(404))
     }
 }

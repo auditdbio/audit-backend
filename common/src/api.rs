@@ -18,7 +18,7 @@ pub struct NewNotification {
     pub user_id: Option<ObjectId>,
     pub subject: String,
     pub message: String,
-    pub link: Option<String>,
+    pub links: Vec<String>,
 }
 
 pub async fn send_notification(
@@ -31,7 +31,7 @@ pub async fn send_notification(
         user_id,
         subject,
         message,
-        link,
+        links,
     } = new_notification;
     let user_id = user_id.unwrap();
     let user = context
@@ -73,7 +73,7 @@ pub async fn send_notification(
                 message,
                 is_read: false,
                 is_sound: true,
-                link,
+                links,
                 timestamp: default_timestamp(),
             },
         };

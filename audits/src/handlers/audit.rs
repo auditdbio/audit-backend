@@ -98,3 +98,14 @@ pub async fn get_audit_issue(
     let result = AuditService::new(context).get_issues(id.parse()?).await?;
     Ok(HttpResponse::Ok().json(result))
 }
+
+#[get("/api/audit/{id}/issue/{issue_id}")]
+pub async fn get_audit_issue_by_id(
+    context: Context,
+    id: web::Path<(String, usize)>,
+) -> error::Result<HttpResponse> {
+    let result = AuditService::new(context)
+        .get_issue_by_id(id.0.parse()?, id.1)
+        .await?;
+    Ok(HttpResponse::Ok().json(result))
+}

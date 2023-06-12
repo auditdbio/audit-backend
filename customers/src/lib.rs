@@ -53,6 +53,7 @@ pub fn create_app(
         .service(my_project)
         .service(get_customer_data)
         .service(get_project_data)
-        .service(ping);
+        .service(ping)
+        .service(get_customer_projects);
     app
 }
