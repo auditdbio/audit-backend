@@ -122,7 +122,8 @@ pub struct CreateIssue {
     pub status: Status,
     pub severity: String,
     pub category: String,
-    pub link: String,
+    #[serde(default)]
+    pub links: Vec<String>,
 }
 
 pub struct AuditService {
@@ -302,7 +303,7 @@ impl AuditService {
             severity: issue.severity,
             events: Vec::new(),
             category: issue.category,
-            link: issue.link,
+            links: issue.links,
             include: true,
             feedback: String::new(),
             last_modified: Utc::now().timestamp(),
@@ -381,8 +382,8 @@ impl AuditService {
             issue.category = category;
         }
 
-        if let Some(link) = change.link {
-            issue.link = link;
+        if let Some(links) = change.links {
+            issue.links = links;
         }
 
         if let Some(include) = change.include {

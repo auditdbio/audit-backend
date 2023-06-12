@@ -83,7 +83,8 @@ pub struct Issue<Id> {
     pub severity: String,
 
     pub category: String,
-    pub link: String,
+    #[serde(default)]
+    pub links: Vec<String>,
 
     pub status: Status,
     pub include: bool,
@@ -108,7 +109,7 @@ impl Issue<String> {
             description: self.description,
             severity: self.severity,
             category: self.category,
-            link: self.link,
+            links: self.links,
             status: self.status,
             include: self.include,
             feedback: self.feedback,
@@ -130,7 +131,7 @@ impl Issue<ObjectId> {
             description: self.description,
             severity: self.severity,
             category: self.category,
-            link: self.link,
+            links: self.links,
             status: self.status,
             include: self.include,
             feedback: self.feedback,
@@ -156,7 +157,7 @@ pub struct ChangeIssue {
     pub description: Option<String>,
 
     pub category: Option<String>,
-    pub link: Option<String>,
+    pub links: Option<Vec<String>>,
 
     pub severity: Option<String>,
 
