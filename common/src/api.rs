@@ -18,6 +18,7 @@ pub struct NewNotification {
     pub user_id: Option<ObjectId>,
     pub subject: String,
     pub message: String,
+    #[serde(default)]
     pub links: Vec<String>,
 }
 
