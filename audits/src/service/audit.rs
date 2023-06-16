@@ -28,6 +28,7 @@ pub struct AuditChange {
     pub report_name: Option<String>,
     pub report: Option<String>,
     pub time: Option<TimeRange>,
+    pub start_audit: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -124,7 +125,6 @@ pub struct CreateIssue {
     pub category: String,
     #[serde(default)]
     pub links: Vec<String>,
-    pub start_audit: Option<bool>,
 }
 
 pub struct AuditService {
