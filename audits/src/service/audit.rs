@@ -124,6 +124,7 @@ pub struct CreateIssue {
     pub category: String,
     #[serde(default)]
     pub links: Vec<String>,
+    pub start_audit: Option<bool>,
 }
 
 pub struct AuditService {
@@ -247,14 +248,22 @@ impl AuditService {
             audit.report_name = Some(report_name);
         }
 
-        if audit.report.is_some() {
-            audit.status = AuditStatus::Resolved;
-        } else if audit.issues.is_empty() {
-            audit.status = AuditStatus::WaitingForAudit;
-        } else if audit.issues.iter().all(|issue| issue.is_resolved()) {
-            audit.status = AuditStatus::Resolved;
-        } else {
-            audit.status = AuditStatus::IssuesWorkflow;
+        if let Some(start_audit) = change.start_audit {
+            if start_audit {
+                audit.status = AuditStatus::InProgress;
+            }
+        }
+
+        if audit.status != AuditStatus::WaitingForAudit {
+            if audit.report.is_some() {
+                audit.status = AuditStatus::Resolved;
+            } else if audit.issues.is_empty() {
+                audit.status = AuditStatus::InProgress;
+            } else if audit.issues.iter().all(|issue| issue.is_resolved()) {
+                audit.status = AuditStatus::Resolved;
+            } else {
+                audit.status = AuditStatus::IssuesWorkflow;
+            }
         }
 
         audit.last_modified = Utc::now().timestamp_micros();
