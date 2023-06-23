@@ -7,10 +7,10 @@ use mongodb::{
 };
 use mongodb_migrator::{migration::Migration, migrator::Env};
 
-pub struct AuditStatusMigration {}
+pub struct NewAuditStatusMigration {}
 
 #[async_trait]
-impl Migration for AuditStatusMigration {
+impl Migration for NewAuditStatusMigration {
     async fn up(&self, env: Env) -> anyhow::Result<()> {
         let conn = env
             .db
@@ -46,7 +46,7 @@ pub async fn up_migrations(mongo_uri: &str) -> anyhow::Result<()> {
     let client = Client::with_uri_str(mongo_uri).await.unwrap();
     let db = client.database("audits");
 
-    let migrations: Vec<Box<dyn Migration>> = vec![Box::new(AuditStatusMigration {})];
+    let migrations: Vec<Box<dyn Migration>> = vec![Box::new(NewAuditStatusMigration {})];
     mongodb_migrator::migrator::default::DefaultMigrator::new()
         .with_conn(db.clone())
         .with_migrations_vec(migrations)
