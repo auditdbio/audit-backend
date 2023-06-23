@@ -46,7 +46,10 @@ pub async fn up_migrations(mongo_uri: &str) -> anyhow::Result<()> {
     let client = Client::with_uri_str(mongo_uri).await.unwrap();
     let db = client.database("audits");
 
-    let migrations: Vec<Box<dyn Migration>> = vec![Box::new(NewAuditStatusMigration {})];
+    let migrations: Vec<Box<dyn Migration>> = vec![
+        Box::new(NewAuditStatusMigration {}),
+        Box::new(NewAuditStatusMigration {}),
+    ];
     mongodb_migrator::migrator::default::DefaultMigrator::new()
         .with_conn(db.clone())
         .with_migrations_vec(migrations)
