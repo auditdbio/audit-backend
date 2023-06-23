@@ -8,19 +8,29 @@ use crate::repository::Entity;
 use super::{audit_request::TimeRange, issue::Issue};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub enum AuditStatus {
+pub enum PublicAuditStatus {
     #[serde(rename = "Waiting for audit", alias = "WaitingForAudit")]
     WaitingForAudit,
     #[serde(rename = "In progress", alias = "InProgress")]
     InProgress,
     #[serde(rename = "Issues workflow", alias = "IssuesWorkflow")]
     IssuesWorkflow,
+    #[serde(rename = "Ready for resolve", alias = "Resolved")]
+    ReadyForResolve,
     #[serde(rename = "Resolved", alias = "Resolved")]
     Resolved,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum AuditStatus {
+    Waiting,
+    Started,
+    Resolved,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Audit<Id: Eq + Hash> {
+    #[serde(rename = "_id")]
     pub id: Id,
     pub customer_id: Id,
     pub auditor_id: Id,

@@ -13,6 +13,13 @@ use crate::{
     services::{MAIL_SERVICE, NOTIFICATIONS_SERVICE, PROTOCOL, USERS_SERVICE},
 };
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct PublicNotification {
+    pub id: String,
+    pub user_id: String,
+    pub inner: NotificationInner,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NewNotification {
     pub user_id: Option<ObjectId>,

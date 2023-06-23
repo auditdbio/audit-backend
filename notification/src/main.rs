@@ -2,10 +2,7 @@ use std::{env, sync::Arc};
 
 use actix_web::HttpServer;
 use common::{context::ServiceState, repository::mongo_repository::MongoRepository};
-use notification::{
-    create_app, repositories::notifications::NotificationsRepository,
-    service::notifications::NotificationsManager,
-};
+use notification::{create_app, repositories::notifications::NotificationsRepository};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -17,13 +14,11 @@ async fn main() -> std::io::Result<()> {
 
     let state = Arc::new(state);
 
-    let manager = Arc::new(NotificationsManager::new());
-
     let repo = Arc::new(NotificationsRepository::new(
         MongoRepository::new(&mongo_uri, "notification", "notifications").await,
     ));
 
-    HttpServer::new(move || create_app(state.clone(), repo.clone(), manager.clone()))
+    HttpServer::new(move || create_app(state.clone(), repo.clone()))
         .bind(("0.0.0.0", 3008))?
         .run()
         .await

@@ -1,131 +1,22 @@
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
-    api::{send_notification, NewNotification},
+    api::{
+        audits::{AuditAction, AuditChange, CreateIssue, PublicAudit},
+        send_notification, NewNotification,
+    },
     context::Context,
     entities::{
         audit::{Audit, AuditStatus},
-        audit_request::{AuditRequest, TimeRange},
-        auditor::PublicAuditor,
-        contacts::Contacts,
-        issue::{ChangeIssue, Event, EventKind, Issue, Status},
-        project::PublicProject,
+        audit_request::AuditRequest,
+        issue::{ChangeIssue, Event, EventKind, Issue},
         role::Role,
     },
     error::{self, AddCode},
-    services::{CUSTOMERS_SERVICE, PROTOCOL},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
-use serde::{Deserialize, Serialize};
 
 use super::audit_request::PublicRequest;
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AuditChange {
-    pub avatar: Option<String>,
-    pub status: Option<String>,
-    pub scope: Option<Vec<String>>,
-    pub report_name: Option<String>,
-    pub report: Option<String>,
-    pub time: Option<TimeRange>,
-    pub start_audit: Option<bool>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PublicAudit {
-    pub id: String,
-    pub auditor_id: String,
-    pub customer_id: String,
-    pub project_id: String,
-
-    pub auditor_first_name: String,
-    pub auditor_last_name: String,
-
-    pub project_name: String,
-    pub avatar: String,
-    pub description: String,
-    pub status: AuditStatus,
-    pub scope: Vec<String>,
-    pub price: i64,
-
-    pub auditor_contacts: Contacts,
-    pub customer_contacts: Contacts,
-    pub tags: Vec<String>,
-    pub last_modified: i64,
-    pub report: Option<String>,
-    pub report_name: Option<String>,
-    pub time: TimeRange,
-
-    pub issues: Vec<Issue<String>>,
-}
-
-impl PublicAudit {
-    pub async fn new(context: &Context, audit: Audit<ObjectId>) -> error::Result<PublicAudit> {
-        let auditor = context
-            .make_request::<PublicAuditor>()
-            .get(format!(
-                "{}://{}/api/auditor/{}",
-                PROTOCOL.as_str(),
-                CUSTOMERS_SERVICE.as_str(),
-                audit.auditor_id
-            ))
-            .auth(context.server_auth())
-            .send()
-            .await?
-            .json::<PublicAuditor>()
-            .await?;
-
-        let project = context
-            .make_request::<PublicProject>()
-            .get(format!(
-                "{}://{}/api/project/{}",
-                PROTOCOL.as_str(),
-                CUSTOMERS_SERVICE.as_str(),
-                audit.project_id
-            ))
-            .auth(context.server_auth())
-            .send()
-            .await?
-            .json::<PublicProject>()
-            .await?;
-
-        let public_audit = PublicAudit {
-            id: audit.id.to_hex(),
-            auditor_id: audit.auditor_id.to_hex(),
-            customer_id: audit.customer_id.to_hex(),
-            project_id: audit.project_id.to_hex(),
-            auditor_first_name: auditor.first_name,
-            auditor_last_name: auditor.last_name,
-            project_name: project.name,
-            avatar: auditor.avatar,
-            description: audit.description,
-            status: audit.status,
-            scope: audit.scope,
-            price: audit.price,
-            auditor_contacts: auditor.contacts,
-            customer_contacts: project.creator_contacts,
-            tags: project.tags,
-            last_modified: audit.last_modified,
-            report: audit.report,
-            report_name: audit.report_name,
-            time: audit.time,
-            issues: Issue::to_string_map(audit.issues),
-        };
-
-        Ok(public_audit)
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CreateIssue {
-    pub name: String,
-    pub description: String,
-    pub status: Status,
-    pub severity: String,
-    pub category: String,
-    #[serde(default)]
-    pub links: Vec<String>,
-}
 
 pub struct AuditService {
     context: Context,
@@ -145,7 +36,7 @@ impl AuditService {
             auditor_id: request.auditor_id.parse()?,
             project_id: request.project_id.parse()?,
             description: request.description,
-            status: AuditStatus::WaitingForAudit,
+            status: AuditStatus::Waiting,
             scope: request.project_scope,
             price: request.price,
             last_modified: Utc::now().timestamp_micros(),
@@ -236,33 +127,32 @@ impl AuditService {
             return Err(anyhow::anyhow!("User is not available to change this audit").code(403));
         }
 
-        if let Some(scope) = change.scope {
-            audit.scope = scope;
-        }
+        if audit.status != AuditStatus::Resolved {
+            if let Some(scope) = change.scope {
+                audit.scope = scope;
+            }
 
-        if let Some(report) = change.report {
-            audit.report = Some(report);
-        }
+            if let Some(report) = change.report {
+                audit.report = Some(report);
+            }
 
-        if let Some(report_name) = change.report_name {
-            audit.report_name = Some(report_name);
-        }
-
-        if let Some(start_audit) = change.start_audit {
-            if start_audit {
-                audit.status = AuditStatus::InProgress;
+            if let Some(report_name) = change.report_name {
+                audit.report_name = Some(report_name);
             }
         }
 
-        if audit.status != AuditStatus::WaitingForAudit {
-            if audit.report.is_some() {
-                audit.status = AuditStatus::Resolved;
-            } else if audit.issues.is_empty() {
-                audit.status = AuditStatus::InProgress;
-            } else if audit.issues.iter().all(|issue| issue.is_resolved()) {
-                audit.status = AuditStatus::Resolved;
-            } else {
-                audit.status = AuditStatus::IssuesWorkflow;
+        if let Some(action) = change.action {
+            match action {
+                AuditAction::Start => {
+                    if audit.status == AuditStatus::Waiting {
+                        audit.status = AuditStatus::Started;
+                    }
+                }
+                AuditAction::Resolve => {
+                    if audit.status == AuditStatus::Started {
+                        audit.status = AuditStatus::Resolved;
+                    }
+                }
             }
         }
 

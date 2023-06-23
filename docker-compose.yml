@@ -1,0 +1,198 @@
+
+x-common-variables: &common-variables
+  MONGOURI: "mongodb://${MONGO_LOGIN}:{MONGO_PASSWORD}@database:27017"
+  JWT_SECRET: "${JWT_SECRET}"
+  HELLO_MAIL_ADDRESS: "${HELLO_MAIL_ADDRESS}"
+  HELLO_MAIL_PASSWORD: "${HELLO_MAIL_PASSWORD}"
+  RUST_LOG: actix,reqwest,search,common=trace
+  SECRET: "laskdflasdlfasldf"
+  AUDITORS_SERVICE_URL: "dev.auditdb.io"
+  AUDITS_SERVICE_URL: "dev.auditdb.io"
+  CUSTOMERS_SERVICE_URL: "dev.auditdb.io"
+  FILES_SERVICE_URL: "dev.auditdb.io"
+  MAIL_SERVICE_URL: "dev.auditdb.io"
+  SEARCH_SERVICE_URL: "dev.auditdb.io"
+  USERS_SERVICE_URL: "dev.auditdb.io"
+  NOTIFICATIONS_SERVICE_URL: "dev.auditdb.io"
+  FRONTEND: "dev.auditdb.io"
+  PROTOCOL: "https"
+  TIMEOUT: "60"
+  FEEDBACK_EMAIL: "hello@auditdb.io"
+  RUN_ACTION_SECRET: "aWfM7EafMV"
+  ADMIN_CREATION_PASSWORD: "lsadlfasdf;asdfkalsfas;d"
+
+services:
+  binaries:
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    volumes:
+      - binaries:/data/binaries
+
+  users:
+    depends_on:
+      - binaries
+    build: ./users
+    expose:
+      - 3001
+    volumes:
+      - binaries:/data/binaries
+    environment:
+      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_PATH: ~^/api/(user|auth|my_user|waiting_list)
+      <<: *common-variables
+    networks:
+      - database
+      - nginx-proxy
+
+  customers:
+    depends_on:
+      - binaries
+    build: ./customers
+    expose:
+      - 3002
+    volumes:
+      - binaries:/data/binaries
+    environment:
+      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_PATH: ~^/api/(customer|my_customer|project|my_project)
+      <<: *common-variables
+    networks:
+      - nginx-proxy
+      - database
+
+  audits:
+    depends_on:
+      - binaries
+    build: ./audits
+    volumes:
+      - binaries:/data/binaries
+    ports:
+      - 3003
+    environment:
+      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_PATH: ~^/api/(audit|my_audit|request|my_request)
+      <<: *common-variables
+    networks:
+      - nginx-proxy
+      - database
+
+  auditors:
+    depends_on:
+      - binaries
+    build: ./auditors
+    expose:
+      - 3004
+    volumes:
+      - binaries:/data/binaries
+    environment:
+      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_PATH: ~^/api/(auditor|my_auditor)
+      <<: *common-variables
+    networks:
+      - nginx-proxy
+      - database
+
+  files:
+    depends_on:
+      - binaries
+    build: ./files
+    expose:
+      - 3005
+    volumes:
+      - binaries:/data/binaries
+      - files:/auditdb-files
+    environment:
+      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_PATH: ~^/api/(file|notused1)
+      <<: *common-variables
+    networks:
+      - database
+      - nginx-proxy
+
+  search:
+    depends_on:
+      - binaries
+    build: ./search
+    expose:
+      - 3006
+    volumes:
+      - binaries:/data/binaries
+    environment:
+      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_PATH: ~^/api/(search|notused1)
+      <<: *common-variables
+    networks:
+      - nginx-proxy
+      - database
+
+  mail:
+    depends_on:
+      - binaries
+    build: ./mail
+    expose:
+      - 3007
+    volumes:
+      - binaries:/data/binaries
+    environment:
+      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_PATH: ~^/api/(mail|feedback)
+      <<: *common-variables
+    networks:
+      - nginx-proxy
+      - database
+
+  notification:
+    depends_on:
+      - binaries
+    build: ./notification
+    expose:
+      - 3008
+    volumes:
+      - binaries:/data/binaries
+    environment:
+      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_PATH: ~^/api/(send_notification|read_notification)
+      <<: *common-variables
+    networks:
+      - nginx-proxy
+      - database
+
+  event:
+    depends_on:
+      - binaries
+    build: ./event
+    expose:
+      - 3010
+    volumes:
+      - binaries:/data/binaries
+    environment:
+      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_PATH: ~^/api/(notifications|event)
+      <<: *common-variables
+    networks:
+      - nginx-proxy
+
+
+  database:
+    image: mongo:latest
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=kletska2002
+    ports:
+      - 27017:27017
+    volumes:
+      - test:/data/db
+    networks:
+      - database
+volumes:
+  database:
+  binaries:
+  files:
+  test:
+networks:
+  database:
+  nginx-proxy:
+    external:
+      true
+
