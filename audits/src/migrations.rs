@@ -119,6 +119,7 @@ pub async fn up_migrations(mongo_uri: &str) -> anyhow::Result<()> {
     let migrations: Vec<Box<dyn Migration>> = vec![
         Box::new(NewAuditStatusMigration {}),
         Box::new(SecondAttemptToMutateStatus {}),
+        Box::new(AuditStatusCorrection {}),
     ];
     mongodb_migrator::migrator::default::DefaultMigrator::new()
         .with_conn(db.clone())
