@@ -17,6 +17,7 @@ use common::context::ServiceState;
 pub use handlers::audit::*;
 pub use handlers::audit_request::*;
 
+#[must_use]
 pub fn create_app(
     state: Arc<ServiceState>,
 ) -> App<

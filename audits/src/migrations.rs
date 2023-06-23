@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use common::entities::audit::{Audit, AuditStatus};
 use futures::StreamExt;
 use mongodb::{
-    bson::{doc, from_document, oid::ObjectId, Bson, Document},
+    bson::{doc, from_document, oid::ObjectId, to_document, Bson, Document},
     Client,
 };
 use mongodb_migrator::{migration::Migration, migrator::Env};
@@ -33,6 +33,41 @@ impl Migration for NewAuditStatusMigration {
             conn.update_one(
                 doc! {"_id": audit.id},
                 doc! {"$set": {"status": serde_json::to_string(&audit.status)?}},
+                None,
+            )
+            .await?;
+        }
+
+        Ok(())
+    }
+}
+
+pub struct AuditStatusCorrection {}
+
+#[async_trait]
+impl Migration for AuditStatusCorrection {
+    async fn up(&self, env: Env) -> anyhow::Result<()> {
+        let conn = env
+            .db
+            .expect("db is unavailable")
+            .collection::<Document>("audits");
+        use mongodb::error::Result;
+        let audits = conn
+            .find(None, None)
+            .await?
+            .collect::<Vec<Result<Document>>>()
+            .await;
+
+        for audit in audits {
+            let mut audit = audit?;
+            audit.insert("status", Bson::String("Waiting".to_string()));
+            let mut audit = from_document::<Audit<ObjectId>>(audit)?;
+            if !audit.issues.is_empty() || audit.report.is_some() {
+                audit.status = AuditStatus::Started;
+            }
+            conn.update_one(
+                doc! {"_id": audit.id},
+                doc! {"$set": to_document(&audit)?},
                 None,
             )
             .await?;

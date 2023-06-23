@@ -42,7 +42,8 @@ pub struct RequestService {
 }
 
 impl RequestService {
-    pub fn new(context: Context) -> Self {
+    #[must_use]
+    pub const fn new(context: Context) -> Self {
         Self { context }
     }
 

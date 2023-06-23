@@ -338,7 +338,7 @@ impl AuditService {
 
             let issues: Vec<Issue<String>> = issues
                 .into_iter()
-                .map(|issue| issue.to_string())
+                .map(Issue::to_string)
                 .collect::<Vec<Issue<String>>>();
 
             return Ok(issues);
