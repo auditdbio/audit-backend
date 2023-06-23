@@ -44,7 +44,7 @@ impl Migration for AuditStatusMigration {
 
 pub async fn up_migrations(mongo_uri: &str) -> anyhow::Result<()> {
     let client = Client::with_uri_str(mongo_uri).await.unwrap();
-    let db = client.database("audit");
+    let db = client.database("audits");
 
     let migrations: Vec<Box<dyn Migration>> = vec![Box::new(AuditStatusMigration {})];
     mongodb_migrator::migrator::default::DefaultMigrator::new()
