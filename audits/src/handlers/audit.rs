@@ -5,6 +5,7 @@ use actix_web::{
 };
 
 use common::{
+    api::audits::{AuditChange, CreateIssue, PublicAudit},
     context::Context,
     entities::{issue::ChangeIssue, role::Role},
     error,
@@ -12,10 +13,7 @@ use common::{
 
 use serde_json::json;
 
-use crate::service::{
-    audit::{AuditChange, AuditService, CreateIssue, PublicAudit},
-    audit_request::PublicRequest,
-};
+use crate::service::{audit::AuditService, audit_request::PublicRequest};
 
 #[post("/api/audit")]
 pub async fn post_audit(

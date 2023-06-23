@@ -7,20 +7,15 @@ use actix_web::{
     middleware, web, App,
 };
 use common::context::ServiceState;
-use handlers::{
-    indexer::ping,
-    notifications::{read_notification, send_notification, unread_notifications},
-};
-use repositories::notifications::NotificationsRepository;
+use service::event::SessionManager;
+use tokio::sync::Mutex;
 
-pub mod access_rules;
 pub mod handlers;
-pub mod repositories;
 pub mod service;
 
 pub fn create_app(
     state: Arc<ServiceState>,
-    repo: Arc<NotificationsRepository>,
+    manager: Arc<Mutex<SessionManager>>,
 ) -> App<
     impl ServiceFactory<
         ServiceRequest,
@@ -36,11 +31,9 @@ pub fn create_app(
     let app = App::new()
         .wrap(cors)
         .wrap(middleware::Logger::default())
+        .app_data(web::Data::from(manager))
         .app_data(web::Data::new(state))
-        .app_data(web::Data::from(repo))
-        .service(send_notification)
-        .service(read_notification)
-        .service(unread_notifications)
-        .service(ping);
+        .service(handlers::event::events)
+        .service(handlers::ping);
     app
 }

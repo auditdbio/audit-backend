@@ -10,5 +10,6 @@ members = [
     "search",
     "mail",
     "notification",
-    "telemetry"
+    "telemetry",
+    "event"
 ]
