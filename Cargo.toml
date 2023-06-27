@@ -11,5 +11,6 @@ members = [
     "mail",
     "notification",
     "telemetry",
-    "event"
+    "event",
+    "report"
 ]
