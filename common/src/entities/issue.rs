@@ -151,7 +151,7 @@ pub struct CreateEvent {
     pub message: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
 pub struct ChangeIssue {
     pub name: Option<String>,
     pub description: Option<String>,

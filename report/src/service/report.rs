@@ -2,7 +2,7 @@ use std::process::Stdio;
 
 use tokio::{io::AsyncWriteExt, process::Command};
 
-pub async fn create_pandoc_report(md: String) -> anyhow::Result<String> {
+pub async fn create_pandoc_report(mut md: String) -> anyhow::Result<String> {
     let mut child = Command::new("pandoc")
         .arg("-f")
         .arg("markdown")

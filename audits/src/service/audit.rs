@@ -9,7 +9,7 @@ use common::{
     entities::{
         audit::{Audit, AuditStatus},
         audit_request::AuditRequest,
-        issue::{ChangeIssue, Event, EventKind, Issue},
+        issue::{ChangeIssue, Event, EventKind, Issue, Status},
         role::Role,
     },
     error::{self, AddCode},
@@ -328,6 +328,36 @@ impl AuditService {
         audits.insert(&audit).await?;
 
         Ok(issue.to_string())
+    }
+
+    pub async fn disclose_all(&self, audit_id: ObjectId) -> error::Result<Vec<Issue<String>>> {
+        let audit = self.get_audit(audit_id).await?;
+
+        // TODO: make auth
+
+        if let Some(mut audit) = audit {
+            audit.issues.iter_mut().for_each(|issue| {
+                if issue.status == Status::Draft {
+                    issue.status = Status::InProgress;
+                    issue.last_modified = Utc::now().timestamp();
+                }
+            });
+
+            let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
+            audits.delete("_id", &audit_id).await?;
+            audits.insert(&audit).await?;
+
+            let issues = audit.issues;
+
+            let issues: Vec<Issue<String>> = issues
+                .into_iter()
+                .map(Issue::to_string)
+                .collect::<Vec<Issue<String>>>();
+
+            return Ok(issues);
+        }
+
+        Ok(Vec::new())
     }
 
     pub async fn get_issues(&self, audit_id: ObjectId) -> error::Result<Vec<Issue<String>>> {

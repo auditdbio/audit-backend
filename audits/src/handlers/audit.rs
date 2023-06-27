@@ -107,3 +107,12 @@ pub async fn get_audit_issue_by_id(
         .await?;
     Ok(HttpResponse::Ok().json(result))
 }
+
+#[patch("/api/audit/{id}/disclose_all")]
+pub async fn patch_audit_disclose_all(
+    context: Context,
+    id: web::Path<String>,
+) -> error::Result<HttpResponse> {
+    let result = AuditService::new(context).disclose_all(id.parse()?).await?;
+    Ok(HttpResponse::Ok().json(result))
+}
