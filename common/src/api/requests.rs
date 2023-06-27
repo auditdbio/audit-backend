@@ -39,9 +39,8 @@ impl PublicRequest {
         request: AuditRequest<ObjectId>,
     ) -> error::Result<PublicRequest> {
         let auth = context.auth();
-        let project = context
+        let project = if let Ok(project) = context
             .make_request::<PublicProject>()
-            .auth(context.server_auth())
             .get(format!(
                 "{}://{}/api/project/{}",
                 PROTOCOL.as_str(),
@@ -52,7 +51,37 @@ impl PublicRequest {
             .send()
             .await?
             .json::<PublicProject>()
-            .await?;
+            .await
+        {
+            project
+        } else {
+            context
+                .make_request::<()>()
+                .post(format!(
+                    "{}://{}/api/project/auditor/{}/{}",
+                    PROTOCOL.as_str(),
+                    CUSTOMERS_SERVICE.as_str(),
+                    request.project_id,
+                    request.auditor_id
+                ))
+                .auth(context.server_auth())
+                .send()
+                .await?;
+
+            context
+                .make_request::<PublicProject>()
+                .get(format!(
+                    "{}://{}/api/project/{}",
+                    PROTOCOL.as_str(),
+                    CUSTOMERS_SERVICE.as_str(),
+                    request.project_id
+                ))
+                .auth(auth.clone())
+                .send()
+                .await?
+                .json::<PublicProject>()
+                .await?
+        };
 
         let auditor = context
             .make_request::<PublicAuditor>()
