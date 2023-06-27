@@ -96,7 +96,7 @@ impl RequestService {
 
         if let Some(old_version_of_this_request) = old_version_of_this_request {
             requests
-                .delete("_id", &old_version_of_this_request.id)
+                .delete("id", &old_version_of_this_request.id)
                 .await?;
         } else if last_changer == Role::Customer {
             let mut new_notification: NewNotification =
@@ -143,7 +143,7 @@ impl RequestService {
             .context
             .try_get_repository::<AuditRequest<ObjectId>>()?;
 
-        let Some(request) = requests.find("_id", &Bson::ObjectId(id)).await? else {
+        let Some(request) = requests.find("id", &Bson::ObjectId(id)).await? else {
             return Ok(None);
         };
 
@@ -196,7 +196,7 @@ impl RequestService {
             .context
             .try_get_repository::<AuditRequest<ObjectId>>()?;
 
-        let Some(mut request) = requests.find("_id", &Bson::ObjectId(id)).await? else {
+        let Some(mut request) = requests.find("id", &Bson::ObjectId(id)).await? else {
             return Err(anyhow::anyhow!("No customer found").code(404));
         };
 
@@ -228,7 +228,7 @@ impl RequestService {
 
         request.last_modified = Utc::now().timestamp_micros();
 
-        requests.delete("_id", &id).await?;
+        requests.delete("id", &id).await?;
         requests.insert(&request).await?;
 
         let public_request = PublicRequest::new(&self.context, request).await?;
@@ -243,7 +243,7 @@ impl RequestService {
             .context
             .try_get_repository::<AuditRequest<ObjectId>>()?;
 
-        let Some(request) = requests.delete("_id", &id).await? else {
+        let Some(request) = requests.delete("id", &id).await? else {
             return Err(anyhow::anyhow!("No customer found").code(404));
         };
 
