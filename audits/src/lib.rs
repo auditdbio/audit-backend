@@ -49,7 +49,8 @@ pub fn create_app(
         .service(post_audit_issue)
         .service(patch_audit_issue)
         .service(get_audit_issue)
-        .service(get_audit_issue_by_id);
+        .service(get_audit_issue_by_id)
+        .service(patch_audit_disclose_all);
 
     app
 }
