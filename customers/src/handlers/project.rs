@@ -1,6 +1,6 @@
 use actix_web::{
     delete, get, patch, post,
-    web::{self, Json},
+    web::{self, Json, Path},
     HttpResponse,
 };
 
@@ -54,4 +54,28 @@ pub async fn delete_project(
     Ok(Json(
         ProjectService::new(context).delete(id.parse()?).await?,
     ))
+}
+
+#[post("/api/project/auditor/{id}/{user_id}")]
+pub async fn add_auditor(
+    context: Context,
+    ids: Path<(String, String)>,
+) -> error::Result<HttpResponse> {
+    let (id, user_id) = ids.into_inner();
+    ProjectService::new(context)
+        .add_auditor(id.parse()?, user_id.parse()?)
+        .await?;
+    Ok(HttpResponse::Ok().finish())
+}
+
+#[delete("/api/project/auditor/{id}/{user_id}")]
+pub async fn delete_auditor(
+    context: Context,
+    ids: Path<(String, String)>,
+) -> error::Result<HttpResponse> {
+    let (id, user_id) = ids.into_inner();
+    ProjectService::new(context)
+        .delete_auditor(id.parse()?, user_id.parse()?)
+        .await?;
+    Ok(HttpResponse::Ok().finish())
 }

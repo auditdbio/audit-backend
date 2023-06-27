@@ -5,7 +5,6 @@ use common::{
     context::Context,
     entities::{
         audit_request::{AuditRequest, PriceRange, TimeRange},
-        project::PublicProject,
         role::Role,
     },
     error::{self, AddCode},
@@ -75,22 +74,6 @@ impl RequestService {
             );
         };
 
-        let project = self
-            .context
-            .make_request::<PublicProject>()
-            .auth(auth.clone())
-            .get(format!(
-                "{}://{}/api/project/{}",
-                PROTOCOL.as_str(),
-                CUSTOMERS_SERVICE.as_str(),
-                request.project_id
-            ))
-            .auth(self.context.server_auth())
-            .send()
-            .await?
-            .json::<PublicProject>()
-            .await?;
-
         let request = AuditRequest {
             id: ObjectId::new(),
             customer_id,
@@ -98,7 +81,6 @@ impl RequestService {
             project_id: request.project_id.parse()?,
             description: request.description,
             time: request.time,
-            project_scope: project.scope,
             price: request.price,
             last_modified: Utc::now().timestamp_micros(),
             last_changer,
@@ -114,7 +96,7 @@ impl RequestService {
 
         if let Some(old_version_of_this_request) = old_version_of_this_request {
             requests
-                .delete("id", &old_version_of_this_request.id)
+                .delete("_id", &old_version_of_this_request.id)
                 .await?;
         } else if last_changer == Role::Customer {
             let mut new_notification: NewNotification =
@@ -132,6 +114,21 @@ impl RequestService {
             send_notification(&self.context, true, true, new_notification).await?;
         }
 
+        if last_changer == Role::Customer {
+            self.context
+                .make_request::<()>()
+                .auth(auth.clone())
+                .post(format!(
+                    "{}://{}/project/auditor/{}/{}",
+                    PROTOCOL.as_str(),
+                    CUSTOMERS_SERVICE.as_str(),
+                    request.project_id,
+                    request.auditor_id
+                ))
+                .send()
+                .await?;
+        }
+
         requests.insert(&request).await?;
 
         let public_request = PublicRequest::new(&self.context, request).await?;
@@ -146,7 +143,7 @@ impl RequestService {
             .context
             .try_get_repository::<AuditRequest<ObjectId>>()?;
 
-        let Some(request) = requests.find("id", &Bson::ObjectId(id)).await? else {
+        let Some(request) = requests.find("_id", &Bson::ObjectId(id)).await? else {
             return Ok(None);
         };
 
@@ -199,7 +196,7 @@ impl RequestService {
             .context
             .try_get_repository::<AuditRequest<ObjectId>>()?;
 
-        let Some(mut request) = requests.find("id", &Bson::ObjectId(id)).await? else {
+        let Some(mut request) = requests.find("_id", &Bson::ObjectId(id)).await? else {
             return Err(anyhow::anyhow!("No customer found").code(404));
         };
 
@@ -213,10 +210,6 @@ impl RequestService {
 
         if let Some(time) = change.time {
             request.time = time;
-        }
-
-        if let Some(project_scope) = change.project_scope {
-            request.project_scope = project_scope;
         }
 
         if let Some(price) = change.price {
@@ -235,7 +228,7 @@ impl RequestService {
 
         request.last_modified = Utc::now().timestamp_micros();
 
-        requests.delete("id", &id).await?;
+        requests.delete("_id", &id).await?;
         requests.insert(&request).await?;
 
         let public_request = PublicRequest::new(&self.context, request).await?;
@@ -250,7 +243,7 @@ impl RequestService {
             .context
             .try_get_repository::<AuditRequest<ObjectId>>()?;
 
-        let Some(request) = requests.delete("id", &id).await? else {
+        let Some(request) = requests.delete("_id", &id).await? else {
             return Err(anyhow::anyhow!("No customer found").code(404));
         };
 
@@ -259,7 +252,30 @@ impl RequestService {
             return Err(anyhow::anyhow!("User is not available to delete this customer").code(400));
         }
 
-        let public_request = PublicRequest::new(&self.context, request).await?;
+        let current_role = if auth.id() == Some(&request.customer_id) {
+            Role::Customer
+        } else if auth.id() == Some(&request.auditor_id) {
+            Role::Auditor
+        } else {
+            return Err(anyhow::anyhow!("User is not available to change this customer").code(400));
+        };
+
+        let public_request = PublicRequest::new(&self.context, request.clone()).await?;
+
+        if current_role == Role::Customer {
+            self.context
+                .make_request::<()>()
+                .auth(auth.clone())
+                .post(format!(
+                    "{}://{}/project/auditor/{}/{}",
+                    PROTOCOL.as_str(),
+                    CUSTOMERS_SERVICE.as_str(),
+                    request.project_id,
+                    request.auditor_id
+                ))
+                .send()
+                .await?;
+        }
 
         Ok(public_request)
     }

@@ -78,6 +78,7 @@ impl ProjectService {
             creator_contacts,
             price: project.price,
             last_modified: Utc::now().timestamp_micros(),
+            auditors: Vec::new(),
         };
 
         projects.insert(&project).await?;
@@ -181,5 +182,53 @@ impl ProjectService {
         }
 
         Ok(auth.public_project(project))
+    }
+
+    pub async fn add_auditor(
+        &self,
+        project_id: ObjectId,
+        auditor_id: ObjectId,
+    ) -> error::Result<()> {
+        let auth = self.context.auth();
+        let projects = self.context.try_get_repository::<Project<ObjectId>>()?;
+
+        let Some(mut project) = projects.find("id", &Bson::ObjectId(project_id)).await? else {
+            return Err(anyhow::anyhow!("No project found").code(404));
+        };
+
+        if !Edit.get_access(auth, &project) {
+            return Err(anyhow::anyhow!("User is not available to change this project").code(403));
+        }
+
+        project.auditors.push(auditor_id);
+
+        projects.delete("id", &project_id).await?;
+        projects.insert(&project).await?;
+
+        Ok(())
+    }
+
+    pub async fn delete_auditor(
+        &self,
+        project_id: ObjectId,
+        auditor_id: ObjectId,
+    ) -> error::Result<()> {
+        let auth = self.context.auth();
+        let projects = self.context.try_get_repository::<Project<ObjectId>>()?;
+
+        let Some(mut project) = projects.find("id", &Bson::ObjectId(project_id)).await? else {
+            return Err(anyhow::anyhow!("No project found").code(404));
+        };
+
+        if !Edit.get_access(auth, &project) {
+            return Err(anyhow::anyhow!("User is not available to change this project").code(403));
+        }
+
+        project.auditors.retain(|id| id != &auditor_id);
+
+        projects.delete("id", &project_id).await?;
+        projects.insert(&project).await?;
+
+        Ok(())
     }
 }

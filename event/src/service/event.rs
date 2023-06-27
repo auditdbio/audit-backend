@@ -148,7 +148,7 @@ pub async fn start_session(
 }
 
 pub async fn make_event(
-    context: Context,
+    _context: Context,
     event: PublicEvent,
     manager: Arc<Mutex<SessionManager>>,
 ) -> error::Result<()> {

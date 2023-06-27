@@ -25,8 +25,6 @@ pub struct AuditRequest<Id> {
     pub customer_id: Id,
     pub project_id: Id,
 
-    pub project_scope: Vec<String>,
-
     pub description: String,
 
     pub price: i64,
@@ -43,7 +41,6 @@ impl AuditRequest<String> {
             customer_id: self.customer_id.parse().unwrap(),
             project_id: self.project_id.parse().unwrap(),
             description: self.description,
-            project_scope: self.project_scope,
             price: self.price,
             last_modified: self.last_modified,
             last_changer: self.last_changer,
@@ -60,7 +57,6 @@ impl AuditRequest<ObjectId> {
             customer_id: self.customer_id.to_hex(),
             project_id: self.project_id.to_hex(),
             description: self.description,
-            project_scope: self.project_scope,
             price: self.price,
             last_modified: self.last_modified,
             last_changer: self.last_changer,

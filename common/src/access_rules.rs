@@ -78,7 +78,11 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b Project<ObjectId>> for Read {
     fn get_access(&self, auth: &'a Auth, project: &'b Project<ObjectId>) -> bool {
         match auth {
             Auth::Service(_, _) | Auth::Admin(_) => true,
-            Auth::User(id) => project.publish_options.publish || id == &project.customer_id,
+            Auth::User(id) => {
+                project.publish_options.publish
+                    || id == &project.customer_id
+                    || project.auditors.contains(id)
+            }
             Auth::None => project.publish_options.publish,
         }
     }

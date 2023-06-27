@@ -28,6 +28,8 @@ pub struct Project<Id> {
     pub creator_contacts: Contacts,
     pub last_modified: i64,
     pub price: i64,
+    #[serde(default)]
+    pub auditors: Vec<Id>,
 }
 
 impl Project<String> {
@@ -44,6 +46,11 @@ impl Project<String> {
             creator_contacts: self.creator_contacts,
             last_modified: self.last_modified,
             price: self.price,
+            auditors: self
+                .auditors
+                .into_iter()
+                .map(|id| id.parse().unwrap())
+                .collect(),
         }
     }
 }
@@ -62,6 +69,7 @@ impl Project<ObjectId> {
             creator_contacts: self.creator_contacts,
             last_modified: self.last_modified,
             price: self.price,
+            auditors: self.auditors.into_iter().map(|id| id.to_hex()).collect(),
         }
     }
 }
@@ -85,32 +93,6 @@ pub struct PublicProject {
     pub creator_contacts: Contacts,
     pub price: i64,
 }
-
-// impl From<Project<ObjectId>> for PublicProject {
-//     fn from(project: Project<ObjectId>) -> Self {
-//         let creator_contacts = if project.creator_contacts.public_contacts {
-//             project.creator_contacts
-//         } else {
-//             Contacts {
-//                 email: None,
-//                 telegram: None,
-//                 public_contacts: false,
-//             }
-//         };
-
-//         Self {
-//             id: project.id.to_hex(),
-//             name: project.name,
-//             description: project.description,
-//             scope: project.scope,
-//             tags: project.tags,
-//             publish_options: project.publish_options,
-//             status: project.status,
-//             creator_contacts,
-//             price: project.price,
-//         }
-//     }
-// }
 
 impl From<Project<ObjectId>> for Option<Document> {
     fn from(project: Project<ObjectId>) -> Self {

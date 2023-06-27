@@ -52,7 +52,7 @@ impl AuditService {
             .context
             .try_get_repository::<AuditRequest<ObjectId>>()?;
 
-        requests.delete("id", &request.id.parse()?).await?;
+        requests.delete("_id", &request.id.parse()?).await?;
 
         let public_audit = PublicAudit::new(&self.context, audit).await?;
 
@@ -64,7 +64,7 @@ impl AuditService {
 
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
-        let Some(audit) = audits.find("id", &Bson::ObjectId(id)).await? else {
+        let Some(audit) = audits.find("_id", &Bson::ObjectId(id)).await? else {
             return Ok(None);
         };
 
@@ -119,7 +119,7 @@ impl AuditService {
 
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
-        let Some(mut audit) = audits.find("id", &Bson::ObjectId(id)).await? else {
+        let Some(mut audit) = audits.find("_id", &Bson::ObjectId(id)).await? else {
             return Err(anyhow::anyhow!("No audit found").code(404));
         };
 
@@ -158,7 +158,7 @@ impl AuditService {
 
         audit.last_modified = Utc::now().timestamp_micros();
 
-        audits.delete("id", &id).await?;
+        audits.delete("_id", &id).await?;
         audits.insert(&audit).await?;
 
         let public_audit = PublicAudit::new(&self.context, audit).await?;
@@ -171,7 +171,7 @@ impl AuditService {
 
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
-        let Some(audit) = audits.delete("id", &id).await? else {
+        let Some(audit) = audits.delete("_id", &id).await? else {
             return Err(anyhow::anyhow!("No audit found").code(404));
         };
 
@@ -212,7 +212,7 @@ impl AuditService {
 
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
-        audits.delete("id", &audit_id).await?;
+        audits.delete("_id", &audit_id).await?;
 
         audits.insert(&audit).await?;
 
@@ -323,7 +323,7 @@ impl AuditService {
 
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
-        audits.delete("id", &audit_id).await?;
+        audits.delete("_id", &audit_id).await?;
 
         audits.insert(&audit).await?;
 
