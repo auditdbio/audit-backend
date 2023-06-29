@@ -96,7 +96,7 @@ impl Handler<Event> for Session {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct UserSessions {
     sessions: HashMap<ObjectId, Recipient<Event>>,
 }
@@ -153,14 +153,16 @@ pub async fn make_event(
     manager: Arc<Mutex<SessionManager>>,
 ) -> error::Result<()> {
     // TODO: make auth
-    let mut lock = manager.lock().await;
-    if let Some(user) = lock.users.get_mut(&event.user_id) {
+    let lock = manager.lock().await;
+    if let Some(user) = lock.users.get(&event.user_id) {
         let event = Event { inner: event };
         for (_, addr) in user.sessions.iter() {
             addr.do_send(event.clone());
         }
+        log::warn!("current user manager state {:?}", user);
     } else {
         log::warn!("No user sessions found for user {}", event.user_id);
     }
+
     Ok(())
 }

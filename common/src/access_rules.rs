@@ -3,8 +3,12 @@ use mongodb::bson::oid::ObjectId;
 use crate::{
     auth::Auth,
     entities::{
-        audit::Audit, audit_request::AuditRequest, auditor::Auditor, customer::Customer,
-        project::Project, user::User,
+        audit::{Audit, AuditStatus},
+        audit_request::AuditRequest,
+        auditor::Auditor,
+        customer::Customer,
+        project::Project,
+        user::User,
     },
 };
 
@@ -15,6 +19,8 @@ pub trait AccessRules<Object, Subject> {
 pub struct Read;
 
 pub struct Edit;
+
+pub struct Delete;
 
 impl<'a, 'b> AccessRules<&'a Auth, &'b User<ObjectId>> for Read {
     fn get_access(&self, auth: &'a Auth, _user: &'b User<ObjectId>) -> bool {
@@ -133,6 +139,19 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b Audit<ObjectId>> for Edit {
         match auth {
             Auth::Service(_, _) | Auth::Admin(_) => true,
             Auth::User(id) => &request.customer_id == id || &request.auditor_id == id,
+            Auth::None => false,
+        }
+    }
+}
+
+impl<'a, 'b> AccessRules<&'a Auth, &'b Audit<ObjectId>> for Delete {
+    fn get_access(&self, auth: &'a Auth, audit: &'b Audit<ObjectId>) -> bool {
+        match auth {
+            Auth::Service(_, _) | Auth::Admin(_) => true,
+            Auth::User(id) => {
+                (&audit.customer_id == id && audit.status == AuditStatus::Waiting)
+                    || &audit.auditor_id == id
+            }
             Auth::None => false,
         }
     }

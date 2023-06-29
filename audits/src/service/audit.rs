@@ -361,15 +361,27 @@ impl AuditService {
     }
 
     pub async fn get_issues(&self, audit_id: ObjectId) -> error::Result<Vec<Issue<String>>> {
+        let auth = self.context.auth();
+
         let audit = self.get_audit(audit_id).await?;
 
         if let Some(audit) = audit {
+            if !Read.get_access(auth, &audit) {
+                return Err(anyhow::anyhow!("User is not available to read this audit").code(403));
+            }
+
+            let is_customer = auth.id().unwrap() == &audit.customer_id;
+
             let issues = audit.issues;
 
-            let issues: Vec<Issue<String>> = issues
+            let mut issues: Vec<Issue<String>> = issues
                 .into_iter()
                 .map(Issue::to_string)
                 .collect::<Vec<Issue<String>>>();
+
+            if is_customer {
+                issues.retain(|issue| issue.status != Status::Draft);
+            }
 
             return Ok(issues);
         }
