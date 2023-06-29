@@ -159,6 +159,8 @@ pub async fn make_event(
         for (_, addr) in user.sessions.iter() {
             addr.do_send(event.clone());
         }
+    } else {
+        log::warn!("No user sessions found for user {}", event.user_id);
     }
     Ok(())
 }
