@@ -34,6 +34,7 @@ pub fn create_app(
         .app_data(web::Data::from(manager))
         .app_data(web::Data::new(state))
         .service(handlers::event::events)
+        .service(handlers::event::make_event)
         .service(handlers::ping);
     app
 }
