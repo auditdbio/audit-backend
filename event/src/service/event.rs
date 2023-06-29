@@ -59,6 +59,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Session {
             Ok(ws::Message::Text(text)) => {
                 let token = text.to_string();
                 let Ok(Some(auth)) = Auth::from_token(&token) else {
+                    log::warn!("unsuccessful auth");
                     return;
                 };
 
