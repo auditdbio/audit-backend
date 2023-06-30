@@ -112,6 +112,45 @@ impl Migration for SecondAttemptToMutateStatus {
     }
 }
 
+pub struct IssuesChangeWillNotFixToNotFixed {}
+
+#[async_trait]
+impl Migration for IssuesChangeWillNotFixToNotFixed {
+    async fn up(&self, env: Env) -> anyhow::Result<()> {
+        let conn = env
+            .db
+            .expect("db is unavailable")
+            .collection::<Document>("audits");
+        use mongodb::error::Result;
+        let audits = conn
+            .find(None, None)
+            .await?
+            .collect::<Vec<Result<Document>>>()
+            .await;
+
+        for audit in audits {
+            let mut audit = audit?;
+
+            let issues = audit.get_array_mut("issues")?;
+            for issue in issues {
+                let issue = issue.as_document_mut().unwrap();
+                if issue.get_str("status")? == "WillNotFix" {
+                    issue.insert("status", Bson::String("NotFixed".to_string()));
+                }
+            }
+
+            conn.update_one(
+                doc! {"_id": audit.get_object_id("_id").unwrap()},
+                doc! {"$set": audit},
+                None,
+            )
+            .await?;
+        }
+
+        Ok(())
+    }
+}
+
 pub async fn up_migrations(mongo_uri: &str) -> anyhow::Result<()> {
     let client = Client::with_uri_str(mongo_uri).await.unwrap();
     let db = client.database("audits");
