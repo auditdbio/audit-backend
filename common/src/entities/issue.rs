@@ -12,7 +12,7 @@ pub enum Status {
     Draft,
     InProgress,
     Verification,
-    WillNotFix,
+    NotFixed,
     Fixed,
 }
 
@@ -26,15 +26,15 @@ impl Status {
             (Status::InProgress, Action::Begin) => None,
             (Status::InProgress, Action::Fixed) => Some(Status::Verification),
             (Status::InProgress, Action::NotFixed) => None,
-            (Status::InProgress, Action::Discard) => Some(Status::WillNotFix),
+            (Status::InProgress, Action::Discard) => Some(Status::NotFixed),
             (Status::Verification, Action::Begin) => None,
             (Status::Verification, Action::Fixed) => Some(Status::InProgress),
             (Status::Verification, Action::NotFixed) => Some(Status::InProgress),
             (Status::Verification, Action::Discard) => None,
-            (Status::WillNotFix, Action::Begin) => None,
-            (Status::WillNotFix, Action::Fixed) => None,
-            (Status::WillNotFix, Action::NotFixed) => None,
-            (Status::WillNotFix, Action::Discard) => Some(Status::InProgress),
+            (Status::NotFixed, Action::Begin) => None,
+            (Status::NotFixed, Action::Fixed) => None,
+            (Status::NotFixed, Action::NotFixed) => None,
+            (Status::NotFixed, Action::Discard) => None,
             (Status::Fixed, Action::Begin) => None,
             (Status::Fixed, Action::Fixed) => None,
             (Status::Fixed, Action::NotFixed) => None,
@@ -42,8 +42,13 @@ impl Status {
             (Status::Draft, Action::Verified) => None,
             (Status::InProgress, Action::Verified) => None,
             (Status::Verification, Action::Verified) => Some(Status::Fixed),
-            (Status::WillNotFix, Action::Verified) => None,
+            (Status::NotFixed, Action::Verified) => None,
             (Status::Fixed, Action::Verified) => Some(Status::Verification),
+            (Status::Draft, Action::ReOpen) => None,
+            (Status::InProgress, Action::ReOpen) => None,
+            (Status::Verification, Action::ReOpen) => None,
+            (Status::NotFixed, Action::ReOpen) => Some(Status::InProgress),
+            (Status::Fixed, Action::ReOpen) => None,
         }
     }
 }
@@ -55,20 +60,25 @@ pub enum Action {
     Verified,
     NotFixed,
     Discard,
+    ReOpen,
 }
 
 impl Action {
     pub fn is_customer(&self) -> bool {
         match self {
             Action::Begin | Action::NotFixed | Action::Verified => false,
-            Action::Fixed | Action::Discard => true,
+            Action::Fixed | Action::Discard | Action::ReOpen => true,
         }
     }
 
     pub fn is_auditor(&self) -> bool {
         match self {
-            Action::Begin | Action::NotFixed | Action::Verified => true,
-            Action::Discard | Action::Fixed => false,
+            Action::Begin
+            | Action::NotFixed
+            | Action::Verified
+            | Action::Discard
+            | Action::ReOpen => true,
+            Action::Fixed => false,
         }
     }
 }
@@ -97,7 +107,7 @@ pub struct Issue<Id> {
 
 impl<T> Issue<T> {
     pub fn is_resolved(&self) -> bool {
-        !self.include || self.status == Status::Fixed || self.status == Status::WillNotFix
+        !self.include || self.status == Status::Fixed || self.status == Status::NotFixed
     }
 }
 
