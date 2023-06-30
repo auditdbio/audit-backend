@@ -135,7 +135,7 @@ impl Migration for IssuesChangeWillNotFixToNotFixed {
             for issue in issues {
                 let issue = issue.as_document_mut().unwrap();
                 if issue.get_str("status")? == "WillNotFix" {
-                    issue.insert("status", Bson::String("NotFixed".to_string()));
+                    issue.insert("status", "NotFixed".to_string());
                 }
             }
 
@@ -159,6 +159,7 @@ pub async fn up_migrations(mongo_uri: &str) -> anyhow::Result<()> {
         Box::new(NewAuditStatusMigration {}),
         Box::new(SecondAttemptToMutateStatus {}),
         Box::new(AuditStatusCorrection {}),
+        Box::new(IssuesChangeWillNotFixToNotFixed {}),
     ];
     mongodb_migrator::migrator::default::DefaultMigrator::new()
         .with_conn(db.clone())
