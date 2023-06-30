@@ -266,6 +266,8 @@ pub enum EventKind {
     IssueLink,
     StatusChange,
     Comment,
+    FeedbackAdded,
+    FeedbackChanged,
 }
 
 pub struct UpdateEvent {}
