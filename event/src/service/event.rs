@@ -63,11 +63,16 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Session {
                     return;
                 };
 
+                log::info!("successful auth");
+
                 if auth.id().unwrap() != &self.user_id {
+                    log::warn!("unsuccessful auth");
                     return;
                 }
 
                 if !self.auth {
+                    log::info!("auth is true");
+
                     self.auth = true;
                 }
             }

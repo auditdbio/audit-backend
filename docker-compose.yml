@@ -153,7 +153,7 @@ services:
       - binaries:/data/binaries
     environment:
       VIRTUAL_HOST: dev.auditdb.io
-      VIRTUAL_PATH: ~^/api/(send_notification|read_notification)
+      VIRTUAL_PATH: ~^/api/(send_notification|read_notification|unread_notifications)
       <<: *common-variables
     networks:
       - nginx-proxy
