@@ -89,7 +89,7 @@ pub async fn send_notification(
             .make_request::<CreateNotification>()
             .auth(context.server_auth())
             .post(format!(
-                "{}://{}/api/mail",
+                "{}://{}/api/send_notification",
                 PROTOCOL.as_str(),
                 NOTIFICATIONS_SERVICE.as_str(),
             ))
