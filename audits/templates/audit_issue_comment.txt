@@ -1,4 +1,4 @@
 {
-    "subject": "",
-    "message": ""
+    "subject": "AuditDB: New comment in issue",
+    "message": "New comment in issue"
 }

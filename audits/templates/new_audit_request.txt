@@ -1,4 +1,4 @@
 {
-    "subject": "",
-    "message": ""
+    "subject": "AuditDB: you have new audit",
+    "message": "You have new audit"
 }

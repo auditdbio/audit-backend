@@ -5,6 +5,7 @@ use common::{
     access_rules::{AccessRules, Edit, Read},
     api::{
         audits::{AuditAction, AuditChange, CreateIssue, PublicAudit},
+        issue::PublicIssue,
         send_notification, NewNotification,
     },
     context::Context,
@@ -191,7 +192,8 @@ impl AuditService {
         &self,
         audit_id: ObjectId,
         issue: CreateIssue,
-    ) -> error::Result<Issue<String>> {
+    ) -> error::Result<PublicIssue> {
+        let auth = self.context.auth();
         let Some(mut audit) = self.get_audit(audit_id).await? else {
             return Err(anyhow::anyhow!("No audit found").code(404));
         };
@@ -226,7 +228,7 @@ impl AuditService {
 
         send_notification(&self.context, true, true, new_notification).await?;
 
-        Ok(issue.to_string())
+        Ok(auth.public_issue(issue))
     }
 
     pub async fn change_issue(
@@ -234,7 +236,7 @@ impl AuditService {
         audit_id: ObjectId,
         issue_id: usize,
         change: ChangeIssue,
-    ) -> error::Result<Issue<String>> {
+    ) -> error::Result<PublicIssue> {
         let auth = self.context.auth();
         let Some(mut audit) = self.get_audit(audit_id).await? else {
             return Err(anyhow::anyhow!("No audit found").code(404));
@@ -330,10 +332,11 @@ impl AuditService {
 
         audits.insert(&audit).await?;
 
-        Ok(issue.to_string())
+        Ok(auth.public_issue(issue))
     }
 
-    pub async fn disclose_all(&self, audit_id: ObjectId) -> error::Result<Vec<Issue<String>>> {
+    pub async fn disclose_all(&self, audit_id: ObjectId) -> error::Result<Vec<PublicIssue>> {
+        let auth = self.context.auth();
         let audit = self.get_audit(audit_id).await?;
 
         // TODO: make auth
@@ -352,10 +355,10 @@ impl AuditService {
 
             let issues = audit.issues;
 
-            let issues: Vec<Issue<String>> = issues
+            let issues: Vec<PublicIssue> = issues
                 .into_iter()
-                .map(Issue::to_string)
-                .collect::<Vec<Issue<String>>>();
+                .map(|i| auth.public_issue(i))
+                .collect::<Vec<PublicIssue>>();
 
             return Ok(issues);
         }
@@ -363,7 +366,7 @@ impl AuditService {
         Ok(Vec::new())
     }
 
-    pub async fn get_issues(&self, audit_id: ObjectId) -> error::Result<Vec<Issue<String>>> {
+    pub async fn get_issues(&self, audit_id: ObjectId) -> error::Result<Vec<PublicIssue>> {
         let auth = self.context.auth();
 
         let audit = self.get_audit(audit_id).await?;
@@ -377,10 +380,10 @@ impl AuditService {
 
             let issues = audit.issues;
 
-            let mut issues: Vec<Issue<String>> = issues
+            let mut issues: Vec<PublicIssue> = issues
                 .into_iter()
-                .map(Issue::to_string)
-                .collect::<Vec<Issue<String>>>();
+                .map(|i| auth.public_issue(i))
+                .collect::<Vec<PublicIssue>>();
 
             if is_customer {
                 issues.retain(|issue| issue.status != Status::Draft);
@@ -396,14 +399,15 @@ impl AuditService {
         &self,
         audit_id: ObjectId,
         issue_id: usize,
-    ) -> error::Result<Issue<String>> {
+    ) -> error::Result<PublicIssue> {
+        let auth = self.context.auth();
         let audit = self.get_audit(audit_id).await?;
 
         if let Some(audit) = audit {
             let issue = audit.issues.get(issue_id).cloned();
 
             if let Some(issue) = issue {
-                return Ok(issue.to_string());
+                return Ok(auth.public_issue(issue));
             }
         }
 

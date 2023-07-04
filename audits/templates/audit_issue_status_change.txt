@@ -1,4 +1,4 @@
 {
-    "subject": "",
-    "message": ""
+    "subject": "AuditDB: Issue has changed status",
+    "message": "Issue has changed status"
 }
