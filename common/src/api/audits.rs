@@ -8,12 +8,14 @@ use crate::{
         audit_request::TimeRange,
         auditor::PublicAuditor,
         contacts::Contacts,
-        issue::{Issue, Status},
+        issue::Status,
         project::PublicProject,
     },
     error,
     services::{CUSTOMERS_SERVICE, PROTOCOL},
 };
+
+use super::issue::PublicIssue;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum AuditAction {
@@ -70,11 +72,12 @@ pub struct PublicAudit {
     pub report_name: Option<String>,
     pub time: TimeRange,
 
-    pub issues: Vec<Issue<String>>,
+    pub issues: Vec<PublicIssue>,
 }
 
 impl PublicAudit {
     pub async fn new(context: &Context, audit: Audit<ObjectId>) -> error::Result<PublicAudit> {
+        let auth = context.auth();
         let auditor = context
             .make_request::<PublicAuditor>()
             .get(format!(
@@ -139,7 +142,11 @@ impl PublicAudit {
             report: audit.report,
             report_name: audit.report_name,
             time: audit.time,
-            issues: Issue::to_string_map(audit.issues),
+            issues: audit
+                .issues
+                .into_iter()
+                .map(|i| auth.public_issue(i))
+                .collect(),
         };
 
         Ok(public_audit)

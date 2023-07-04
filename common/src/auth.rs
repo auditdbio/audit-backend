@@ -7,11 +7,13 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    api::issue::PublicIssue,
     constants::DURATION,
     entities::{
         auditor::{Auditor, PublicAuditor},
         contacts::Contacts,
         customer::{Customer, PublicCustomer},
+        issue::{Event, Issue},
         project::{Project, PublicProject},
     },
     error::{self, AddCode},
@@ -144,6 +146,25 @@ impl Auth {
             status: project.status,
             creator_contacts: contacts,
             price: project.price,
+        }
+    }
+
+    pub fn public_issue(&self, issue: Issue<ObjectId>) -> PublicIssue {
+        let id = self.id().unwrap();
+
+        PublicIssue {
+            id: issue.id,
+            name: issue.name,
+            description: issue.description,
+            status: issue.status,
+            severity: issue.severity,
+            category: issue.category,
+            links: issue.links,
+            include: issue.include,
+            feedback: issue.feedback,
+            events: Event::to_string_map(issue.events),
+            last_modified: issue.last_modified,
+            read: *issue.read.get(id).unwrap_or(&0),
         }
     }
 }

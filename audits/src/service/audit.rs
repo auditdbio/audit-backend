@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
@@ -206,6 +208,7 @@ impl AuditService {
             include: true,
             feedback: String::new(),
             last_modified: Utc::now().timestamp(),
+            read: HashMap::new(),
         };
 
         audit.issues.push(issue.clone());
@@ -402,6 +405,35 @@ impl AuditService {
             if let Some(issue) = issue {
                 return Ok(issue.to_string());
             }
+        }
+
+        Err(anyhow::anyhow!("No issue found").code(404))
+    }
+
+    pub async fn read_events(
+        &self,
+        audit_id: ObjectId,
+        issue_id: usize,
+        read: u64,
+    ) -> error::Result<()> {
+        let auth = self.context.auth();
+
+        let audit = self.get_audit(audit_id).await?;
+
+        if let Some(mut audit) = audit {
+            let issue = audit.issues.get_mut(issue_id);
+
+            if let Some(issue) = issue {
+                issue.read.insert(*auth.id().unwrap(), read);
+            }
+
+            let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
+
+            audits.delete("_id", &audit_id).await?;
+
+            audits.insert(&audit).await?;
+
+            return Ok(());
         }
 
         Err(anyhow::anyhow!("No issue found").code(404))

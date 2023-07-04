@@ -1,4 +1,4 @@
-use std::hash::Hash;
+use std::{collections::HashMap, hash::Hash};
 
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -103,6 +103,8 @@ pub struct Issue<Id> {
     pub events: Vec<Event<Id>>,
     #[serde(default = "default_timestamp")]
     pub last_modified: i64,
+    #[serde(default)]
+    pub read: HashMap<ObjectId, u64>,
 }
 
 impl<T> Issue<T> {
@@ -125,6 +127,7 @@ impl Issue<String> {
             feedback: self.feedback,
             events: Event::parse_map(self.events),
             last_modified: self.last_modified,
+            read: self.read,
         }
     }
 
@@ -147,6 +150,7 @@ impl Issue<ObjectId> {
             feedback: self.feedback,
             events: Event::to_string_map(self.events),
             last_modified: self.last_modified,
+            read: self.read,
         }
     }
 
