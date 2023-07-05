@@ -34,13 +34,19 @@ pub async fn send_notification(
     email: bool,
     notification: bool,
     new_notification: NewNotification,
+    variables: Vec<(String, String)>,
 ) -> error::Result<()> {
     let NewNotification {
         user_id,
-        subject,
-        message,
+        mut subject,
+        mut message,
         links,
     } = new_notification;
+    for (key, value) in variables {
+        message = message.replace(&format!("{{{}}}", key), &value);
+        subject = subject.replace(&format!("{{{}}}", key), &value);
+    }
+
     let user_id = user_id.unwrap();
     let user = context
         .make_request::<PublicUser>()

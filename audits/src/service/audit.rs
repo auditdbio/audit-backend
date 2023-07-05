@@ -13,9 +13,12 @@ use common::{
         audit::{Audit, AuditStatus},
         audit_request::AuditRequest,
         issue::{ChangeIssue, Event, EventKind, Issue, Status},
+        project::PublicProject,
         role::Role,
+        user::PublicUser,
     },
     error::{self, AddCode},
+    services::{CUSTOMERS_SERVICE, PROTOCOL, USERS_SERVICE},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 
@@ -226,7 +229,9 @@ impl AuditService {
 
         new_notification.user_id = Some(audit.customer_id);
 
-        send_notification(&self.context, true, true, new_notification).await?;
+        let variables = vec![("name".to_owned(), issue.name.clone())];
+
+        send_notification(&self.context, true, true, new_notification, variables).await?;
 
         Ok(auth.public_issue(issue))
     }
@@ -265,16 +270,30 @@ impl AuditService {
         };
 
         if let Some(action) = change.status {
+            let old_status = issue.status.clone();
             let Some(new_state) = issue.status.apply(&action) else {
                 return Err(anyhow::anyhow!("Invalid action").code(400));
             };
+
             let mut new_notification: NewNotification = serde_json::from_str(include_str!(
                 "../../templates/audit_issue_status_change.txt"
             ))?;
 
             new_notification.user_id = Some(receiver_id);
 
-            send_notification(&self.context, true, true, new_notification).await?;
+            let variables = vec![
+                ("issue".to_owned(), issue.name.clone()),
+                (
+                    "old_status".to_owned(),
+                    serde_json::to_string(&old_status)?.replace('\"', ""),
+                ),
+                (
+                    "new_status".to_owned(),
+                    serde_json::to_string(&issue.status)?.replace('\"', ""),
+                ),
+            ];
+
+            send_notification(&self.context, true, true, new_notification, variables).await?;
             issue.status = new_state;
         }
 
@@ -299,6 +318,38 @@ impl AuditService {
         }
 
         if let Some(events) = change.events {
+            let sender = auth.id().unwrap();
+
+            let sender = self
+                .context
+                .make_request::<PublicUser>()
+                .auth(auth.clone())
+                .get(format!(
+                    "{}://{}/api/user/{}",
+                    PROTOCOL.as_str(),
+                    USERS_SERVICE.as_str(),
+                    sender,
+                ))
+                .send()
+                .await?
+                .json::<PublicUser>()
+                .await?;
+
+            let project = self
+                .context
+                .make_request::<PublicProject>()
+                .auth(auth.clone())
+                .get(format!(
+                    "{}://{}/api/project/{}",
+                    PROTOCOL.as_str(),
+                    CUSTOMERS_SERVICE.as_str(),
+                    audit.project_id,
+                ))
+                .send()
+                .await?
+                .json::<PublicProject>()
+                .await?;
+
             for create_event in events {
                 let event = Event {
                     timestamp: Utc::now().timestamp(),
@@ -315,7 +366,14 @@ impl AuditService {
 
                     new_notification.user_id = Some(receiver_id);
 
-                    send_notification(&self.context, true, true, new_notification).await?;
+                    let variables = vec![
+                        ("sender".to_owned(), sender.name.clone()),
+                        ("project".to_owned(), project.name.clone()),
+                        ("issue".to_owned(), issue.name.clone()),
+                    ];
+
+                    send_notification(&self.context, true, true, new_notification, variables)
+                        .await?;
                 }
 
                 issue.events.push(event);

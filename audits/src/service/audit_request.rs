@@ -5,10 +5,12 @@ use common::{
     context::Context,
     entities::{
         audit_request::{AuditRequest, PriceRange, TimeRange},
+        project,
         role::Role,
+        user::PublicUser,
     },
     error::{self, AddCode},
-    services::{CUSTOMERS_SERVICE, PROTOCOL},
+    services::{CUSTOMERS_SERVICE, PROTOCOL, USERS_SERVICE},
 };
 
 use mongodb::bson::{oid::ObjectId, Bson};
@@ -94,6 +96,36 @@ impl RequestService {
             .collect::<Vec<_>>()
             .pop();
 
+        let sender = self
+            .context
+            .make_request::<PublicUser>()
+            .auth(auth.clone())
+            .get(format!(
+                "{}://{}/api/user/{}",
+                PROTOCOL.as_str(),
+                USERS_SERVICE.as_str(),
+                user_id,
+            ))
+            .send()
+            .await?
+            .json::<PublicUser>()
+            .await?;
+
+        let project = self
+            .context
+            .make_request::<project::PublicProject>()
+            .auth(auth.clone())
+            .get(format!(
+                "{}://{}/api/project/{}",
+                PROTOCOL.as_str(),
+                USERS_SERVICE.as_str(),
+                request.project_id,
+            ))
+            .send()
+            .await?
+            .json::<project::PublicProject>()
+            .await?;
+
         if let Some(old_version_of_this_request) = old_version_of_this_request {
             requests
                 .delete("id", &old_version_of_this_request.id)
@@ -104,14 +136,21 @@ impl RequestService {
 
             new_notification.user_id = Some(request.auditor_id);
 
-            send_notification(&self.context, true, true, new_notification).await?;
+            let variables: Vec<(String, String)> = vec![
+                ("sender".to_owned(), sender.name.clone()),
+                ("project".to_owned(), project.name.clone()),
+            ];
+
+            send_notification(&self.context, true, true, new_notification, variables).await?;
         } else {
             let mut new_notification: NewNotification =
                 serde_json::from_str(include_str!("../../templates/new_audit_offer.txt"))?;
 
             new_notification.user_id = Some(request.customer_id);
 
-            send_notification(&self.context, true, true, new_notification).await?;
+            let variables: Vec<(String, String)> = vec![("sender".to_owned(), sender.name.clone())];
+
+            send_notification(&self.context, true, true, new_notification, variables).await?;
         }
 
         if last_changer == Role::Customer {

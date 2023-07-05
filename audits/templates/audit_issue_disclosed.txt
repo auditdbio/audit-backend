@@ -1,4 +1,4 @@
 {
     "subject": "AuditDB: Issue has been disclosed",
-    "message": "Issue has been disclosed"
+    "message": "Issue {issue} has been disclosed"
 }
