@@ -104,7 +104,7 @@ pub struct Issue<Id> {
     #[serde(default = "default_timestamp")]
     pub last_modified: i64,
     #[serde(default)]
-    pub read: HashMap<ObjectId, u64>,
+    pub read: HashMap<String, u64>,
 }
 
 impl<T> Issue<T> {

@@ -486,7 +486,7 @@ impl AuditService {
             let issue = audit.issues.get_mut(issue_id);
 
             if let Some(issue) = issue {
-                issue.read.insert(*auth.id().unwrap(), read);
+                issue.read.insert(auth.id().unwrap().to_hex(), read);
             }
 
             let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;

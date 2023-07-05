@@ -164,7 +164,7 @@ impl Auth {
             feedback: issue.feedback,
             events: Event::to_string_map(issue.events),
             last_modified: issue.last_modified,
-            read: *issue.read.get(id).unwrap_or(&0),
+            read: *issue.read.get(&id.to_hex()).unwrap_or(&0),
         }
     }
 }
