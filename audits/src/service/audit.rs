@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{hash_map::Entry, HashMap};
 
 use chrono::Utc;
 use common::{
@@ -318,7 +318,7 @@ impl AuditService {
         }
 
         if let Some(events) = change.events {
-            let sender = auth.id().unwrap();
+            let sender_id = auth.id().unwrap();
 
             let sender = self
                 .context
@@ -328,7 +328,7 @@ impl AuditService {
                     "{}://{}/api/user/{}",
                     PROTOCOL.as_str(),
                     USERS_SERVICE.as_str(),
-                    sender,
+                    sender_id,
                 ))
                 .send()
                 .await?
@@ -377,6 +377,16 @@ impl AuditService {
                 }
 
                 issue.events.push(event);
+            }
+
+            match issue.read.entry(sender_id.to_hex()) {
+                Entry::Occupied(mut value) => {
+                    let value = value.get_mut();
+                    *value += issue.events.len() as u64;
+                }
+                Entry::Vacant(place) => {
+                    place.insert(issue.events.len() as u64);
+                }
             }
         }
 
