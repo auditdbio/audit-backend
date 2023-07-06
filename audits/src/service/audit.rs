@@ -382,7 +382,7 @@ impl AuditService {
             match issue.read.entry(sender_id.to_hex()) {
                 Entry::Occupied(mut value) => {
                     let value = value.get_mut();
-                    *value += issue.events.len() as u64;
+                    *value = issue.events.len() as u64;
                 }
                 Entry::Vacant(place) => {
                     place.insert(issue.events.len() as u64);
