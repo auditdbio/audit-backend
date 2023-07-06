@@ -338,7 +338,7 @@ impl AuditService {
             let project = self
                 .context
                 .make_request::<PublicProject>()
-                .auth(auth.clone())
+                .auth(self.context.server_auth()) // TODO: think about private projects here
                 .get(format!(
                     "{}://{}/api/project/{}",
                     PROTOCOL.as_str(),
