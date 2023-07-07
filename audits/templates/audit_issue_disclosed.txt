@@ -1,7 +1,5 @@
 {
     "alert": "New audit issue for {audit} audit",
     "subject": "AuditDB: new issue",
-    "message": "Vigilant auditor has uncovered a potential issue in your smart contract codebase during their latest exploration. It seems there's an issue in your code base that warrants your attention.
-We advise you to to have a look and provide some comments on auditdb.io
-Awaiting your swift action."
+    "message": "Vigilant auditor has uncovered a potential issue in your smart contract codebase during their latest exploration. It seems there's an issue in your code base that warrants your attention.\n We advise you to to have a look and provide some comments on auditdb.io\n Awaiting your swift action."
 }

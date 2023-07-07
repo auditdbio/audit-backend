@@ -1,7 +1,5 @@
 {
     "alert": "Deadline for audit {audit} is in 2 days",
     "subject": "AuditDB: Upcoming Deadline for {audit} audit",
-    "message": "Our audit starship is rapidly approaching the event horizon! The deadline for the blockchain social network audit is now visible on the cosmic dashboard.
-Set your warp speed, align your resources, and get ready to reach the audit finish line.
-Be ready to finalize the audit in 2 days."
+    "message": "Our audit starship is rapidly approaching the event horizon! The deadline for the blockchain social network audit is now visible on the cosmic dashboard.\n Set your warp speed, align your resources, and get ready to reach the audit finish line.\n Be ready to finalize the audit in 2 days."
 }
