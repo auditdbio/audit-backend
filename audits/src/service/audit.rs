@@ -280,7 +280,7 @@ impl AuditService {
                 return Err(anyhow::anyhow!("Invalid action").code(400));
             };
 
-            let new_notification: NewNotification = if role == Role::Customer {
+            let mut new_notification: NewNotification = if role == Role::Customer {
                 serde_json::from_str(include_str!(
                     "../../templates/audit_issue_status_change_auditor.txt"
                 ))?
@@ -289,6 +289,8 @@ impl AuditService {
                     "../../templates/audit_issue_status_change_customer.txt"
                 ))?
             };
+
+            new_notification.user_id = Some(receiver_id);
 
             let project = get_project(&self.context, audit.project_id).await?;
 
