@@ -2,6 +2,6 @@
     "alert": "New audit offer for {project} project",
     "subject": "AuditDB: Blockchain Audit request",
     "message": "Just touching base regarding the pending audit request on auditdb.io
-				We're eagerly waiting to tap into your expertise to ensure our digital universe is compliant and shipshape. If you've already seen the request, that's fantastic – if not, let's align soon!
-				Looking forward to conquering this quest with you."
+We're eagerly waiting to tap into your expertise to ensure our digital universe is compliant and shipshape. If you've already seen the request, that's fantastic – if not, let's align soon!
+Looking forward to conquering this quest with you."
 }

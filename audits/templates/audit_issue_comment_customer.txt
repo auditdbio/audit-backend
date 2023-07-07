@@ -2,5 +2,5 @@
     "alert": "New issue comment for {audit}",
     "subject": "New Comment Alert: Social Network Activity",
     "message": "Code Red! A new comment has just materialized on auditdb.io matrix. Time to plug in and see what's up.
-				Excited to hear your thoughts after the quick scan!"
+Excited to hear your thoughts after the quick scan!"
 }

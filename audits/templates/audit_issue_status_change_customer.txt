@@ -2,6 +2,6 @@
     "alert": "Issue {issue} status is changed",
     "subject": "AuditDB: the issue status has changed",
     "message": "Auditor has changed the issue status. It means some action from your side could be required.
-				We advise you to to have a look and provide some comments on auditdb.io
-				Awaiting your swift action."
+We advise you to to have a look and provide some comments on auditdb.io
+Awaiting your swift action."
 }
