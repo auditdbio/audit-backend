@@ -188,6 +188,19 @@ services:
       <<: *common-variables
     networks:
       - nginx-proxy
+      - report
+
+  renderer:
+    build: ./renderer
+    expose:
+      - 8080
+    environment:
+      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_PATH: ~^/api/(generate-report|notused1)
+      <<: *common-variables
+    networks:
+      - report
+
 
 
   database:
@@ -207,6 +220,7 @@ volumes:
   files:
   test:
 networks:
+  report:
   database:
   nginx-proxy:
     external:
