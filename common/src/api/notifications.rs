@@ -23,6 +23,7 @@ pub struct PublicNotification {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NewNotification {
     pub user_id: Option<ObjectId>,
+    pub alert: String,
     pub subject: String,
     pub message: String,
     #[serde(default)]
@@ -38,6 +39,7 @@ pub async fn send_notification(
 ) -> error::Result<()> {
     let NewNotification {
         user_id,
+        mut alert,
         mut subject,
         mut message,
         links,
@@ -45,6 +47,7 @@ pub async fn send_notification(
     for (key, value) in variables {
         message = message.replace(&format!("{{{}}}", key), &value);
         subject = subject.replace(&format!("{{{}}}", key), &value);
+        alert = alert.replace(&format!("{{{}}}", key), &value);
     }
 
     let user_id = user_id.unwrap();

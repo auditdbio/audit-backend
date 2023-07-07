@@ -1,4 +1,7 @@
 {
-    "subject": "AuditDB: Audit has been submitted",
-    "message": "Audit has been submitted"
+    "alert": "Audit {audit} submitted",
+    "subject": "AuditDB: Mission Complete, Audit is submitted",
+    "message": "Auditor, code name 'Bug Buster', has successfully completed the quest in your smart contract labyrinth. The mission log, i.e., the audit, is submitted and now ready for download.
+				Initiate data transfer and decode the findings. We eagerly await your analysis.
+				Download and conquer the world."
 }

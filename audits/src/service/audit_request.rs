@@ -5,12 +5,11 @@ use common::{
     context::Context,
     entities::{
         audit_request::{AuditRequest, PriceRange, TimeRange},
-        project,
+        project::get_project,
         role::Role,
-        user::PublicUser,
     },
     error::{self, AddCode},
-    services::{CUSTOMERS_SERVICE, PROTOCOL, USERS_SERVICE},
+    services::{CUSTOMERS_SERVICE, PROTOCOL},
 };
 
 use mongodb::bson::{oid::ObjectId, Bson};
@@ -96,35 +95,7 @@ impl RequestService {
             .collect::<Vec<_>>()
             .pop();
 
-        let sender = self
-            .context
-            .make_request::<PublicUser>()
-            .auth(auth.clone())
-            .get(format!(
-                "{}://{}/api/user/{}",
-                PROTOCOL.as_str(),
-                USERS_SERVICE.as_str(),
-                user_id,
-            ))
-            .send()
-            .await?
-            .json::<PublicUser>()
-            .await?;
-
-        let project = self
-            .context
-            .make_request::<project::PublicProject>()
-            .auth(self.context.server_auth()) // TODO: think about private projects here
-            .get(format!(
-                "{}://{}/api/project/{}",
-                PROTOCOL.as_str(),
-                USERS_SERVICE.as_str(),
-                request.project_id,
-            ))
-            .send()
-            .await?
-            .json::<project::PublicProject>()
-            .await?;
+        let project = get_project(&self.context, request.project_id).await?;
 
         if let Some(old_version_of_this_request) = old_version_of_this_request {
             requests
@@ -136,10 +107,8 @@ impl RequestService {
 
             new_notification.user_id = Some(request.auditor_id);
 
-            let variables: Vec<(String, String)> = vec![
-                ("sender".to_owned(), sender.name.clone()),
-                ("project".to_owned(), project.name.clone()),
-            ];
+            let variables: Vec<(String, String)> =
+                vec![("project".to_owned(), project.name.clone())];
 
             send_notification(&self.context, true, true, new_notification, variables).await?;
         } else {
@@ -148,7 +117,8 @@ impl RequestService {
 
             new_notification.user_id = Some(request.customer_id);
 
-            let variables: Vec<(String, String)> = vec![("sender".to_owned(), sender.name.clone())];
+            let variables: Vec<(String, String)> =
+                vec![("project".to_owned(), project.name.clone())];
 
             send_notification(&self.context, true, true, new_notification, variables).await?;
         }

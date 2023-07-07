@@ -1,4 +1,7 @@
 {
-    "subject": "",
-    "message": ""
+    "alert": "Audit {audit} starts in 2 days",
+    "subject": "AuditDB: Audit starts in 2 days",
+    "message": "The countdown for our next epic quest – the audit {audit} – has officially begun. We are nearing the starting point for our next digital journey, and the client is on standby, ready to embark.
+				Mark your calendars, prepare your gear, and let's align soon to kick off this mission.
+				Audit starts in 2 days. Be ready and log in to auditdb.io"
 }

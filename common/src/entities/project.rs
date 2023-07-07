@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::{
+    context::Context,
+    error,
     repository::Entity,
     services::{CUSTOMERS_SERVICE, PROTOCOL},
 };
@@ -118,4 +120,20 @@ impl From<Project<ObjectId>> for Option<Document> {
         document.insert("private", !project.publish_options.publish);
         Some(document)
     }
+}
+
+pub async fn get_project(context: &Context, id: ObjectId) -> error::Result<PublicProject> {
+    Ok(context
+        .make_request::<PublicProject>()
+        .auth(context.server_auth()) // TODO: think about private projects here
+        .get(format!(
+            "{}://{}/api/project/{}",
+            PROTOCOL.as_str(),
+            CUSTOMERS_SERVICE.as_str(),
+            id,
+        ))
+        .send()
+        .await?
+        .json::<PublicProject>()
+        .await?)
 }

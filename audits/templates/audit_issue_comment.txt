@@ -1,4 +1,0 @@
-{
-    "subject": "AuditDB: {sender} leave a new comment",
-    "message": "{sender} leave comment in Audit {project} about issue {issue}"
-}

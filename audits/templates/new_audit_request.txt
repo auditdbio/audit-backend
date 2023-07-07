@@ -1,4 +1,7 @@
 {
-    "subject": "AuditDB: You have new audit",
-    "message": "You have new audit request from {sender} to a project {project}"
+    "alert": "New audit request",
+    "subject": "AuditDB: New Mission Alert. New audit request",
+    "message": "A new challenge awaits in the auditdb.io universe! Someone is calling for your legendary audit skills again.
+				Client is eager and ready to discuss the nitty-gritty and initiate the auditing process.
+				Awaiting your green signal to light up this adventure!"
 }

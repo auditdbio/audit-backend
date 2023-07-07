@@ -1,4 +1,4 @@
-use std::collections::{hash_map::Entry, HashMap};
+use std::collections::HashMap;
 
 use chrono::Utc;
 use common::{
@@ -13,12 +13,10 @@ use common::{
         audit::{Audit, AuditStatus},
         audit_request::AuditRequest,
         issue::{ChangeIssue, Event, EventKind, Issue, Status},
-        project::PublicProject,
+        project::get_project,
         role::Role,
-        user::PublicUser,
     },
     error::{self, AddCode},
-    services::{CUSTOMERS_SERVICE, PROTOCOL, USERS_SERVICE},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 
@@ -229,7 +227,9 @@ impl AuditService {
 
         new_notification.user_id = Some(audit.customer_id);
 
-        let variables = vec![("name".to_owned(), issue.name.clone())];
+        let project = get_project(&self.context, audit.project_id).await?;
+
+        let variables = vec![("audit".to_owned(), project.name)];
 
         send_notification(&self.context, true, true, new_notification, variables).await?;
 
@@ -263,34 +263,38 @@ impl AuditService {
             issue.description = description;
         }
 
-        let receiver_id = if auth.id().unwrap() == &audit.customer_id {
+        let role = if auth.id().unwrap() == &audit.customer_id {
+            Role::Customer
+        } else {
+            Role::Auditor
+        };
+
+        let receiver_id = if role == Role::Customer {
             audit.auditor_id
         } else {
             audit.customer_id
         };
 
         if let Some(action) = change.status {
-            let old_status = issue.status.clone();
             let Some(new_state) = issue.status.apply(&action) else {
                 return Err(anyhow::anyhow!("Invalid action").code(400));
             };
 
-            let mut new_notification: NewNotification = serde_json::from_str(include_str!(
-                "../../templates/audit_issue_status_change.txt"
-            ))?;
+            let new_notification: NewNotification = if role == Role::Customer {
+                serde_json::from_str(include_str!(
+                    "../../templates/audit_issue_status_change_auditor.txt"
+                ))?
+            } else {
+                serde_json::from_str(include_str!(
+                    "../../templates/audit_issue_status_change_customer.txt"
+                ))?
+            };
 
-            new_notification.user_id = Some(receiver_id);
+            let project = get_project(&self.context, audit.project_id).await?;
 
             let variables = vec![
                 ("issue".to_owned(), issue.name.clone()),
-                (
-                    "old_status".to_owned(),
-                    serde_json::to_string(&old_status)?.replace('\"', ""),
-                ),
-                (
-                    "new_status".to_owned(),
-                    serde_json::to_string(&issue.status)?.replace('\"', ""),
-                ),
+                ("audit".to_owned(), project.name),
             ];
 
             send_notification(&self.context, true, true, new_notification, variables).await?;
@@ -320,35 +324,13 @@ impl AuditService {
         if let Some(events) = change.events {
             let sender_id = auth.id().unwrap();
 
-            let sender = self
-                .context
-                .make_request::<PublicUser>()
-                .auth(auth.clone())
-                .get(format!(
-                    "{}://{}/api/user/{}",
-                    PROTOCOL.as_str(),
-                    USERS_SERVICE.as_str(),
-                    sender_id,
-                ))
-                .send()
-                .await?
-                .json::<PublicUser>()
-                .await?;
+            let project = get_project(&self.context, audit.project_id).await?;
 
-            let project = self
-                .context
-                .make_request::<PublicProject>()
-                .auth(self.context.server_auth()) // TODO: think about private projects here
-                .get(format!(
-                    "{}://{}/api/project/{}",
-                    PROTOCOL.as_str(),
-                    CUSTOMERS_SERVICE.as_str(),
-                    audit.project_id,
-                ))
-                .send()
-                .await?
-                .json::<PublicProject>()
-                .await?;
+            let role = if sender_id == &audit.customer_id {
+                Role::Customer
+            } else {
+                Role::Auditor
+            };
 
             for create_event in events {
                 let event = Event {
@@ -360,15 +342,20 @@ impl AuditService {
                 };
 
                 if event.kind == EventKind::Comment {
-                    let mut new_notification: NewNotification = serde_json::from_str(
-                        include_str!("../../templates/audit_issue_comment.txt"),
-                    )?;
+                    let mut new_notification: NewNotification = if role == Role::Customer {
+                        serde_json::from_str(include_str!(
+                            "../../templates/audit_issue_comment_auditor.txt"
+                        ))?
+                    } else {
+                        serde_json::from_str(include_str!(
+                            "../../templates/audit_issue_comment_customer.txt"
+                        ))?
+                    };
 
                     new_notification.user_id = Some(receiver_id);
 
                     let variables = vec![
-                        ("sender".to_owned(), sender.name.clone()),
-                        ("project".to_owned(), project.name.clone()),
+                        ("audit".to_owned(), project.name.clone()),
                         ("issue".to_owned(), issue.name.clone()),
                     ];
 
@@ -379,15 +366,9 @@ impl AuditService {
                 issue.events.push(event);
             }
 
-            match issue.read.entry(sender_id.to_hex()) {
-                Entry::Occupied(mut value) => {
-                    let value = value.get_mut();
-                    *value = issue.events.len() as u64;
-                }
-                Entry::Vacant(place) => {
-                    place.insert(issue.events.len() as u64);
-                }
-            }
+            issue
+                .read
+                .insert(sender_id.to_hex(), issue.events.len() as u64);
         }
 
         issue.last_modified = Utc::now().timestamp();
