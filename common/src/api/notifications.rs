@@ -66,6 +66,8 @@ pub async fn send_notification(
         .await?;
     if email {
         let create_letter = CreateLetter {
+            recipient_id: user.id.parse().ok(),
+            recipient_name: Some(user.name),
             email: user.email,
             message: message.clone(),
             subject: subject.clone(),
@@ -87,7 +89,7 @@ pub async fn send_notification(
         let create_notification = CreateNotification {
             user_id,
             inner: NotificationInner {
-                message,
+                message: alert,
                 is_read: false,
                 is_sound: true,
                 links,

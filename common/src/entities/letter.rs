@@ -20,6 +20,8 @@ impl Entity for Letter {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateLetter {
+    pub recipient_id: Option<ObjectId>,
+    pub recipient_name: Option<String>,
     pub email: String,
     pub message: String,
     pub subject: String,

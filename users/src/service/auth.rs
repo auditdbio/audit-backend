@@ -158,6 +158,8 @@ impl AuthService {
                 email: user.email.clone(),
                 message,
                 subject: "Registration at auditdb.io".to_string(),
+                recipient_id: None,
+                recipient_name: Some(user.name.clone()),
             };
 
             self.context
@@ -263,6 +265,8 @@ impl AuthService {
             email: user.email.clone(),
             message,
             subject: "Password change at auditdb.io".to_string(),
+            recipient_id: Some(user.id),
+            recipient_name: Some(user.name.clone()),
         };
 
         self.context
