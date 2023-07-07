@@ -1,0 +1,145 @@
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: "Montserrat", sans-serif;
+  color: #333;
+}
+
+blockquote {
+  margin: 16px 0;
+  padding: 5px 8px 5px 30px;
+  color: #333;
+  border-left: 10px solid #d6dbdf;
+  background: none repeat scroll 0 0 rgba(102,128,153,.05);
+}
+
+pre {
+  padding: 20px;
+  background: #f5f5f5;
+  page-break-inside: avoid;
+}
+
+code {
+  padding: 3px;
+  background: #f5f5f5;
+}
+
+table {
+  border: 1px solid #f6f6f6;
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+thead {
+  background: #f5f7fa;
+}
+
+th {
+  border: 1px solid #efefef;
+  text-align: center;
+  padding: 10px 6px;
+}
+
+td {
+  border: 1px solid #efefef;
+  padding: 10px 15px;
+  min-width: 60px;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 -15px;
+}
+
+.col-6 {
+  width: 50%;
+  padding: 0 15px;
+}
+
+.col-12 {
+  width: 100%;
+  padding: 0 15px;
+}
+
+.mt-60 {
+  margin-top: 60px;
+}
+
+.cover-page-corner-logo {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.hero {
+  padding: 200px 50px 50px;
+  margin-bottom: 30px;
+  height: 540mm;
+}
+
+.hero-image-block {
+  text-align: center;
+}
+
+.hero-text-block {
+  padding-top: 100px;
+}
+
+.hero-text {
+  margin: 50px auto 0;
+  font-weight: 600;
+  font-size: 50px;
+  color: #434242;
+  max-width: 480px;
+}
+
+.auditor-info-block {
+  max-width: 480px;
+  margin: 120px auto 0;
+}
+
+.auditor-info {
+  font-weight: 500;
+  font-size: 30px;
+  color: #434242;
+}
+
+.auditor-info-heading {
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+.section-title {
+  font-weight: 500;
+  font-size: 40px;
+  color: #434242;
+}
+
+.project-name {
+  text-align: center;
+  font-weight: 600;
+  font-size: 60px;
+  color: #434242;
+  margin: 300px 0 20px;
+}
+
+.project-description {
+  margin-bottom: 30px;
+}
+
+.table-of-contents {
+  list-style: none;
+}
+
+.project-scope {
+  display: flex;
+  flex-direction: column;
+}
