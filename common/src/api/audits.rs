@@ -114,7 +114,7 @@ impl PublicAudit {
                 } else if audit.issues.is_empty() {
                     PublicAuditStatus::InProgress
                 } else if audit.issues.iter().all(|issue| issue.is_resolved()) {
-                    PublicAuditStatus::Resolved
+                    PublicAuditStatus::ReadyForResolve
                 } else {
                     PublicAuditStatus::IssuesWorkflow
                 }
