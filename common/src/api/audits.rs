@@ -34,6 +34,8 @@ pub struct AuditChange {
     pub report: Option<String>,
     pub time: Option<TimeRange>,
     pub start_audit: Option<bool>,
+    #[serde(rename = "isPublic")]
+    pub public: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -53,6 +55,8 @@ pub struct PublicAudit {
     pub auditor_id: String,
     pub customer_id: String,
     pub project_id: String,
+    #[serde(rename = "isPublic")]
+    pub public: bool,
 
     pub auditor_first_name: String,
     pub auditor_last_name: String,
@@ -147,6 +151,7 @@ impl PublicAudit {
                 .into_iter()
                 .map(|i| auth.public_issue(i))
                 .collect(),
+            public: audit.public,
         };
 
         Ok(public_audit)

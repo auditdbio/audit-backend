@@ -35,6 +35,8 @@ pub struct Audit<Id: Eq + Hash> {
     pub customer_id: Id,
     pub auditor_id: Id,
     pub project_id: Id,
+    #[serde(default)]
+    pub public: bool,
 
     pub description: String,
     pub status: AuditStatus,
@@ -66,6 +68,7 @@ impl Audit<String> {
             report_name: self.report_name,
             time: self.time,
             issues: Issue::parse_map(self.issues),
+            public: self.public,
         }
     }
 }
@@ -86,6 +89,7 @@ impl Audit<ObjectId> {
             report_name: self.report_name,
             time: self.time,
             issues: Issue::to_string_map(self.issues),
+            public: self.public,
         }
     }
 }

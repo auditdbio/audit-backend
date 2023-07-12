@@ -48,6 +48,7 @@ impl AuditService {
             report_name: None,
             time: request.time,
             issues: Vec::new(),
+            public: false,
         };
 
         audits.insert(&audit).await?;
@@ -129,6 +130,10 @@ impl AuditService {
 
         if !Edit.get_access(auth, &audit) {
             return Err(anyhow::anyhow!("User is not available to change this audit").code(403));
+        }
+
+        if let Some(public) = change.public {
+            audit.public = public;
         }
 
         if audit.status != AuditStatus::Resolved {
@@ -492,5 +497,29 @@ impl AuditService {
         }
 
         Err(anyhow::anyhow!("No issue found").code(404))
+    }
+
+    pub async fn find_public(
+        &self,
+        user: ObjectId,
+        role: String,
+    ) -> error::Result<Vec<PublicAudit>> {
+        let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
+
+        let role = role.to_ascii_lowercase() + "_id";
+
+        if role != "customer_id" && role != "auditor_id" {
+            return Err(anyhow::anyhow!("Invalid role").code(400));
+        }
+
+        let audits = audits.find_many(&role, &Bson::ObjectId(user)).await?;
+
+        let mut result = vec![];
+
+        for audit in audits {
+            result.push(PublicAudit::new(&self.context, audit).await?);
+        }
+
+        Ok(result)
     }
 }

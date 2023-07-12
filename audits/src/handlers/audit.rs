@@ -127,3 +127,16 @@ pub async fn patch_audit_issue_read(
         .await?;
     Ok(HttpResponse::Ok().finish())
 }
+
+#[get("/api/public_audits/{id}/{role}")]
+pub async fn get_public_audits(
+    context: Context,
+    path: web::Path<(String, String)>,
+) -> error::Result<Json<Vec<PublicAudit>>> {
+    let (id, role) = path.into_inner();
+    Ok(Json(
+        AuditService::new(context)
+            .find_public(id.parse()?, role)
+            .await?,
+    ))
+}
