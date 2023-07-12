@@ -72,7 +72,7 @@ services:
       - 3003
     environment:
       VIRTUAL_HOST: dev.auditdb.io
-      VIRTUAL_PATH: ~^/api/(audit|my_audit|request|my_request)
+      VIRTUAL_PATH: ~^/api/(audit|my_audit|request|my_request|public_audits)
       <<: *common-variables
     networks:
       - nginx-proxy
