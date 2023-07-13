@@ -176,8 +176,8 @@ services:
 
   renderer:
     build:
-      context: ./renderer
-      dockerfile: ./renderer/Dockerfile
+      context: renderer
+      dockerfile: Dockerfile
     expose:
       - 8080
     networks:
