@@ -5,4 +5,4 @@ COPY . .
 RUN npm i
 RUN npm run build
 RUN chmod +x setup.sh
-CMD ["setup.sh"]
+CMD ["npm", "start"]
