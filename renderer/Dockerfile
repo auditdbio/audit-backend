@@ -1,4 +1,4 @@
-FROM node
+FROM node:16.17.0-bullseye-slim
 
 WORKDIR /backend
 COPY ./setup.sh .
