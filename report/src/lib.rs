@@ -30,7 +30,7 @@ pub fn create_app(
     let app = App::new()
         .wrap(cors)
         .wrap(middleware::Logger::default())
-        .app_data(Data::from(state))
+        .app_data(Data::new(state))
         .service(handlers::report::create_report);
     app
 }
