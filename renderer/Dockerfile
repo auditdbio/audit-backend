@@ -19,7 +19,7 @@ RUN npm init -y &&  \
     && chown -R pptruser:pptruser /puppeteer/package-lock.json
 USER pptruser
 
-WORKDIR /backend
+WORKDIR /puppeteer/backend
 COPY . .
 RUN npm i
 RUN npm run build
