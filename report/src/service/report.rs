@@ -53,8 +53,7 @@ pub async fn create_report(context: Context, audit: PublicAudit) -> anyhow::Resu
     let report = context
         .make_request()
         .post(format!(
-            "{}://{}/api/generate-report",
-            PROTOCOL.as_str(),
+            "http://{}/api/generate-report",
             RENDERER_SERVICE.as_str()
         ))
         .json(&input)
