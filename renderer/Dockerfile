@@ -1,4 +1,4 @@
-FROM puppeteer/puppeteer:latest
+FROM ghcr.io/puppeteer/puppeteer:latest
 
 WORKDIR /backend
 COPY . .
