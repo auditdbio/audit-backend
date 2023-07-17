@@ -1,4 +1,4 @@
-FROM geekykaran/headless-chrome-node-docker:latest
+FROM puppeteer/puppeteer:latest
 
 WORKDIR /backend
 COPY . .
