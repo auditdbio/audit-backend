@@ -1,9 +1,9 @@
-use actix_multipart::Multipart;
 use actix_web::{post, web::Json};
-use futures::StreamExt;
+use common::{api::audits::PublicAudit, context::Context, error};
+
 use serde::{Deserialize, Serialize};
 
-use crate::service::report::create_pandoc_report;
+use crate::service::report::PublicReport;
 
 #[derive(Serialize, Deserialize)]
 pub struct CreateReport {
@@ -16,21 +16,11 @@ pub struct Report {
 }
 
 #[post("/api/report")]
-pub async fn create_report(mut payload: Multipart) -> Json<Report> {
-    while let Some(item) = payload.next().await {
-        let mut field = item.unwrap();
-        if field.name() == "markdown" {
-            let mut md = vec![];
-            while let Some(chunk) = field.next().await {
-                let data = chunk.unwrap();
-                md.push(data);
-            }
-            let report = create_pandoc_report(String::from_utf8(md.concat()).unwrap())
-                .await
-                .unwrap();
-            return Json(Report { latex: report });
-        }
-    }
-    let report = String::new();
-    Json(Report { latex: report })
+pub async fn create_report(
+    context: Context,
+    Json(payload): Json<PublicAudit>,
+) -> error::Result<Json<PublicReport>> {
+    Ok(Json(
+        crate::service::report::create_report(context, payload).await?,
+    ))
 }
