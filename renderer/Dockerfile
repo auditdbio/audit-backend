@@ -17,10 +17,12 @@ RUN npm init -y &&  \
     && chown -R pptruser:pptruser /puppeteer/node_modules \
     && chown -R pptruser:pptruser /puppeteer/package.json \
     && chown -R pptruser:pptruser /puppeteer/package-lock.json
-USER pptruser
 
 WORKDIR /puppeteer/backend
 COPY . .
 RUN npm i
 RUN npm run build
+
+USER pptruser
+
 CMD ["npm", "start"]
