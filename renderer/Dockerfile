@@ -1,7 +1,5 @@
-FROM node:16.17.0-bullseye-slim
+FROM node:14-slim
 
-WORKDIR /backend
-COPY . .
 RUN apt-get update \
     && apt-get install -y wget gnupg \
     && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
@@ -18,6 +16,10 @@ RUN npm init -y &&  \
     && chown -R pptruser:pptruser /node_modules \
     && chown -R pptruser:pptruser /package.json \
     && chown -R pptruser:pptruser /package-lock.json
+USER pptruser
+
+WORKDIR /backend
+COPY . .
 RUN npm i
 RUN npm run build
 RUN chmod +x setup.sh
