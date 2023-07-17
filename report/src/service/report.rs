@@ -82,7 +82,7 @@ pub async fn create_report(context: Context, audit: PublicAudit) -> anyhow::Resu
 
     let _ = client
         .post(format!(
-            "{}://{}/api/files",
+            "{}://{}/api/file",
             PROTOCOL.as_str(),
             FILES_SERVICE.as_str()
         ))
