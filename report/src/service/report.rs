@@ -1,15 +1,10 @@
-use actix_files::NamedFile;
-use actix_web::HttpResponse;
 use common::{
     api::audits::PublicAudit,
     context::Context,
     entities::user::PublicUser,
-    services::{FILES_SERVICE, PROTOCOL, USERS_SERVICE},
+    services::{FILES_SERVICE, PROTOCOL, RENDERER_SERVICE, USERS_SERVICE},
 };
-use reqwest::{
-    multipart::{Form, Part},
-    Response,
-};
+use reqwest::multipart::{Form, Part};
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]
@@ -60,7 +55,7 @@ pub async fn create_report(context: Context, audit: PublicAudit) -> anyhow::Resu
         .post(format!(
             "{}://{}/api/generate-report",
             PROTOCOL.as_str(),
-            FILES_SERVICE.as_str()
+            RENDERER_SERVICE.as_str()
         ))
         .json(&input)
         .send()
