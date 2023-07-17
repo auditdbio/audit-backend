@@ -179,8 +179,25 @@ services:
       context: renderer
       dockerfile: Dockerfile
     expose:
-      - 8080
+      - 3015
     networks:
+      - report
+
+  report:
+    build: ./report
+    depends_on:
+      - binaries
+      - renderer
+    expose:
+      - 3011
+    volumes:
+      - binaries:/data/binaries
+    environment:
+      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_PATH: ~^/api/(report|notused2)
+      <<: *common-variables
+    networks:
+      - nginx-proxy
       - report
 
   database:
