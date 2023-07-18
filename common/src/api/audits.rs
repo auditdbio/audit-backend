@@ -25,7 +25,7 @@ pub enum AuditAction {
     Resolve,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct AuditChange {
     pub avatar: Option<String>,
     pub action: Option<AuditAction>,

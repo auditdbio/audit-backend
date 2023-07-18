@@ -1,5 +1,5 @@
 use common::{
-    api::audits::PublicAudit,
+    api::audits::{AuditChange, PublicAudit},
     context::Context,
     entities::user::PublicUser,
     services::{FILES_SERVICE, PROTOCOL, RENDERER_SERVICE, USERS_SERVICE},
@@ -66,7 +66,7 @@ pub async fn create_report(context: Context, audit: PublicAudit) -> anyhow::Resu
         .bytes()
         .await?;
 
-    let path = audit.customer_id.clone() + &audit.auditor_id;
+    let path = audit.id.clone() + ".pdf";
 
     let client = &context.0.client;
     let form = Form::new()
@@ -86,6 +86,25 @@ pub async fn create_report(context: Context, audit: PublicAudit) -> anyhow::Resu
         .multipart(form)
         .send()
         .await?;
+
+    let audit_change = AuditChange {
+        report: Some(path.clone()),
+        ..AuditChange::default()
+    };
+
+    let _ = context
+        .make_request()
+        .patch(format!(
+            "{}://{}/api/audit/{}",
+            PROTOCOL.as_str(),
+            USERS_SERVICE.as_str(),
+            audit.id
+        ))
+        .auth(context.auth().clone())
+        .json(&audit_change)
+        .send()
+        .await
+        .unwrap();
 
     Ok(PublicReport { path })
 }
