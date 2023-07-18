@@ -22,7 +22,7 @@ export const generateReport = async (req, res) => {
   const project = req.body
 
   // --- Generate PDF from HTML page:
-  const browser = await puppeteer.launch({ headless: true })
+  const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
   const browserPage = await browser.newPage()
 
   await browserPage.setContent(getHTML(project), { waitUntil: 'networkidle2' })
