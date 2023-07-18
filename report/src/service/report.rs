@@ -22,10 +22,13 @@ pub struct PublicReport {
 }
 
 pub async fn create_report(context: Context, audit: PublicAudit) -> anyhow::Result<PublicReport> {
-    let markdown = audit.issues.iter().fold(String::new(), |mut acc, issue| {
-        acc.push_str(&format!("## {}\n\n{}\n\n", issue.name, issue.description));
-        acc
-    });
+    let markdown = audit
+        .issues
+        .iter()
+        .fold(audit.description, |mut acc, issue| {
+            acc.push_str(&format!("\n\n## {}\n\n{}", issue.name, issue.description));
+            acc
+        });
 
     let user = context
         .make_request()
