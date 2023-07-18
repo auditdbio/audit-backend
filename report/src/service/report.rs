@@ -1,3 +1,5 @@
+use std::fmt::format;
+
 use common::{
     api::audits::{AuditChange, PublicAudit},
     context::Context,
@@ -21,7 +23,22 @@ pub struct PublicReport {
     path: String,
 }
 
-pub async fn create_report(context: Context, audit: PublicAudit) -> anyhow::Result<PublicReport> {
+pub async fn create_report(context: Context, audit_id: String) -> anyhow::Result<PublicReport> {
+    let audit = context
+        .make_request::<PublicAudit>()
+        .auth(context.auth().clone())
+        .get(format!(
+            "{}://{}/api/audit/{}",
+            PROTOCOL.as_str(),
+            USERS_SERVICE.as_str(),
+            audit_id
+        ))
+        .send()
+        .await
+        .unwrap()
+        .json::<PublicAudit>()
+        .await?;
+
     let markdown = audit
         .issues
         .iter()
