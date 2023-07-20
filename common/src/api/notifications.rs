@@ -28,6 +28,7 @@ pub struct NewNotification {
     pub message: String,
     #[serde(default)]
     pub links: Vec<String>,
+    pub role: String,
 }
 
 pub async fn send_notification(
@@ -43,6 +44,7 @@ pub async fn send_notification(
         mut subject,
         mut message,
         links,
+        role,
     } = new_notification;
     for (key, value) in variables {
         message = message.replace(&format!("{{{}}}", key), &value);
@@ -94,6 +96,7 @@ pub async fn send_notification(
                 is_sound: true,
                 links,
                 timestamp: default_timestamp(),
+                role,
             },
         };
         context

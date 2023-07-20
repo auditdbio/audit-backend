@@ -9,7 +9,7 @@ use common::{
         role::Role,
     },
     error::{self, AddCode},
-    services::{CUSTOMERS_SERVICE, PROTOCOL},
+    services::{CUSTOMERS_SERVICE, FRONTEND, PROTOCOL},
 };
 
 use mongodb::bson::{oid::ObjectId, Bson};
@@ -105,6 +105,12 @@ impl RequestService {
             let mut new_notification: NewNotification =
                 serde_json::from_str(include_str!("../../templates/new_audit_request.txt"))?;
 
+            new_notification.links.push(format!(
+                "https://{}/audit-request/{}",
+                FRONTEND.as_str(),
+                request.id
+            ));
+
             new_notification.user_id = Some(request.auditor_id);
 
             let variables: Vec<(String, String)> =
@@ -114,6 +120,12 @@ impl RequestService {
         } else {
             let mut new_notification: NewNotification =
                 serde_json::from_str(include_str!("../../templates/new_audit_offer.txt"))?;
+
+            new_notification.links.push(format!(
+                "https://{}/audit-request/{}/customer",
+                FRONTEND.as_str(),
+                request.id
+            ));
 
             new_notification.user_id = Some(request.customer_id);
 

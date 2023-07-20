@@ -17,6 +17,7 @@ use common::{
         role::Role,
     },
     error::{self, AddCode},
+    services::FRONTEND,
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 
@@ -229,6 +230,12 @@ impl AuditService {
 
         let mut new_notification: NewNotification =
             serde_json::from_str(include_str!("../../templates/audit_issue_disclosed.txt"))?;
+
+        new_notification.links.push(format!(
+            "https://{}/audit-info/{}/customer",
+            FRONTEND.as_str(),
+            audit.id
+        ));
 
         new_notification.user_id = Some(audit.customer_id);
 
