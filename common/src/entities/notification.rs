@@ -8,6 +8,7 @@ pub struct NotificationInner {
     pub message: String,
     pub is_read: bool,
     pub is_sound: bool,
+    #[serde(default)]
     pub role: String,
     #[serde(default)]
     pub links: Vec<String>,
