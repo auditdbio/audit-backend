@@ -1,13 +1,19 @@
-use std::fmt::format;
+use std::collections::{
+    hash_map::Entry::{Occupied, Vacant},
+    HashMap,
+};
 
 use common::{
-    api::audits::{AuditChange, PublicAudit},
+    api::{
+        audits::{AuditChange, PublicAudit},
+        issue::PublicIssue,
+    },
     context::Context,
-    entities::user::PublicUser,
+    entities::{issue::Status, user::PublicUser},
     services::{FILES_SERVICE, PROTOCOL, RENDERER_SERVICE, USERS_SERVICE},
 };
 use reqwest::multipart::{Form, Part};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct RendererInput {
@@ -21,6 +27,115 @@ pub struct RendererInput {
 #[derive(Debug, Clone, Serialize)]
 pub struct PublicReport {
     path: String,
+}
+
+/*
+ * | Issues: {number} | severity1 | severity2 | severity3 |
+ * ----------------------------------------------------------------
+ * | Fixed            | {number}  | {number}  | {number}  |
+ * | Not Fixed        | {number}  | {number}  | {number}  |
+ *
+ */
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct Statistics {
+    number_of_issues: usize,
+    fixed_or_not: HashMap<String, [usize; 2]>,
+}
+
+impl Statistics {
+    pub fn new(issues: &Vec<PublicIssue>) -> Self {
+        let mut statistics = Statistics::default();
+
+        for issue in issues {
+            if issue.include {
+                statistics.number_of_issues += 1;
+
+                let fixed = (issue.status == Status::Fixed) as usize;
+
+                match statistics.fixed_or_not.entry(issue.severity.clone()) {
+                    Occupied(mut value) => value.get_mut()[fixed] += 1,
+                    Vacant(place) => {
+                        place.insert([1 - fixed, fixed]);
+                    }
+                }
+            }
+        }
+
+        statistics
+    }
+}
+
+fn generate_markdown_issue(issue: &PublicIssue) -> String {
+    if !issue.include {
+        return String::new();
+    }
+
+    //links
+    let PublicIssue {
+        name,
+        status,
+        category,
+        description,
+        feedback,
+        severity,
+        links,
+        ..
+    } = issue;
+
+    let status = if status == &Status::Fixed {
+        "Fixed"
+    } else {
+        "Not fixed"
+    };
+
+    let links: String = links.iter().map(|s| format!("- {s}\n")).collect();
+
+    format!(
+        "## {name}\n\n ### Severity: {severity}\n\n ### Status: {status}\n\n ### Category: {category}\n\n ### Links\n\n {links}\n\n {}\n\n ## Feedback\n\n {feedback}\n\n",
+         description
+    )
+}
+
+fn generate_markdown_statistics(statistics: &Statistics) -> String {
+    [
+        statistics.fixed_or_not.keys().fold(
+            format!("| {} |", statistics.number_of_issues),
+            |acc, sev| acc + &format!(" {} |", sev),
+        ),
+        statistics
+            .fixed_or_not
+            .values()
+            .fold("| Fixed |".to_owned(), |acc, val| {
+                acc + &format!(" {} |", val[1])
+            }),
+        statistics
+            .fixed_or_not
+            .values()
+            .fold("| Not fixed |".to_owned(), |acc, val| {
+                acc + &format!(" {} |", val[0])
+            }),
+    ]
+    .concat()
+}
+
+fn generate_markdown_audit(audit: &PublicAudit) -> String {
+    // make statistics
+    let statistics = Statistics::new(&audit.issues);
+
+    format!(
+        "## Statistics\n\n {}\n\n ## Descritption\n\n {}\n\n",
+        generate_markdown_statistics(&statistics),
+        audit.description.clone(),
+    )
+}
+
+fn generate_markdown(audit: &PublicAudit) -> String {
+    audit
+        .issues
+        .iter()
+        .fold(generate_markdown_audit(audit), |acc, issue| {
+            acc + &generate_markdown_issue(issue)
+        })
 }
 
 pub async fn create_report(context: Context, audit_id: String) -> anyhow::Result<PublicReport> {
@@ -39,14 +154,7 @@ pub async fn create_report(context: Context, audit_id: String) -> anyhow::Result
         .json::<PublicAudit>()
         .await?;
 
-    let markdown = audit
-        .issues
-        .iter()
-        .fold(audit.description, |mut acc, issue| {
-            acc.push_str(&format!("\n\n## {}\n\n{}", issue.name, issue.description));
-            acc
-        });
-
+    let markdown = generate_markdown(&audit);
     let user = context
         .make_request()
         .get(format!(

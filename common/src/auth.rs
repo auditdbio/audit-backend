@@ -21,6 +21,7 @@ use crate::{
 
 pub static ENCODING_KEY: Lazy<EncodingKey> = Lazy::new(|| {
     let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+
     EncodingKey::from_secret(secret.as_bytes())
 });
 
