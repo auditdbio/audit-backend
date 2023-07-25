@@ -1,7 +1,10 @@
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
-    api::{send_notification, NewNotification},
+    api::{
+        events::{EventPayload, PublicEvent},
+        send_notification, NewNotification,
+    },
     context::Context,
     entities::{
         audit_request::{AuditRequest, PriceRange, TimeRange},
@@ -9,7 +12,7 @@ use common::{
         role::Role,
     },
     error::{self, AddCode},
-    services::{CUSTOMERS_SERVICE, FRONTEND, PROTOCOL},
+    services::{CUSTOMERS_SERVICE, EVENTS_SERVICE, FRONTEND, PROTOCOL},
 };
 
 use mongodb::bson::{oid::ObjectId, Bson};
@@ -105,11 +108,9 @@ impl RequestService {
             let mut new_notification: NewNotification =
                 serde_json::from_str(include_str!("../../templates/new_audit_request.txt"))?;
 
-            new_notification.links.push(format!(
-                "https://{}/audit-request/{}",
-                FRONTEND.as_str(),
-                request.id
-            ));
+            new_notification
+                .links
+                .push(format!("/audit-request/{}", request.id));
 
             new_notification.user_id = Some(request.auditor_id);
 
@@ -121,11 +122,9 @@ impl RequestService {
             let mut new_notification: NewNotification =
                 serde_json::from_str(include_str!("../../templates/new_audit_offer.txt"))?;
 
-            new_notification.links.push(format!(
-                "https://{}/audit-request/{}/customer",
-                FRONTEND.as_str(),
-                request.id
-            ));
+            new_notification
+                .links
+                .push(format!("/audit-request/{}/customer", request.id));
 
             new_notification.user_id = Some(request.customer_id);
 
@@ -152,7 +151,30 @@ impl RequestService {
 
         requests.insert(&request).await?;
 
+        let event_reciver = if auth.id().unwrap() == &customer_id {
+            auditor_id
+        } else {
+            customer_id
+        };
+
         let public_request = PublicRequest::new(&self.context, request).await?;
+
+        let event = PublicEvent::new(
+            event_reciver,
+            EventPayload::NewRequest(public_request.clone()),
+        );
+
+        self.context
+            .make_request()
+            .post(format!(
+                "{}://{}/api/event",
+                PROTOCOL.as_str(),
+                EVENTS_SERVICE.as_str()
+            ))
+            .auth(self.context.server_auth())
+            .json(&event)
+            .send()
+            .await?;
 
         Ok(public_request)
     }

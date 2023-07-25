@@ -60,10 +60,10 @@ pub async fn send_notification(
 
     notifications.insert(&notification).await?;
 
-    let event = PublicEvent {
-        user_id: notif.user_id,
-        payload: EventPayload::Notification(notification.into()),
-    };
+    let event = PublicEvent::new(
+        notif.user_id,
+        EventPayload::Notification(notification.into()),
+    );
 
     context
         .make_request()

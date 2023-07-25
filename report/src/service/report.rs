@@ -70,7 +70,6 @@ fn generate_markdown_issue(issue: &PublicIssue) -> String {
         return String::new();
     }
 
-    //links
     let PublicIssue {
         name,
         status,
@@ -119,7 +118,6 @@ fn generate_markdown_statistics(statistics: &Statistics) -> String {
 }
 
 fn generate_markdown_audit(audit: &PublicAudit) -> String {
-    // make statistics
     let statistics = Statistics::new(&audit.issues);
 
     format!(

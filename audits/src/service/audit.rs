@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 
 use chrono::Utc;
+
 use common::{
     access_rules::{AccessRules, Edit, Read},
     api::{
         audits::{AuditAction, AuditChange, CreateIssue, PublicAudit},
+        events::{self, EventPayload, PublicEvent},
         issue::PublicIssue,
         send_notification, NewNotification,
     },
@@ -17,7 +19,7 @@ use common::{
         role::Role,
     },
     error::{self, AddCode},
-    services::FRONTEND,
+    services::{EVENTS_SERVICE, PROTOCOL},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 
@@ -33,12 +35,16 @@ impl AuditService {
     }
 
     pub async fn create(&self, request: PublicRequest) -> error::Result<PublicAudit> {
+        let auth = self.context.auth();
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
+
+        let auditor_id = request.auditor_id.parse()?;
+        let customer_id = request.customer_id.parse()?;
 
         let audit = Audit {
             id: ObjectId::new(),
-            customer_id: request.customer_id.parse()?,
-            auditor_id: request.auditor_id.parse()?,
+            customer_id,
+            auditor_id,
             project_id: request.project_id.parse()?,
             description: request.description,
             status: AuditStatus::Waiting,
@@ -61,6 +67,26 @@ impl AuditService {
         requests.delete("_id", &request.id.parse()?).await?;
 
         let public_audit = PublicAudit::new(&self.context, audit).await?;
+
+        let event_reciver = if auth.id().unwrap() == &customer_id {
+            auditor_id
+        } else {
+            customer_id
+        };
+
+        let event = PublicEvent::new(event_reciver, EventPayload::NewAudit(public_audit.clone()));
+
+        self.context
+            .make_request()
+            .post(format!(
+                "{}://{}/api/event",
+                PROTOCOL.as_str(),
+                EVENTS_SERVICE.as_str()
+            ))
+            .auth(self.context.server_auth())
+            .json(&event)
+            .send()
+            .await?;
 
         Ok(public_audit)
     }
@@ -171,7 +197,30 @@ impl AuditService {
         audits.delete("_id", &id).await?;
         audits.insert(&audit).await?;
 
+        let event_reciver = if auth.id().unwrap() == &audit.customer_id {
+            audit.auditor_id
+        } else {
+            audit.customer_id
+        };
+
         let public_audit = PublicAudit::new(&self.context, audit).await?;
+
+        let event = PublicEvent::new(
+            event_reciver,
+            EventPayload::AuditUpdate(public_audit.clone()),
+        );
+
+        self.context
+            .make_request()
+            .post(format!(
+                "{}://{}/api/event",
+                PROTOCOL.as_str(),
+                EVENTS_SERVICE.as_str()
+            ))
+            .auth(self.context.server_auth())
+            .json(&event)
+            .send()
+            .await?;
 
         Ok(public_audit)
     }
@@ -231,11 +280,9 @@ impl AuditService {
         let mut new_notification: NewNotification =
             serde_json::from_str(include_str!("../../templates/audit_issue_disclosed.txt"))?;
 
-        new_notification.links.push(format!(
-            "https://{}/audit-info/{}/customer",
-            FRONTEND.as_str(),
-            audit.id
-        ));
+        new_notification
+            .links
+            .push(format!("/audit-info/{}/customer", audit.id));
 
         new_notification.user_id = Some(audit.customer_id);
 

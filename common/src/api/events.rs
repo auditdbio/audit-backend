@@ -11,8 +11,31 @@ pub enum EventPayload {
     AuditUpdate(PublicAudit),
 }
 
+impl EventPayload {
+    pub fn kind(&self) -> String {
+        match self {
+            EventPayload::Notification(_) => "Notification".to_owned(),
+            EventPayload::NewRequest(_) => "NewRequest".to_owned(),
+            EventPayload::NewAudit(_) => "NewAudit".to_owned(),
+            EventPayload::AuditUpdate(_) => "AuditUpdate".to_owned(),
+        }
+    }
+}
+
 #[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct PublicEvent {
     pub user_id: ObjectId,
+    pub kind: String,
     pub payload: EventPayload,
+}
+
+impl PublicEvent {
+    pub fn new(user_id: ObjectId, payload: EventPayload) -> Self {
+        let kind = payload.kind();
+        Self {
+            user_id,
+            kind,
+            payload,
+        }
+    }
 }
