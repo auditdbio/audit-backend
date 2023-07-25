@@ -12,5 +12,6 @@ members = [
     "notification",
     "telemetry",
     "event",
-    "report"
+    "report",
+    "chat"
 ]

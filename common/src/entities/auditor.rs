@@ -72,7 +72,7 @@ impl Entity for Auditor<ObjectId> {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PublicAuditor {
     pub user_id: String,
     pub avatar: String,

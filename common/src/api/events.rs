@@ -1,7 +1,9 @@
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-use super::{audits::PublicAudit, requests::PublicRequest, PublicNotification};
+use super::{
+    audits::PublicAudit, chat::PublicMessage, requests::PublicRequest, PublicNotification,
+};
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
 pub enum EventPayload {
@@ -9,6 +11,7 @@ pub enum EventPayload {
     NewRequest(PublicRequest),
     NewAudit(PublicAudit),
     AuditUpdate(PublicAudit),
+    ChatMessage(PublicMessage),
 }
 
 impl EventPayload {
@@ -18,6 +21,7 @@ impl EventPayload {
             EventPayload::NewRequest(_) => "NewRequest".to_owned(),
             EventPayload::NewAudit(_) => "NewAudit".to_owned(),
             EventPayload::AuditUpdate(_) => "AuditUpdate".to_owned(),
+            EventPayload::ChatMessage(_) => "ChatMessage".to_owned(),
         }
     }
 }

@@ -91,7 +91,7 @@ impl From<Customer<ObjectId>> for Option<Document> {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PublicCustomer {
     pub user_id: String,
     pub avatar: String,
