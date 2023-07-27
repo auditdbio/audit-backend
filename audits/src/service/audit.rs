@@ -42,7 +42,7 @@ impl AuditService {
         let customer_id = request.customer_id.parse()?;
 
         let audit = Audit {
-            id: ObjectId::new(),
+            id: request.id.parse()?,
             customer_id,
             auditor_id,
             project_id: request.project_id.parse()?,
