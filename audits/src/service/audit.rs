@@ -64,7 +64,7 @@ impl AuditService {
             .context
             .try_get_repository::<AuditRequest<ObjectId>>()?;
 
-        requests.delete("_id", &request.id.parse()?).await?;
+        requests.delete("id", &request.id.parse()?).await?;
 
         let public_audit = PublicAudit::new(&self.context, audit).await?;
 

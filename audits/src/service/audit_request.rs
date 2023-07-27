@@ -78,7 +78,7 @@ impl RequestService {
             );
         };
 
-        let request = AuditRequest {
+        let mut request = AuditRequest {
             id: ObjectId::new(),
             customer_id,
             auditor_id,
@@ -104,6 +104,7 @@ impl RequestService {
             requests
                 .delete("id", &old_version_of_this_request.id)
                 .await?;
+            request.id = old_version_of_this_request.id;
         } else if last_changer == Role::Customer {
             let mut new_notification: NewNotification =
                 serde_json::from_str(include_str!("../../templates/new_audit_request.txt"))?;

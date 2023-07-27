@@ -10,6 +10,7 @@ pub struct NotificationInner {
     pub is_sound: bool,
     #[serde(default)]
     pub role: String,
+
     #[serde(default)]
     pub links: Vec<String>,
 
