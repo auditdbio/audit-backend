@@ -319,6 +319,22 @@ impl RequestService {
                 ))
                 .send()
                 .await?;
+
+            // audit_request_decline_customer.txt
+
+            let mut new_notification: NewNotification = serde_json::from_str(include_str!(
+                "../../templates/audit_request_decline_customer.txt"
+            ))?;
+
+            new_notification
+                .links
+                .push(format!("/audit-request/{}/customer", request.id));
+
+            new_notification.user_id = Some(request.auditor_id);
+
+            let variables: Vec<(String, String)> = vec![];
+
+            send_notification(&self.context, true, true, new_notification, variables).await?;
         }
 
         Ok(public_request)
