@@ -18,6 +18,7 @@ blockquote {
 pre {
   padding: 20px;
   background: #f5f5f5;
+  line-height: 22px;
   page-break-inside: avoid;
 }
 
@@ -117,10 +118,32 @@ td {
   font-weight: 600;
 }
 
-.section-title {
-  font-weight: 500;
+.report-block {
+  /*page-break-inside: avoid;*/
+  margin-bottom: 100px;
+}
+
+.report-block-title {
+  font-weight: 600;
+  font-size: 45px;
+  color: black;
+  margin-bottom: 20px;
+  border-bottom: 1px solid lightgrey;
+}
+
+.issue-block {
+  padding-left: 20px;
+}
+
+.report-issue-title {
+  font-weight: 600;
   font-size: 40px;
   color: #434242;
+  margin-bottom: 15px;
+}
+
+.report-plain-text {
+  padding: 0 20px;
 }
 
 .project-name {
@@ -132,11 +155,34 @@ td {
 }
 
 .project-description {
+  padding: 0 20px;
   margin-bottom: 30px;
 }
 
-.table-of-contents {
-  list-style: none;
+.issue-data {
+  font-size: 20px;
+  margin-bottom: 10px;
+}
+
+.issue-feedback {
+  background: #f5d7a9;
+  border-radius: 10px;
+  padding: 10px 20px;
+  margin-bottom: 30px;
+  page-break-inside: avoid;
+}
+
+.issue-feedback pre {
+  background: transparent;
+  padding: 10px;
+}
+
+.issue-feedback-title {
+  font-weight: 500;
+  font-size: 25px;
+  font-style: italic;
+  color: black;
+  margin-bottom: 10px;
 }
 
 .project-scope {

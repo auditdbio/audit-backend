@@ -1,42 +1,33 @@
 import React from 'react'
-import RenderMarkdown from './RenderMarkdown.js'
+import { ISSUE_DATA, PLAIN_TEXT, PROJECT_DESCRIPTION, STATISTICS } from '../../constants/reportBlockTypes.js'
+import ProjectDescriptionBlock from './blocks/ProjectDescriptionBlock.js'
+import PlainTextBlock from './blocks/PlainTextBlock.js'
+import IssueDataBlock from './blocks/IssueDataBlock.js'
 
 const ProjectData = ({ project }) => {
   return (
     <div className="project-data">
-      {/*<div id="contents" className="section-title">*/}
-      {/*  Table of contents:*/}
-      {/*</div>*/}
-      {/*<ul className="table-of-contents">*/}
-      {/*  <li>*/}
-      {/*    Summary*/}
-      {/*    <ul className="table-of-contents">*/}
-      {/*      <li>Project description</li>*/}
-      {/*      <li>Scope</li>*/}
-      {/*    </ul>*/}
-      {/*  </li>*/}
-      {/*  <li>Issue summary</li>*/}
-      {/*  <li>Issues</li>*/}
-      {/*</ul>*/}
+      {project.report_data?.map((reportBlock) => {
+        if (reportBlock.type === PROJECT_DESCRIPTION || reportBlock.type === STATISTICS) {
+          return <ProjectDescriptionBlock data={reportBlock} />
+        } else if (reportBlock.type === PLAIN_TEXT) {
+          return <PlainTextBlock data={reportBlock} />
+        } else if (reportBlock.type === ISSUE_DATA) {
+          return <IssueDataBlock data={reportBlock} />
+        }
+      })}
 
-      {/*<div id="description" className="section-title">*/}
-      {/*  Description:*/}
-      {/*</div>*/}
-
-      <div className="project-description">
-        <RenderMarkdown markdown={project.markdown} />
-      </div>
-
-      <div id="scope" className="section-title">
-        Links:
-      </div>
-
-      <div className="project-scope">
-        {project?.scope.map((link, idx) => (
-          <a href={link} key={idx} className="project-link">
-            {link}
-          </a>
-        ))}
+      <div className="report-block">
+        <div id="scope" className="report-block-title">
+          Links:
+        </div>
+        <div className="project-scope">
+          {project?.scope.map((link, idx) => (
+            <a href={link} key={idx} className="project-link">
+              {link}
+            </a>
+          ))}
+        </div>
       </div>
     </div>
   )
