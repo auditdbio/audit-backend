@@ -4,9 +4,9 @@ import RenderMarkdown from '../RenderMarkdown.js'
 const IssueDataBlock = ({ data }) => {
   return (
     <div className="report-block issue-block">
-      <div className="report-issue-title">{data.title}</div>
+      <h2 className="report-issue-title">{data.title}</h2>
 
-      <div className="issue-data">
+      <div className="issue-data page-break">
         <div>
           <b>Status:</b> {data.issue_data?.status}
         </div>
@@ -24,10 +24,20 @@ const IssueDataBlock = ({ data }) => {
         <RenderMarkdown markdown={data.text} />
       </div>
 
+      {!!data.issue_data?.links?.length && (
+        <div className="scope issue-links">
+          {data.issue_data.links.map((link, idx) => (
+            <a href={link} key={idx} className="issue-link">
+              {link}
+            </a>
+          ))}
+        </div>
+      )}
+
       {data.feedback && (
         <div className="issue-feedback">
           <div className="issue-feedback-title">Feedback:</div>
-          <RenderMarkdown markdown={data.feedback} />
+          <RenderMarkdown markdown={data.feedback}/>
         </div>
       )}
     </div>

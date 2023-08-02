@@ -30,6 +30,11 @@ export const generateReport = async (req, res) => {
   await browserPage.evaluate(() => (document.body.style.zoom = 0.5))
 
   const pdfBuffer = await browserPage.pdf(pdfOptions)
+
+
+  const headingStrings = await browserPage.$$eval('.report-block-title', nodes => nodes.map(n => n.innerText))
+  console.log(headingStrings)
+
   await browser.close()
 
   // --------------------------------------------

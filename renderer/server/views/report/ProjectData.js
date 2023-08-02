@@ -3,6 +3,7 @@ import { ISSUE_DATA, PLAIN_TEXT, PROJECT_DESCRIPTION, STATISTICS } from '../../c
 import ProjectDescriptionBlock from './blocks/ProjectDescriptionBlock.js'
 import PlainTextBlock from './blocks/PlainTextBlock.js'
 import IssueDataBlock from './blocks/IssueDataBlock.js'
+import ProjectLinksBlock from "./blocks/ProjectLinksBlock.js"
 
 const ProjectData = ({ project }) => {
   return (
@@ -17,18 +18,7 @@ const ProjectData = ({ project }) => {
         }
       })}
 
-      <div className="report-block">
-        <div id="scope" className="report-block-title">
-          Links:
-        </div>
-        <div className="project-scope">
-          {project?.scope.map((link, idx) => (
-            <a href={link} key={idx} className="project-link">
-              {link}
-            </a>
-          ))}
-        </div>
-      </div>
+      <ProjectLinksBlock project={project} />
     </div>
   )
 }
