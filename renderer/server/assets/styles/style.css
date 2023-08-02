@@ -139,6 +139,7 @@ td {
   color: black;
   margin-bottom: 20px;
   border-bottom: 1px solid lightgrey;
+  page-break-inside: avoid;
 }
 
 .issue-block {
@@ -151,6 +152,7 @@ td {
   font-size: 40px;
   color: #434242;
   margin-bottom: 15px;
+  page-break-inside: avoid;
 }
 
 .report-plain-text {
@@ -175,10 +177,11 @@ td {
 .issue-data {
   font-size: 20px;
   margin-bottom: 10px;
+  page-break-inside: avoid;
 }
 
 .issue-feedback {
-  background: #f5d7a9;
+  background: #fcefdc;
   border-radius: 10px;
   padding: 10px 20px;
   margin-bottom: 30px;
