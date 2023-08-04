@@ -5,7 +5,7 @@ const ProjectLinksBlock = ({ project }) => {
   return (
     <div className="report-block">
       <h2 id="scope" className="report-block-title">
-        Links
+        {project.report_data?.length + 1}. Links
         <TitleLabel show={true} />
       </h2>
       <div className="scope page-break">

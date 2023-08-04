@@ -2,11 +2,11 @@ import React from 'react'
 import RenderMarkdown from '../RenderMarkdown.js'
 import TitleLabel from '../TitleLabel.js'
 
-const IssueDataBlock = ({ data }) => {
+const IssueDataBlock = ({ data, num }) => {
   return (
     <div className="report-block issue-block">
       <h2 className="report-issue-title">
-        {data.title}
+        {num}. {data.title}
         <TitleLabel show={data.include_in_toc} />
       </h2>
 

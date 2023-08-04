@@ -4,10 +4,22 @@ import fontkit from "@pdf-lib/fontkit"
 import { rgb } from "pdf-lib"
 
 const createTOC = async (project, pdfDoc, pdfBuffer, backgroundImage) => {
-  const itemsForToc = project.report_data.reduce((acc, item) => {
-    return item.include_in_toc ? [...acc, item.title] : acc
-  }, [])
-  const tableOfContents = await getPageForStrings(pdfBuffer, [...itemsForToc, 'Links'])
+  const tocReducer = (report_data, num) => {
+    return report_data.reduce((acc, item, idx) => {
+      const numeration = num ? ` ${num}.${idx + 1}` : idx + 1
+      let subsections = []
+      if (item.subsections?.length) {
+        subsections = tocReducer(item.subsections, numeration)
+      }
+      const title = `${numeration}. ${item.title}`
+      return item.include_in_toc
+        ? [...acc, title, ...subsections]
+        : acc
+    }, [])
+  }
+
+  const itemsForToc = tocReducer(project.report_data)
+  const tableOfContents = await getPageForStrings(pdfBuffer, [...itemsForToc, `${project.report_data.length + 1}. Links`])
 
   const tocPage = await pdfDoc.insertPage(1)
   const { width, height } = tocPage.getSize()
@@ -49,7 +61,7 @@ const createTOC = async (project, pdfDoc, pdfBuffer, backgroundImage) => {
       } else {
         await tocPage.drawText(currentLine, { ...drawTextOptions, y: tocY })
         tocY -= lineHeight
-        currentLine = `    ${lineWords[j]} `
+        currentLine = `  ${lineWords[j]} `
       }
     }
 
