@@ -32,6 +32,7 @@ pub struct Section {
     pub include_in_toc: bool,
     pub feedback: Option<String>,
     pub issue_data: Option<IssueData>,
+    pub subsection: Option<Vec<Section>>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -48,13 +49,6 @@ pub struct PublicReport {
     path: String,
 }
 
-/*
- * | Issues: {number} | severity1 | severity2 | severity3 |
- * ----------------------------------------------------------------
- * | Fixed            | {number}  | {number}  | {number}  |
- * | Not Fixed        | {number}  | {number}  | {number}  |
- *
- */
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Statistics {
     number_of_issues: usize,
@@ -158,11 +152,19 @@ fn generate_issue_section(issue: &PublicIssue) -> Option<Section> {
             category,
             links: issue.links.clone(),
         }),
+        subsection: None,
     })
 }
 
 fn generate_audit_sections(audit: &PublicAudit) -> Vec<Section> {
     let statistics = Statistics::new(&audit.issues);
+
+    /*
+     * Table of contests
+     * Disclamer
+     *     Project description
+     *     Scope
+     */
 
     vec![
         Section {
