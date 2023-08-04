@@ -173,6 +173,7 @@ fn generate_audit_sections(audit: &PublicAudit, issues: Vec<Section>) -> Vec<Sec
             typ: "plain_text".to_owned(),
             title: "Disclamer".to_string(),
             text: disclamer,
+            include_in_toc: true,
             ..Default::default()
         },
         Section {
