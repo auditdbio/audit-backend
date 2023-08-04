@@ -144,7 +144,7 @@ fn generate_issue_section(issue: &PublicIssue) -> Option<Section> {
         typ: "issue_data".to_string(),
         title: name.clone(),
         text: description.clone(),
-        include_in_toc: false,
+        include_in_toc: true,
         feedback,
         issue_data: Some(IssueData {
             severity,
@@ -198,6 +198,7 @@ fn generate_audit_sections(audit: &PublicAudit, issues: Vec<Section>) -> Vec<Sec
             typ: "plain_text".to_string(),
             title: "Issues".to_string(),
             subsections: Some(issues),
+            include_in_toc: true,
             ..Default::default()
         },
     ]
