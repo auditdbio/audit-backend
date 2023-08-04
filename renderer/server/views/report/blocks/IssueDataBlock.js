@@ -1,12 +1,16 @@
 import React from 'react'
 import RenderMarkdown from '../RenderMarkdown.js'
+import TitleLabel from '../TitleLabel.js'
 
-const IssueDataBlock = ({ data }) => {
+const IssueDataBlock = ({ data, num }) => {
   return (
     <div className="report-block issue-block">
-      <div className="report-issue-title">{data.title}</div>
+      <h2 className="report-issue-title">
+        {num}. {data.title}
+        <TitleLabel show={data.include_in_toc} />
+      </h2>
 
-      <div className="issue-data">
+      <div className="issue-data page-break">
         <div>
           <b>Status:</b> {data.issue_data?.status}
         </div>
@@ -23,6 +27,16 @@ const IssueDataBlock = ({ data }) => {
       <div className="project-description">
         <RenderMarkdown markdown={data.text} />
       </div>
+
+      {!!data.issue_data?.links?.length && (
+        <div className="scope issue-links">
+          {data.issue_data.links.map((link, idx) => (
+            <a href={link} key={idx} className="issue-link">
+              {link}
+            </a>
+          ))}
+        </div>
+      )}
 
       {data.feedback && (
         <div className="issue-feedback">

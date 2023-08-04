@@ -15,6 +15,10 @@ blockquote {
   background: none repeat scroll 0 0 rgba(102,128,153,.05);
 }
 
+h1,h2,h3,h4,h5,h6 {
+  page-break-after: avoid;
+}
+
 pre {
   padding: 20px;
   background: #f5f5f5;
@@ -47,6 +51,20 @@ td {
   border: 1px solid #efefef;
   padding: 10px 15px;
   min-width: 60px;
+}
+
+.title-search-label {
+  font-size: 1px;
+  color: white;
+}
+
+.table-of-contents {
+  height: 560mm;
+}
+
+.page-break {
+  page-break-before: avoid;
+  /*page-break-inside: avoid;*/
 }
 
 .container {
@@ -119,16 +137,19 @@ td {
 }
 
 .report-block {
-  /*page-break-inside: avoid;*/
   margin-bottom: 100px;
 }
 
 .report-block-title {
+  font-family: "Arial", "Helvetica", sans-serif;
+  orphans: 2;
+  page-break-after: avoid;
   font-weight: 600;
   font-size: 45px;
   color: black;
   margin-bottom: 20px;
   border-bottom: 1px solid lightgrey;
+  page-break-inside: avoid;
 }
 
 .issue-block {
@@ -136,14 +157,18 @@ td {
 }
 
 .report-issue-title {
+  font-family: "Arial", "Helvetica", sans-serif;
+  orphans: 3;
   font-weight: 600;
   font-size: 40px;
   color: #434242;
   margin-bottom: 15px;
+  page-break-inside: avoid;
 }
 
 .report-plain-text {
   padding: 0 20px;
+  widows: 2;
 }
 
 .project-name {
@@ -157,15 +182,17 @@ td {
 .project-description {
   padding: 0 20px;
   margin-bottom: 30px;
+  widows: 2;
 }
 
 .issue-data {
   font-size: 20px;
   margin-bottom: 10px;
+  page-break-inside: avoid;
 }
 
 .issue-feedback {
-  background: #f5d7a9;
+  background: #fcefdc;
   border-radius: 10px;
   padding: 10px 20px;
   margin-bottom: 30px;
@@ -185,7 +212,14 @@ td {
   margin-bottom: 10px;
 }
 
-.project-scope {
+.scope {
   display: flex;
   flex-direction: column;
+  widows: 2;
+}
+
+.issue-links {
+  padding: 0 20px;
+  margin-bottom: 30px;
+  page-break-inside: avoid;
 }
