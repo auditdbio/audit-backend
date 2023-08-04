@@ -9,8 +9,8 @@ use super::{
 pub enum EventPayload {
     Notification(PublicNotification),
     NewRequest(PublicRequest),
-    RequestAccept(ObjectId),
-    RequestDecline(ObjectId),
+    RequestAccept(String),
+    RequestDecline(String),
     NewAudit(PublicAudit),
     AuditUpdate(PublicAudit),
     ChatMessage(PublicMessage),

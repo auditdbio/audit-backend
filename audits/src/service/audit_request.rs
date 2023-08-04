@@ -329,7 +329,7 @@ impl RequestService {
 
         let event = PublicEvent::new(
             event_reciver,
-            EventPayload::RequestDecline(public_request.id.parse()?),
+            EventPayload::RequestDecline(public_request.id.clone()),
         );
 
         self.context

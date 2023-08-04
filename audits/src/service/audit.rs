@@ -90,7 +90,7 @@ impl AuditService {
 
         let event = PublicEvent::new(
             event_reciver,
-            EventPayload::RequestAccept(request.id.parse()?),
+            EventPayload::RequestAccept(request.id.clone()),
         );
 
         self.context
