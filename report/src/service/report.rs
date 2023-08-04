@@ -15,13 +15,32 @@ use common::{
 use reqwest::multipart::{Form, Part};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct IssueData {
+    pub severity: Option<String>,
+    pub status: String,
+    pub category: Option<String>,
+    pub links: Vec<String>,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct Section {
+    #[serde(rename = "type")]
+    pub typ: String,
+    pub title: String,
+    pub text: String,
+    pub include_in_toc: bool,
+    pub feedback: Option<String>,
+    pub issue_data: Option<IssueData>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RendererInput {
     pub auditor_name: String,
     pub auditor_email: String,
     pub project_name: String,
     pub scope: Vec<String>,
-    pub markdown: String,
+    pub report_data: Vec<Section>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -63,11 +82,32 @@ impl Statistics {
 
         statistics
     }
+
+    pub fn to_markdown(self) -> String {
+        [
+            self.fixed_or_not
+                .keys()
+                .fold(format!("| {} |", self.number_of_issues), |acc, sev| {
+                    acc + &format!(" {} |", sev)
+                }),
+            self.fixed_or_not
+                .values()
+                .fold("| Fixed |".to_owned(), |acc, val| {
+                    acc + &format!(" {} |", val[1])
+                }),
+            self.fixed_or_not
+                .values()
+                .fold("| Not fixed |".to_owned(), |acc, val| {
+                    acc + &format!(" {} |", val[0])
+                }),
+        ]
+        .concat()
+    }
 }
 
-fn generate_markdown_issue(issue: &PublicIssue) -> String {
+fn generate_issue_section(issue: &PublicIssue) -> Option<Section> {
     if !issue.include {
-        return String::new();
+        return None;
     }
 
     let PublicIssue {
@@ -84,56 +124,76 @@ fn generate_markdown_issue(issue: &PublicIssue) -> String {
     let status = if status == &Status::Fixed {
         "Fixed"
     } else {
-        "Not fixed"
+        "NotFixed"
+    }
+    .to_string();
+
+    let feedback = if !feedback.is_empty() {
+        Some(feedback.clone())
+    } else {
+        None
     };
 
-    let links: String = links.iter().map(|s| format!("- {s}\n")).collect();
+    let severity = if !severity.is_empty() {
+        Some(severity.clone())
+    } else {
+        None
+    };
 
-    format!(
-        "## {name}\n\n ### Severity: {severity}\n\n ### Status: {status}\n\n ### Category: {category}\n\n ### Links\n\n {links}\n\n {}\n\n ## Feedback\n\n {feedback}\n\n",
-         description
-    )
+    let category = if !category.is_empty() {
+        Some(category.clone())
+    } else {
+        None
+    };
+
+    Some(Section {
+        typ: "issue_data".to_string(),
+        title: name.clone(),
+        text: description.clone(),
+        include_in_toc: false,
+        feedback,
+        issue_data: Some(IssueData {
+            severity,
+            status,
+            category,
+            links: issue.links.clone(),
+        }),
+    })
 }
 
-fn generate_markdown_statistics(statistics: &Statistics) -> String {
-    [
-        statistics.fixed_or_not.keys().fold(
-            format!("| {} |", statistics.number_of_issues),
-            |acc, sev| acc + &format!(" {} |", sev),
-        ),
-        statistics
-            .fixed_or_not
-            .values()
-            .fold("| Fixed |".to_owned(), |acc, val| {
-                acc + &format!(" {} |", val[1])
-            }),
-        statistics
-            .fixed_or_not
-            .values()
-            .fold("| Not fixed |".to_owned(), |acc, val| {
-                acc + &format!(" {} |", val[0])
-            }),
-    ]
-    .concat()
-}
-
-fn generate_markdown_audit(audit: &PublicAudit) -> String {
+fn generate_audit_sections(audit: &PublicAudit) -> Vec<Section> {
     let statistics = Statistics::new(&audit.issues);
 
-    format!(
-        "## Statistics\n\n {}\n\n ## Descritption\n\n {}\n\n",
-        generate_markdown_statistics(&statistics),
-        audit.description.clone(),
-    )
+    vec![
+        Section {
+            typ: "project_description".to_string(),
+            title: "Project Description".to_string(),
+            text: audit.description.clone(),
+            include_in_toc: true,
+            ..Default::default()
+        },
+        Section {
+            typ: "statistics".to_string(),
+            title: "Issue statistics".to_string(),
+            text: statistics.to_markdown(),
+            include_in_toc: true,
+            ..Default::default()
+        },
+        Section {
+            typ: "plain_text".to_string(),
+            title: "Issues".to_string(),
+            ..Default::default()
+        },
+    ]
 }
 
-fn generate_markdown(audit: &PublicAudit) -> String {
-    audit
+fn generate_data(audit: &PublicAudit) -> Vec<Section> {
+    let issues = audit
         .issues
         .iter()
-        .fold(generate_markdown_audit(audit), |acc, issue| {
-            acc + &generate_markdown_issue(issue)
-        })
+        .filter_map(generate_issue_section)
+        .collect();
+    vec![generate_audit_sections(audit), issues].concat()
 }
 
 pub async fn create_report(context: Context, audit_id: String) -> anyhow::Result<PublicReport> {
@@ -152,7 +212,6 @@ pub async fn create_report(context: Context, audit_id: String) -> anyhow::Result
         .json::<PublicAudit>()
         .await?;
 
-    let markdown = generate_markdown(&audit);
     let user = context
         .make_request()
         .get(format!(
@@ -168,12 +227,13 @@ pub async fn create_report(context: Context, audit_id: String) -> anyhow::Result
         .json::<PublicUser>()
         .await?;
 
+    let report_data = generate_data(&audit);
     let input = RendererInput {
         auditor_name: audit.auditor_first_name + " " + &audit.auditor_last_name,
         auditor_email: user.email,
         project_name: audit.project_name,
         scope: audit.scope,
-        markdown,
+        report_data,
     };
 
     let report = context
