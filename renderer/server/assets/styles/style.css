@@ -53,6 +53,15 @@ td {
   min-width: 60px;
 }
 
+.title-search-label {
+  font-size: 1px;
+  color: white;
+}
+
+.table-of-contents {
+  height: 560mm;
+}
+
 .page-break {
   page-break-before: avoid;
   /*page-break-inside: avoid;*/
@@ -132,6 +141,7 @@ td {
 }
 
 .report-block-title {
+  font-family: "Arial", "Helvetica", sans-serif;
   orphans: 2;
   page-break-after: avoid;
   font-weight: 600;
@@ -147,6 +157,7 @@ td {
 }
 
 .report-issue-title {
+  font-family: "Arial", "Helvetica", sans-serif;
   orphans: 3;
   font-weight: 600;
   font-size: 40px;

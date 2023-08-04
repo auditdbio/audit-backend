@@ -1,10 +1,14 @@
 import React from 'react'
 import RenderMarkdown from '../RenderMarkdown.js'
+import TitleLabel from '../TitleLabel.js'
 
 const IssueDataBlock = ({ data }) => {
   return (
     <div className="report-block issue-block">
-      <h2 className="report-issue-title">{data.title}</h2>
+      <h2 className="report-issue-title">
+        {data.title}
+        <TitleLabel show={data.include_in_toc} />
+      </h2>
 
       <div className="issue-data page-break">
         <div>
@@ -37,7 +41,7 @@ const IssueDataBlock = ({ data }) => {
       {data.feedback && (
         <div className="issue-feedback">
           <div className="issue-feedback-title">Feedback:</div>
-          <RenderMarkdown markdown={data.feedback}/>
+          <RenderMarkdown markdown={data.feedback} />
         </div>
       )}
     </div>
