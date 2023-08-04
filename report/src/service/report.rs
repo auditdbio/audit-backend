@@ -33,6 +33,7 @@ pub struct Section {
     pub feedback: Option<String>,
     pub issue_data: Option<IssueData>,
     pub subsections: Option<Vec<Section>>,
+    pub links: Option<Vec<String>>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -84,16 +85,23 @@ impl Statistics {
                 .fold(format!("| {} |", self.number_of_issues), |acc, sev| {
                     acc + &format!(" {} |", sev)
                 }),
+            "\n".to_string(),
+            self.fixed_or_not
+                .keys()
+                .fold("| :---: |".to_string(), |acc, _| acc + " :---: |"),
+            "\n".to_string(),
             self.fixed_or_not
                 .values()
                 .fold("| Fixed |".to_owned(), |acc, val| {
                     acc + &format!(" {} |", val[1])
                 }),
+            "\n".to_string(),
             self.fixed_or_not
                 .values()
                 .fold("| Not fixed |".to_owned(), |acc, val| {
                     acc + &format!(" {} |", val[0])
                 }),
+            "\n\n".to_string(),
         ]
         .concat()
     }
@@ -152,7 +160,7 @@ fn generate_issue_section(issue: &PublicIssue) -> Option<Section> {
             category,
             links: issue.links.clone(),
         }),
-        subsections: None,
+        ..Default::default()
     })
 }
 
@@ -179,13 +187,22 @@ fn generate_audit_sections(audit: &PublicAudit, issues: Vec<Section>) -> Vec<Sec
         Section {
             typ: "plain_text".to_string(),
             title: "Summary".to_string(),
-            subsections: Some(vec![Section {
-                typ: "project_description".to_string(),
-                title: "Project Description".to_string(),
-                text: audit.description.clone(),
-                include_in_toc: true,
-                ..Default::default()
-            }]),
+            include_in_toc: true,
+            subsections: Some(vec![
+                Section {
+                    typ: "project_description".to_string(),
+                    title: "Project Description".to_string(),
+                    text: audit.description.clone(),
+                    include_in_toc: true,
+                    ..Default::default()
+                },
+                Section {
+                    typ: "scope".to_string(),
+                    title: "Scope".to_string(),
+                    links: Some(audit.scope.clone()),
+                    ..Default::default()
+                },
+            ]),
             ..Default::default()
         },
         Section {
