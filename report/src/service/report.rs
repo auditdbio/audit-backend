@@ -32,7 +32,7 @@ pub struct Section {
     pub include_in_toc: bool,
     pub feedback: Option<String>,
     pub issue_data: Option<IssueData>,
-    pub subsection: Option<Vec<Section>>,
+    pub subsections: Option<Vec<Section>>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -152,31 +152,44 @@ fn generate_issue_section(issue: &PublicIssue) -> Option<Section> {
             category,
             links: issue.links.clone(),
         }),
-        subsection: None,
+        subsections: None,
     })
 }
 
-fn generate_audit_sections(audit: &PublicAudit) -> Vec<Section> {
+fn generate_audit_sections(audit: &PublicAudit, issues: Vec<Section>) -> Vec<Section> {
     let statistics = Statistics::new(&audit.issues);
 
     /*
      * Table of contests
      * Disclamer
+     * Summary
      *     Project description
      *     Scope
      */
+    let disclamer = include_str!("../../templates/disclamer.txt").to_string();
 
     vec![
         Section {
-            typ: "project_description".to_string(),
-            title: "Project Description".to_string(),
-            text: audit.description.clone(),
-            include_in_toc: true,
+            typ: "plain_text".to_owned(),
+            title: "Disclamer".to_string(),
+            text: disclamer,
+            ..Default::default()
+        },
+        Section {
+            typ: "plain_text".to_string(),
+            title: "Summary".to_string(),
+            subsections: Some(vec![Section {
+                typ: "project_description".to_string(),
+                title: "Project Description".to_string(),
+                text: audit.description.clone(),
+                include_in_toc: true,
+                ..Default::default()
+            }]),
             ..Default::default()
         },
         Section {
             typ: "statistics".to_string(),
-            title: "Issue statistics".to_string(),
+            title: "Issue Summary".to_string(),
             text: statistics.to_markdown(),
             include_in_toc: true,
             ..Default::default()
@@ -184,6 +197,7 @@ fn generate_audit_sections(audit: &PublicAudit) -> Vec<Section> {
         Section {
             typ: "plain_text".to_string(),
             title: "Issues".to_string(),
+            subsections: Some(issues),
             ..Default::default()
         },
     ]
@@ -195,7 +209,7 @@ fn generate_data(audit: &PublicAudit) -> Vec<Section> {
         .iter()
         .filter_map(generate_issue_section)
         .collect();
-    vec![generate_audit_sections(audit), issues].concat()
+    generate_audit_sections(audit, issues)
 }
 
 pub async fn create_report(context: Context, audit_id: String) -> anyhow::Result<PublicReport> {
