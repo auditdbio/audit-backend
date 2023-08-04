@@ -319,23 +319,30 @@ impl RequestService {
                 ))
                 .send()
                 .await?;
-
-            // audit_request_decline_customer.txt
-
-            let mut new_notification: NewNotification = serde_json::from_str(include_str!(
-                "../../templates/audit_request_decline_customer.txt"
-            ))?;
-
-            new_notification
-                .links
-                .push(format!("/audit-request/{}/customer", request.id));
-
-            new_notification.user_id = Some(request.auditor_id);
-
-            let variables: Vec<(String, String)> = vec![];
-
-            send_notification(&self.context, true, true, new_notification, variables).await?;
         }
+
+        let event_reciver = if current_role == Role::Customer {
+            public_request.auditor_id.parse()?
+        } else {
+            public_request.customer_id.parse()?
+        };
+
+        let event = PublicEvent::new(
+            event_reciver,
+            EventPayload::RequestDecline(public_request.id.parse()?),
+        );
+
+        self.context
+            .make_request()
+            .post(format!(
+                "{}://{}/api/event",
+                PROTOCOL.as_str(),
+                EVENTS_SERVICE.as_str()
+            ))
+            .auth(self.context.server_auth())
+            .json(&event)
+            .send()
+            .await?;
 
         Ok(public_request)
     }

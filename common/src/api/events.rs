@@ -9,6 +9,8 @@ use super::{
 pub enum EventPayload {
     Notification(PublicNotification),
     NewRequest(PublicRequest),
+    RequestAccept(ObjectId),
+    RequestDecline(ObjectId),
     NewAudit(PublicAudit),
     AuditUpdate(PublicAudit),
     ChatMessage(PublicMessage),
@@ -22,6 +24,8 @@ impl EventPayload {
             EventPayload::NewAudit(_) => "NewAudit".to_owned(),
             EventPayload::AuditUpdate(_) => "AuditUpdate".to_owned(),
             EventPayload::ChatMessage(_) => "ChatMessage".to_owned(),
+            EventPayload::RequestAccept(_) => "RequestAccept".to_owned(),
+            EventPayload::RequestDecline(_) => "RequestDecline".to_owned(),
         }
     }
 }

@@ -88,6 +88,23 @@ impl AuditService {
             .send()
             .await?;
 
+        let event = PublicEvent::new(
+            event_reciver,
+            EventPayload::RequestAccept(request.id.parse()?),
+        );
+
+        self.context
+            .make_request()
+            .post(format!(
+                "{}://{}/api/event",
+                PROTOCOL.as_str(),
+                EVENTS_SERVICE.as_str()
+            ))
+            .auth(self.context.server_auth())
+            .json(&event)
+            .send()
+            .await?;
+
         Ok(public_audit)
     }
 
