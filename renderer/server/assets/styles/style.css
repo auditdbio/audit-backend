@@ -58,13 +58,8 @@ td {
   color: white;
 }
 
-.table-of-contents {
-  height: 560mm;
-}
-
 .page-break {
   page-break-before: avoid;
-  /*page-break-inside: avoid;*/
 }
 
 .container {

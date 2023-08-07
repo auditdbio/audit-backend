@@ -3,7 +3,7 @@ import { ISSUE_DATA, PLAIN_TEXT, PROJECT_DESCRIPTION, SCOPE, STATISTICS } from '
 import ProjectDescriptionBlock from './blocks/ProjectDescriptionBlock.js'
 import PlainTextBlock from './blocks/PlainTextBlock.js'
 import IssueDataBlock from './blocks/IssueDataBlock.js'
-import ProjectLinksBlock from "./blocks/ProjectLinksBlock.js"
+import ProjectLinksBlock from './blocks/ProjectLinksBlock.js'
 
 const ReportBlocks = ({ blocks, num }) => {
   return (

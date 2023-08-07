@@ -3,7 +3,7 @@ import fontkit from '@pdf-lib/fontkit'
 import { rgb } from 'pdf-lib'
 import getPageForStrings from '../../utils/getPageForStrings.js'
 
-const createTOC = async (project, pdfDoc, pdfBuffer, backgroundImage) => {
+const createTOC = async (project, pdfDoc, pdfBuffer) => {
   const tocReducer = (report_data, num) => {
     let idx = 1
     return report_data.reduce((acc, item) => {
@@ -24,15 +24,8 @@ const createTOC = async (project, pdfDoc, pdfBuffer, backgroundImage) => {
   const itemsForToc = tocReducer(project.report_data)
   const tableOfContents = await getPageForStrings(pdfBuffer, itemsForToc)
 
-  const tocPage = await pdfDoc.insertPage(1)
-  const { width, height } = tocPage.getSize()
-  await tocPage.drawImage(backgroundImage, {
-    x: 0,
-    y: 0,
-    width,
-    height,
-    blendMode: 'Normal',
-  })
+  let tocPagesCounter = 1
+  let tocPage = await pdfDoc.insertPage(tocPagesCounter)
 
   const fontBytes = fs.readFileSync('server/assets/fonts/MartianMono-Regular.ttf')
   await pdfDoc.registerFontkit(fontkit)
@@ -42,8 +35,12 @@ const createTOC = async (project, pdfDoc, pdfBuffer, backgroundImage) => {
   const lineHeight = 13
   const pageMaxWidth = 500
   const dotWidth = tocFont.widthOfTextAtSize('.', tocFontSize)
-  let tocY = 770
+  const countOfLines = tableOfContents.reduce((acc, item) => {
+    return acc + Math.ceil(tocFont.widthOfTextAtSize(item.title + 5, tocFontSize) / 500)
+  }, 0)
+  const countOfTocPages = Math.ceil(countOfLines / 55)
 
+  let tocY = 770
   for (let i = 0; i < tableOfContents.length; i++) {
     const section = tableOfContents[i]
     const drawTextOptions = {
@@ -59,7 +56,7 @@ const createTOC = async (project, pdfDoc, pdfBuffer, backgroundImage) => {
     let currentLine = ''
     for (let j = 0; j < lineWords.length; j++) {
       const currentLineWithWord = tocFont.widthOfTextAtSize(
-        `${currentLine + lineWords[j]}. ${section.page}`,
+        `${currentLine + lineWords[j]}. ${section.page + countOfTocPages}`,
         tocFontSize
       )
       if (currentLineWithWord <= 500) {
@@ -72,17 +69,21 @@ const createTOC = async (project, pdfDoc, pdfBuffer, backgroundImage) => {
     }
 
     if (currentLine) {
-      const lineWidth = tocFont.widthOfTextAtSize(`${currentLine}. ${section.page}`, tocFontSize)
+      const lineWidth = tocFont.widthOfTextAtSize(`${currentLine}. ${section.page + countOfTocPages}`, tocFontSize)
       let numberOfDots = Math.max(Math.floor((pageMaxWidth - lineWidth) / dotWidth), 0)
-      await tocPage.drawText(`${currentLine}.${'.'.repeat(numberOfDots)} ${section.page}`, {
+      await tocPage.drawText(`${currentLine}.${'.'.repeat(numberOfDots)} ${section.page + countOfTocPages}`, {
         ...drawTextOptions,
         y: tocY,
       })
       tocY -= lineHeight
     }
-  }
 
-  await pdfDoc.removePage(2)
+    if (tocY <= 65) {
+      tocPagesCounter++
+      tocPage = await pdfDoc.insertPage(tocPagesCounter)
+      tocY = 800
+    }
+  }
 }
 
 export default createTOC
