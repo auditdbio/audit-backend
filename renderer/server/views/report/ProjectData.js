@@ -8,7 +8,6 @@ const ProjectData = ({ project }) => {
       <div className="table-of-contents" />
 
       <ReportBlocks blocks={project.report_data} />
-      <ProjectLinksBlock project={project} />
     </div>
   )
 }

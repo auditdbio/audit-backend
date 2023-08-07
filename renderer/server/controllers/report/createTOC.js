@@ -22,10 +22,7 @@ const createTOC = async (project, pdfDoc, pdfBuffer, backgroundImage) => {
   }
 
   const itemsForToc = tocReducer(project.report_data)
-  const tableOfContents = await getPageForStrings(pdfBuffer, [
-    ...itemsForToc,
-    `${project.report_data.length + 1}. Links`,
-  ])
+  const tableOfContents = await getPageForStrings(pdfBuffer, itemsForToc)
 
   const tocPage = await pdfDoc.insertPage(1)
   const { width, height } = tocPage.getSize()

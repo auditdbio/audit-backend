@@ -1,8 +1,9 @@
 import React from 'react'
-import { ISSUE_DATA, PLAIN_TEXT, PROJECT_DESCRIPTION, STATISTICS } from '../../constants/reportBlockTypes.js'
+import { ISSUE_DATA, PLAIN_TEXT, PROJECT_DESCRIPTION, SCOPE, STATISTICS } from '../../constants/reportBlockTypes.js'
 import ProjectDescriptionBlock from './blocks/ProjectDescriptionBlock.js'
 import PlainTextBlock from './blocks/PlainTextBlock.js'
 import IssueDataBlock from './blocks/IssueDataBlock.js'
+import ProjectLinksBlock from "./blocks/ProjectLinksBlock.js"
 
 const ReportBlocks = ({ blocks, num }) => {
   return (
@@ -31,6 +32,8 @@ const ReportBlocks = ({ blocks, num }) => {
               {reportBlock.subsections?.length && <ReportBlocks blocks={reportBlock.subsections} num={numeration} />}
             </>
           )
+        } else if (reportBlock.type === SCOPE) {
+          return <ProjectLinksBlock data={reportBlock} num={numeration} />
         }
       })}
     </>
