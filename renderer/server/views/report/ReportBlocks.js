@@ -1,8 +1,8 @@
 import React from 'react'
-import { ISSUE_DATA, PLAIN_TEXT, PROJECT_DESCRIPTION, STATISTICS } from "../../constants/reportBlockTypes.js"
-import ProjectDescriptionBlock from "./blocks/ProjectDescriptionBlock.js"
-import PlainTextBlock from "./blocks/PlainTextBlock.js"
-import IssueDataBlock from "./blocks/IssueDataBlock.js"
+import { ISSUE_DATA, PLAIN_TEXT, PROJECT_DESCRIPTION, STATISTICS } from '../../constants/reportBlockTypes.js'
+import ProjectDescriptionBlock from './blocks/ProjectDescriptionBlock.js'
+import PlainTextBlock from './blocks/PlainTextBlock.js'
+import IssueDataBlock from './blocks/IssueDataBlock.js'
 
 const ReportBlocks = ({ blocks, num }) => {
   return (

@@ -3,7 +3,7 @@ import { PDFDocument } from 'pdf-lib'
 import fs from 'fs'
 import getHTML from '../../views/html.js'
 import { footerTemplate } from '../../views/footer.js'
-import createTOC from "./createTOC.js"
+import createTOC from './createTOC.js'
 
 const pdfOptions = {
   format: 'A4',

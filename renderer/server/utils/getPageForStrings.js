@@ -2,6 +2,7 @@ import pdfjsLib from 'pdfjs-dist/legacy/build/pdf.js'
 
 async function getPageForStrings(pdfBuffer, titlesArray) {
   const tableOfContents = []
+  let foundHeadings = []
 
   const pdfData = new Uint8Array(pdfBuffer)
 
@@ -18,7 +19,9 @@ async function getPageForStrings(pdfBuffer, titlesArray) {
             const strings = content.items.map((item) => item.str)
             const text = strings.join('').replace(/ /g, '')
             titlesArray.forEach((title) => {
-              if (text.includes(title.replace(/ /g, '') + '|||')) {
+              if (foundHeadings.includes(title)) return
+              if (text.includes(title.replace(/^ *(\d\.)* /g, '').replace(/ /g, '') + '|||')) {
+                foundHeadings.push(title)
                 tableOfContents.push({
                   title,
                   page: pageNum,

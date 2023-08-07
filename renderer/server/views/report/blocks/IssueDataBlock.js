@@ -12,9 +12,6 @@ const IssueDataBlock = ({ data, num }) => {
 
       <div className="issue-data page-break">
         <div>
-          <b>Status:</b> {data.issue_data?.status}
-        </div>
-        <div>
           <b>Severity:</b> {data.issue_data?.severity}
         </div>
         {data.issue_data?.category && (
@@ -22,6 +19,9 @@ const IssueDataBlock = ({ data, num }) => {
             <b>Category:</b> {data.issue_data.category}
           </div>
         )}
+        <div>
+          <b>Status:</b> {data.issue_data?.status}
+        </div>
       </div>
 
       <div className="project-description">

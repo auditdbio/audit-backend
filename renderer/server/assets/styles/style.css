@@ -150,6 +150,7 @@ td {
   margin-bottom: 20px;
   border-bottom: 1px solid lightgrey;
   page-break-inside: avoid;
+  word-break: break-word;
 }
 
 .issue-block {
@@ -164,6 +165,7 @@ td {
   color: #434242;
   margin-bottom: 15px;
   page-break-inside: avoid;
+  word-break: break-word;
 }
 
 .report-plain-text {
