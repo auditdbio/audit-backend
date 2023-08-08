@@ -1,8 +1,15 @@
 import React from 'react'
 import RenderMarkdown from '../RenderMarkdown.js'
 import TitleLabel from '../TitleLabel.js'
+import SeverityChip from "./SeverityChip.js"
 
 const IssueDataBlock = ({ data, num }) => {
+  const getStatusColor = (status) => {
+    if (status === 'Fixed') return '#09C010'
+    if (status === 'NotFixed') return 'darkred'
+    return 'black'
+  }
+
   return (
     <div className="report-block issue-block">
       <h2 className="report-issue-title">
@@ -11,16 +18,23 @@ const IssueDataBlock = ({ data, num }) => {
       </h2>
 
       <div className="issue-data page-break">
-        <div>
-          <b>Severity:</b> {data.issue_data?.severity}
+        <div className="issue-info-wrapper">
+          <b>Severity:</b> <SeverityChip severity={data.issue_data?.severity} />
         </div>
         {data.issue_data?.category && (
-          <div>
-            <b>Category:</b> {data.issue_data.category}
+          <div className="issue-info-wrapper">
+            <b>Category:</b>
+            <span className="issue-info-value">{data.issue_data.category}</span>
           </div>
         )}
-        <div>
-          <b>Status:</b> {data.issue_data?.status}
+        <div className="issue-info-wrapper">
+          <b>Status:</b>
+          <span
+            style={{ color: getStatusColor(data.issue_data?.status) }}
+            className="issue-info-value"
+          >
+            {data.issue_data?.status}
+          </span>
         </div>
       </div>
 

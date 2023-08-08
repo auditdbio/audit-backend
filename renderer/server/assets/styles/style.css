@@ -220,3 +220,23 @@ td {
   margin-bottom: 30px;
   page-break-inside: avoid;
 }
+
+.issue-info-wrapper {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+.issue-info-value {
+  margin-left: 10px;
+}
+
+.severity-chip {
+  color: white;
+  font-weight: 500;
+  border-radius: 16px;
+  background: #434242;
+  padding: 2px 12px;
+  margin-left: 10px;
+}
