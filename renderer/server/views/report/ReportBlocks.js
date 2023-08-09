@@ -4,6 +4,7 @@ import ProjectDescriptionBlock from './blocks/ProjectDescriptionBlock.js'
 import PlainTextBlock from './blocks/PlainTextBlock.js'
 import IssueDataBlock from './blocks/IssueDataBlock.js'
 import ProjectLinksBlock from './blocks/ProjectLinksBlock.js'
+import StatisticsBlock from './blocks/StatisticsBlock.js'
 
 const ReportBlocks = ({ blocks, num, subsectionLevel = 0 }) => {
   const paddingLeft = `${subsectionLevel * 20}px`
@@ -13,7 +14,7 @@ const ReportBlocks = ({ blocks, num, subsectionLevel = 0 }) => {
       {blocks?.map((reportBlock, idx) => {
         const numeration = num ? `${num}.${idx + 1}` : idx + 1
 
-        if (reportBlock.type === PROJECT_DESCRIPTION || reportBlock.type === STATISTICS) {
+        if (reportBlock.type === PROJECT_DESCRIPTION) {
           return (
             <>
               <ProjectDescriptionBlock data={reportBlock} num={numeration} subsectionLevel={subsectionLevel} />
@@ -42,6 +43,8 @@ const ReportBlocks = ({ blocks, num, subsectionLevel = 0 }) => {
           )
         } else if (reportBlock.type === SCOPE) {
           return <ProjectLinksBlock data={reportBlock} num={numeration} subsectionLevel={subsectionLevel} />
+        } else if (reportBlock.type === STATISTICS) {
+          return <StatisticsBlock data={reportBlock} num={numeration} subsectionLevel={subsectionLevel} />
         }
       })}
     </div>
