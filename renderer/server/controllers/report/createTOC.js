@@ -1,6 +1,6 @@
 import fs from 'fs'
 import fontkit from '@pdf-lib/fontkit'
-import { rgb } from 'pdf-lib'
+import { rgb, StandardFonts } from 'pdf-lib'
 import getPageForStrings from '../../utils/getPageForStrings.js'
 
 const createTOC = async (project, pdfDoc, pdfBuffer) => {
@@ -27,7 +27,7 @@ const createTOC = async (project, pdfDoc, pdfBuffer) => {
   let tocPagesCounter = 1
   let tocPage = await pdfDoc.insertPage(tocPagesCounter)
 
-  const fontBytes = fs.readFileSync('server/assets/fonts/MartianMono-Regular.ttf')
+  const fontBytes = fs.readFileSync('server/assets/fonts/RobotoMono-Regular.ttf')
   await pdfDoc.registerFontkit(fontkit)
   const tocFont = await pdfDoc.embedFont(fontBytes)
   await tocPage.drawText('Table of contents', { x: 40, y: 800, size: 20, color: rgb(0, 0, 0) })
