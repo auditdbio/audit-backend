@@ -1,10 +1,10 @@
 import React from 'react'
 import TitleLabel from '../TitleLabel.js'
 
-const ProjectLinksBlock = ({ data, num }) => {
+const ProjectLinksBlock = ({ data, num, subsectionLevel }) => {
   return (
     <div className="report-block">
-      <h2 id="scope" className="report-block-title">
+      <h2 id="scope" className={subsectionLevel ? 'subsection-title' : 'report-block-title'}>
         {num}. {data.title}
         <TitleLabel show={true} />
       </h2>

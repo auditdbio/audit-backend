@@ -22,9 +22,9 @@ export const generateReport = async (req, res) => {
   // --- Generate PDF from HTML page:
   const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
   const browserPage = await browser.newPage()
-  await browserPage.setContent(getHTML(project), { waitUntil: 'networkidle2' })
+  await browserPage.setContent(getHTML(project), { waitUntil: 'networkidle0' })
   await browserPage.evaluateHandle('document.fonts.ready')
-  await browserPage.evaluate(() => (document.body.style.zoom = 0.5))
+  await browserPage.evaluate(() => (document.body.style.zoom = 0.6))
   const pdfBuffer = await browserPage.pdf(pdfOptions)
   await browser.close()
 

@@ -5,38 +5,46 @@ import PlainTextBlock from './blocks/PlainTextBlock.js'
 import IssueDataBlock from './blocks/IssueDataBlock.js'
 import ProjectLinksBlock from './blocks/ProjectLinksBlock.js'
 
-const ReportBlocks = ({ blocks, num }) => {
+const ReportBlocks = ({ blocks, num, subsectionLevel = 0 }) => {
+  const paddingLeft = `${subsectionLevel * 20}px`
+
   return (
-    <>
+    <div style={{ paddingLeft }}>
       {blocks?.map((reportBlock, idx) => {
         const numeration = num ? `${num}.${idx + 1}` : idx + 1
 
         if (reportBlock.type === PROJECT_DESCRIPTION || reportBlock.type === STATISTICS) {
           return (
             <>
-              <ProjectDescriptionBlock data={reportBlock} num={numeration} />
-              {reportBlock.subsections?.length && <ReportBlocks blocks={reportBlock.subsections} num={numeration} />}
+              <ProjectDescriptionBlock data={reportBlock} num={numeration} subsectionLevel={subsectionLevel} />
+              {reportBlock.subsections?.length && (
+                <ReportBlocks blocks={reportBlock.subsections} num={numeration} subsectionLevel={subsectionLevel + 1} />
+              )}
             </>
           )
         } else if (reportBlock.type === PLAIN_TEXT) {
           return (
             <>
-              <PlainTextBlock data={reportBlock} num={numeration} />
-              {reportBlock.subsections?.length && <ReportBlocks blocks={reportBlock.subsections} num={numeration} />}
+              <PlainTextBlock data={reportBlock} num={numeration} subsectionLevel={subsectionLevel} />
+              {reportBlock.subsections?.length && (
+                <ReportBlocks blocks={reportBlock.subsections} num={numeration} subsectionLevel={subsectionLevel + 1} />
+              )}
             </>
           )
         } else if (reportBlock.type === ISSUE_DATA) {
           return (
             <>
-              <IssueDataBlock data={reportBlock} num={numeration} />
-              {reportBlock.subsections?.length && <ReportBlocks blocks={reportBlock.subsections} num={numeration} />}
+              <IssueDataBlock data={reportBlock} num={numeration} subsectionLevel={subsectionLevel} />
+              {reportBlock.subsections?.length && (
+                <ReportBlocks blocks={reportBlock.subsections} num={numeration} subsectionLevel={subsectionLevel + 1} />
+              )}
             </>
           )
         } else if (reportBlock.type === SCOPE) {
-          return <ProjectLinksBlock data={reportBlock} num={numeration} />
+          return <ProjectLinksBlock data={reportBlock} num={numeration} subsectionLevel={subsectionLevel} />
         }
       })}
-    </>
+    </div>
   )
 }
 
