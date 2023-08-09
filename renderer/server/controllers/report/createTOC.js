@@ -1,6 +1,6 @@
 import fs from 'fs'
 import fontkit from '@pdf-lib/fontkit'
-import { rgb, StandardFonts } from 'pdf-lib'
+import { rgb } from 'pdf-lib'
 import getPageForStrings from '../../utils/getPageForStrings.js'
 
 const createTOC = async (project, pdfDoc, pdfBuffer) => {
