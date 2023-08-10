@@ -16,8 +16,16 @@ async function getPageForStrings(pdfBuffer, titlesArray) {
       const loadPage = (pageNum) => {
         return doc.getPage(pageNum).then((page) => {
           return page.getTextContent().then((content) => {
-            const strings = content.items.map((item) => item.str)
+            const pageHeadingsYCoords = []
+            const strings = content.items.map((item) => {
+              if (item.str === '|||') {
+                pageHeadingsYCoords.push(item.transform[5])
+              }
+              return item.str
+            })
             const text = strings.join('').replace(/ /g, '')
+
+            let headingCoordsIdx = 0
             titlesArray.forEach((title) => {
               if (foundHeadings.includes(title)) return
               if (text.includes(title.replace(/^ *(\d\.)* /g, '').replace(/ /g, '') + '|||')) {
@@ -25,7 +33,9 @@ async function getPageForStrings(pdfBuffer, titlesArray) {
                 tableOfContents.push({
                   title,
                   page: pageNum,
+                  coordY: pageHeadingsYCoords[headingCoordsIdx]
                 })
+                headingCoordsIdx++
               }
             })
             page.cleanup() // Release page resources.
