@@ -10,7 +10,7 @@ use common::{
     },
     context::Context,
     entities::{issue::Status, user::PublicUser},
-    services::{FILES_SERVICE, PROTOCOL, RENDERER_SERVICE, USERS_SERVICE},
+    services::{FILES_SERVICE, FRONTEND, PROTOCOL, RENDERER_SERVICE, USERS_SERVICE},
 };
 use reqwest::multipart::{Form, Part};
 use serde::{Deserialize, Serialize};
@@ -40,7 +40,7 @@ pub struct Section {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RendererInput {
     pub auditor_name: String,
-    pub auditor_email: String,
+    pub profile_link: String,
     pub project_name: String,
     pub scope: Vec<String>,
     pub report_data: Vec<Section>,
@@ -314,7 +314,12 @@ pub async fn create_report(context: Context, audit_id: String) -> anyhow::Result
     let report_data = generate_data(&audit);
     let input = RendererInput {
         auditor_name: audit.auditor_first_name + " " + &audit.auditor_last_name,
-        auditor_email: user.email,
+        profile_link: format!(
+            "{}://{}/user/{}/auditor",
+            PROTOCOL.as_str(),
+            FRONTEND.as_str(),
+            audit.auditor_id
+        ),
         project_name: audit.project_name,
         scope: audit.scope,
         report_data,
