@@ -33,6 +33,7 @@ pub struct Section {
     pub feedback: Option<String>,
     pub issue_data: Option<IssueData>,
     pub subsections: Option<Vec<Section>>,
+    pub statistics: Option<Statistics>,
     pub links: Option<Vec<String>>,
 }
 
@@ -50,10 +51,74 @@ pub struct PublicReport {
     path: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct IssuesCount<T> {
+    critical: T,
+    major: T,
+    medium: T,
+    minor: T,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct IssueCollector {
+    issues: IssuesCount<Vec<Section>>,
+}
+
+impl IssueCollector {
+    pub fn add_issue(mut self, issue: &PublicIssue) -> Self {
+        let Some(section) = generate_issue_section(issue) else {
+            return self;
+        };
+
+        match issue.severity.as_str() {
+            "Critical" => self.issues.critical.push(section),
+            "Major" => self.issues.major.push(section),
+            "Medium" => self.issues.medium.push(section),
+            "Minor" => self.issues.minor.push(section),
+            _ => {}
+        };
+
+        self
+    }
+    pub fn into_issues(self) -> Vec<Section> {
+        vec![
+            Section {
+                typ: "plain_text".to_string(),
+                title: "Critical".to_string(),
+                subsections: Some(self.issues.critical),
+                include_in_toc: true,
+                ..Default::default()
+            },
+            Section {
+                typ: "plain_text".to_string(),
+                title: "Major".to_string(),
+                subsections: Some(self.issues.major),
+                include_in_toc: true,
+                ..Default::default()
+            },
+            Section {
+                typ: "plain_text".to_string(),
+                title: "Medium".to_string(),
+                subsections: Some(self.issues.medium),
+                include_in_toc: true,
+                ..Default::default()
+            },
+            Section {
+                typ: "plain_text".to_string(),
+                title: "Minor".to_string(),
+                subsections: Some(self.issues.minor),
+                include_in_toc: true,
+                ..Default::default()
+            },
+        ]
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Statistics {
-    number_of_issues: usize,
-    fixed_or_not: HashMap<String, [usize; 2]>,
+    total: usize,
+    fixed: IssuesCount<usize>,
+    not_fixed: IssuesCount<usize>,
 }
 
 impl Statistics {
@@ -62,48 +127,29 @@ impl Statistics {
 
         for issue in issues {
             if issue.include {
-                statistics.number_of_issues += 1;
+                statistics.total += 1;
 
-                let fixed = (issue.status == Status::Fixed) as usize;
-
-                match statistics.fixed_or_not.entry(issue.severity.clone()) {
-                    Occupied(mut value) => value.get_mut()[fixed] += 1,
-                    Vacant(place) => {
-                        place.insert([1 - fixed, fixed]);
+                if issue.status == Status::Fixed {
+                    match issue.severity.as_str() {
+                        "Critical" => statistics.fixed.critical += 1,
+                        "Major" => statistics.fixed.major += 1,
+                        "Medium" => statistics.fixed.medium += 1,
+                        "Minor" => statistics.fixed.minor += 1,
+                        _ => {}
+                    }
+                } else {
+                    match issue.severity.as_str() {
+                        "Critical" => statistics.not_fixed.critical += 1,
+                        "Major" => statistics.not_fixed.major += 1,
+                        "Medium" => statistics.not_fixed.medium += 1,
+                        "Minor" => statistics.not_fixed.minor += 1,
+                        _ => {}
                     }
                 }
             }
         }
 
         statistics
-    }
-
-    pub fn to_markdown(self) -> String {
-        [
-            self.fixed_or_not
-                .keys()
-                .fold(format!("| {} |", self.number_of_issues), |acc, sev| {
-                    acc + &format!(" {} |", sev)
-                }),
-            "\n".to_string(),
-            self.fixed_or_not
-                .keys()
-                .fold("| :---: |".to_string(), |acc, _| acc + " :---: |"),
-            "\n".to_string(),
-            self.fixed_or_not
-                .values()
-                .fold("| Fixed |".to_owned(), |acc, val| {
-                    acc + &format!(" {} |", val[1])
-                }),
-            "\n".to_string(),
-            self.fixed_or_not
-                .values()
-                .fold("| Not fixed |".to_owned(), |acc, val| {
-                    acc + &format!(" {} |", val[0])
-                }),
-            "\n\n".to_string(),
-        ]
-        .concat()
     }
 }
 
@@ -200,6 +246,7 @@ fn generate_audit_sections(audit: &PublicAudit, issues: Vec<Section>) -> Vec<Sec
                     typ: "scope".to_string(),
                     title: "Scope".to_string(),
                     links: Some(audit.scope.clone()),
+                    include_in_toc: true,
                     ..Default::default()
                 },
             ]),
@@ -208,7 +255,7 @@ fn generate_audit_sections(audit: &PublicAudit, issues: Vec<Section>) -> Vec<Sec
         Section {
             typ: "statistics".to_string(),
             title: "Issue Summary".to_string(),
-            text: statistics.to_markdown(),
+            statistics: Some(statistics),
             include_in_toc: true,
             ..Default::default()
         },
@@ -226,8 +273,10 @@ fn generate_data(audit: &PublicAudit) -> Vec<Section> {
     let issues = audit
         .issues
         .iter()
-        .filter_map(generate_issue_section)
-        .collect();
+        .fold(IssueCollector::default(), |collector, i| {
+            collector.add_issue(i)
+        })
+        .into_issues();
     generate_audit_sections(audit, issues)
 }
 
