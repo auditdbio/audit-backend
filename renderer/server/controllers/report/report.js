@@ -1,8 +1,10 @@
 import puppeteer from 'puppeteer'
-import { PDFDocument, rgb } from 'pdf-lib'
+import { PDFDocument } from 'pdf-lib'
 import fs from 'fs'
 import getHTML from '../../views/html.js'
-import createTOC from './createTOC.js'
+import createTOC from './utils/createTOC.js'
+import createPageLinkAnnotation from "./utils/createPageLinkAnnotation.js"
+import addBackgroundToPages from "./utils/addBackgroundToPage.js"
 
 const pdfOptions = {
   format: 'A4',
@@ -19,7 +21,6 @@ const pdfOptions = {
 export const generateReport = async (req, res) => {
   const project = req.body
 
-  // --- Generate PDF from HTML page:
   const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
   const browserPage = await browser.newPage()
   await browserPage.setContent(getHTML(project), { waitUntil: 'networkidle0' })
@@ -28,48 +29,18 @@ export const generateReport = async (req, res) => {
   const pdfBuffer = await browserPage.pdf(pdfOptions)
   await browser.close()
 
-  // --- Create table of contents:
   const pdfDoc = await PDFDocument.load(pdfBuffer)
-  await createTOC(project, pdfDoc, pdfBuffer)
 
-  // --- Adding a BG image and page number to PDF pages:
-  const backgroundFile = fs.readFileSync('server/assets/images/bg2.png')
-  const coverImageFile = fs.readFileSync('server/assets/images/backgroundCover.png')
-  const backgroundImage = await pdfDoc.embedPng(backgroundFile)
-  const coverImage = await pdfDoc.embedPng(coverImageFile)
+  const tableOfContentsWithCoords = await createTOC(project, pdfDoc, pdfBuffer)
+  await addBackgroundToPages(pdfDoc)
+  await createPageLinkAnnotation(pdfDoc, tableOfContentsWithCoords)
 
-  const pdfDocPages = pdfDoc.getPages()
-  const copiedPages = await pdfDoc.copyPages(pdfDoc, [...pdfDocPages.keys()])
-
-  for (let i = 0; i < pdfDocPages.length; i++) {
-    const { width, height } = pdfDocPages[i].getSize()
-    const embeddedPage = await pdfDoc.embedPage(copiedPages[i])
-    const newPage = await pdfDoc.insertPage(i)
-    const background = i === 0 ? coverImage : backgroundImage
-    await newPage.drawImage(background, {
-      x: 0,
-      y: 0,
-      width,
-      height,
-      blendMode: 'Normal',
-    })
-    await newPage.drawText(String(i + 1), {
-      x: 570,
-      y: 15,
-      size: 10,
-      color: rgb(0, 0, 0),
-    })
-    await newPage.drawPage(embeddedPage)
-    await pdfDoc.removePage(i + 1)
-  }
-
-  // --- Create PDF document:
-  const pdfBytesWithBackground = await pdfDoc.save()
+  const pdfBytes = await pdfDoc.save()
 
   // --- Save generated report in temp directory:
-  // fs.writeFileSync(`temp/output-${Date.now()}.pdf`, pdfBytesWithBackground)
+  // fs.writeFileSync(`temp/output-${Date.now()}.pdf`, pdfBytes)
   // fs.writeFileSync(`temp/output-${Date.now()}.html`, getHTML(project)) // save in html format for debugging
 
   res.contentType('application/pdf')
-  res.end(pdfBytesWithBackground, 'binary')
+  res.end(pdfBytes, 'binary')
 }
