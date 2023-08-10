@@ -4,17 +4,17 @@ const SeverityChip = ({ severity }) => {
   const defineColor = () => {
     switch (severity) {
       case 'Critical':
-        return '#FF0000';
+        return '#FF0000'
       case 'Major':
-        return '#FF9900';
+        return '#FF9900'
       case 'Medium':
-        return '#5b97bb';
+        return '#5b97bb'
       case 'Minor':
-        return '#09C010';
+        return '#09C010'
       default:
-        return '#434242';
+        return '#434242'
     }
-  };
+  }
 
   return (
     <div className="severity-chip" style={{ background: defineColor(severity) }}>
