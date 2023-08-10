@@ -33,7 +33,7 @@ export const generateReport = async (req, res) => {
 
   const tableOfContentsWithCoords = await createTOC(project, pdfDoc, pdfBuffer)
   await addBackgroundToPages(pdfDoc)
-  await createPageLinkAnnotation(pdfDoc, tableOfContentsWithCoords)
+  await createPageLinkAnnotation(pdfDoc, tableOfContentsWithCoords, project.profile_link)
 
   const pdfBytes = await pdfDoc.save()
 
