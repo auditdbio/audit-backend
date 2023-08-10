@@ -129,11 +129,19 @@ td {
   font-weight: 500;
   font-size: 30px;
   color: #434242;
+  margin-bottom: 15px;
 }
 
 .auditor-info-heading {
   margin-bottom: 20px;
   font-weight: 600;
+}
+
+.QR-wrapper {
+  display: inline-block;
+  background: white;
+  padding: 10px;
+  margin-bottom: 20px;
 }
 
 .report-block {
