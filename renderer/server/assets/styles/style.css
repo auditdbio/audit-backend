@@ -130,6 +130,7 @@ td {
   font-size: 30px;
   color: #434242;
   margin-bottom: 15px;
+  word-break: break-word;
 }
 
 .auditor-info-heading {
@@ -180,9 +181,9 @@ td {
 .project-name {
   text-align: center;
   font-weight: 600;
-  font-size: 60px;
   color: #434242;
   margin: 200px 0 20px;
+  word-break: break-word;
 }
 
 .project-description {

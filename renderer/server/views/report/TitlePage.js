@@ -1,9 +1,11 @@
 import React from 'react'
+import QRCode from 'qrcode.react'
 import HeroLogo from '../images/HeroLogo.js'
 import CornerLogo from '../images/CornerLogo.js'
-import QRCode from "qrcode.react"
 
 const TitlePage = ({ project }) => {
+  const titleSize = project?.project_name?.length <= 100 ? '60px' : '50px'
+
   return (
     <div className="container">
       <div className="cover-page-corner-logo">
@@ -15,12 +17,12 @@ const TitlePage = ({ project }) => {
             <div className="hero-text">Smart Contract Security Audit Report</div>
             <div className="auditor-info-block">
               <div className="auditor-info auditor-info-heading">By</div>
-              <div className="auditor-info">{project.auditor_name}</div>
+              <div className="auditor-info">{project?.auditor_name}</div>
               <div className="QR-wrapper">
-                <QRCode.QRCodeSVG value={project.profile_link} />
+                <QRCode.QRCodeSVG value={project?.profile_link} />
               </div>
               <div>
-                <a className="auditor-info" href={project.profile_link}>
+                <a className="auditor-info" href={project?.profile_link}>
                   Profile link
                 </a>
               </div>
@@ -30,7 +32,9 @@ const TitlePage = ({ project }) => {
             <HeroLogo />
           </div>
         </div>
-        <div className="project-name">{project.project_name}</div>
+        <div className="project-name" style={{ fontSize: titleSize }}>
+          {project?.project_name}
+        </div>
       </div>
     </div>
   )
