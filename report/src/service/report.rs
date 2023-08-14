@@ -220,13 +220,13 @@ fn generate_audit_sections(audit: &PublicAudit, issues: Vec<Section>) -> Vec<Sec
      *     Project description
      *     Scope
      */
-    let disclamer = include_str!("../../templates/disclamer.txt").to_string();
+    let disclaimer = include_str!("../../templates/disclaimer.md").to_string();
 
     vec![
         Section {
             typ: "plain_text".to_owned(),
             title: "Disclamer".to_string(),
-            text: disclamer,
+            text: disclaimer,
             include_in_toc: true,
             ..Default::default()
         },
