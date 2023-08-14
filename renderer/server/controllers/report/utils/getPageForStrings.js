@@ -33,7 +33,7 @@ async function getPageForStrings(pdfBuffer, titlesArray) {
                 tableOfContents.push({
                   title,
                   page: pageNum,
-                  coordY: pageHeadingsYCoords[headingCoordsIdx]
+                  coordY: pageHeadingsYCoords[headingCoordsIdx],
                 })
                 headingCoordsIdx++
               }

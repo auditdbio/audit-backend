@@ -12,7 +12,8 @@ const createPageLinkAnnotation = async (pdfDoc, tableOfContents, tocPagesCounter
         Border: [0, 0, 0],
         C: [1, 1, 1],
         A: { Type: 'Action', S: 'URI', URI: PDFString.of(profileLink) },
-      }))
+      })
+    )
   }
 
   if (profileLink) {
@@ -26,14 +27,15 @@ const createPageLinkAnnotation = async (pdfDoc, tableOfContents, tocPagesCounter
         Subtype: 'Link',
         Rect: [
           40, // lower left x coord
-          tocStringCoordY - 2 - (13 * tocStringNumberOfLines), // lower left y coord
+          tocStringCoordY - 2 - 13 * tocStringNumberOfLines, // lower left y coord
           540, // upper right x coord
           tocStringCoordY + 8, // upper right y coord
         ],
         Border: [0, 0, 0], // Border for the link
         C: [1, 1, 1], // Make the border color white: rgb(1, 1, 1)
         Dest: [pageRef, 'XYZ', null, destCoordY + 20, null], // Page to be visited when the link is clicked
-      }))
+      })
+    )
   }
 
   let links = []

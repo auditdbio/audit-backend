@@ -3,8 +3,8 @@ import { PDFDocument } from 'pdf-lib'
 import fs from 'fs'
 import getHTML from '../../views/html.js'
 import createTOC from './utils/createTOC.js'
-import createPageLinkAnnotation from "./utils/createPageLinkAnnotation.js"
-import addBackgroundToPages from "./utils/addBackgroundToPage.js"
+import createPageLinkAnnotation from './utils/createPageLinkAnnotation.js'
+import addBackgroundToPages from './utils/addBackgroundToPage.js'
 
 const pdfOptions = {
   format: 'A4',
