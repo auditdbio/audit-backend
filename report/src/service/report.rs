@@ -225,7 +225,7 @@ fn generate_audit_sections(audit: &PublicAudit, issues: Vec<Section>) -> Vec<Sec
     vec![
         Section {
             typ: "plain_text".to_owned(),
-            title: "Disclamer".to_string(),
+            title: "Disclaimer".to_string(),
             text: disclaimer,
             include_in_toc: true,
             ..Default::default()
