@@ -1,6 +1,6 @@
 import { PDFName, PDFString } from 'pdf-lib'
 
-const createPageLinkAnnotation = async (pdfDoc, tableOfContents, profileLink) => {
+const createPageLinkAnnotation = async (pdfDoc, tableOfContents, tocPagesCounter, profileLink) => {
   const pdfDocPages = pdfDoc.getPages()
 
   const createProfileLinkAnnot = (profileLink) => {
@@ -15,7 +15,9 @@ const createPageLinkAnnotation = async (pdfDoc, tableOfContents, profileLink) =>
       }))
   }
 
-  pdfDocPages[0].node.set(PDFName.of('Annots'), pdfDoc.context.obj([createProfileLinkAnnot(profileLink)]))
+  if (profileLink) {
+    pdfDocPages[0].node.set(PDFName.of('Annots'), pdfDoc.context.obj([createProfileLinkAnnot(profileLink)]))
+  }
 
   const createAnnot = (pageRef, tocStringCoordY, destCoordY, tocStringNumberOfLines) => {
     return pdfDoc.context.register(
@@ -38,20 +40,25 @@ const createPageLinkAnnotation = async (pdfDoc, tableOfContents, profileLink) =>
   let currentTocPage = tableOfContents[0].tocPage
 
   for (let i = 0; i < tableOfContents.length; i++) {
-    const destPage = tableOfContents[i].destPage + 1
-    const pageRef = pdfDocPages[destPage].ref
-    const destCoordY = tableOfContents[i].destCoordY || null
-    const tocStringCoordY = tableOfContents[i].tocStringCoordY
-    const tocStringNumberOfLines = tableOfContents[i].tocStringNumberOfLines
-    const link = createAnnot(pageRef, tocStringCoordY, destCoordY, tocStringNumberOfLines)
+    try {
+      const additionalTOCPages = tocPagesCounter - 1
+      const destPage = tableOfContents[i].destPage + additionalTOCPages
+      const pageRef = pdfDocPages[destPage].ref
+      const destCoordY = tableOfContents[i].destCoordY || null
+      const tocStringCoordY = tableOfContents[i].tocStringCoordY
+      const tocStringNumberOfLines = tableOfContents[i].tocStringNumberOfLines
+      const link = createAnnot(pageRef, tocStringCoordY, destCoordY, tocStringNumberOfLines)
 
-    if (tableOfContents[i].tocPage !== currentTocPage) {
-      pdfDocPages[currentTocPage].node.set(PDFName.of('Annots'), pdfDoc.context.obj(links))
-      currentTocPage = tableOfContents[i].tocPage
-      links = []
+      if (tableOfContents[i].tocPage !== currentTocPage) {
+        pdfDocPages[currentTocPage].node.set(PDFName.of('Annots'), pdfDoc.context.obj(links))
+        currentTocPage = tableOfContents[i].tocPage
+        links = []
+      }
+
+      links.push(link)
+    } catch (e) {
+      console.error(e)
     }
-
-    links.push(link)
   }
 
   pdfDocPages[currentTocPage].node.set(PDFName.of('Annots'), pdfDoc.context.obj(links))
