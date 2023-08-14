@@ -99,7 +99,7 @@ const createTOC = async (project, pdfDoc, pdfBuffer) => {
     }
   }
 
-  return tableOfContentsWithCoords
+  return { tableOfContentsWithCoords, tocPagesCounter }
 }
 
 export default createTOC
