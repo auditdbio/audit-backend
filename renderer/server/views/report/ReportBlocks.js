@@ -21,7 +21,7 @@ const ReportBlocks = ({ blocks, num, subsectionLevel = 0 }) => {
       {blocks?.map((reportBlock, idx) => {
         const numeration = num ? `${num}.${idx + 1}` : idx + 1
 
-        if (reportBlock.type === PROJECT_DESCRIPTION || type === MARKDOWN) {
+        if (reportBlock.type === PROJECT_DESCRIPTION || reportBlock.type === MARKDOWN) {
           return (
             <>
               <ProjectDescriptionBlock data={reportBlock} num={numeration} subsectionLevel={subsectionLevel} />
