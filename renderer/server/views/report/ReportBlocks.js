@@ -1,5 +1,12 @@
 import React from 'react'
-import { ISSUE_DATA, PLAIN_TEXT, PROJECT_DESCRIPTION, SCOPE, STATISTICS } from '../../constants/reportBlockTypes.js'
+import {
+  ISSUE_DATA,
+  MARKDOWN,
+  PLAIN_TEXT,
+  PROJECT_DESCRIPTION,
+  SCOPE,
+  STATISTICS,
+} from '../../constants/reportBlockTypes.js'
 import ProjectDescriptionBlock from './blocks/ProjectDescriptionBlock.js'
 import PlainTextBlock from './blocks/PlainTextBlock.js'
 import IssueDataBlock from './blocks/IssueDataBlock.js'
@@ -14,7 +21,7 @@ const ReportBlocks = ({ blocks, num, subsectionLevel = 0 }) => {
       {blocks?.map((reportBlock, idx) => {
         const numeration = num ? `${num}.${idx + 1}` : idx + 1
 
-        if (reportBlock.type === PROJECT_DESCRIPTION) {
+        if (reportBlock.type === PROJECT_DESCRIPTION || type === MARKDOWN) {
           return (
             <>
               <ProjectDescriptionBlock data={reportBlock} num={numeration} subsectionLevel={subsectionLevel} />

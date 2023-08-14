@@ -1,5 +1,5 @@
-import fs from "fs"
-import { rgb } from "pdf-lib"
+import fs from 'fs'
+import { rgb } from 'pdf-lib'
 
 const addBackgroundToPages = async (pdfDoc) => {
   const backgroundFile = fs.readFileSync('server/assets/images/bg2.png')
@@ -12,6 +12,7 @@ const addBackgroundToPages = async (pdfDoc) => {
 
   for (let i = 0; i < pdfDocPages.length; i++) {
     const { width, height } = pdfDocPages[i].getSize()
+    await copiedPages[i].drawText(' ')
     const embeddedPage = await pdfDoc.embedPage(copiedPages[i])
     const newPage = await pdfDoc.insertPage(i)
     const background = i === 0 ? coverImage : backgroundImage
