@@ -6,7 +6,7 @@ use common::{
     access_rules::{AccessRules, Edit, Read},
     api::{
         audits::{AuditAction, AuditChange, CreateIssue, PublicAudit},
-        events::{EventPayload, PublicEvent},
+        events::{post_event, EventPayload, PublicEvent},
         issue::PublicIssue,
         send_notification, NewNotification,
     },
@@ -19,7 +19,6 @@ use common::{
         role::Role,
     },
     error::{self, AddCode},
-    services::{EVENTS_SERVICE, PROTOCOL},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 
@@ -76,34 +75,14 @@ impl AuditService {
 
         let event = PublicEvent::new(event_reciver, EventPayload::NewAudit(public_audit.clone()));
 
-        self.context
-            .make_request()
-            .post(format!(
-                "{}://{}/api/event",
-                PROTOCOL.as_str(),
-                EVENTS_SERVICE.as_str()
-            ))
-            .auth(self.context.server_auth())
-            .json(&event)
-            .send()
-            .await?;
+        post_event(&self.context, event, self.context.server_auth()).await?;
 
         let event = PublicEvent::new(
             event_reciver,
             EventPayload::RequestAccept(request.id.clone()),
         );
 
-        self.context
-            .make_request()
-            .post(format!(
-                "{}://{}/api/event",
-                PROTOCOL.as_str(),
-                EVENTS_SERVICE.as_str()
-            ))
-            .auth(self.context.server_auth())
-            .json(&event)
-            .send()
-            .await?;
+        post_event(&self.context, event, self.context.server_auth()).await?;
 
         Ok(public_audit)
     }
@@ -227,17 +206,7 @@ impl AuditService {
             EventPayload::AuditUpdate(public_audit.clone()),
         );
 
-        self.context
-            .make_request()
-            .post(format!(
-                "{}://{}/api/event",
-                PROTOCOL.as_str(),
-                EVENTS_SERVICE.as_str()
-            ))
-            .auth(self.context.server_auth())
-            .json(&event)
-            .send()
-            .await?;
+        post_event(&self.context, event, self.context.server_auth()).await?;
 
         Ok(public_audit)
     }
@@ -459,7 +428,25 @@ impl AuditService {
 
         audits.insert(&audit).await?;
 
-        Ok(auth.public_issue(issue))
+        let public_issue = auth.public_issue(issue);
+
+        let event_reciver = if auth.id().unwrap() == &audit.customer_id {
+            audit.auditor_id
+        } else {
+            audit.customer_id
+        };
+
+        let event = PublicEvent::new(
+            event_reciver,
+            EventPayload::IssueUpdate {
+                issue: public_issue.clone(),
+                audit: audit_id.to_hex(),
+            },
+        );
+
+        post_event(&self.context, event, self.context.server_auth()).await?;
+
+        Ok(public_issue)
     }
 
     pub async fn disclose_all(&self, audit_id: ObjectId) -> error::Result<Vec<PublicIssue>> {

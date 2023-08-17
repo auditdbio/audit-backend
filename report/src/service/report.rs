@@ -1,15 +1,10 @@
-use std::collections::{
-    hash_map::Entry::{Occupied, Vacant},
-    HashMap,
-};
-
 use common::{
     api::{
         audits::{AuditChange, PublicAudit},
         issue::PublicIssue,
     },
     context::Context,
-    entities::{issue::Status, user::PublicUser},
+    entities::issue::Status,
     services::{FILES_SERVICE, FRONTEND, PROTOCOL, RENDERER_SERVICE, USERS_SERVICE},
 };
 use reqwest::multipart::{Form, Part};
@@ -165,7 +160,6 @@ fn generate_issue_section(issue: &PublicIssue) -> Option<Section> {
         description,
         feedback,
         severity,
-        links,
         ..
     } = issue;
 
@@ -296,21 +290,6 @@ pub async fn create_report(context: Context, audit_id: String) -> anyhow::Result
         .json::<PublicAudit>()
         .await?;
 
-    let user = context
-        .make_request()
-        .get(format!(
-            "{}://{}/api/user/{}",
-            PROTOCOL.as_str(),
-            USERS_SERVICE.as_str(),
-            audit.auditor_id
-        ))
-        .json(&audit.auditor_id)
-        .send()
-        .await
-        .unwrap()
-        .json::<PublicUser>()
-        .await?;
-
     let report_data = generate_data(&audit);
     let input = RendererInput {
         auditor_name: audit.auditor_first_name + " " + &audit.auditor_last_name,
@@ -346,8 +325,8 @@ pub async fn create_report(context: Context, audit_id: String) -> anyhow::Result
         .part("path", Part::text(path.clone()))
         .part("original_name", Part::text("report.pdf"))
         .part("private", Part::text("true"))
-        .part("customerId", Part::text(audit.customer_id))
-        .part("auditorId", Part::text(audit.auditor_id));
+        .part("customerId", Part::text(audit.auditor_id))
+        .part("auditorId", Part::text(audit.customer_id));
 
     let _ = client
         .post(format!(
