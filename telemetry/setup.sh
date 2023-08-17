@@ -1,3 +1,3 @@
 #!/bin/bash
-cp /data/binaries/search_binary .
-./search_binary
+cp /data/binaries/telemetry_binary .
+./telemetry_binary
