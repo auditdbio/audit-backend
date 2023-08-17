@@ -1,6 +1,7 @@
 use actix_web::{
     get,
     web::{self, Json},
+    HttpResponse, ResponseError,
 };
 use common::context::Context;
 
@@ -10,4 +11,12 @@ use crate::service::ping::{self, Service, Status};
 pub async fn status(context: Context, services: web::Data<Vec<Service>>) -> Json<Status> {
     let status = ping::status(context, &services).await;
     Json(status)
+}
+
+#[get("/api/telemetry/update")]
+pub async fn update(context: Context) -> HttpResponse {
+    match ping::update(&context).await {
+        Ok(_) => HttpResponse::Ok().finish(),
+        Err(err) => err.error_response(),
+    }
 }

@@ -12,8 +12,7 @@ use actix_web::middleware;
 use actix_web::web;
 use actix_web::App;
 use common::context::ServiceState;
-use handler::ping::status;
-use service::ping::services;
+use handler::ping;
 
 pub fn create_app(
     state: Arc<ServiceState>,
@@ -33,7 +32,6 @@ pub fn create_app(
         .wrap(cors)
         .wrap(middleware::Logger::default())
         .app_data(web::Data::new(state))
-        .app_data(web::Data::new(services()))
-        .service(status);
+        .service(ping::update);
     app
 }

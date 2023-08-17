@@ -14,7 +14,7 @@ use common::{
     entities::{
         audit::{Audit, AuditStatus},
         audit_request::AuditRequest,
-        issue::{ChangeIssue, Event, EventKind, Issue, Status},
+        issue::{severity_to_integer, ChangeIssue, Event, EventKind, Issue, Status},
         project::get_project,
         role::Role,
     },
@@ -261,6 +261,10 @@ impl AuditService {
 
         audits.delete("_id", &audit_id).await?;
 
+        audit.issues.sort_by(|a, b| {
+            severity_to_integer(&a.severity).cmp(&severity_to_integer(&b.severity))
+        });
+
         audits.insert(&audit).await?;
 
         let mut new_notification: NewNotification =
@@ -348,7 +352,7 @@ impl AuditService {
             issue.status = new_state;
         }
 
-        if let Some(severity) = change.severity {
+        if let Some(severity) = change.severity.clone() {
             issue.severity = severity;
         }
 
@@ -425,6 +429,12 @@ impl AuditService {
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
         audits.delete("_id", &audit_id).await?;
+
+        if change.severity.is_some() {
+            audit.issues.sort_by(|a, b| {
+                severity_to_integer(&a.severity).cmp(&severity_to_integer(&b.severity))
+            });
+        }
 
         audits.insert(&audit).await?;
 

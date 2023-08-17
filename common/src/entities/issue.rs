@@ -85,6 +85,16 @@ impl Action {
 
 use crate::default_timestamp;
 
+pub fn severity_to_integer(severity: &str) -> usize {
+    match severity {
+        "Critical" | "critical" => 0,
+        "Major" | "major" => 1,
+        "Medium" | "medium" => 2,
+        "Minor" | "minor" => 3,
+        _ => 4,
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Issue<Id> {
     pub id: usize,

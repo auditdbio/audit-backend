@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
 use common::{
+    api::events::{post_event, EventPayload, PublicEvent},
     context::Context,
+    error,
     services::{
         AUDITORS_SERVICE, AUDITS_SERVICE, CUSTOMERS_SERVICE, FILES_SERVICE, MAIL_SERVICE,
         NOTIFICATIONS_SERVICE, PROTOCOL, SEARCH_SERVICE, USERS_SERVICE,
@@ -65,4 +67,10 @@ pub fn services() -> Vec<Service> {
         Service::new("search", SEARCH_SERVICE.as_str()),
         Service::new("users", USERS_SERVICE.as_str()),
     ]
+}
+
+pub async fn update(context: &Context) -> error::Result<()> {
+    let event = PublicEvent::new(*context.auth().id().unwrap(), EventPayload::VersionUpdate);
+    post_event(context, event, context.server_auth()).await?;
+    Ok(())
 }

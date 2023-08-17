@@ -160,6 +160,22 @@ services:
       - nginx-proxy
       - database
 
+  telemetry:
+    depends_on:
+      - binaries
+    build: ./telemetry
+    expose:
+      - 3009
+    volumes:
+      - binaries:/data/binaries
+    environment:
+      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_PATH: ~^/api/(telemetry|not_used1)
+      <<: *common-variables
+    networks:
+      - nginx-proxy
+      - database
+
   chat:
     depends_on:
       - binaries
