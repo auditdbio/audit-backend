@@ -163,7 +163,7 @@ services:
   chat:
     depends_on:
       - binaries
-    build: ./notification
+    build: ./chat
     expose:
       - 3012
     volumes:
