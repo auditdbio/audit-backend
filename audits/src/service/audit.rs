@@ -6,7 +6,7 @@ use common::{
     access_rules::{AccessRules, Edit, Read},
     api::{
         audits::{AuditAction, AuditChange, CreateIssue, PublicAudit},
-        events::{self, EventPayload, PublicEvent},
+        events::{EventPayload, PublicEvent},
         issue::PublicIssue,
         send_notification, NewNotification,
     },

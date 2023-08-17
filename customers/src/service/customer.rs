@@ -10,7 +10,7 @@ use common::{
         user::PublicUser,
     },
     error::{self, AddCode},
-    services::{PROTOCOL, USERS_SERVICE},
+    services::{AUDITORS_SERVICE, PROTOCOL, USERS_SERVICE},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -123,7 +123,7 @@ impl CustomerService {
                 .get(format!(
                     "{}://{}/api/auditor/{}",
                     PROTOCOL.as_str(),
-                    USERS_SERVICE.as_str(),
+                    AUDITORS_SERVICE.as_str(),
                     auth.id().unwrap()
                 ))
                 .send()

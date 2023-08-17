@@ -12,7 +12,7 @@ use crate::{
         project::PublicProject,
     },
     error,
-    services::{CUSTOMERS_SERVICE, PROTOCOL},
+    services::{AUDITORS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL},
 };
 
 use super::issue::PublicIssue;
@@ -87,7 +87,7 @@ impl PublicAudit {
             .get(format!(
                 "{}://{}/api/auditor/{}",
                 PROTOCOL.as_str(),
-                CUSTOMERS_SERVICE.as_str(),
+                AUDITORS_SERVICE.as_str(),
                 audit.auditor_id
             ))
             .auth(context.server_auth())

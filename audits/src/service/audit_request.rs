@@ -12,7 +12,7 @@ use common::{
         role::Role,
     },
     error::{self, AddCode},
-    services::{CUSTOMERS_SERVICE, EVENTS_SERVICE, FRONTEND, PROTOCOL},
+    services::{CUSTOMERS_SERVICE, EVENTS_SERVICE, PROTOCOL},
 };
 
 use mongodb::bson::{oid::ObjectId, Bson};

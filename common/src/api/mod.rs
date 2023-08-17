@@ -1,7 +1,10 @@
 pub mod notifications;
 pub use notifications::*;
+pub mod auditor;
 pub mod audits;
 pub mod chat;
+pub mod customer;
 pub mod events;
 pub mod issue;
+pub mod project;
 pub mod requests;

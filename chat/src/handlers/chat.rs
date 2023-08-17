@@ -3,26 +3,36 @@ use actix_web::{
     web::{Json, Path},
     HttpResponse,
 };
-use common::{api::chat::PublicMessage, context::Context, error};
+use common::{
+    api::chat::{CreateMessage, PublicMessage},
+    context::Context,
+    entities::role::Role,
+    error,
+};
 
-use crate::services::chat::{ChatService, Preview};
+use crate::services::chat::{ChatService, PublicChat};
 
 #[post("/api/chat/message")]
 pub async fn send_message(
     context: Context,
-    Json(message): Json<PublicMessage>,
+    Json(message): Json<CreateMessage>,
 ) -> error::Result<HttpResponse> {
     ChatService::new(context).send_message(message).await?;
     Ok(HttpResponse::Ok().finish())
 }
 
-#[get("/api/chat/preview")]
-pub async fn preview(context: Context) -> error::Result<Json<Preview>> {
-    Ok(Json(ChatService::new(context).preview().await?))
+#[get("/api/chat/preview/{role}")]
+pub async fn preview(context: Context, role: Path<Role>) -> error::Result<Json<Vec<PublicChat>>> {
+    Ok(Json(
+        ChatService::new(context).preview(role.into_inner()).await?,
+    ))
 }
 
-#[get("api/chat/{id}")]
-pub async fn messages(context: Context, id: Path<String>) -> error::Result<Json<Vec<String>>> {
+#[get("/api/chat/{id}")]
+pub async fn messages(
+    context: Context,
+    id: Path<String>,
+) -> error::Result<Json<Vec<PublicMessage>>> {
     Ok(Json(
         ChatService::new(context)
             .messages(id.into_inner().parse()?)
