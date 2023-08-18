@@ -10,3 +10,5 @@ cp /usr/src/audit_backend/target/release/mail /data/binaries/mail_binary
 cp /usr/src/audit_backend/target/release/notification /data/binaries/notification_binary
 cp /usr/src/audit_backend/target/release/event /data/binaries/event_binary
 cp /usr/src/audit_backend/target/release/report /data/binaries/report_binary
+cp /usr/src/audit_backend/target/release/chat /data/binaries/chat_binary
+cp /usr/src/audit_backend/target/release/telemetry /data/binaries/telemetry_binary
