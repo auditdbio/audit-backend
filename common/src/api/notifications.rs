@@ -6,7 +6,7 @@ use crate::{
     default_timestamp,
     entities::{
         letter::CreateLetter,
-        notification::{CreateNotification, NotificationInner, NotificationMessage},
+        notification::{CreateNotification, NotificationInner},
         user::PublicUser,
     },
     error,
@@ -91,7 +91,8 @@ pub async fn send_notification(
         let create_notification = CreateNotification {
             user_id,
             inner: NotificationInner {
-                message: NotificationMessage::Str(alert),
+                message: alert,
+                substitutions: vec![],
                 is_read: false,
                 is_sound: true,
                 links,
