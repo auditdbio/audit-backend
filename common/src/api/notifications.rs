@@ -6,7 +6,7 @@ use crate::{
     default_timestamp,
     entities::{
         letter::CreateLetter,
-        notification::{CreateNotification, NotificationInner},
+        notification::{CreateNotification, NotificationInner, Substitution},
         user::PublicUser,
     },
     error,
@@ -26,6 +26,8 @@ pub struct NewNotification {
     pub alert: String,
     pub subject: String,
     pub message: String,
+    pub title: String,
+    pub substitutions: Vec<Substitution>,
     #[serde(default)]
     pub links: Vec<String>,
     pub role: String,
@@ -45,6 +47,9 @@ pub async fn send_notification(
         mut message,
         links,
         role,
+        substitutions,
+        title,
+        ..
     } = new_notification;
     for (key, value) in variables {
         message = message.replace(&format!("{{{}}}", key), &value);
@@ -92,12 +97,13 @@ pub async fn send_notification(
             user_id,
             inner: NotificationInner {
                 message: alert,
-                substitutions: vec![],
+                substitutions,
                 is_read: false,
                 is_sound: true,
                 links,
                 timestamp: default_timestamp(),
                 role,
+                title: Some(title),
             },
         };
         context

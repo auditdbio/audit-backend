@@ -2,5 +2,7 @@
     "alert": "Issue {issue} status is changed",
     "subject": "AuditDB: Status Update Alert",
     "message": "Quantum shift detected! An issue in the Audit {audit}  has experienced a status change. It's time to put on your diagnostic goggles and investigate.s\n Log in, examine the change, and share your insights.",
-    "role": "Auditor"
+    "role": "Auditor",
+    "title": "Issue update",
+    "substitutions": [{"text": "{issue}", styles: ["bold"]}]
 }

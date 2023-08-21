@@ -12,6 +12,8 @@ pub struct Substitution {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct NotificationInner {
     pub message: String,
+    pub title: Option<String>,
+    #[serde(default)]
     pub substitutions: Vec<Substitution>,
     pub is_read: bool,
     pub is_sound: bool,
