@@ -1,8 +1,8 @@
 {
-    "alert": "Audit {audit} submitted",
+    "alert": "Audit {} submitted",
     "subject": "AuditDB: Mission Complete, Audit is submitted",
     "message": "Auditor, code name 'Bug Buster', has successfully completed the quest in your smart contract labyrinth. The mission log, i.e., the audit, is submitted and now ready for download.\n Initiate data transfer and decode the findings. We eagerly await your analysis.\n Download and conquer the world.",
     "role": "Customer",
     "title": "Audit submitted",
-    "substitutions": [{"text": "{audit}", styles: ["bold"]}]
+    "substitutions": [{"text": "{audit}", "styles": ["bold"]}]
 }

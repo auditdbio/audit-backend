@@ -1,8 +1,8 @@
 {
-    "alert": "New audit issue for {audit} audit",
+    "alert": "New audit issue for {} audit",
     "subject": "AuditDB: new issue",
     "message": "Vigilant auditor has uncovered a potential issue in your smart contract codebase during their latest exploration. It seems there's an issue in your code base that warrants your attention.\n We advise you to to have a look and provide some comments on auditdb.io\n Awaiting your swift action.",
     "role": "Customer",
     "title": "Issue disclosed",
-    "substitutions": [{"text": "{audit}", styles: ["bold"]}]
+    "substitutions": [{"text": "{audit}", "styles": ["bold"]}]
 }
