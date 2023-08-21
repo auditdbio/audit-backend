@@ -1,14 +1,25 @@
-use std::sync::Arc;
+use std::{env, sync::Arc};
 
 use actix_web::HttpServer;
-use chat::create_app;
-use common::context::ServiceState;
+use chat::{create_app, repositories::chat::ChatRepository};
+use common::{context::ServiceState, repository::mongo_repository::MongoRepository};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init();
 
     let state = ServiceState::new("chat".to_string());
+
+    let mongo_uri = env::var("MONGOURI").unwrap();
+
+    let messages = MongoRepository::new(&mongo_uri, "chat", "messages").await;
+    let groups = MongoRepository::new(&mongo_uri, "chat", "groups").await;
+    let private_chats = MongoRepository::new(&mongo_uri, "chat", "private_chats").await;
+    let chat = ChatRepository::new(messages, groups, private_chats);
+
+    let mut state = state;
+
+    state.insert_manual::<ChatRepository>(chat);
 
     let state = Arc::new(state);
 

@@ -3,7 +3,11 @@ use actix_web::{
     web::{self, Json},
     HttpResponse, ResponseError,
 };
-use common::context::Context;
+use common::{
+    api::events::{post_event, EventPayload, PublicEvent},
+    context::Context,
+};
+use mongodb::bson::oid::ObjectId;
 
 use crate::service::ping::{self, Service, Status};
 
@@ -16,7 +20,13 @@ pub async fn status(context: Context, services: web::Data<Vec<Service>>) -> Json
 #[get("/api/telemetry/update")]
 pub async fn update(context: Context) -> HttpResponse {
     match ping::update(&context).await {
-        Ok(_) => HttpResponse::Ok().finish(),
+        Ok(_) => {
+            let event = PublicEvent::new(ObjectId::new(), EventPayload::VersionUpdate);
+            post_event(&context, event, context.server_auth())
+                .await
+                .unwrap();
+            HttpResponse::Ok().finish()
+        }
         Err(err) => err.error_response(),
     }
 }

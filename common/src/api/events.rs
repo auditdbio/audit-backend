@@ -40,6 +40,10 @@ impl EventPayload {
             EventPayload::VersionUpdate => "VersionUpdate".to_owned(),
         }
     }
+
+    pub fn for_all(&self) -> bool {
+        matches!(self, EventPayload::VersionUpdate)
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
