@@ -15,11 +15,11 @@ async fn main() -> std::io::Result<()> {
     let messages = MongoRepository::new(&mongo_uri, "chat", "messages").await;
     let groups = MongoRepository::new(&mongo_uri, "chat", "groups").await;
     let private_chats = MongoRepository::new(&mongo_uri, "chat", "private_chats").await;
-    let chat = ChatRepository::new(messages, groups, private_chats);
+    let chat = Arc::new(ChatRepository::new(messages, groups, private_chats));
 
     let mut state = state;
 
-    state.insert_manual::<ChatRepository>(chat);
+    state.insert_manual::<Arc<ChatRepository>>(chat);
 
     let state = Arc::new(state);
 
