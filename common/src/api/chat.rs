@@ -1,7 +1,12 @@
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-use crate::{entities::role::Role, error};
+use crate::{
+    auth::Auth,
+    entities::role::Role,
+    error,
+    services::{CHAT_SERVICE, PROTOCOL},
+};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct ChatId {
@@ -48,4 +53,15 @@ pub struct PublicMessage {
     pub chat: String,
     pub time: i64,
     pub text: String,
+}
+
+pub fn create_message(message: CreateMessage, auth: Auth) -> error::Result<()> {
+    ureq::post(&format!(
+        "{}://{}/api/chat/message",
+        PROTOCOL.as_str(),
+        CHAT_SERVICE.as_str()
+    ))
+    .set("Authorization", &format!("Bearer {}", auth.to_token()?))
+    .send_json(message)?;
+    Ok(())
 }

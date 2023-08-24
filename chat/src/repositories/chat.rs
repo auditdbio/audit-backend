@@ -155,7 +155,7 @@ impl ChatRepository {
 
         let messages = Messages {
             id: message.chat,
-            messages: vec![message],
+            messages: vec![],
         };
 
         self.messages.insert(&messages).await?;

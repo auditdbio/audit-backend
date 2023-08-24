@@ -35,10 +35,12 @@ impl ServiceState {
     }
 }
 
+#[derive(Clone)]
 pub struct HandlerContext {
     pub user_auth: Auth,
 }
 
+#[derive(Clone)]
 pub struct Context(pub Arc<ServiceState>, pub HandlerContext);
 
 impl FromRequest for Context {

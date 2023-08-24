@@ -69,7 +69,7 @@ services:
     build: ./audits
     volumes:
       - binaries:/data/binaries
-    ports:
+    expose:
       - 3003
     environment:
       VIRTUAL_HOST: dev.auditdb.io

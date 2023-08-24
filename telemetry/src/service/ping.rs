@@ -9,6 +9,7 @@ use common::{
         NOTIFICATIONS_SERVICE, PROTOCOL, SEARCH_SERVICE, USERS_SERVICE,
     },
 };
+use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -70,7 +71,7 @@ pub fn services() -> Vec<Service> {
 }
 
 pub async fn update(context: &Context) -> error::Result<()> {
-    let event = PublicEvent::new(*context.auth().id().unwrap(), EventPayload::VersionUpdate);
+    let event = PublicEvent::new(ObjectId::new(), EventPayload::VersionUpdate);
     post_event(context, event, context.server_auth()).await?;
     Ok(())
 }
