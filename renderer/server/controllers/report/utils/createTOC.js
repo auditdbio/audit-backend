@@ -24,8 +24,6 @@ const createTOC = async (project, pdfDoc, pdfBuffer) => {
   const itemsForToc = tocReducer(project.report_data)
   const tableOfContents = await getPageForStrings(pdfBuffer, itemsForToc)
 
-  console.log(tableOfContents)
-
   const tableOfContentsWithCoords = []
   let tocPagesCounter = 1
   let tocPage = await pdfDoc.insertPage(tocPagesCounter)
