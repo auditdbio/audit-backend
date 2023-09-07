@@ -11,6 +11,7 @@ use crate::{
     constants::DURATION,
     entities::{
         auditor::{Auditor, PublicAuditor},
+        bage::{Bage, PublicBage},
         contacts::Contacts,
         customer::{Customer, PublicCustomer},
         issue::{Event, Issue},
@@ -107,6 +108,36 @@ impl Auth {
         }
 
         PublicAuditor {
+            user_id: auditor.user_id.to_hex(),
+            avatar: auditor.avatar,
+            first_name: auditor.first_name,
+            last_name: auditor.last_name,
+            about: auditor.about,
+            company: auditor.company,
+            contacts,
+            free_at: auditor.free_at,
+            price_range: auditor.price_range,
+            tags: auditor.tags,
+        }
+    }
+
+    pub fn public_bage(&self, auditor: Bage<ObjectId>) -> PublicBage {
+        let mut contacts = Contacts {
+            telegram: None,
+            email: None,
+            public_contacts: false,
+        };
+
+        if auditor.contacts.public_contacts || self.full_access() {
+            contacts = auditor.contacts;
+        }
+
+        if &Auth::None == self || &Auth::Service("search".to_string(), false) == self {
+            contacts.telegram = None;
+            contacts.email = None;
+        }
+
+        PublicBage {
             user_id: auditor.user_id.to_hex(),
             avatar: auditor.avatar,
             first_name: auditor.first_name,

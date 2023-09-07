@@ -24,8 +24,9 @@ pub async fn post_auditor(
 
 #[get("/api/auditor/{id}")]
 pub async fn get_auditor(context: Context, id: web::Path<String>) -> error::Result<HttpResponse> {
-    let res = AuditorService::new(context).find(id.parse()?).await?;
-    if let Some(res) = res {
+    let service = AuditorService::new(context);
+    let id = id.parse()?;
+    if let Some(res) = service.find(id).await? {
         Ok(HttpResponse::Ok().json(res))
     } else {
         Ok(HttpResponse::Ok().json(json! {{}}))

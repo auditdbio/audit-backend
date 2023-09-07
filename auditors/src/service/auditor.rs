@@ -4,7 +4,8 @@ use common::{
     context::Context,
     entities::{
         audit_request::PriceRange,
-        auditor::{Auditor, PublicAuditor},
+        auditor::{Auditor, ExtendedAuditor, PublicAuditor},
+        bage::Bage,
         contacts::Contacts,
         customer::PublicCustomer,
         user::PublicUser,
@@ -74,20 +75,29 @@ impl AuditorService {
         Ok(auditor.stringify())
     }
 
-    pub async fn find(&self, id: ObjectId) -> error::Result<Option<PublicAuditor>> {
+    pub async fn find(&self, id: ObjectId) -> error::Result<Option<ExtendedAuditor>> {
         let auth = self.context.auth();
 
         let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
 
+
         let Some(auditor) = auditors.find("user_id", &Bson::ObjectId(id)).await? else {
-            return Ok(None);
+            
+            let bages = self.context.try_get_repository::<Bage<ObjectId>>()?;
+            
+            let Some(bage) = bages.find("user_id", &Bson::ObjectId(id)).await? else {
+                return Ok(None);
+            };
+            
+        
+            return Ok(Some(ExtendedAuditor::Bage(auth.public_bage(bage))));
         };
 
         if !Read.get_access(auth, &auditor) {
             return Err(anyhow::anyhow!("User is not available to change this auditor").code(400));
         }
 
-        Ok(Some(auth.public_auditor(auditor)))
+        Ok(Some(ExtendedAuditor::Auditor(auth.public_auditor(auditor))))
     }
 
     pub async fn my_auditor(&self) -> error::Result<Option<Auditor<String>>> {

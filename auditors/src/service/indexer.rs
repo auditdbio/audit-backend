@@ -1,7 +1,10 @@
 use common::{
     access_rules::{AccessRules, GetData},
     context::Context,
-    entities::auditor::{Auditor, PublicAuditor},
+    entities::{
+        auditor::{Auditor, PublicAuditor},
+        bage::{Bage, PublicBage},
+    },
     error::{self, AddCode},
 };
 use mongodb::bson::{oid::ObjectId, Document};
@@ -46,6 +49,40 @@ impl IndexerService {
         Ok(auditors
             .into_iter()
             .map(|x| auth.public_auditor(x))
+            .collect::<Vec<_>>())
+    }
+
+    pub async fn index_bages(&self, since: i64) -> error::Result<Vec<Document>> {
+        let auth = self.context.auth();
+
+        if !GetData.get_access(auth, ()) {
+            return Err(anyhow::anyhow!("No access to get auditor data {:?}", auth).code(400));
+        }
+
+        let bages = self.context.try_get_repository::<Bage<ObjectId>>()?;
+
+        let customers = bages.get_all_since(since).await?;
+
+        Ok(customers
+            .into_iter()
+            .filter_map(|x| x.into())
+            .collect::<Vec<_>>())
+    }
+
+    pub async fn find_bages(&self, ids: Vec<ObjectId>) -> error::Result<Vec<PublicBage>> {
+        let auth = self.context.auth();
+
+        if !GetData.get_access(auth, ()) {
+            return Err(anyhow::anyhow!("No access to get auditor data: {:?}", auth).code(400));
+        }
+
+        let bages = self.context.try_get_repository::<Bage<ObjectId>>()?;
+
+        let auditors = bages.find_all_by_ids("user_id", ids).await?;
+
+        Ok(auditors
+            .into_iter()
+            .map(|x| auth.public_bage(x))
             .collect::<Vec<_>>())
     }
 }

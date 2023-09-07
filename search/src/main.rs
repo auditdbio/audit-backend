@@ -26,14 +26,17 @@ async fn main() -> std::io::Result<()> {
 
     let since_repo = SinceRepo::new(MongoRepository::new(&mongo_uri, "search", "meta").await);
 
-    if since_repo
+    if let Some(since) = since_repo
         .find("name", &Bson::String("since".to_string()))
         .await
         .unwrap()
-        .is_none()
     {
+        if since.dict.len() < Since::default().dict.len() {
+            since_repo.insert(&Since::default()).await.unwrap();
+        }
+    } else {
         since_repo.insert(&Since::default()).await.unwrap();
-    }
+    };
 
     let timeout = env::var("TIMEOUT")
         .unwrap_or("7200".to_string())

@@ -7,10 +7,10 @@ use crate::{
     services::{AUDITORS_SERVICE, PROTOCOL},
 };
 
-use super::{audit_request::PriceRange, bage::PublicBage, contacts::Contacts};
+use super::{audit_request::PriceRange, contacts::Contacts};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
-pub struct Auditor<Id> {
+pub struct Bage<Id> {
     pub user_id: Id,
     pub avatar: String,
     pub first_name: String,
@@ -24,9 +24,9 @@ pub struct Auditor<Id> {
     pub last_modified: i64,
 }
 
-impl Auditor<String> {
-    pub fn parse(self) -> Auditor<ObjectId> {
-        Auditor {
+impl Bage<String> {
+    pub fn parse(self) -> Bage<ObjectId> {
+        Bage {
             user_id: self.user_id.parse().unwrap(),
             avatar: self.avatar,
             first_name: self.first_name,
@@ -42,9 +42,9 @@ impl Auditor<String> {
     }
 }
 
-impl Auditor<ObjectId> {
-    pub fn stringify(self) -> Auditor<String> {
-        Auditor {
+impl Bage<ObjectId> {
+    pub fn stringify(self) -> Bage<String> {
+        Bage {
             user_id: self.user_id.to_hex(),
             avatar: self.avatar,
             first_name: self.first_name,
@@ -60,20 +60,20 @@ impl Auditor<ObjectId> {
     }
 }
 
-impl From<Auditor<String>> for Auditor<ObjectId> {
-    fn from(auditor: Auditor<String>) -> Self {
-        auditor.parse()
+impl From<Bage<String>> for Bage<ObjectId> {
+    fn from(bage: Bage<String>) -> Self {
+        bage.parse()
     }
 }
 
-impl Entity for Auditor<ObjectId> {
+impl Entity for Bage<ObjectId> {
     fn id(&self) -> ObjectId {
         self.user_id
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PublicAuditor {
+pub struct PublicBage {
     pub user_id: String,
     pub avatar: String,
     pub first_name: String,
@@ -86,58 +86,32 @@ pub struct PublicAuditor {
     pub tags: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "kind")]
-pub enum ExtendedAuditor {
-    Auditor(PublicAuditor),
-    Bage(PublicBage),
-}
-
-impl From<Auditor<ObjectId>> for Option<Document> {
-    fn from(auditor: Auditor<ObjectId>) -> Self {
-        let auditor = auditor.stringify();
-        let mut document = mongodb::bson::to_document(&auditor).unwrap();
-        if !auditor.contacts.public_contacts {
+impl From<Bage<ObjectId>> for Option<Document> {
+    fn from(bage: Bage<ObjectId>) -> Self {
+        let bage = bage.stringify();
+        let mut document = mongodb::bson::to_document(&bage).unwrap();
+        if !bage.contacts.public_contacts {
             document.remove("contacts");
         }
-        document.insert("id", auditor.user_id);
+        document.insert("id", bage.user_id);
         document.insert(
             "request_url",
             format!(
-                "{}://{}/api/auditor/data",
+                "{}://{}/api/bage/data",
                 PROTOCOL.as_str(),
                 AUDITORS_SERVICE.as_str()
             ),
         );
         document.insert(
             "search_tags",
-            auditor
-                .tags
+            bage.tags
                 .iter()
                 .map(|tag| tag.to_lowercase())
                 .collect::<Vec<String>>(),
         );
 
         document.remove("last_modified");
-        document.insert("kind", "auditor");
+        document.insert("kind", "bage");
         Some(document)
     }
 }
-
-// impl From<Auditor<ObjectId>> for PublicAuditor {
-//     fn from(auditor: Auditor<ObjectId>) -> Self {
-//         let auditor = auditor.stringify();
-//         PublicAuditor {
-//             user_id: auditor.user_id,
-//             avatar: auditor.avatar,
-//             first_name: auditor.first_name,
-//             last_name: auditor.last_name,
-//             about: auditor.about,
-//             company: auditor.company,
-//             contacts: auditor.contacts,
-//             free_at: auditor.free_at,
-//             price_range: auditor.price_range,
-//             tags: auditor.tags,
-//         }
-//     }
-// }
