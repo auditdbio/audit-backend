@@ -76,36 +76,63 @@ impl IssueCollector {
         self
     }
     pub fn into_issues(self) -> Vec<Section> {
-        vec![
-            Section {
-                typ: "plain_text".to_string(),
-                title: "Critical".to_string(),
-                subsections: Some(self.issues.critical),
-                include_in_toc: true,
-                ..Default::default()
-            },
-            Section {
-                typ: "plain_text".to_string(),
-                title: "Major".to_string(),
-                subsections: Some(self.issues.major),
-                include_in_toc: true,
-                ..Default::default()
-            },
-            Section {
-                typ: "plain_text".to_string(),
-                title: "Medium".to_string(),
-                subsections: Some(self.issues.medium),
-                include_in_toc: true,
-                ..Default::default()
-            },
-            Section {
-                typ: "plain_text".to_string(),
-                title: "Minor".to_string(),
-                subsections: Some(self.issues.minor),
-                include_in_toc: true,
-                ..Default::default()
-            },
-        ]
+        // vec![
+        //     Section {
+        //         typ: "plain_text".to_string(),
+        //         title: "Critical".to_string(),
+        //         subsections: Some(self.issues.critical),
+        //         include_in_toc: true,
+        //         ..Default::default()
+        //     },
+        //     Section {
+        //         typ: "plain_text".to_string(),
+        //         title: "Major".to_string(),
+        //         subsections: Some(self.issues.major),
+        //         include_in_toc: true,
+        //         ..Default::default()
+        //     },
+        //     Section {
+        //         typ: "plain_text".to_string(),
+        //         title: "Medium".to_string(),
+        //         subsections: Some(self.issues.medium),
+        //         include_in_toc: true,
+        //         ..Default::default()
+        //     },
+        //     Section {
+        //         typ: "plain_text".to_string(),
+        //         title: "Minor".to_string(),
+        //         subsections: Some(self.issues.minor),
+        //         include_in_toc: true,
+        //         ..Default::default()
+        //     },
+        // ]
+
+        let sections = vec![
+            ("Critical", &self.issues.critical),
+            ("Major", &self.issues.major),
+            ("Medium", &self.issues.medium),
+            ("Minor", &self.issues.minor),
+        ];
+
+        sections
+          .into_iter()
+          .map(|(title, subsections)| {
+              let mut section = Section {
+                  typ: "plain_text".to_string(),
+                  title: title.to_string(),
+                  subsections: Some(subsections.clone()),
+                  include_in_toc: true,
+                  ..Default::default()
+              };
+
+              if subsections.is_empty() {
+                  section.text = format!("No {} issues found.", title.to_lowercase());
+                  section.subsections = None;
+              }
+
+              section
+          })
+          .collect()
     }
 }
 
