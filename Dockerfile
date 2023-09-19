@@ -1,5 +1,5 @@
 FROM rust:latest as build
-RUN cargo install cargo-chef
+RUN cargo install cargo-chef --locked
 WORKDIR /app
 
 
