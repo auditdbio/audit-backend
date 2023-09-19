@@ -76,37 +76,6 @@ impl IssueCollector {
         self
     }
     pub fn into_issues(self) -> Vec<Section> {
-        // vec![
-        //     Section {
-        //         typ: "plain_text".to_string(),
-        //         title: "Critical".to_string(),
-        //         subsections: Some(self.issues.critical),
-        //         include_in_toc: true,
-        //         ..Default::default()
-        //     },
-        //     Section {
-        //         typ: "plain_text".to_string(),
-        //         title: "Major".to_string(),
-        //         subsections: Some(self.issues.major),
-        //         include_in_toc: true,
-        //         ..Default::default()
-        //     },
-        //     Section {
-        //         typ: "plain_text".to_string(),
-        //         title: "Medium".to_string(),
-        //         subsections: Some(self.issues.medium),
-        //         include_in_toc: true,
-        //         ..Default::default()
-        //     },
-        //     Section {
-        //         typ: "plain_text".to_string(),
-        //         title: "Minor".to_string(),
-        //         subsections: Some(self.issues.minor),
-        //         include_in_toc: true,
-        //         ..Default::default()
-        //     },
-        // ]
-
         let sections = vec![
             ("Critical", &self.issues.critical),
             ("Major", &self.issues.major),
