@@ -1,4 +1,5 @@
-FROM lukemathwalker/cargo-chef:latest-rust-1 as chef
+FROM rust:latest as chef
+RUN cargo install cargo-chef --locked
 WORKDIR /app
 
 
