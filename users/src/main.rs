@@ -15,6 +15,8 @@ use actix_web::HttpServer;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    dotenv::dotenv().ok();
+
     env_logger::init();
 
     let mongo_uri = env::var("MONGOURI").unwrap();

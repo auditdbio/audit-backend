@@ -6,6 +6,8 @@ use notification::{create_app, repositories::notifications::NotificationsReposit
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    dotenv::dotenv().ok();
+
     env_logger::init();
 
     let mongo_uri = env::var("MONGOURI").expect("MONGOURI must be set");

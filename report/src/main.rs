@@ -6,6 +6,8 @@ use report::create_app;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    dotenv::dotenv().ok();
+
     env_logger::init();
 
     let state = Arc::new(ServiceState::new("report".to_string()));

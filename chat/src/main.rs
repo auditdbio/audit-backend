@@ -6,6 +6,8 @@ use common::{context::ServiceState, repository::mongo_repository::MongoRepositor
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    dotenv::dotenv().ok();
+
     env_logger::init();
 
     let state = ServiceState::new("chat".to_string());
