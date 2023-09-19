@@ -19,6 +19,8 @@ futures = "0.3.25"
 common = {path = "../common"}
 chrono = "0.4.23"
 anyhow = "1"
+dotenv = "0.15.0"
+
 
 
 [dependencies.mongodb]

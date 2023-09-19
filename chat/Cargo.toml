@@ -23,6 +23,8 @@ async-trait = "0.1"
 common = {path = "../common"}
 tokio = "1.32.0"
 mongodb-migrator = "0.1"
+dotenv = "0.15.0"
+
 
 [dependencies.mongodb]
 version = "2.3.1"

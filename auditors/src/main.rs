@@ -12,6 +12,7 @@ use mongodb::bson::oid::ObjectId;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    dotenv::dotenv().ok();
     let mongo_uri = env::var("MONGOURI").unwrap();
     env_logger::init();
 

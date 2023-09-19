@@ -22,6 +22,8 @@ anyhow = "1"
 async-trait = "0.1"
 common = {path = "../common"}
 mongodb-migrator = "0.1"
+dotenv = "0.15.0"
+
 
 
 [dependencies.mongodb]
