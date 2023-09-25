@@ -1,3 +1,5 @@
+#![feature(is_some_and)]
+
 pub mod handlers;
 pub mod repositories;
 pub mod service;

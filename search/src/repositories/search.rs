@@ -85,13 +85,26 @@ impl SearchRepo {
             None
         };
 
+        let kind = query
+            .kind
+            .unwrap_or(String::new())
+            .split(' ')
+            .filter_map(|s| {
+                if !s.is_empty() {
+                    Some(s.to_ascii_lowercase())
+                } else {
+                    None
+                } // insensitive
+            })
+            .collect::<Vec<_>>();
+
         query.query = query.query.to_ascii_lowercase();
 
         let mut docs = Vec::new();
 
-        if let Some(kind) = query.kind.clone() {
+        if !kind.is_empty() {
             docs.push(doc! {
-                "kind": kind,
+                "kind": kind.clone(),
             });
         }
 
@@ -124,7 +137,7 @@ impl SearchRepo {
             });
         }
 
-        if query.kind != Some("customer".to_string()) {
+        if kind.contains(&"customer".to_string()) {
             let price_from = query.price_from.unwrap_or(0);
             let price_to = query.price_to.unwrap_or(i64::MAX);
             docs.push(doc! {
