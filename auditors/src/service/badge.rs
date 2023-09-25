@@ -226,16 +226,8 @@ impl BadgeService {
         todo!()
     }
 
-    pub async fn make_delete(
-        &self,
-        badge_id: ObjectId,
-        user_id: ObjectId,
-        code: String,
-    ) -> error::Result<PublicAuditor> {
-        // get audit requests
-        // delete audit requests
-        // delete badge
-
+    pub async fn delete_run(&self, code: String) -> error::Result<PublicBadge> {
+        // send code
         todo!()
     }
 }

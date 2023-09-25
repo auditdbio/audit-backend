@@ -1,5 +1,5 @@
 use actix_web::{
-    delete, patch, post,
+    delete, get, patch, post,
     web::{self, Json},
     HttpResponse,
 };
@@ -22,7 +22,7 @@ pub async fn post_badge(
     Ok(Json(BadgeService::new(context).create(data).await?))
 }
 
-#[patch("/api/badge/substitute/{badge_id}/{user_id}")]
+#[patch("/api/badge/merge/{badge_id}/{user_id}")]
 pub async fn substitute(
     context: Context,
     ids: web::Path<(String, String)>,
@@ -35,7 +35,7 @@ pub async fn substitute(
     Ok(HttpResponse::Ok().finish())
 }
 
-#[patch("/api/badge/substitute/run/{code}")]
+#[get("/api/badge/merge/run/{code}")]
 pub async fn substitute_run(
     context: Context,
     ids: web::Path<String>,
@@ -47,4 +47,14 @@ pub async fn substitute_run(
 #[delete("/api/badge/delete/{id}")]
 pub async fn delete(context: Context, id: web::Path<String>) -> error::Result<Json<PublicBadge>> {
     Ok(Json(BadgeService::new(context).delete(id.parse()?).await?))
+}
+
+#[get("/api/badge/delete/run/{code}")]
+pub async fn delete_run(
+    context: Context,
+    code: web::Path<String>,
+) -> error::Result<Json<PublicBadge>> {
+    Ok(Json(
+        BadgeService::new(context).delete_run(code.parse()?).await?,
+    ))
 }
