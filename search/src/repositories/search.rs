@@ -104,7 +104,9 @@ impl SearchRepo {
 
         if !kind.is_empty() {
             docs.push(doc! {
-                "kind": kind.clone(),
+                "kind": {
+                    "$in": kind.clone(),
+                },
             });
         }
 
