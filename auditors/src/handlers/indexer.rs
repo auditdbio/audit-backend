@@ -5,7 +5,7 @@ use actix_web::{
 };
 use common::{
     context::Context,
-    entities::{auditor::PublicAuditor, bage::PublicBage},
+    entities::{auditor::PublicAuditor, badge::PublicBadge},
     error,
 };
 use mongodb::bson::{oid::ObjectId, Document};
@@ -32,24 +32,24 @@ pub async fn get_auditor_data(
     Ok(Json(IndexerService::new(context).find_auditors(ids).await?))
 }
 
-#[get("/api/bage/data/{since}")]
-pub async fn provide_bages_data(
+#[get("/api/badge/data/{since}")]
+pub async fn provide_badges_data(
     context: Context,
     since: web::Path<i64>,
 ) -> error::Result<Json<Vec<Document>>> {
     Ok(Json(
         IndexerService::new(context)
-            .index_bages(since.into_inner())
+            .index_badges(since.into_inner())
             .await?,
     ))
 }
 
-#[post("/api/bage/data")]
-pub async fn get_bages_data(
+#[post("/api/badge/data")]
+pub async fn get_badges_data(
     context: Context,
     Json(ids): web::Json<Vec<ObjectId>>,
-) -> error::Result<Json<Vec<PublicBage>>> {
-    Ok(Json(IndexerService::new(context).find_bages(ids).await?))
+) -> error::Result<Json<Vec<PublicBadge>>> {
+    Ok(Json(IndexerService::new(context).find_badges(ids).await?))
 }
 
 #[get("/api/auditors/ping")]

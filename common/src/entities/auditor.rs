@@ -7,7 +7,7 @@ use crate::{
     services::{AUDITORS_SERVICE, PROTOCOL},
 };
 
-use super::{audit_request::PriceRange, bage::PublicBage, contacts::Contacts};
+use super::{audit_request::PriceRange, badge::PublicBadge, contacts::Contacts};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
 pub struct Auditor<Id> {
@@ -90,7 +90,7 @@ pub struct PublicAuditor {
 #[serde(tag = "kind")]
 pub enum ExtendedAuditor {
     Auditor(PublicAuditor),
-    Bage(PublicBage),
+    Badge(PublicBadge),
 }
 
 impl From<Auditor<ObjectId>> for Option<Document> {

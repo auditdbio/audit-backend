@@ -5,7 +5,7 @@ use common::{
     entities::{
         audit_request::PriceRange,
         auditor::{Auditor, ExtendedAuditor, PublicAuditor},
-        bage::Bage,
+        badge::Badge,
         contacts::Contacts,
         customer::PublicCustomer,
         user::PublicUser,
@@ -83,14 +83,14 @@ impl AuditorService {
 
         let Some(auditor) = auditors.find("user_id", &Bson::ObjectId(id)).await? else {
             
-            let bages = self.context.try_get_repository::<Bage<ObjectId>>()?;
+            let badges = self.context.try_get_repository::<Badge<ObjectId>>()?;
             
-            let Some(bage) = bages.find("user_id", &Bson::ObjectId(id)).await? else {
+            let Some(badge) = badges.find("user_id", &Bson::ObjectId(id)).await? else {
                 return Ok(None);
             };
             
         
-            return Ok(Some(ExtendedAuditor::Bage(auth.public_bage(bage))));
+            return Ok(Some(ExtendedAuditor::Badge(auth.public_badge(badge))));
         };
 
         if !Read.get_access(auth, &auditor) {

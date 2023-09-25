@@ -11,7 +11,7 @@ use crate::{
     constants::DURATION,
     entities::{
         auditor::{Auditor, PublicAuditor},
-        bage::{Bage, PublicBage},
+        badge::{Badge, PublicBadge},
         contacts::Contacts,
         customer::{Customer, PublicCustomer},
         issue::{Event, Issue},
@@ -22,7 +22,6 @@ use crate::{
 
 pub static ENCODING_KEY: Lazy<EncodingKey> = Lazy::new(|| {
     let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
-
     EncodingKey::from_secret(secret.as_bytes())
 });
 
@@ -121,7 +120,7 @@ impl Auth {
         }
     }
 
-    pub fn public_bage(&self, auditor: Bage<ObjectId>) -> PublicBage {
+    pub fn public_badge(&self, auditor: Badge<ObjectId>) -> PublicBadge {
         let mut contacts = Contacts {
             telegram: None,
             email: None,
@@ -137,7 +136,7 @@ impl Auth {
             contacts.email = None;
         }
 
-        PublicBage {
+        PublicBadge {
             user_id: auditor.user_id.to_hex(),
             avatar: auditor.avatar,
             first_name: auditor.first_name,

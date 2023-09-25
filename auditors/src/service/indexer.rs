@@ -3,7 +3,7 @@ use common::{
     context::Context,
     entities::{
         auditor::{Auditor, PublicAuditor},
-        bage::{Bage, PublicBage},
+        badge::{Badge, PublicBadge},
     },
     error::{self, AddCode},
 };
@@ -52,16 +52,16 @@ impl IndexerService {
             .collect::<Vec<_>>())
     }
 
-    pub async fn index_bages(&self, since: i64) -> error::Result<Vec<Document>> {
+    pub async fn index_badges(&self, since: i64) -> error::Result<Vec<Document>> {
         let auth = self.context.auth();
 
         if !GetData.get_access(auth, ()) {
             return Err(anyhow::anyhow!("No access to get auditor data {:?}", auth).code(400));
         }
 
-        let bages = self.context.try_get_repository::<Bage<ObjectId>>()?;
+        let badges = self.context.try_get_repository::<Badge<ObjectId>>()?;
 
-        let customers = bages.get_all_since(since).await?;
+        let customers = badges.get_all_since(since).await?;
 
         Ok(customers
             .into_iter()
@@ -69,20 +69,20 @@ impl IndexerService {
             .collect::<Vec<_>>())
     }
 
-    pub async fn find_bages(&self, ids: Vec<ObjectId>) -> error::Result<Vec<PublicBage>> {
+    pub async fn find_badges(&self, ids: Vec<ObjectId>) -> error::Result<Vec<PublicBadge>> {
         let auth = self.context.auth();
 
         if !GetData.get_access(auth, ()) {
             return Err(anyhow::anyhow!("No access to get auditor data: {:?}", auth).code(400));
         }
 
-        let bages = self.context.try_get_repository::<Bage<ObjectId>>()?;
+        let badges = self.context.try_get_repository::<Badge<ObjectId>>()?;
 
-        let auditors = bages.find_all_by_ids("user_id", ids).await?;
+        let auditors = badges.find_all_by_ids("user_id", ids).await?;
 
         Ok(auditors
             .into_iter()
-            .map(|x| auth.public_bage(x))
+            .map(|x| auth.public_badge(x))
             .collect::<Vec<_>>())
     }
 }

@@ -1,3 +1,3 @@
 pub mod auditor;
-pub mod bage;
+pub mod badge;
 pub mod indexer;

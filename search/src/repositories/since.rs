@@ -40,7 +40,7 @@ impl Default for Since {
                 );
                 map.insert(
                     format!(
-                        "{}://{}/api/bage/data",
+                        "{}://{}/api/badge/data",
                         PROTOCOL.as_str(),
                         AUDITORS_SERVICE.as_str()
                     ),

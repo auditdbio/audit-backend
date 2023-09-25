@@ -6,7 +6,7 @@ use crate::{
         audit::{Audit, AuditStatus},
         audit_request::AuditRequest,
         auditor::Auditor,
-        bage::Bage,
+        badge::Badge,
         customer::Customer,
         project::Project,
         user::User,
@@ -71,8 +71,8 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b Auditor<ObjectId>> for Read {
     }
 }
 
-impl<'a, 'b> AccessRules<&'a Auth, &'b Bage<ObjectId>> for Read {
-    fn get_access(&self, auth: &'a Auth, _auditor: &'b Bage<ObjectId>) -> bool {
+impl<'a, 'b> AccessRules<&'a Auth, &'b Badge<ObjectId>> for Read {
+    fn get_access(&self, auth: &'a Auth, _auditor: &'b Badge<ObjectId>) -> bool {
         #[allow(clippy::match_single_binding)]
         match auth {
             _ => true,
@@ -90,8 +90,8 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b Auditor<ObjectId>> for Edit {
     }
 }
 
-impl<'a, 'b> AccessRules<&'a Auth, &'b Bage<ObjectId>> for Edit {
-    fn get_access(&self, auth: &'a Auth, _bage: &'b Bage<ObjectId>) -> bool {
+impl<'a, 'b> AccessRules<&'a Auth, &'b Badge<ObjectId>> for Edit {
+    fn get_access(&self, auth: &'a Auth, _badge: &'b Badge<ObjectId>) -> bool {
         matches!(auth, Auth::Service(_, _) | Auth::Admin(_))
     }
 }

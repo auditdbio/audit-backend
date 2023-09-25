@@ -12,7 +12,7 @@ use actix_web::{
 use common::context::ServiceState;
 pub use handlers::auditor::*;
 use handlers::{
-    bage::{delete, post_bage, substitute},
+    badge::{delete, post_badge, substitute},
     indexer::{get_auditor_data, ping, provide_auditor_data},
 };
 
@@ -42,7 +42,7 @@ pub fn create_app(
         .service(get_my_auditor)
         .service(get_auditor_data)
         .service(ping)
-        .service(post_bage)
+        .service(post_badge)
         .service(substitute)
         .service(delete);
     app

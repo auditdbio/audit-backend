@@ -1,7 +1,7 @@
 pub mod audit;
 pub mod audit_request;
 pub mod auditor;
-pub mod bage;
+pub mod badge;
 pub mod contacts;
 pub mod customer;
 pub mod issue;

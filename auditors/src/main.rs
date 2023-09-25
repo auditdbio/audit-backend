@@ -6,7 +6,7 @@ use auditors::create_app;
 
 use common::context::ServiceState;
 use common::entities::auditor::Auditor;
-use common::entities::bage::Bage;
+use common::entities::badge::Badge;
 use common::repository::mongo_repository::MongoRepository;
 use mongodb::bson::oid::ObjectId;
 
@@ -18,12 +18,12 @@ async fn main() -> std::io::Result<()> {
 
     let auditor_repo: MongoRepository<Auditor<ObjectId>> =
         MongoRepository::new(&mongo_uri, "auditors", "auditors").await;
-    let bage_repo: MongoRepository<Bage<ObjectId>> =
-        MongoRepository::new(&mongo_uri, "bages", "bages").await;
+    let badge_repo: MongoRepository<Badge<ObjectId>> =
+        MongoRepository::new(&mongo_uri, "badges", "badges").await;
 
     let mut state = ServiceState::new("customer".to_string());
     state.insert(Arc::new(auditor_repo));
-    state.insert(Arc::new(bage_repo));
+    state.insert(Arc::new(badge_repo));
     let state = Arc::new(state);
 
     HttpServer::new(move || create_app(state.clone()))

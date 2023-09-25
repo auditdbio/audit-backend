@@ -18,7 +18,7 @@ impl Entity for Letter {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct CreateLetter {
     pub recipient_id: Option<ObjectId>,
     pub recipient_name: Option<String>,

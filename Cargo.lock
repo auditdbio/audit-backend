@@ -3728,8 +3728,6 @@ dependencies = [
  "serde",
  "serde_json",
  "sha256",
- "utoipa",
- "utoipa-swagger-ui",
  "uuid",
 ]
 
