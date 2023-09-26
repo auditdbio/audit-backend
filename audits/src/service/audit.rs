@@ -287,7 +287,7 @@ impl AuditService {
 
     fn create_event(
         context: &Context,
-        issue: &mut Issue<Id>,
+        issue: &mut Issue<ObjectId>,
         kind: EventKind,
         message: String,
     ) {
@@ -323,7 +323,7 @@ impl AuditService {
         if let Some(name) = change.name {
             issue.name = name;
 
-            create_event(
+            Self::create_event(
                 &self.context,
                 &mut issue,
                 EventKind::IssueName,
@@ -334,7 +334,7 @@ impl AuditService {
         if let Some(description) = change.description {
             issue.description = description;
 
-            create_event(
+            Self::create_event(
                 &self.context,
                 &mut issue,
                 EventKind::IssueDescription,
@@ -381,7 +381,7 @@ impl AuditService {
             send_notification(&self.context, true, true, new_notification, variables).await?;
             issue.status = new_state;
 
-            create_event(
+            Self::create_event(
                 &self.context,
                 &mut issue,
                 EventKind::StatusChange,
@@ -392,7 +392,7 @@ impl AuditService {
         if let Some(severity) = change.severity.clone() {
             issue.severity = severity;
 
-            create_event(
+            Self::create_event(
                 &self.context,
                 &mut issue,
                 EventKind::IssueSeverity,
@@ -403,7 +403,7 @@ impl AuditService {
         if let Some(category) = change.category {
             issue.category = category;
 
-            create_event(
+            Self::create_event(
                 &self.context,
                 &mut issue,
                 EventKind::IssueCategory,
@@ -421,7 +421,7 @@ impl AuditService {
                 "deleted link".to_string()
             };
 
-            create_event(
+            Self::create_event(
                 &self.context,
                 &mut issue,
                 EventKind::IssueLink,
@@ -448,7 +448,7 @@ impl AuditService {
 
             issue.feedback = feedback;
 
-            create_event(
+            Self::create_event(
                 &self.context,
                 &mut issue,
                 kind,
