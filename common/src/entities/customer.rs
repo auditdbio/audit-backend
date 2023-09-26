@@ -100,6 +100,7 @@ pub struct PublicCustomer {
     pub about: String,
     pub company: String,
     pub contacts: Contacts,
+    pub kind: String,
     pub tags: Vec<String>,
 }
 

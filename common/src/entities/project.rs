@@ -93,6 +93,7 @@ pub struct PublicProject {
     pub publish_options: PublishOptions,
     pub status: String,
     pub creator_contacts: Contacts,
+    pub kind: String,
     pub price: i64,
 }
 
