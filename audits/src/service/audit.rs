@@ -285,6 +285,22 @@ impl AuditService {
         Ok(auth.public_issue(issue))
     }
 
+    fn create_event(
+        context: &Context,
+        issue: &mut Issue<Id>,
+        kind: EventKind,
+        message: String,
+    ) {
+        let event = Event {
+            timestamp: Utc::now().timestamp(),
+            user: *context.auth().id().unwrap(),
+            kind,
+            message,
+            id: issue.events.len(),
+        };
+        issue.events.push(event);
+    }
+
     pub async fn change_issue(
         &self,
         audit_id: ObjectId,
@@ -306,10 +322,24 @@ impl AuditService {
 
         if let Some(name) = change.name {
             issue.name = name;
+
+            create_event(
+                &self.context,
+                &mut issue,
+                EventKind::IssueName,
+                "changed name of the issue".to_string(),
+            );
         }
 
         if let Some(description) = change.description {
             issue.description = description;
+
+            create_event(
+                &self.context,
+                &mut issue,
+                EventKind::IssueDescription,
+                "changed description".to_string(),
+            );
         }
 
         let role = if auth.id().unwrap() == &audit.customer_id {
@@ -350,18 +380,53 @@ impl AuditService {
 
             send_notification(&self.context, true, true, new_notification, variables).await?;
             issue.status = new_state;
+
+            create_event(
+                &self.context,
+                &mut issue,
+                EventKind::StatusChange,
+                format!("changed status to {:?}", issue.status),
+            );
         }
 
         if let Some(severity) = change.severity.clone() {
             issue.severity = severity;
+
+            create_event(
+                &self.context,
+                &mut issue,
+                EventKind::IssueSeverity,
+                issue.severity,
+            );
         }
 
         if let Some(category) = change.category {
             issue.category = category;
+
+            create_event(
+                &self.context,
+                &mut issue,
+                EventKind::IssueCategory,
+                format!("changed category to {}", issue.category),
+            );
         }
 
         if let Some(links) = change.links {
+            let prev_links_length = issue.links.len();
             issue.links = links;
+
+            let message = if prev_links_length < links.len() {
+                "added new link".to_string()
+            } else {
+                "deleted link".to_string()
+            };
+
+            create_event(
+                &self.context,
+                &mut issue,
+                EventKind::IssueLink,
+                message
+            );
         }
 
         if let Some(include) = change.include {
@@ -369,7 +434,26 @@ impl AuditService {
         }
 
         if let Some(feedback) = change.feedback {
+            let message = if feedback.is_empty() {
+                "added feedback".to_string()
+            } else {
+                "changed feedback".to_string()
+            };
+
+            let kind = if feedback.is_empty() {
+                EventKind::FeedbackAdded
+            } else {
+                EventKind::FeedbackChanged
+            };
+
             issue.feedback = feedback;
+
+            create_event(
+                &self.context,
+                &mut issue,
+                kind,
+                message
+            );
         }
 
         if let Some(events) = change.events {
