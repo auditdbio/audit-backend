@@ -379,41 +379,41 @@ impl AuditService {
             ];
 
             send_notification(&self.context, true, true, new_notification, variables).await?;
-            issue.status = new_state;
+            issue.status = new_state.clone();
 
             Self::create_event(
                 &self.context,
                 &mut issue,
                 EventKind::StatusChange,
-                format!("changed status to {:?}", issue.status),
+                format!("changed status to {:?}", new_state),
             );
         }
 
         if let Some(severity) = change.severity.clone() {
-            issue.severity = severity;
+            issue.severity = severity.clone();
 
             Self::create_event(
                 &self.context,
                 &mut issue,
                 EventKind::IssueSeverity,
-                issue.severity,
+                severity,
             );
         }
 
         if let Some(category) = change.category {
-            issue.category = category;
+            issue.category = category.clone();
 
             Self::create_event(
                 &self.context,
                 &mut issue,
                 EventKind::IssueCategory,
-                format!("changed category to {}", issue.category),
+                format!("changed category to {}", category),
             );
         }
 
         if let Some(links) = change.links {
             let prev_links_length = issue.links.len();
-            issue.links = links;
+            issue.links = links.clone();
 
             let message = if prev_links_length < links.len() {
                 "added new link".to_string()
