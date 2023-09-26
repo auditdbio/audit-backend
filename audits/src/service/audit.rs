@@ -285,6 +285,22 @@ impl AuditService {
         Ok(auth.public_issue(issue))
     }
 
+    fn create_event(
+        context: &Context,
+        issue: &mut Issue<Id>,
+        kind: EventKind,
+        message: String,
+    ) {
+        let event = Event {
+            timestamp: Utc::now().timestamp(),
+            user: *context.auth().id().unwrap(),
+            kind,
+            message,
+            id: issue.events.len(),
+        };
+        issue.events.push(event);
+    }
+
     pub async fn change_issue(
         &self,
         audit_id: ObjectId,
@@ -307,27 +323,23 @@ impl AuditService {
         if let Some(name) = change.name {
             issue.name = name;
 
-            let event = Event {
-                timestamp: Utc::now().timestamp(),
-                user: *self.context.auth().id().unwrap(),
-                kind: EventKind::IssueName,
-                message: "changed name of the issue".to_string(),
-                id: issue.events.len(),
-            };
-            issue.events.push(event);
+            create_event(
+                &self.context,
+                &mut issue,
+                EventKind::IssueName,
+                "changed name of the issue".to_string(),
+            );
         }
 
         if let Some(description) = change.description {
             issue.description = description;
 
-            let event = Event {
-                timestamp: Utc::now().timestamp(),
-                user: *self.context.auth().id().unwrap(),
-                kind: EventKind::IssueDescription,
-                message: "changed description".to_string(),
-                id: issue.events.len(),
-            };
-            issue.events.push(event);
+            create_event(
+                &self.context,
+                &mut issue,
+                EventKind::IssueDescription,
+                "changed description".to_string(),
+            );
         }
 
         let role = if auth.id().unwrap() == &audit.customer_id {
@@ -369,40 +381,34 @@ impl AuditService {
             send_notification(&self.context, true, true, new_notification, variables).await?;
             issue.status = new_state;
 
-            let event = Event {
-                timestamp: Utc::now().timestamp(),
-                user: *self.context.auth().id().unwrap(),
-                kind: EventKind::StatusChange,
-                message: format!("changed status to {:?}", issue.status),
-                id: issue.events.len(),
-            };
-            issue.events.push(event);
+            create_event(
+                &self.context,
+                &mut issue,
+                EventKind::StatusChange,
+                format!("changed status to {:?}", issue.status),
+            );
         }
 
         if let Some(severity) = change.severity.clone() {
             issue.severity = severity;
 
-            let event = Event {
-                timestamp: Utc::now().timestamp(),
-                user: *self.context.auth().id().unwrap(),
-                kind: EventKind::IssueSeverity,
-                message: issue.severity,
-                id: issue.events.len(),
-            };
-            issue.events.push(event);
+            create_event(
+                &self.context,
+                &mut issue,
+                EventKind::IssueSeverity,
+                issue.severity,
+            );
         }
 
         if let Some(category) = change.category {
             issue.category = category;
 
-            let event = Event {
-                timestamp: Utc::now().timestamp(),
-                user: *self.context.auth().id().unwrap(),
-                kind: EventKind::IssueCategory,
-                message: format!("changed category to {}", issue.category),
-                id: issue.events.len(),
-            };
-            issue.events.push(event);
+            create_event(
+                &self.context,
+                &mut issue,
+                EventKind::IssueCategory,
+                format!("changed category to {}", issue.category),
+            );
         }
 
         if let Some(links) = change.links {
@@ -415,14 +421,12 @@ impl AuditService {
                 "deleted link".to_string()
             };
 
-            let event = Event {
-                timestamp: Utc::now().timestamp(),
-                user: *self.context.auth().id().unwrap(),
-                kind: EventKind::IssueLink,
-                message,
-                id: issue.events.len(),
-            };
-            issue.events.push(event);
+            create_event(
+                &self.context,
+                &mut issue,
+                EventKind::IssueLink,
+                message
+            );
         }
 
         if let Some(include) = change.include {
@@ -444,14 +448,12 @@ impl AuditService {
 
             issue.feedback = feedback;
 
-            let event = Event {
-                timestamp: Utc::now().timestamp(),
-                user: *self.context.auth().id().unwrap(),
+            create_event(
+                &self.context,
+                &mut issue,
                 kind,
-                message,
-                id: issue.events.len(),
-            };
-            issue.events.push(event);
+                message
+            );
         }
 
         if let Some(events) = change.events {
