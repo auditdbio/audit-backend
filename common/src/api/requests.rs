@@ -1,6 +1,5 @@
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use actix_web::web::Json;
 
 use crate::{
     context::Context,
@@ -126,7 +125,7 @@ pub async fn get_audit_requests(context: &Context, auth: Auth) -> error::Result<
     .get(format!(
       "{}://{}/api/my_audit_request/auditor",
       PROTOCOL.as_str(),
-      AUDITS_SERVICE.as_str(),
+      AUDITS_SERVICE.as_str()
     ))
     .auth(auth)
     .send()
