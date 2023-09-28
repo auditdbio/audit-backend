@@ -88,7 +88,7 @@ pub struct PublicAuditor {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "kind")]
+#[serde(tag = "api_kind")]
 pub enum ExtendedAuditor {
     Auditor(PublicAuditor),
     Badge(PublicBadge),
