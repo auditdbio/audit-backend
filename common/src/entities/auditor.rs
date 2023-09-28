@@ -83,6 +83,7 @@ pub struct PublicAuditor {
     pub contacts: Contacts,
     pub free_at: String,
     pub price_range: PriceRange,
+    pub kind: String,
     pub tags: Vec<String>,
 }
 

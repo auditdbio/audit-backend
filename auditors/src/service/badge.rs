@@ -58,7 +58,7 @@ impl BadgeService {
     }
 
     pub async fn create(&self, badge: CreateBadge) -> error::Result<Badge<String>> {
-        let auth = self.context.auth();
+        let _auth = self.context.auth();
 
         let badges = self.context.try_get_repository::<Badge<ObjectId>>()?;
 
