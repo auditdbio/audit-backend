@@ -13,7 +13,7 @@ use common::context::ServiceState;
 pub use handlers::auditor::*;
 use handlers::{
     badge::{delete, delete_run, post_badge, substitute, substitute_run},
-    indexer::{get_auditor_data, ping, provide_auditor_data},
+    indexer::{get_auditor_data, get_badges_data, ping, provide_auditor_data, provide_badges_data},
 };
 
 pub fn create_app(
@@ -39,8 +39,10 @@ pub fn create_app(
         .service(patch_auditor)
         .service(delete_auditor)
         .service(provide_auditor_data)
+        .service(provide_badges_data)
         .service(get_my_auditor)
         .service(get_auditor_data)
+        .service(get_badges_data)
         .service(ping)
         .service(post_badge)
         .service(substitute)
