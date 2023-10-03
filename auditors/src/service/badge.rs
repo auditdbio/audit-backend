@@ -155,8 +155,12 @@ impl BadgeService {
         Ok(badge.stringify())
     }
 
-    pub async fn substitute(&self, badge_id: ObjectId, user_id: ObjectId) -> error::Result<()> {
+    pub async fn substitute(&self, badge_id: ObjectId) -> error::Result<()> {
         let auth = self.context.auth();
+
+        let Some(&user_id) =  auth.id() else {
+            return Err(anyhow::anyhow!("User is not available to change this badge").code(400));
+        };
 
         let payload = CodePayload { badge_id, user_id };
         // create code
@@ -167,8 +171,11 @@ impl BadgeService {
         )
         .await?;
 
-        // get user email
-        let user = api::user::get_by_id(&self.context, user_id).await?; // Wrong email here
+        let badges = self.context.try_get_repository::<Badge<ObjectId>>()?;
+
+        let Some(badge) = badges.find("user_id", &Bson::ObjectId(badge_id)).await? else {
+            return Err(anyhow::anyhow!("No badge found").code(400));
+        };
 
         // send link with code
         let link = format!(
@@ -178,7 +185,7 @@ impl BadgeService {
         );
 
         let letter = CreateLetter {
-            email: user.email,
+            email: badge.contacts.email.unwrap(),
             message: include_str!("../../templates/code.txt").replace("{link}", &link),
             subject: include_str!("../../templates/code_subject.txt").to_owned(),
 
