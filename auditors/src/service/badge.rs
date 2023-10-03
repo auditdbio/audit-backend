@@ -10,7 +10,7 @@ use common::{
     context::Context,
     entities::{
         audit_request::PriceRange,
-        auditor::PublicAuditor,
+        auditor::{Auditor, PublicAuditor},
         badge::{Badge, PublicBadge},
         contacts::Contacts,
         letter::CreateLetter,
@@ -20,10 +20,6 @@ use common::{
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
-
-use crate::service::auditor::CreateAuditor;
-
-use super::auditor::AuditorService;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateBadge {
@@ -251,27 +247,29 @@ impl BadgeService {
             api::requests::create_request(&self.context, auth.clone(), new_request).await?;
         }
 
-        let auditors = AuditorService::new(self.context.clone());
+        let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
         // create auditor
-        let auditor = auditors
-            .create(CreateAuditor {
-                avatar: badge.avatar.into(),
-                first_name: badge.first_name,
-                last_name: badge.last_name,
-                about: badge.about.into(),
-                company: badge.company.into(),
-                contacts: badge.contacts,
-                tags: badge.tags.into(),
-                free_at: badge.free_at.into(),
-                price_range: badge.price_range.into(),
-            })
-            .await?;
+        let auditor = Auditor {
+            user_id: payload.user_id,
+            avatar: badge.avatar,
+            first_name: badge.first_name,
+            last_name: badge.last_name,
+            about: badge.about,
+            company: badge.company,
+            contacts: badge.contacts,
+            tags: badge.tags,
+            last_modified: Utc::now().timestamp_micros(),
+            free_at: badge.free_at,
+            price_range: badge.price_range,
+        };
+
+        auditors.insert(&auditor).await?;
 
         // delete badge
         let badges = self.context.try_get_repository::<Badge<ObjectId>>()?;
         badges.delete("user_id", &payload.badge_id).await?;
 
-        Ok(auth.public_auditor(auditor.parse()))
+        Ok(auth.public_auditor(auditor))
     }
 
     pub async fn delete(&self, badge_id: ObjectId) -> error::Result<PublicBadge> {
