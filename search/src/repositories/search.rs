@@ -54,6 +54,7 @@ impl SearchRepo {
             let sort_order = query.sort_order.unwrap_or(1);
             let mut sort = doc! {
                 sort_by.clone(): sort_order,
+                "_id": -1,
             };
 
             if &sort_by == "price" {
