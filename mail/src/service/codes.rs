@@ -1,15 +1,21 @@
-use common::{context::Context, error};
+use common::{context::Context, error, repository::Entity};
 use mongodb::bson::{oid::ObjectId, Bson};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Code {
     #[serde(rename = "_id")]
     id: ObjectId,
     code: String,
     payload: String,
     user_id: ObjectId,
+}
+
+impl Entity for Code {
+    fn id(&self) -> ObjectId {
+        self.id
+    }
 }
 
 pub struct CodeService {
