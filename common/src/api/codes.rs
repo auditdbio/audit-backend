@@ -1,5 +1,4 @@
 use crate::{
-    auth::Auth,
     context::Context,
     error,
     services::{MAIL_SERVICE, PROTOCOL},

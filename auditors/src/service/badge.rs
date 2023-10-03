@@ -215,7 +215,7 @@ impl BadgeService {
             .make_request::<Vec<PublicRequest>>()
             .auth(auth.clone())
             .get(format!(
-                "{}://{}/api/audit_request/auditor",
+                "{}://{}/api/my_audit_request/auditor",
                 PROTOCOL.as_str(),
                 AUDITS_SERVICE.as_str()
             ))
