@@ -2,6 +2,7 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    auth::Auth,
     context::Context,
     entities::{
         audit_request::{AuditRequest, TimeRange},
@@ -116,4 +117,51 @@ impl PublicRequest {
             last_changer: request.last_changer,
         })
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateRequest {
+    pub customer_id: String,
+    pub auditor_id: String,
+    pub project_id: String,
+
+    pub price: i64,
+    pub description: String,
+    pub time: TimeRange,
+}
+
+pub async fn create_request(
+    context: &Context,
+    auth: Auth,
+    data: CreateRequest,
+) -> error::Result<()> {
+    context
+        .make_request::<CreateRequest>()
+        .post(format!(
+            "{}://{}/api/audit_request",
+            PROTOCOL.as_str(),
+            AUDITORS_SERVICE.as_str()
+        ))
+        .auth(auth)
+        .json(&data)
+        .send()
+        .await?;
+
+    Ok(())
+}
+
+pub async fn delete(context: &Context, auth: Auth, id: ObjectId) -> error::Result<()> {
+    context
+        .make_request::<()>()
+        .delete(format!(
+            "{}://{}/api/audit_request/{}",
+            PROTOCOL.as_str(),
+            AUDITORS_SERVICE.as_str(),
+            id.to_hex()
+        ))
+        .auth(auth)
+        .send()
+        .await?;
+
+    Ok(())
 }

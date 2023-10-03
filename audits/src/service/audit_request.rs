@@ -3,6 +3,7 @@ use common::{
     access_rules::{AccessRules, Edit, Read},
     api::{
         events::{EventPayload, PublicEvent},
+        requests::CreateRequest,
         send_notification, NewNotification,
     },
     context::Context,
@@ -17,17 +18,6 @@ use common::{
 
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CreateRequest {
-    customer_id: String,
-    auditor_id: String,
-    project_id: String,
-
-    price: i64,
-    description: String,
-    time: TimeRange,
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RequestChange {

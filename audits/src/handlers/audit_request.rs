@@ -4,11 +4,16 @@ use actix_web::{
     HttpResponse,
 };
 
-use common::{context::Context, entities::role::Role, error};
+use common::{
+    api::requests::{CreateRequest, PublicRequest},
+    context::Context,
+    entities::role::Role,
+    error,
+};
 
 use serde_json::json;
 
-use crate::service::audit_request::{CreateRequest, PublicRequest, RequestChange, RequestService};
+use crate::service::audit_request::{RequestChange, RequestService};
 
 #[post("/api/audit_request")]
 pub async fn post_audit_request(
