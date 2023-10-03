@@ -23,11 +23,8 @@ pub async fn post_badge(
 }
 
 #[patch("/api/badge/merge/{badge_id}")]
-pub async fn substitute(
-    context: Context,
-    ids: web::Path<(String, String)>,
-) -> error::Result<HttpResponse> {
-    let (badge_id, user_id) = ids.into_inner();
+pub async fn substitute(context: Context, ids: web::Path<String>) -> error::Result<HttpResponse> {
+    let badge_id = ids.into_inner();
 
     BadgeService::new(context)
         .substitute(badge_id.parse()?)
