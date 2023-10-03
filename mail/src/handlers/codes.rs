@@ -7,8 +7,11 @@ use common::{context::Context, error};
 use crate::service::codes::CodeService;
 
 #[post("/api/code/{payload}")]
-pub async fn post_code(context: Context, path: web::Path<String>) -> error::Result<String> {
-    CodeService::new(context).create(path.into_inner()).await
+pub async fn post_code(context: Context, path: web::Path<String>) -> error::Result<Json<String>> {
+    CodeService::new(context)
+        .create(path.into_inner())
+        .await
+        .map(Json)
 }
 
 #[get("/api/code/{code}")]
