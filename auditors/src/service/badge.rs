@@ -203,7 +203,9 @@ impl BadgeService {
             serde_json::from_str(&api::codes::get_code(&self.context, code).await?.unwrap())?;
         let auth = Auth::User(payload.user_id);
 
-        let badge = self.find(payload.badge_id).await?.unwrap();
+        let Some(badge) = self.find(payload.badge_id).await? else {
+            return Err(anyhow::anyhow!("No badge found").code(400));
+        };
         // get all audit requests
 
         let mut requests: Vec<PublicRequest> = self
@@ -272,13 +274,80 @@ impl BadgeService {
         Ok(auth.public_auditor(auditor))
     }
 
-    pub async fn delete(&self, badge_id: ObjectId) -> error::Result<PublicBadge> {
-        // send code
-        todo!()
+    pub async fn delete(&self, badge_id: ObjectId) -> error::Result<()> {
+        let auth = self.context.auth();
+
+        let Some(&user_id) =  auth.id() else {
+            return Err(anyhow::anyhow!("User is not available to change this badge").code(400));
+        };
+
+        let payload = CodePayload { badge_id, user_id };
+        // create code
+        let code = post_code(&self.context, serde_json::to_string(&payload)?).await?;
+
+        let badges = self.context.try_get_repository::<Badge<ObjectId>>()?;
+
+        let Some(badge) = badges.find("user_id", &Bson::ObjectId(badge_id)).await? else {
+            return Err(anyhow::anyhow!("No badge found").code(400));
+        };
+
+        // send link with code
+        let link = format!(
+            "https://{}/api/badge/delete/run/{}",
+            AUDITORS_SERVICE.as_str(),
+            code
+        );
+
+        let letter = CreateLetter {
+            email: badge.contacts.email.unwrap(),
+            message: include_str!("../../templates/code.txt").replace("{link}", &link),
+            subject: include_str!("../../templates/code_subject.txt").to_owned(),
+
+            ..CreateLetter::default()
+        };
+
+        api::mail::send_mail(&self.context, letter).await?;
+
+        Ok(())
     }
 
-    pub async fn delete_run(&self, code: String) -> error::Result<PublicBadge> {
-        // send code
-        todo!()
+    pub async fn delete_run(&self, code: String) -> error::Result<()> {
+        let payload: CodePayload =
+            serde_json::from_str(&api::codes::get_code(&self.context, code).await?.unwrap())?;
+        let auth = Auth::User(payload.user_id);
+
+        // get all audit requests
+
+        let requests: Vec<PublicRequest> = self
+            .context
+            .make_request::<Vec<PublicRequest>>()
+            .auth(auth.clone())
+            .get(format!(
+                "{}://{}/api/audit_request/all/auditor/{}",
+                PROTOCOL.as_str(),
+                AUDITS_SERVICE.as_str(),
+                payload.badge_id,
+            ))
+            .send()
+            .await?
+            .json()
+            .await?;
+
+        // delete all audit requests
+
+        for request in &requests {
+            api::requests::delete(
+                &self.context,
+                self.context.server_auth().clone(),
+                request.id.parse()?,
+            )
+            .await?;
+        }
+        // create new audit requests
+
+        // delete badge
+        let badges = self.context.try_get_repository::<Badge<ObjectId>>()?;
+        badges.delete("user_id", &payload.badge_id).await?;
+        Ok(())
     }
 }
