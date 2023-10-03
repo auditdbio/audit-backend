@@ -7,7 +7,7 @@ use actix_web::{
 use common::{
     api::requests::{CreateRequest, PublicRequest},
     context::Context,
-    entities::role::Role,
+    entities::{audit_request::AuditRequest, role::Role},
     error,
 };
 
@@ -68,5 +68,18 @@ pub async fn delete_audit_request(
 ) -> error::Result<Json<PublicRequest>> {
     Ok(Json(
         RequestService::new(context).delete(id.parse()?).await?,
+    ))
+}
+
+#[get("/api/audit_request/all/{role}/{id}")]
+pub async fn find_all_audit_request(
+    context: Context,
+    path: web::Path<(Role, String)>,
+) -> error::Result<Json<Vec<AuditRequest<String>>>> {
+    let (role, id) = path.into_inner();
+    Ok(Json(
+        RequestService::new(context)
+            .find_all(role, id.parse()?)
+            .await?,
     ))
 }

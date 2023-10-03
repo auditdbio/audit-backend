@@ -336,4 +336,28 @@ impl RequestService {
 
         Ok(public_request)
     }
+
+    pub async fn find_all(
+        &self,
+        role: Role,
+        user_id: ObjectId,
+    ) -> error::Result<Vec<AuditRequest<String>>> {
+        let requests = self
+            .context
+            .try_get_repository::<AuditRequest<ObjectId>>()?;
+
+        let id = match role {
+            Role::Auditor => "auditor_id",
+            Role::Customer => "customer_id",
+        };
+
+        let result = requests
+            .find_many(id, &Bson::ObjectId(user_id))
+            .await?
+            .into_iter()
+            .map(|r| r.stringify())
+            .collect();
+
+        Ok(result)
+    }
 }

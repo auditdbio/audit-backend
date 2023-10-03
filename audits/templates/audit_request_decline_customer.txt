@@ -3,5 +3,6 @@
     "subject": "AuditDB: Mission Decline Alert",
     "message": "A request in the auditdb.io is declined!",
     "role": "Auditor",
-    "title": "Request declined"
+    "title": "Request declined",
+    "substitutions": [{"text": "{audit}", "styles": ["bold"]}]
 }

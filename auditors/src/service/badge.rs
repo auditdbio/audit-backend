@@ -215,9 +215,10 @@ impl BadgeService {
             .make_request::<Vec<PublicRequest>>()
             .auth(auth.clone())
             .get(format!(
-                "{}://{}/api/my_audit_request/auditor",
+                "{}://{}/api/audit_request/all/auditor/{}",
                 PROTOCOL.as_str(),
-                AUDITS_SERVICE.as_str()
+                AUDITS_SERVICE.as_str(),
+                payload.badge_id,
             ))
             .send()
             .await?
