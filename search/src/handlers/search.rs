@@ -1,5 +1,5 @@
 use actix_web::{
-    get, post,
+    delete, get, post,
     web::{self, Json},
     HttpResponse,
 };
@@ -32,4 +32,16 @@ pub async fn search(
         .search(query.into_inner())
         .await?;
     Ok(Json(results))
+}
+
+#[delete("/api/search/{id}")]
+pub async fn delete(
+    id: web::Path<String>,
+    repo: web::Data<SearchRepo>,
+    context: Context,
+) -> error::Result<HttpResponse> {
+    SearchService::new(repo, context)
+        .delete(id.parse()?)
+        .await?;
+    Ok(HttpResponse::Ok().finish())
 }

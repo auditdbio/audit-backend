@@ -3,7 +3,7 @@ use std::sync::Arc;
 use common::{error, repository::mongo_repository::MongoRepository};
 use futures::StreamExt;
 use mongodb::{
-    bson::{doc, Bson, Document},
+    bson::{doc, oid::ObjectId, Bson, Document},
     options::{FindOptions, UpdateOptions},
     IndexModel,
 };
@@ -101,7 +101,21 @@ impl SearchRepo {
 
         query.query = query.query.to_ascii_lowercase();
 
-        let mut docs = Vec::new();
+        let mut docs = vec![
+            doc! {
+                "deleted": false,
+            },
+            doc! {
+                "$or": [
+                    {
+                        "private": false,
+                    },
+                    {
+                        "private": Bson::Null,
+                    }
+                ]
+            },
+        ];
 
         if !kind.is_empty() {
             docs.push(doc! {
@@ -180,17 +194,6 @@ impl SearchRepo {
             });
         }
 
-        docs.push(doc! {
-            "$or": [
-                {
-                    "private": false,
-                },
-                {
-                    "private": Bson::Null,
-                }
-            ]
-        });
-
         log::info!("Search query: {:?}", docs);
 
         let result: Vec<Document> = self
@@ -216,5 +219,13 @@ impl SearchRepo {
             result,
             total_documents,
         })
+    }
+
+    pub async fn delete(&self, id: ObjectId) -> error::Result<()> {
+        self.0
+            .collection
+            .update_one(doc! {"id": id}, doc! {"$set": {"deleted": true}}, None)
+            .await?;
+        Ok(())
     }
 }

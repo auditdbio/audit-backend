@@ -2,7 +2,12 @@ use std::{collections::HashMap, str::FromStr};
 
 use actix_web::web;
 use chrono::Utc;
-use common::{auth::Auth, context::Context, error, repository::Repository};
+use common::{
+    auth::Auth,
+    context::Context,
+    error::{self, AddCode},
+    repository::Repository,
+};
 
 use mongodb::bson::{oid::ObjectId, Bson, Document};
 use reqwest::Client;
@@ -163,5 +168,15 @@ impl SearchService {
             result,
             total_documents,
         })
+    }
+
+    pub async fn delete(&self, id: ObjectId) -> error::Result<()> {
+        if !matches!(self.context.auth(), Auth::Service(_, _)) {
+            return Err(
+                anyhow::anyhow!("You are not authorized to delete this document").code(401),
+            );
+        }
+        self.repo.delete(id).await?;
+        Ok(())
     }
 }

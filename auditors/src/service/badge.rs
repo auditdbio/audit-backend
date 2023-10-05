@@ -16,7 +16,7 @@ use common::{
         letter::CreateLetter,
     },
     error::{self, AddCode},
-    services::{AUDITORS_SERVICE, AUDITS_SERVICE, PROTOCOL},
+    services::{AUDITORS_SERVICE, AUDITS_SERVICE, PROTOCOL, SEARCH_SERVICE},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -48,13 +48,33 @@ pub struct BadgeChange {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct CodePayload {
+struct MergePayload {
     badge_id: ObjectId,
     user_id: ObjectId,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct DeletePayload {
+    badge_id: ObjectId,
+}
+
 pub struct BadgeService {
     context: Context,
+}
+
+async fn delete_from_search(context: &Context, id: ObjectId) -> error::Result<()> {
+    context
+        .make_request::<()>()
+        .auth(context.server_auth())
+        .delete(format!(
+            "{}://{}/api/search/{}",
+            PROTOCOL.as_str(),
+            SEARCH_SERVICE.as_str(),
+            id,
+        ))
+        .send()
+        .await?;
+    Ok(())
 }
 
 impl BadgeService {
@@ -167,7 +187,7 @@ impl BadgeService {
             return Err(anyhow::anyhow!("User is not available to change this badge").code(400));
         };
 
-        let payload = CodePayload { badge_id, user_id };
+        let payload = MergePayload { badge_id, user_id };
         // create code
         let code = post_code(&self.context, serde_json::to_string(&payload)?).await?;
 
@@ -199,9 +219,9 @@ impl BadgeService {
 
     pub async fn substitute_run(&self, code: String) -> error::Result<PublicAuditor> {
         // get payload from code
-        let payload: CodePayload =
+        let payload: MergePayload =
             serde_json::from_str(&api::codes::get_code(&self.context, code).await?.unwrap())?;
-        let auth = Auth::User(payload.user_id);
+        let auth = Auth::User(payload.badge_id);
 
         let Some(badge) = self.find(payload.badge_id).await? else {
             return Err(anyhow::anyhow!("No badge found").code(400));
@@ -234,6 +254,7 @@ impl BadgeService {
             .await?;
         }
         // create new audit requests
+        let auth = Auth::User(payload.user_id);
 
         for request in &mut requests {
             // CreateRequest
@@ -271,17 +292,13 @@ impl BadgeService {
         let badges = self.context.try_get_repository::<Badge<ObjectId>>()?;
         badges.delete("user_id", &payload.badge_id).await?;
 
+        delete_from_search(&self.context, payload.badge_id).await?;
+
         Ok(auth.public_auditor(auditor))
     }
 
     pub async fn delete(&self, badge_id: ObjectId) -> error::Result<()> {
-        let auth = self.context.auth();
-
-        let Some(&user_id) =  auth.id() else {
-            return Err(anyhow::anyhow!("User is not available to change this badge").code(400));
-        };
-
-        let payload = CodePayload { badge_id, user_id };
+        let payload = DeletePayload { badge_id };
         // create code
         let code = post_code(&self.context, serde_json::to_string(&payload)?).await?;
 
@@ -312,9 +329,9 @@ impl BadgeService {
     }
 
     pub async fn delete_run(&self, code: String) -> error::Result<()> {
-        let payload: CodePayload =
+        let payload: DeletePayload =
             serde_json::from_str(&api::codes::get_code(&self.context, code).await?.unwrap())?;
-        let auth = Auth::User(payload.user_id);
+        let auth = Auth::User(payload.badge_id);
 
         // get all audit requests
 
@@ -343,11 +360,13 @@ impl BadgeService {
             )
             .await?;
         }
-        // create new audit requests
 
         // delete badge
         let badges = self.context.try_get_repository::<Badge<ObjectId>>()?;
         badges.delete("user_id", &payload.badge_id).await?;
+
+        delete_from_search(&self.context, payload.badge_id).await?;
+
         Ok(())
     }
 }
