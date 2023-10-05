@@ -103,7 +103,7 @@ impl SearchRepo {
 
         let mut docs = vec![
             doc! {
-                "deleted": false,
+                "deleted": Bson::Null,
             },
             doc! {
                 "$or": [
