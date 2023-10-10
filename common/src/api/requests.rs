@@ -81,7 +81,8 @@ impl PublicRequest {
                 .send()
                 .await?
                 .json::<PublicProject>()
-                .await?
+                .await
+                .map_err(|_| anyhow::anyhow!("Project {} not found", request.project_id))?
         };
 
         let auditor = context
@@ -97,7 +98,8 @@ impl PublicRequest {
             .send()
             .await?
             .json::<PublicAuditor>()
-            .await?;
+            .await
+            .map_err(|_| anyhow::anyhow!("Auditor {} not found", request.auditor_id))?;
 
         Ok(PublicRequest {
             id: request.id.to_hex(),

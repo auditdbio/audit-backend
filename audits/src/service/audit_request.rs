@@ -48,7 +48,9 @@ impl RequestService {
             .try_get_repository::<AuditRequest<ObjectId>>()?;
 
         let Some(user_id) = auth.id() else {
-            return Err(anyhow::anyhow!("Audit can be created only by authenticated user").code(400));
+            return Err(
+                anyhow::anyhow!("Audit can be created only by authenticated user").code(400),
+            );
         };
 
         let customer_id = request.customer_id.parse()?;
@@ -198,7 +200,9 @@ impl RequestService {
             .try_get_repository::<AuditRequest<ObjectId>>()?;
 
         let Some(user_id) = auth.id() else {
-            return Err(anyhow::anyhow!("Audit can be created only by authenticated user").code(400));
+            return Err(
+                anyhow::anyhow!("Audit can be created only by authenticated user").code(400),
+            );
         };
 
         let id = match role {
