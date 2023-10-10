@@ -94,6 +94,36 @@ pub enum ExtendedAuditor {
     Badge(PublicBadge),
 }
 
+impl ExtendedAuditor {
+    pub fn avatar(&self) -> &String {
+        match self {
+            ExtendedAuditor::Auditor(auditor) => &auditor.avatar,
+            ExtendedAuditor::Badge(badge) => &badge.avatar,
+        }
+    }
+
+    pub fn first_name(&self) -> &String {
+        match self {
+            ExtendedAuditor::Auditor(auditor) => &auditor.first_name,
+            ExtendedAuditor::Badge(badge) => &badge.first_name,
+        }
+    }
+
+    pub fn last_name(&self) -> &String {
+        match self {
+            ExtendedAuditor::Auditor(auditor) => &auditor.last_name,
+            ExtendedAuditor::Badge(badge) => &badge.last_name,
+        }
+    }
+
+    pub fn contacts(&self) -> &Contacts {
+        match self {
+            ExtendedAuditor::Auditor(auditor) => &auditor.contacts,
+            ExtendedAuditor::Badge(badge) => &badge.contacts,
+        }
+    }
+}
+
 impl From<Auditor<ObjectId>> for Option<Document> {
     fn from(auditor: Auditor<ObjectId>) -> Self {
         let auditor = auditor.stringify();
