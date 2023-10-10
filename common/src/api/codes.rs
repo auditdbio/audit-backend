@@ -1,14 +1,12 @@
 use crate::{
-    auth::Auth,
     context::Context,
     error,
     services::{MAIL_SERVICE, PROTOCOL},
 };
 
-pub async fn post_code(context: &Context, auth: Auth, payload: String) -> error::Result<String> {
+pub async fn post_code(context: &Context, payload: String) -> error::Result<String> {
     Ok(context
         .make_request::<String>()
-        .auth(auth)
         .post(format!(
             "{}://{}/api/code/{}",
             PROTOCOL.as_str(),
@@ -21,14 +19,9 @@ pub async fn post_code(context: &Context, auth: Auth, payload: String) -> error:
         .await?)
 }
 
-pub async fn get_code(
-    context: &Context,
-    auth: Auth,
-    code: String,
-) -> error::Result<Option<String>> {
+pub async fn get_code(context: &Context, code: String) -> error::Result<Option<String>> {
     Ok(context
         .make_request::<String>()
-        .auth(auth)
         .get(format!(
             "{}://{}/api/code/{}",
             PROTOCOL.as_str(),

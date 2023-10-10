@@ -83,14 +83,45 @@ pub struct PublicAuditor {
     pub contacts: Contacts,
     pub free_at: String,
     pub price_range: PriceRange,
+    pub kind: String,
     pub tags: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "kind")]
+#[serde(tag = "api_kind")]
 pub enum ExtendedAuditor {
     Auditor(PublicAuditor),
     Badge(PublicBadge),
+}
+
+impl ExtendedAuditor {
+    pub fn avatar(&self) -> &String {
+        match self {
+            ExtendedAuditor::Auditor(auditor) => &auditor.avatar,
+            ExtendedAuditor::Badge(badge) => &badge.avatar,
+        }
+    }
+
+    pub fn first_name(&self) -> &String {
+        match self {
+            ExtendedAuditor::Auditor(auditor) => &auditor.first_name,
+            ExtendedAuditor::Badge(badge) => &badge.first_name,
+        }
+    }
+
+    pub fn last_name(&self) -> &String {
+        match self {
+            ExtendedAuditor::Auditor(auditor) => &auditor.last_name,
+            ExtendedAuditor::Badge(badge) => &badge.last_name,
+        }
+    }
+
+    pub fn contacts(&self) -> &Contacts {
+        match self {
+            ExtendedAuditor::Auditor(auditor) => &auditor.contacts,
+            ExtendedAuditor::Badge(badge) => &badge.contacts,
+        }
+    }
 }
 
 impl From<Auditor<ObjectId>> for Option<Document> {

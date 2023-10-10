@@ -3,6 +3,7 @@ use common::{
     access_rules::{AccessRules, Edit, Read},
     api::{
         events::{EventPayload, PublicEvent},
+        requests::CreateRequest,
         send_notification, NewNotification,
     },
     context::Context,
@@ -17,17 +18,6 @@ use common::{
 
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CreateRequest {
-    customer_id: String,
-    auditor_id: String,
-    project_id: String,
-
-    price: i64,
-    description: String,
-    time: TimeRange,
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RequestChange {
@@ -345,5 +335,29 @@ impl RequestService {
             .await?;
 
         Ok(public_request)
+    }
+
+    pub async fn find_all(
+        &self,
+        role: Role,
+        user_id: ObjectId,
+    ) -> error::Result<Vec<AuditRequest<String>>> {
+        let requests = self
+            .context
+            .try_get_repository::<AuditRequest<ObjectId>>()?;
+
+        let id = match role {
+            Role::Auditor => "auditor_id",
+            Role::Customer => "customer_id",
+        };
+
+        let result = requests
+            .find_many(id, &Bson::ObjectId(user_id))
+            .await?
+            .into_iter()
+            .map(|r| r.stringify())
+            .collect();
+
+        Ok(result)
     }
 }

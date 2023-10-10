@@ -145,7 +145,7 @@ impl ChatService {
 
                 let name = if id.role == Role::Auditor {
                     let auditor = request_auditor(&self.context, id.id, auth.clone()).await?;
-                    auditor.first_name + " " + &auditor.last_name
+                    auditor.first_name().clone() + " " + auditor.last_name()
                 } else {
                     let customer = request_customer(&self.context, id.id, auth.clone()).await?;
                     customer.first_name + " " + &customer.last_name

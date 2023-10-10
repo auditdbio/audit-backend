@@ -87,6 +87,7 @@ impl Auth {
             company: customer.company,
             contacts,
             tags: customer.tags,
+            kind: "customer".to_string(),
         }
     }
 
@@ -117,6 +118,7 @@ impl Auth {
             free_at: auditor.free_at,
             price_range: auditor.price_range,
             tags: auditor.tags,
+            kind: "auditor".to_string(),
         }
     }
 
@@ -147,6 +149,7 @@ impl Auth {
             free_at: auditor.free_at,
             price_range: auditor.price_range,
             tags: auditor.tags,
+            kind: "badge".to_string(),
         }
     }
 
@@ -177,6 +180,7 @@ impl Auth {
             status: project.status,
             creator_contacts: contacts,
             price: project.price,
+            kind: "project".to_string(),
         }
     }
 

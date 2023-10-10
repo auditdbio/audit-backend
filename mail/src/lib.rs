@@ -8,6 +8,7 @@ use actix_web::{
 };
 use common::context::ServiceState;
 use handlers::{
+    codes::{check_code, post_code},
     indexer::ping,
     mail::{send_feedback, send_mail},
 };
@@ -35,6 +36,8 @@ pub fn create_app(
         .app_data(web::Data::new(state))
         .service(send_mail)
         .service(send_feedback)
+        .service(check_code)
+        .service(post_code)
         .service(ping);
     app
 }
