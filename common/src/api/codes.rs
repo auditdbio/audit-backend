@@ -8,7 +8,7 @@ use crate::{
 pub async fn post_code(context: &Context, auth: Auth, payload: String) -> error::Result<String> {
     Ok(context
         .make_request::<String>()
-        .auth(auth)
+        .auth(&auth)
         .post(format!(
             "{}://{}/api/code/{}",
             PROTOCOL.as_str(),
@@ -28,7 +28,7 @@ pub async fn get_code(
 ) -> error::Result<Option<String>> {
     Ok(context
         .make_request::<String>()
-        .auth(auth)
+        .auth(&auth)
         .get(format!(
             "{}://{}/api/code/{}",
             PROTOCOL.as_str(),

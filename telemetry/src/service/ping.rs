@@ -42,7 +42,7 @@ pub async fn status(context: Context, services: &Vec<Service>) -> Status {
         let response = context
             .make_request::<()>()
             .get(service.ping.clone())
-            .auth(context.server_auth())
+            .auth(&context.server_auth())
             .send()
             .await;
 

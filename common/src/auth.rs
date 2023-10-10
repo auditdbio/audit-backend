@@ -30,9 +30,26 @@ pub static DECODING_KEY: Lazy<DecodingKey> = Lazy::new(|| {
     DecodingKey::from_secret(secret.as_bytes())
 });
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
+pub enum Service {
+    Auditors,
+    Audits,
+    Customers,
+    Common,
+    Files,
+    Users,
+    Search,
+    Mail,
+    Notification,
+    Telemetry,
+    Event,
+    Report,
+    Chat,
+}
+
+#[derive(Debug, Clone, PartialEq, Copy)]
 pub enum Auth {
-    Service(String, bool),
+    Service(Service, bool),
     Admin(ObjectId),
     User(ObjectId),
     None,
@@ -57,7 +74,7 @@ impl Auth {
     pub fn full_access(&self) -> bool {
         match self {
             Auth::Admin(_) => true,
-            Auth::Service(name, _) => name != "search",
+            Auth::Service(name, _) => name != Service::Search,
             _ => false,
         }
     }
@@ -73,7 +90,7 @@ impl Auth {
             contacts = customer.contacts;
         }
 
-        if &Auth::None == self || &Auth::Service("search".to_string(), false) == self {
+        if &Auth::None == self || &Auth::Service(Service::Search, false) == self {
             contacts.telegram = None;
             contacts.email = None;
         }
@@ -102,7 +119,7 @@ impl Auth {
             contacts = auditor.contacts;
         }
 
-        if &Auth::None == self || &Auth::Service("search".to_string(), false) == self {
+        if &Auth::None == self || &Auth::Service(Service::Search, false) == self {
             contacts.telegram = None;
             contacts.email = None;
         }
@@ -133,7 +150,7 @@ impl Auth {
             contacts = auditor.contacts;
         }
 
-        if &Auth::None == self || &Auth::Service("search".to_string(), false) == self {
+        if &Auth::None == self || &Auth::Service(Service::Search, false) == self {
             contacts.telegram = None;
             contacts.email = None;
         }
@@ -164,7 +181,7 @@ impl Auth {
             contacts = project.creator_contacts;
         }
 
-        if &Auth::None == self || &Auth::Service("search".to_string(), false) == self {
+        if &Auth::None == self || &Auth::Service(Service::Search, false) == self {
             contacts.telegram = None;
             contacts.email = None;
         }
@@ -215,7 +232,7 @@ enum Role {
 struct Claims {
     role: Role,
     user_id: Option<String>,
-    service_name: Option<String>,
+    service_name: Option<Service>,
     user_authorized: Option<bool>,
     exp: i64,
 }

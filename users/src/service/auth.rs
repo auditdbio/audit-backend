@@ -164,7 +164,7 @@ impl AuthService {
 
             self.context
                 .make_request()
-                .auth(self.context.server_auth())
+                .auth(&self.context.server_auth())
                 .post(format!(
                     "{}://{}/api/mail",
                     PROTOCOL.as_str(),
@@ -271,7 +271,7 @@ impl AuthService {
 
         self.context
             .make_request()
-            .auth(self.context.server_auth())
+            .auth(&self.context.server_auth())
             .post(format!(
                 "{}://{}/api/mail",
                 PROTOCOL.as_str(),

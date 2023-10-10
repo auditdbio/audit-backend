@@ -48,7 +48,7 @@ impl PublicRequest {
                 CUSTOMERS_SERVICE.as_str(),
                 request.project_id
             ))
-            .auth(auth.clone())
+            .auth(auth)
             .send()
             .await?
             .json::<PublicProject>()
@@ -65,7 +65,7 @@ impl PublicRequest {
                     request.project_id,
                     request.auditor_id
                 ))
-                .auth(context.server_auth())
+                .auth(&context.server_auth())
                 .send()
                 .await?;
 
@@ -77,7 +77,7 @@ impl PublicRequest {
                     CUSTOMERS_SERVICE.as_str(),
                     request.project_id
                 ))
-                .auth(auth.clone())
+                .auth(auth)
                 .send()
                 .await?
                 .json::<PublicProject>()
@@ -86,14 +86,14 @@ impl PublicRequest {
 
         let auditor = context
             .make_request::<PublicAuditor>()
-            .auth(context.server_auth())
+            .auth(&context.server_auth())
             .get(format!(
                 "{}://{}/api/auditor/{}",
                 PROTOCOL.as_str(),
                 AUDITORS_SERVICE.as_str(),
                 request.auditor_id
             ))
-            .auth(auth.clone())
+            .auth(auth)
             .send()
             .await?
             .json::<PublicAuditor>()
@@ -127,7 +127,7 @@ pub async fn get_audit_requests(context: &Context, auth: Auth) -> error::Result<
       PROTOCOL.as_str(),
       AUDITS_SERVICE.as_str()
     ))
-    .auth(auth)
+    .auth(&auth)
     .send()
     .await?
     .json::<Vec<PublicRequest>>()

@@ -4,6 +4,7 @@ use actix_web::HttpServer;
 use common::context::ServiceState;
 use event::{create_app, service::event::SessionManager};
 use tokio::sync::Mutex;
+use common::auth::Service;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -11,7 +12,7 @@ async fn main() -> std::io::Result<()> {
 
     env_logger::init();
 
-    let state = ServiceState::new("events".to_string());
+    let state = ServiceState::new(Service::Event);
 
     let state = Arc::new(state);
 

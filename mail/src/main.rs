@@ -11,6 +11,7 @@ use std::env;
 use std::sync::Arc;
 
 use actix_web::HttpServer;
+use common::auth::Service;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -23,7 +24,7 @@ async fn main() -> std::io::Result<()> {
     let letters_repo = MongoRepository::new(&mongo_uri, "mail", "letters").await;
     let feedback_repo = MongoRepository::new(&mongo_uri, "mail", "feedback").await;
 
-    let mut state = ServiceState::new("mail".to_string());
+    let mut state = ServiceState::new(Service::Mail);
     state.insert::<Letter>(Arc::new(letters_repo));
     state.insert::<Feedback>(Arc::new(feedback_repo));
 

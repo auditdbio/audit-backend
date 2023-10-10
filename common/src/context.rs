@@ -10,6 +10,7 @@ use crate::{
     error::{self, AddCode, ServiceError},
     repository::RepositoryObject,
 };
+use crate::auth::Service;
 
 pub struct ServiceState {
     pub repositories: TypeMap,
@@ -18,7 +19,7 @@ pub struct ServiceState {
 }
 
 impl ServiceState {
-    pub fn new(service_name: String) -> Self {
+    pub fn new(service_name: Service) -> Self {
         Self {
             repositories: TypeMap::new(),
             client: reqwest::Client::new(),
@@ -149,8 +150,8 @@ impl<'a, 'b, T: Serialize> ServiceRequest<'a, 'b, T> {
         Ok(response)
     }
 
-    pub fn auth(mut self, auth: Auth) -> Self {
-        self.auth = auth;
+    pub fn auth(mut self, auth: &Auth) -> Self {
+        self.auth = *auth;
         self
     }
 }

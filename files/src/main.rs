@@ -2,6 +2,7 @@ use std::{env, sync::Arc};
 
 use actix_web::HttpServer;
 use common::{context::ServiceState, repository::mongo_repository::MongoRepository};
+use common::auth::Service;
 use files::{create_app, service::file::Metadata};
 
 #[actix_web::main]
@@ -15,7 +16,7 @@ async fn main() -> std::io::Result<()> {
     let meta_repo: MongoRepository<Metadata> =
         MongoRepository::new(&mongo_uri, "files", "meta").await;
 
-    let mut state = ServiceState::new("files".to_string());
+    let mut state = ServiceState::new(Service::Files);
     state.insert(Arc::new(meta_repo));
     let state = Arc::new(state);
 
