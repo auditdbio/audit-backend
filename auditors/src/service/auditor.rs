@@ -18,15 +18,15 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateAuditor {
-    avatar: Option<String>,
-    first_name: String,
-    last_name: String,
-    about: Option<String>,
-    company: Option<String>,
-    contacts: Contacts,
-    free_at: Option<String>,
-    price_range: Option<PriceRange>,
-    tags: Option<Vec<String>>,
+    pub avatar: Option<String>,
+    pub first_name: String,
+    pub last_name: String,
+    pub about: Option<String>,
+    pub company: Option<String>,
+    pub contacts: Contacts,
+    pub free_at: Option<String>,
+    pub price_range: Option<PriceRange>,
+    pub tags: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

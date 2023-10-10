@@ -6,7 +6,7 @@ use crate::{
     entities::{
         audit::{Audit, AuditStatus, PublicAuditStatus},
         audit_request::TimeRange,
-        auditor::PublicAuditor,
+        auditor::{ExtendedAuditor, PublicAuditor},
         contacts::Contacts,
         issue::Status,
         project::PublicProject,
@@ -93,7 +93,7 @@ impl PublicAudit {
             .auth(&context.server_auth())
             .send()
             .await?
-            .json::<PublicAuditor>()
+            .json::<ExtendedAuditor>()
             .await?;
 
         let project = context
@@ -131,15 +131,15 @@ impl PublicAudit {
             auditor_id: audit.auditor_id.to_hex(),
             customer_id: audit.customer_id.to_hex(),
             project_id: audit.project_id.to_hex(),
-            auditor_first_name: auditor.first_name,
-            auditor_last_name: auditor.last_name,
+            auditor_first_name: auditor.first_name().clone(),
+            auditor_last_name: auditor.last_name().clone(),
             project_name: project.name,
-            avatar: auditor.avatar,
+            avatar: auditor.avatar().clone(),
             description: audit.description,
             status,
             scope: audit.scope,
             price: audit.price,
-            auditor_contacts: auditor.contacts,
+            auditor_contacts: auditor.contacts().clone(),
             customer_contacts: project.creator_contacts,
             tags: project.tags,
             last_modified: audit.last_modified,

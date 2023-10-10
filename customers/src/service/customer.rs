@@ -3,7 +3,7 @@ use common::{
     access_rules::{AccessRules, Edit, Read},
     context::Context,
     entities::{
-        auditor::PublicAuditor,
+        auditor::{ExtendedAuditor, PublicAuditor},
         contacts::Contacts,
         customer::{Customer, PublicCustomer},
         project::{Project, PublicProject},
@@ -128,7 +128,7 @@ impl CustomerService {
                 ))
                 .send()
                 .await?
-                .json::<PublicAuditor>()
+                .json::<ExtendedAuditor>()
                 .await
                 .is_ok();
 

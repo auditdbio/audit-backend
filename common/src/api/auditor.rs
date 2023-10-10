@@ -3,7 +3,7 @@ use mongodb::bson::oid::ObjectId;
 use crate::{
     auth::Auth,
     context::Context,
-    entities::auditor::PublicAuditor,
+    entities::auditor::{ExtendedAuditor, PublicAuditor},
     error,
     services::{AUDITORS_SERVICE, PROTOCOL},
 };
@@ -12,7 +12,7 @@ pub async fn request_auditor(
     context: &Context,
     id: ObjectId,
     auth: Auth,
-) -> error::Result<PublicAuditor> {
+) -> error::Result<ExtendedAuditor> {
     Ok(context
         .make_request::<PublicAuditor>()
         .get(format!(
@@ -24,6 +24,6 @@ pub async fn request_auditor(
         .auth(&auth)
         .send()
         .await?
-        .json::<PublicAuditor>()
+        .json::<ExtendedAuditor>()
         .await?)
 }
