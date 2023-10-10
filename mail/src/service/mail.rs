@@ -119,7 +119,7 @@ impl MailService {
             let user = self
                 .context
                 .make_request::<PublicUser>()
-                .auth(auth.clone())
+                .auth(auth)
                 .get(format!(
                     "{}://{}/api/user/{}",
                     PROTOCOL.as_str(),

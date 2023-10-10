@@ -9,6 +9,7 @@ use common::{
 
 use customers::create_app;
 use mongodb::bson::oid::ObjectId;
+use common::auth::Service;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -23,7 +24,7 @@ async fn main() -> std::io::Result<()> {
     let project_repo: MongoRepository<Project<ObjectId>> =
         MongoRepository::new(&mongo_uri, "customers", "projects").await;
 
-    let mut state = ServiceState::new("customer".to_string());
+    let mut state = ServiceState::new(Service::Customers);
     state.insert(Arc::new(customer_repo));
     state.insert(Arc::new(project_repo));
     let state = Arc::new(state);

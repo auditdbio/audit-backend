@@ -9,6 +9,7 @@ use common::entities::auditor::Auditor;
 use common::entities::badge::Badge;
 use common::repository::mongo_repository::MongoRepository;
 use mongodb::bson::oid::ObjectId;
+use common::auth::Service;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -21,7 +22,7 @@ async fn main() -> std::io::Result<()> {
     let badge_repo: MongoRepository<Badge<ObjectId>> =
         MongoRepository::new(&mongo_uri, "badges", "badges").await;
 
-    let mut state = ServiceState::new("customer".to_string());
+    let mut state = ServiceState::new(Service::Auditors);
     state.insert(Arc::new(auditor_repo));
     state.insert(Arc::new(badge_repo));
     let state = Arc::new(state);
