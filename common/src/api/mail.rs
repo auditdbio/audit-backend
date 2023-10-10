@@ -8,7 +8,7 @@ use crate::{
 pub async fn send_mail(context: &Context, create_letter: CreateLetter) -> error::Result<()> {
     context
         .make_request::<CreateLetter>()
-        .auth(context.server_auth())
+        .auth(&context.server_auth())
         .post(format!(
             "{}://{}/api/mail",
             PROTOCOL.as_str(),

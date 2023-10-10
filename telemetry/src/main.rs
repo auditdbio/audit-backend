@@ -7,6 +7,7 @@ use telemetry::create_app;
 use std::sync::Arc;
 
 use actix_web::HttpServer;
+use common::auth::Service;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -14,7 +15,7 @@ async fn main() -> std::io::Result<()> {
 
     env_logger::init();
 
-    let state = ServiceState::new("telemetry".to_string());
+    let state = ServiceState::new(Service::Telemetry);
 
     let state = Arc::new(state);
 

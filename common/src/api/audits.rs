@@ -90,7 +90,7 @@ impl PublicAudit {
                 AUDITORS_SERVICE.as_str(),
                 audit.auditor_id
             ))
-            .auth(context.server_auth())
+            .auth(&context.server_auth())
             .send()
             .await?
             .json::<ExtendedAuditor>()
@@ -104,7 +104,7 @@ impl PublicAudit {
                 CUSTOMERS_SERVICE.as_str(),
                 audit.project_id
             ))
-            .auth(context.server_auth())
+            .auth(&context.server_auth())
             .send()
             .await?
             .json::<PublicProject>()

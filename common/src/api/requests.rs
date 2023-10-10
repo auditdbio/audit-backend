@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     auth::Auth,
     context::Context,
+    auth::Auth,
     entities::{
         audit_request::{AuditRequest, TimeRange},
         auditor::PublicAuditor,
@@ -12,7 +13,7 @@ use crate::{
         role::Role,
     },
     error,
-    services::{AUDITORS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL},
+    services::{AUDITORS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL, AUDITS_SERVICE},
 };
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
@@ -48,7 +49,7 @@ impl PublicRequest {
                 CUSTOMERS_SERVICE.as_str(),
                 request.project_id
             ))
-            .auth(auth.clone())
+            .auth(auth)
             .send()
             .await?
             .json::<PublicProject>()
@@ -65,7 +66,7 @@ impl PublicRequest {
                     request.project_id,
                     request.auditor_id
                 ))
-                .auth(context.server_auth())
+                .auth(&context.server_auth())
                 .send()
                 .await?;
 
@@ -77,7 +78,7 @@ impl PublicRequest {
                     CUSTOMERS_SERVICE.as_str(),
                     request.project_id
                 ))
-                .auth(auth.clone())
+                .auth(auth)
                 .send()
                 .await?
                 .json::<PublicProject>()
@@ -87,14 +88,14 @@ impl PublicRequest {
 
         let auditor = context
             .make_request::<PublicAuditor>()
-            .auth(context.server_auth())
+            .auth(&context.server_auth())
             .get(format!(
                 "{}://{}/api/auditor/{}",
                 PROTOCOL.as_str(),
                 AUDITORS_SERVICE.as_str(),
                 request.auditor_id
             ))
-            .auth(auth.clone())
+            .auth(auth)
             .send()
             .await?
             .json::<PublicAuditor>()
@@ -120,6 +121,21 @@ impl PublicRequest {
         })
     }
 }
+
+pub async fn get_audit_requests(context: &Context, auth: Auth) -> error::Result<Vec<PublicRequest>> {
+  Ok(context
+    .make_request::<Vec<PublicRequest>>()
+    .get(format!(
+      "{}://{}/api/my_audit_request/auditor",
+      PROTOCOL.as_str(),
+      AUDITS_SERVICE.as_str()
+    ))
+    .auth(&auth)
+    .send()
+    .await?
+    .json::<Vec<PublicRequest>>()
+    .await?
+  )
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateRequest {

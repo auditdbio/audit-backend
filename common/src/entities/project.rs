@@ -126,7 +126,7 @@ impl From<Project<ObjectId>> for Option<Document> {
 pub async fn get_project(context: &Context, id: ObjectId) -> error::Result<PublicProject> {
     Ok(context
         .make_request::<PublicProject>()
-        .auth(context.server_auth()) // TODO: think about private projects here
+        .auth(&context.server_auth()) // TODO: think about private projects here
         .get(format!(
             "{}://{}/api/project/{}",
             PROTOCOL.as_str(),

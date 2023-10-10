@@ -11,6 +11,7 @@ use common::entities::audit_request::AuditRequest;
 use common::repository::mongo_repository::MongoRepository;
 use common::verification::verify;
 use mongodb::bson::oid::ObjectId;
+use common::auth::Service;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -30,7 +31,7 @@ async fn main() -> std::io::Result<()> {
     let audit_request_repo: MongoRepository<AuditRequest<ObjectId>> =
         MongoRepository::new(&mongo_uri, "audits", "requests").await;
 
-    let mut state = ServiceState::new("audit".to_string());
+    let mut state = ServiceState::new(Service::Audits);
     state.insert(Arc::new(audit_repo));
     state.insert(Arc::new(audit_request_repo));
     let state = Arc::new(state);

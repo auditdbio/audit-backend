@@ -60,7 +60,7 @@ pub async fn send_notification(
     let user_id = user_id.unwrap();
     let user = context
         .make_request::<PublicUser>()
-        .auth(context.server_auth())
+        .auth(&context.server_auth())
         .get(format!(
             "{}://{}/api/user/{}",
             PROTOCOL.as_str(),
@@ -81,7 +81,7 @@ pub async fn send_notification(
         };
         context
             .make_request::<CreateLetter>()
-            .auth(context.server_auth())
+            .auth(&context.server_auth())
             .post(format!(
                 "{}://{}/api/mail",
                 PROTOCOL.as_str(),
@@ -108,7 +108,7 @@ pub async fn send_notification(
         };
         context
             .make_request::<CreateNotification>()
-            .auth(context.server_auth())
+            .auth(&context.server_auth())
             .post(format!(
                 "{}://{}/api/send_notification",
                 PROTOCOL.as_str(),

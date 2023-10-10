@@ -21,7 +21,7 @@ pub async fn request_customer(
             CUSTOMERS_SERVICE.as_str(),
             id
         ))
-        .auth(auth)
+        .auth(&auth)
         .send()
         .await?
         .json::<PublicCustomer>()

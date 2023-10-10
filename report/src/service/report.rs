@@ -273,7 +273,7 @@ fn generate_data(audit: &PublicAudit) -> Vec<Section> {
 pub async fn create_report(context: Context, audit_id: String) -> anyhow::Result<PublicReport> {
     let audit = context
         .make_request::<PublicAudit>()
-        .auth(context.auth().clone())
+        .auth(context.auth())
         .get(format!(
             "{}://{}/api/audit/{}",
             PROTOCOL.as_str(),
@@ -347,7 +347,7 @@ pub async fn create_report(context: Context, audit_id: String) -> anyhow::Result
             USERS_SERVICE.as_str(),
             audit.id
         ))
-        .auth(context.auth().clone())
+        .auth(context.auth())
         .json(&audit_change)
         .send()
         .await

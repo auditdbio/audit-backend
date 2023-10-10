@@ -1,5 +1,5 @@
 use actix_web::rt::{spawn, time};
-use common::auth::Auth;
+use common::auth::{Auth, Service};
 use common::context::ServiceState;
 use common::repository::mongo_repository::MongoRepository;
 use common::repository::Repository;
@@ -46,7 +46,7 @@ async fn main() -> std::io::Result<()> {
         .unwrap();
 
     let search_repo_clone = search_repo.clone();
-    let auth = Auth::Service("search".to_string(), false);
+    let auth = Auth::Service(Service::Search, false);
     spawn(async move {
         let mut interval = time::interval(Duration::from_secs(timeout));
         loop {
@@ -60,7 +60,7 @@ async fn main() -> std::io::Result<()> {
         }
     });
 
-    let state = Arc::new(ServiceState::new("search".to_string()));
+    let state = Arc::new(ServiceState::new(Service::Search));
 
     log::info!(
         "{} {} {:?}",

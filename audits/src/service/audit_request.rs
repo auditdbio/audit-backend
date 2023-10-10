@@ -130,7 +130,7 @@ impl RequestService {
         if last_changer == Role::Customer {
             self.context
                 .make_request::<()>()
-                .auth(auth.clone())
+                .auth(auth)
                 .post(format!(
                     "{}://{}/project/auditor/{}/{}",
                     PROTOCOL.as_str(),
@@ -164,7 +164,7 @@ impl RequestService {
                 PROTOCOL.as_str(),
                 EVENTS_SERVICE.as_str()
             ))
-            .auth(self.context.server_auth())
+            .auth(&self.context.server_auth())
             .json(&event)
             .send()
             .await?;
@@ -303,7 +303,7 @@ impl RequestService {
         if current_role == Role::Customer {
             self.context
                 .make_request::<()>()
-                .auth(auth.clone())
+                .auth(auth)
                 .post(format!(
                     "{}://{}/project/auditor/{}/{}",
                     PROTOCOL.as_str(),
@@ -333,7 +333,7 @@ impl RequestService {
                 PROTOCOL.as_str(),
                 EVENTS_SERVICE.as_str()
             ))
-            .auth(self.context.server_auth())
+            .auth(&self.context.server_auth())
             .json(&event)
             .send()
             .await?;

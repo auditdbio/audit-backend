@@ -72,7 +72,7 @@ pub async fn post_event(context: &Context, event: PublicEvent, auth: Auth) -> er
             PROTOCOL.as_str(),
             EVENTS_SERVICE.as_str()
         ))
-        .auth(auth)
+        .auth(&auth)
         .json(&event)
         .send()
         .await?;
