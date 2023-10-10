@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 use crate::{
     auth::Auth,
     context::Context,
-    auth::Auth,
     entities::{
         audit_request::{AuditRequest, TimeRange},
         auditor::PublicAuditor,
@@ -13,7 +12,7 @@ use crate::{
         role::Role,
     },
     error,
-    services::{AUDITORS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL, AUDITS_SERVICE},
+    services::{AUDITORS_SERVICE, AUDITS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL},
 };
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
@@ -122,20 +121,23 @@ impl PublicRequest {
     }
 }
 
-pub async fn get_audit_requests(context: &Context, auth: Auth) -> error::Result<Vec<PublicRequest>> {
-  Ok(context
-    .make_request::<Vec<PublicRequest>>()
-    .get(format!(
-      "{}://{}/api/my_audit_request/auditor",
-      PROTOCOL.as_str(),
-      AUDITS_SERVICE.as_str()
-    ))
-    .auth(&auth)
-    .send()
-    .await?
-    .json::<Vec<PublicRequest>>()
-    .await?
-  )
+pub async fn get_audit_requests(
+    context: &Context,
+    auth: Auth,
+) -> error::Result<Vec<PublicRequest>> {
+    Ok(context
+        .make_request::<Vec<PublicRequest>>()
+        .get(format!(
+            "{}://{}/api/my_audit_request/auditor",
+            PROTOCOL.as_str(),
+            AUDITS_SERVICE.as_str()
+        ))
+        .auth(&auth)
+        .send()
+        .await?
+        .json::<Vec<PublicRequest>>()
+        .await?)
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateRequest {
@@ -160,7 +162,7 @@ pub async fn create_request(
             PROTOCOL.as_str(),
             AUDITORS_SERVICE.as_str()
         ))
-        .auth(auth)
+        .auth(&auth)
         .json(&data)
         .send()
         .await?;
@@ -177,7 +179,7 @@ pub async fn delete(context: &Context, auth: Auth, id: ObjectId) -> error::Resul
             AUDITORS_SERVICE.as_str(),
             id.to_hex()
         ))
-        .auth(auth)
+        .auth(&auth)
         .send()
         .await?;
 

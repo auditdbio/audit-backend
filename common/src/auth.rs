@@ -30,7 +30,7 @@ pub static DECODING_KEY: Lazy<DecodingKey> = Lazy::new(|| {
     DecodingKey::from_secret(secret.as_bytes())
 });
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum Service {
     Auditors,
     Audits,
@@ -74,7 +74,7 @@ impl Auth {
     pub fn full_access(&self) -> bool {
         match self {
             Auth::Admin(_) => true,
-            Auth::Service(name, _) => name != Service::Search,
+            Auth::Service(name, _) => name != &Service::Search,
             _ => false,
         }
     }
