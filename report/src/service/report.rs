@@ -84,24 +84,24 @@ impl IssueCollector {
         ];
 
         sections
-          .into_iter()
-          .map(|(title, subsections)| {
-              let mut section = Section {
-                  typ: "plain_text".to_string(),
-                  title: title.to_string(),
-                  subsections: Some(subsections.clone()),
-                  include_in_toc: true,
-                  ..Default::default()
-              };
+            .into_iter()
+            .map(|(title, subsections)| {
+                let mut section = Section {
+                    typ: "plain_text".to_string(),
+                    title: title.to_string(),
+                    subsections: Some(subsections.clone()),
+                    include_in_toc: true,
+                    ..Default::default()
+                };
 
-              if subsections.is_empty() {
-                  section.text = format!("No {} issues found.", title.to_lowercase());
-                  section.subsections = None;
-              }
+                if subsections.is_empty() {
+                    section.text = format!("No {} issues found.", title.to_lowercase());
+                    section.subsections = None;
+                }
 
-              section
-          })
-          .collect()
+                section
+            })
+            .collect()
     }
 }
 
@@ -273,7 +273,7 @@ fn generate_data(audit: &PublicAudit) -> Vec<Section> {
 pub async fn create_report(context: Context, audit_id: String) -> anyhow::Result<PublicReport> {
     let audit = context
         .make_request::<PublicAudit>()
-        .auth(context.auth())
+        .auth(*context.auth())
         .get(format!(
             "{}://{}/api/audit/{}",
             PROTOCOL.as_str(),
@@ -347,7 +347,7 @@ pub async fn create_report(context: Context, audit_id: String) -> anyhow::Result
             USERS_SERVICE.as_str(),
             audit.id
         ))
-        .auth(context.auth())
+        .auth(*context.auth())
         .json(&audit_change)
         .send()
         .await

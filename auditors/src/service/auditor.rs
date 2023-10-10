@@ -80,15 +80,12 @@ impl AuditorService {
 
         let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
 
-
         let Some(auditor) = auditors.find("user_id", &Bson::ObjectId(id)).await? else {
-
             let badges = self.context.try_get_repository::<Badge<ObjectId>>()?;
 
             let Some(badge) = badges.find("user_id", &Bson::ObjectId(id)).await? else {
                 return Ok(None);
             };
-
 
             return Ok(Some(ExtendedAuditor::Badge(auth.public_badge(badge))));
         };
@@ -114,7 +111,7 @@ impl AuditorService {
             let user = self
                 .context
                 .make_request::<PublicUser>()
-                .auth(auth)
+                .auth(*auth)
                 .get(format!(
                     "{}://{}/api/user/{}",
                     PROTOCOL.as_str(),
@@ -133,7 +130,7 @@ impl AuditorService {
             let has_customer = self
                 .context
                 .make_request::<PublicCustomer>()
-                .auth(auth)
+                .auth(*auth)
                 .get(format!(
                     "{}://{}/api/customer/{}",
                     PROTOCOL.as_str(),
