@@ -100,7 +100,7 @@ impl CustomerService {
             let user = self
                 .context
                 .make_request::<PublicUser>()
-                .auth(auth)
+                .auth(*auth)
                 .get(format!(
                     "{}://{}/api/user/{}",
                     PROTOCOL.as_str(),
@@ -119,7 +119,7 @@ impl CustomerService {
             let has_auditor = self
                 .context
                 .make_request::<PublicAuditor>()
-                .auth(auth)
+                .auth(*auth)
                 .get(format!(
                     "{}://{}/api/auditor/{}",
                     PROTOCOL.as_str(),

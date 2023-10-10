@@ -67,7 +67,7 @@ pub async fn send_notification(
 
     context
         .make_request()
-        .auth(auth)
+        .auth(*auth)
         .post(format!(
             "{}://{}/api/event",
             PROTOCOL.as_str(),

@@ -183,7 +183,7 @@ impl BadgeService {
     pub async fn substitute(&self, badge_id: ObjectId) -> error::Result<()> {
         let auth = self.context.auth();
 
-        let Some(&user_id) =  auth.id() else {
+        let Some(&user_id) = auth.id() else {
             return Err(anyhow::anyhow!("User is not available to change this badge").code(400));
         };
 
@@ -231,7 +231,7 @@ impl BadgeService {
         let mut requests: Vec<PublicRequest> = self
             .context
             .make_request::<Vec<PublicRequest>>()
-            .auth(auth.clone())
+            .auth(auth)
             .get(format!(
                 "{}://{}/api/audit_request/all/auditor/{}",
                 PROTOCOL.as_str(),

@@ -17,8 +17,7 @@ use crate::repositories::{search::SearchRepo, since::SinceRepo};
 
 pub(super) async fn get_data(client: &Client, url: &str, since: i64) -> Option<Vec<Document>> {
     let request = client.get(format!("{url}/{since}"));
-    let Ok(res) = request.send()
-        .await else {
+    let Ok(res) = request.send().await else {
         log::error!("Error while sending request");
         return None;
     };
@@ -49,7 +48,7 @@ pub async fn fetch_data(
 
     for since in data.dict.iter_mut() {
         let timestamp = Utc::now().timestamp_micros();
-        let Some(docs) = get_data(&client, since.0 ,*since.1).await else {
+        let Some(docs) = get_data(&client, since.0, *since.1).await else {
             log::info!("No data for {}", since.0);
             continue;
         };
@@ -138,7 +137,7 @@ impl SearchService {
             let docs = self
                 .context
                 .make_request()
-                .auth(&auth)
+                .auth(auth)
                 .post(service)
                 .json(&ids)
                 .send()

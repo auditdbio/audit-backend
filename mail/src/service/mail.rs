@@ -57,12 +57,13 @@ impl MailService {
         let sender_email = letter.sender.clone().unwrap_or(EMAIL_ADDRESS.to_string());
 
         let Ok(email) = Message::builder()
-                .from(sender_email.parse().unwrap())
-                .to(email)
-                .subject(letter.subject)
-                .body(letter.message) else {
-                    return Err(anyhow::anyhow!("Error building email").code(500));
-                };
+            .from(sender_email.parse().unwrap())
+            .to(email)
+            .subject(letter.subject)
+            .body(letter.message)
+        else {
+            return Err(anyhow::anyhow!("Error building email").code(500));
+        };
         let mailer = SmtpTransport::relay("smtp.gmail.com")
             .unwrap()
             .credentials(Credentials::new(
@@ -119,7 +120,7 @@ impl MailService {
             let user = self
                 .context
                 .make_request::<PublicUser>()
-                .auth(auth)
+                .auth(*auth)
                 .get(format!(
                     "{}://{}/api/user/{}",
                     PROTOCOL.as_str(),

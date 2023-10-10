@@ -5,12 +5,12 @@ use anyhow::anyhow;
 use serde::Serialize;
 use type_map::concurrent::TypeMap;
 
+use crate::auth::Service;
 use crate::{
     auth::Auth,
     error::{self, AddCode, ServiceError},
     repository::RepositoryObject,
 };
-use crate::auth::Service;
 
 pub struct ServiceState {
     pub repositories: TypeMap,
@@ -77,10 +77,9 @@ impl FromRequest for Context {
                 }
             };
 
-            let Some(state) = req
-                .app_data::<Data<Arc<ServiceState>>>()else {
-                    return Err(anyhow::anyhow!("No state provided".to_string()).into());
-                };
+            let Some(state) = req.app_data::<Data<Arc<ServiceState>>>() else {
+                return Err(anyhow::anyhow!("No state provided".to_string()).into());
+            };
 
             Ok(Context(Arc::clone(state), HandlerContext { user_auth }))
         }
@@ -150,8 +149,8 @@ impl<'a, 'b, T: Serialize> ServiceRequest<'a, 'b, T> {
         Ok(response)
     }
 
-    pub fn auth(mut self, auth: &Auth) -> Self {
-        self.auth = *auth;
+    pub fn auth(mut self, auth: Auth) -> Self {
+        self.auth = auth;
         self
     }
 }

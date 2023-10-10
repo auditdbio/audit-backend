@@ -91,7 +91,10 @@ impl AuthService {
     pub async fn login(&self, login: &Login) -> error::Result<Token> {
         let users = self.context.try_get_repository::<User<ObjectId>>()?;
 
-        let Some(user) = users.find("email", &Bson::String(login.email.clone())).await? else {
+        let Some(user) = users
+            .find("email", &Bson::String(login.email.clone()))
+            .await?
+        else {
             return Err(anyhow::anyhow!("No user found").code(404));
         };
 
@@ -164,7 +167,7 @@ impl AuthService {
 
             self.context
                 .make_request()
-                .auth(&self.context.server_auth())
+                .auth(self.context.server_auth())
                 .post(format!(
                     "{}://{}/api/mail",
                     PROTOCOL.as_str(),
@@ -271,7 +274,7 @@ impl AuthService {
 
         self.context
             .make_request()
-            .auth(&self.context.server_auth())
+            .auth(self.context.server_auth())
             .post(format!(
                 "{}://{}/api/mail",
                 PROTOCOL.as_str(),
@@ -287,7 +290,10 @@ impl AuthService {
     pub async fn reset_password(&self, token: ChangePasswordData) -> error::Result<()> {
         let codes = self.context.try_get_repository::<Code>()?;
 
-        let Some(code) = codes.find("code", &Bson::String(token.code.clone())).await? else {
+        let Some(code) = codes
+            .find("code", &Bson::String(token.code.clone()))
+            .await?
+        else {
             return Err(anyhow::anyhow!("No code found").code(404));
         };
 
