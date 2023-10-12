@@ -8,9 +8,11 @@ use common::{
         project::{Project, PublicProject, PublishOptions},
     },
     error::{self, AddCode},
+    services::{CUSTOMERS_SERVICE, PROTOCOL},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
+use common::entities::customer::PublicCustomer;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateProject {
@@ -91,13 +93,29 @@ impl ProjectService {
 
         let projects = self.context.try_get_repository::<Project<ObjectId>>()?;
 
-        let Some(project) = projects.find("id",&Bson::ObjectId(id)).await? else {
+        let Some(mut project) = projects.find("id", &Bson::ObjectId(id)).await? else {
             return Ok(None)
         };
 
         if !Read.get_access(auth, &project) {
             return Err(anyhow::anyhow!("User is not available to read this project").code(403));
         }
+
+        let customer = self.context
+          .make_request::<PublicCustomer>()
+          .get(format!(
+              "{}://{}/api/customer/{}",
+              PROTOCOL.as_str(),
+              CUSTOMERS_SERVICE.as_str(),
+              project.customer_id
+          ))
+          .auth(self.context.server_auth())
+          .send()
+          .await?
+          .json::<PublicCustomer>()
+          .await?;
+
+        project.creator_contacts = customer.contacts;
 
         Ok(Some(auth.public_project(project)))
     }
