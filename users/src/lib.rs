@@ -42,6 +42,7 @@ pub fn create_app(
         .service(verify_link)
         .service(create_user)
         .service(forgot_password)
-        .service(reset_password);
+        .service(reset_password)
+        .service(restore_token);
     app
 }
