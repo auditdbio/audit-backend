@@ -18,7 +18,7 @@ x-common-variables: &common-variables
   FRONTEND: "${FRONTEND}"
   PROTOCOL: "${PROTOCOL}"
   FEEDBACK_EMAIL: "${FEEDBACK_EMAIL}"
-  RUST_LOG: actix=info,reqwest=info,search=info,common=info
+  RUST_LOG: actix=info,reqwest=info,search=info,common=info,audits=trace
   TIMEOUT: "60"
 
 
