@@ -99,11 +99,15 @@ impl RequestService {
         info!("request create checkpoint 3");
 
         if let Some(old_version_of_this_request) = old_version_of_this_request {
+            info!("request create checkpoint 3.1");
+
             requests
                 .delete("id", &old_version_of_this_request.id)
                 .await?;
             request.id = old_version_of_this_request.id;
         } else if last_changer == Role::Customer {
+            info!("request create checkpoint 3.2");
+
             let mut new_notification: NewNotification =
                 serde_json::from_str(include_str!("../../templates/new_audit_request.txt"))?;
 
@@ -118,6 +122,8 @@ impl RequestService {
 
             send_notification(&self.context, true, true, new_notification, variables).await?;
         } else {
+            info!("request create checkpoint 3.3");
+
             let mut new_notification: NewNotification =
                 serde_json::from_str(include_str!("../../templates/new_audit_offer.txt"))?;
 
