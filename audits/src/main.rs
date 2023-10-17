@@ -15,7 +15,6 @@ use mongodb::bson::oid::ObjectId;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    log::info!("log test");
     dotenv::dotenv().ok();
 
     env_logger::init();

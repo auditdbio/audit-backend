@@ -42,7 +42,6 @@ impl RequestService {
     }
 
     pub async fn create(&self, request: CreateRequest) -> error::Result<PublicRequest> {
-        info!("request create begin");
         let auth = self.context.auth();
 
         let requests = self
@@ -83,7 +82,6 @@ impl RequestService {
             last_modified: Utc::now().timestamp_micros(),
             last_changer,
         };
-        info!("request create checkpoint 1");
 
         let old_version_of_this_request = requests
             .find_many("project_id", &Bson::ObjectId(request.project_id))
@@ -93,21 +91,14 @@ impl RequestService {
             .collect::<Vec<_>>()
             .pop();
 
-        info!("request create checkpoint 2");
-
         let project = get_project(&self.context, request.project_id).await?;
-        info!("request create checkpoint 3");
 
         if let Some(old_version_of_this_request) = old_version_of_this_request {
-            info!("request create checkpoint 3.1");
-
             requests
                 .delete("id", &old_version_of_this_request.id)
                 .await?;
             request.id = old_version_of_this_request.id;
         } else if last_changer == Role::Customer {
-            info!("request create checkpoint 3.2");
-
             let mut new_notification: NewNotification =
                 serde_json::from_str(include_str!("../../templates/new_audit_request.txt"))?;
 
@@ -120,10 +111,12 @@ impl RequestService {
             let variables: Vec<(String, String)> =
                 vec![("project".to_owned(), project.name.clone())];
 
-            send_notification(&self.context, true, true, new_notification, variables).await?;
+            if let Err(err) =
+                send_notification(&self.context, true, true, new_notification, variables).await
+            {
+                log::warn!("Failed to send notification: {}", err); // TODO: this always fails for badges, do something with it
+            }
         } else {
-            info!("request create checkpoint 3.3");
-
             let mut new_notification: NewNotification =
                 serde_json::from_str(include_str!("../../templates/new_audit_offer.txt"))?;
 
@@ -139,8 +132,6 @@ impl RequestService {
             send_notification(&self.context, true, true, new_notification, variables).await?;
         }
 
-        info!("request create checkpoint 4");
-
         if last_changer == Role::Customer {
             self.context
                 .make_request::<()>()
@@ -155,7 +146,6 @@ impl RequestService {
                 .send()
                 .await?;
         }
-        info!("request create checkpoint 5");
 
         requests.insert(&request).await?;
 
@@ -171,8 +161,6 @@ impl RequestService {
             event_reciver,
             EventPayload::NewRequest(public_request.clone()),
         );
-
-        info!("request create checkpoint 6");
 
         self.context
             .make_request()
