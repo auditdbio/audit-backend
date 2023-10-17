@@ -5,16 +5,17 @@ use actix_web::HttpServer;
 use audits::create_app;
 
 use audits::migrations::up_migrations;
+use common::auth::Service;
 use common::context::ServiceState;
 use common::entities::audit::Audit;
 use common::entities::audit_request::AuditRequest;
 use common::repository::mongo_repository::MongoRepository;
 use common::verification::verify;
 use mongodb::bson::oid::ObjectId;
-use common::auth::Service;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    log::info!("log test");
     dotenv::dotenv().ok();
 
     env_logger::init();
