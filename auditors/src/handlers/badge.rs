@@ -34,7 +34,7 @@ pub async fn find_badge(
 #[patch("/api/badge/merge/{secret}")]
 pub async fn merge(context: Context, secret: web::Path<String>) -> error::Result<HttpResponse> {
     BadgeService::new(context)
-        .delete(secret.into_inner())
+        .merge(secret.into_inner())
         .await?;
     Ok(HttpResponse::Ok().finish())
 }
@@ -42,7 +42,7 @@ pub async fn merge(context: Context, secret: web::Path<String>) -> error::Result
 #[delete("/api/badge/delete/{secret}")]
 pub async fn delete(context: Context, secret: web::Path<String>) -> error::Result<HttpResponse> {
     BadgeService::new(context)
-        .substitute(secret.into_inner())
+        .delete(secret.into_inner())
         .await?;
     Ok(HttpResponse::Ok().finish())
 }

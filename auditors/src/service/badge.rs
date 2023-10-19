@@ -221,7 +221,7 @@ impl BadgeService {
     //     Ok(())
     // }
 
-    pub async fn substitute(&self, code: String) -> error::Result<PublicAuditor> {
+    pub async fn merge(&self, code: String) -> error::Result<PublicAuditor> {
         let auth = *self.context.auth();
 
         let id = *auth.id().unwrap();
