@@ -2,9 +2,15 @@ use actix_web::HttpRequest;
 use chrono::Utc;
 use common::{
     access_rules::AccessRules,
+    api::{
+        self,
+        badge::{get_badge, BadgePayload},
+        codes::post_code,
+        user::CreateUser,
+    },
     auth::Auth,
     context::Context,
-    entities::{letter::CreateLetter, user::User},
+    entities::{badge::PublicBadge, letter::CreateLetter, user::User},
     error::{self, AddCode},
     repository::Entity,
     services::{FRONTEND, MAIL_SERVICE, PROTOCOL, USERS_SERVICE},
@@ -13,7 +19,7 @@ use mongodb::bson::{oid::ObjectId, Bson};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 
-use super::user::CreateUser;
+use super::user::UserService;
 
 lazy_static::lazy_static! {
     static ref ADMIN_CREATION_PASSWORD: String = std::env::var("ADMIN_CREATION_PASSWORD").unwrap();
@@ -39,6 +45,7 @@ pub struct Token {
 pub struct Link {
     pub user: User<ObjectId>,
     pub code: String,
+    pub secret: Option<String>,
 }
 
 impl Entity for Link {
@@ -116,8 +123,18 @@ impl AuthService {
     pub async fn authentication(
         &self,
         mut user: CreateUser,
-        verify_email: bool,
+        mut verify_email: bool,
     ) -> error::Result<User<String>> {
+        if let Some(secret) = &user.secret {
+            let payload: BadgePayload = serde_json::from_str(
+                &api::codes::get_code(&self.context, secret.clone())
+                    .await?
+                    .unwrap(),
+            )?;
+
+            verify_email &= payload.email != user.email;
+        }
+
         let is_admin: bool =
             user.admin_creation_password == Some(ADMIN_CREATION_PASSWORD.to_string());
 
@@ -187,7 +204,7 @@ impl AuthService {
         user.password.push_str(&salt);
         let password = sha256::digest(user.password);
 
-        let user = User {
+        let new_user = User {
             id: ObjectId::new(),
             name: user.name,
             email: user.email,
@@ -200,8 +217,9 @@ impl AuthService {
         };
 
         let link = Link {
-            user,
+            user: new_user,
             code: code.clone(),
+            secret: user.secret,
         };
 
         if verify_email {
@@ -222,9 +240,28 @@ impl AuthService {
             return Ok(false);
         };
 
-        let users = self.context.try_get_repository::<User<ObjectId>>()?;
+        let user = link.user;
 
-        users.insert(&link.user).await?;
+        let merge_secret = if let Some(secret) = &link.secret {
+            Some(secret.clone())
+        } else {
+            // get badge by email
+            let badge = get_badge(&self.context, user.email.clone()).await?;
+            if let Some(badge) = badge {
+                let payload = BadgePayload {
+                    badge_id: badge.user_id.parse()?,
+                    email: badge.contacts.email.unwrap(),
+                };
+
+                Some(post_code(&self.context, serde_json::to_string(&payload)?).await?)
+            } else {
+                None
+            }
+        };
+
+        UserService::new(self.context.clone())
+            .create(user, merge_secret)
+            .await?;
 
         Ok(true)
     }

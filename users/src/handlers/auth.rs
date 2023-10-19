@@ -3,12 +3,9 @@ use actix_web::{
     web::{self, Json},
     HttpRequest, HttpResponse,
 };
-use common::{context::Context, entities::user::User, error};
+use common::{api::user::CreateUser, context::Context, entities::user::User, error};
 
-use crate::service::{
-    auth::{AuthService, ChangePasswordData, Login, Token, TokenResponce},
-    user::CreateUser,
-};
+use crate::service::auth::{AuthService, ChangePasswordData, Login, Token, TokenResponce};
 
 #[post("/api/auth/login")]
 pub async fn login(context: Context, login: Json<Login>) -> error::Result<Json<Token>> {

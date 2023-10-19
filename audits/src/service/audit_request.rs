@@ -2,18 +2,24 @@ use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
     api::{
+        auditor::request_auditor,
+        badge::BadgePayload,
+        codes::post_code,
         events::{EventPayload, PublicEvent},
+        mail::send_mail,
         requests::CreateRequest,
         send_notification, NewNotification,
     },
     context::Context,
     entities::{
         audit_request::{AuditRequest, PriceRange, TimeRange},
+        auditor::ExtendedAuditor,
+        letter::CreateLetter,
         project::get_project,
         role::Role,
     },
     error::{self, AddCode},
-    services::{CUSTOMERS_SERVICE, EVENTS_SERVICE, PROTOCOL},
+    services::{CUSTOMERS_SERVICE, EVENTS_SERVICE, FRONTEND, PROTOCOL},
 };
 
 use log::info;
@@ -115,6 +121,48 @@ impl RequestService {
                 send_notification(&self.context, true, true, new_notification, variables).await
             {
                 log::warn!("Failed to send notification: {}", err); // TODO: this always fails for badges, do something with it
+            }
+
+            if let ExtendedAuditor::Badge(badge) = request_auditor(
+                &self.context,
+                request.auditor_id,
+                self.context.server_auth(),
+            )
+            .await?
+            {
+                let payload = BadgePayload {
+                    badge_id: badge.user_id.parse()?,
+                    email: badge.contacts.email.clone().unwrap(),
+                };
+
+                let code = post_code(&self.context, serde_json::to_string(&payload)?).await?;
+
+                // delete link
+                let delete_link = format!(
+                    "{}://{}/delete/{}/{}",
+                    PROTOCOL.as_str(),
+                    FRONTEND.as_str(),
+                    badge.user_id,
+                    code
+                );
+                // merge link
+                let merge_link = format!(
+                    "{}://{}/invite-user/{}/{}",
+                    PROTOCOL.as_str(),
+                    FRONTEND.as_str(),
+                    badge.user_id,
+                    code
+                );
+
+                // send email
+                let letter = CreateLetter {
+                    recipient_id: None,
+                    recipient_name: None,
+                    email: badge.contacts.email.unwrap(),
+                    message: format!("merge link: {}, delete link: {}", merge_link, delete_link),
+                    subject: "The badge notification".to_string(),
+                };
+                send_mail(&self.context, letter).await?;
             }
         } else {
             let mut new_notification: NewNotification =

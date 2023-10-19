@@ -2,6 +2,7 @@ pub mod notifications;
 pub use notifications::*;
 pub mod auditor;
 pub mod audits;
+pub mod badge;
 pub mod chat;
 pub mod codes;
 pub mod customer;

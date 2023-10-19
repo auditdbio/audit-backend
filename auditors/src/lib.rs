@@ -12,7 +12,7 @@ use actix_web::{
 use common::context::ServiceState;
 pub use handlers::auditor::*;
 use handlers::{
-    badge::{delete, delete_run, post_badge, substitute, substitute_run},
+    badge::{delete, find_badge, merge, post_badge},
     indexer::{get_auditor_data, get_badges_data, ping, provide_auditor_data, provide_badges_data},
 };
 
@@ -45,9 +45,8 @@ pub fn create_app(
         .service(get_badges_data)
         .service(ping)
         .service(post_badge)
-        .service(substitute)
-        .service(substitute_run)
+        .service(merge)
         .service(delete)
-        .service(delete_run);
+        .service(find_badge);
     app
 }

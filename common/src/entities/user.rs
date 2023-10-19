@@ -1,10 +1,9 @@
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
 use crate::repository::Entity;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct User<Id> {
     pub id: Id,
     pub email: String,

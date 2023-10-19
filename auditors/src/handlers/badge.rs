@@ -5,7 +5,11 @@ use actix_web::{
 };
 
 use crate::service::badge::{BadgeService, CreateBadge};
-use common::{context::Context, entities::badge::Badge, error};
+use common::{
+    context::Context,
+    entities::badge::{Badge, PublicBadge},
+    error,
+};
 
 #[post("/api/badge")]
 pub async fn post_badge(
@@ -15,34 +19,30 @@ pub async fn post_badge(
     Ok(Json(BadgeService::new(context).create(data).await?))
 }
 
-#[patch("/api/badge/merge/{badge_id}")]
-pub async fn substitute(context: Context, ids: web::Path<String>) -> error::Result<HttpResponse> {
-    let badge_id = ids.into_inner();
+#[get("/api/badge/{email}")]
+pub async fn find_badge(
+    context: Context,
+    email: web::Path<String>,
+) -> error::Result<Json<Option<PublicBadge>>> {
+    Ok(Json(
+        BadgeService::new(context)
+            .find_by_email(email.into_inner())
+            .await?,
+    ))
+}
 
+#[patch("/api/badge/merge/{secret}")]
+pub async fn merge(context: Context, secret: web::Path<String>) -> error::Result<HttpResponse> {
     BadgeService::new(context)
-        .substitute(badge_id.parse()?)
+        .delete(secret.into_inner())
         .await?;
     Ok(HttpResponse::Ok().finish())
 }
 
-#[get("/api/badge/merge/run/{code}")]
-pub async fn substitute_run(
-    context: Context,
-    ids: web::Path<String>,
-) -> error::Result<HttpResponse> {
-    let code = ids.into_inner();
-    BadgeService::new(context).substitute_run(code).await?;
-    Ok(HttpResponse::Ok().finish())
-}
-
-#[delete("/api/badge/delete/{id}")]
-pub async fn delete(context: Context, id: web::Path<String>) -> error::Result<HttpResponse> {
-    BadgeService::new(context).delete(id.parse()?).await?;
-    Ok(HttpResponse::Ok().finish())
-}
-
-#[get("/api/badge/delete/run/{code}")]
-pub async fn delete_run(context: Context, code: web::Path<String>) -> error::Result<HttpResponse> {
-    BadgeService::new(context).delete_run(code.parse()?).await?;
+#[delete("/api/badge/delete/{secret}")]
+pub async fn delete(context: Context, secret: web::Path<String>) -> error::Result<HttpResponse> {
+    BadgeService::new(context)
+        .substitute(secret.into_inner())
+        .await?;
     Ok(HttpResponse::Ok().finish())
 }

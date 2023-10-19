@@ -1,6 +1,8 @@
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
+    api::badge::merge,
+    auth::Auth,
     context::Context,
     entities::user::{PublicUser, User},
     error::{self, AddCode},
@@ -14,16 +16,6 @@ use super::auth::ChangePassword;
 
 pub struct UserService {
     pub context: Context,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CreateUser {
-    pub email: String,
-    pub password: String,
-    pub name: String,
-    pub current_role: String,
-    pub use_email: Option<bool>,
-    pub admin_creation_password: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -41,9 +33,17 @@ impl UserService {
         Self { context }
     }
 
-    pub async fn create(&self, user: User<String>) -> error::Result<PublicUser> {
+    pub async fn create(
+        &self,
+        user: User<ObjectId>,
+        merge_secret: Option<String>,
+    ) -> error::Result<PublicUser> {
         let users = self.context.try_get_repository::<User<ObjectId>>()?;
-        let user = user.parse();
+
+        // run merge here
+        if let Some(secret) = merge_secret {
+            merge(&self.context, Auth::User(user.id), secret).await?;
+        }
 
         users.insert(&user).await?;
 
@@ -71,7 +71,10 @@ impl UserService {
 
         let users = self.context.try_get_repository::<User<ObjectId>>()?;
 
-        let Some(user) = users.find("id", &Bson::ObjectId(*auth.id().unwrap())).await? else {
+        let Some(user) = users
+            .find("id", &Bson::ObjectId(*auth.id().unwrap()))
+            .await?
+        else {
             return Ok(None);
         };
 
