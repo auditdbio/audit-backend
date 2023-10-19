@@ -16,7 +16,7 @@ use common::{
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-use crate::repositories::chat::{ChatRepository, Group};
+use crate::repositories::chat::{Chat, ChatRepository, Group};
 
 pub struct ChatService {
     context: Context,
@@ -29,6 +29,7 @@ pub struct PublicChat {
     pub members: Vec<PublicChatId>,
     pub last_modified: i64,
     pub last_message: PublicMessage,
+    pub avatar: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -62,7 +63,7 @@ impl ChatService {
         Self { context }
     }
 
-    pub async fn send_message(&self, message: CreateMessage) -> error::Result<()> {
+    pub async fn send_message(&self, message: CreateMessage) -> error::Result<Chat> {
         // TODO: check permissions
         let auth = self.context.auth();
 
@@ -117,7 +118,7 @@ impl ChatService {
                 .send()
                 .await?;
         }
-        Ok(())
+        Ok(chat)
     }
 
     pub async fn preview(&self, role: Role) -> error::Result<Vec<PublicChat>> {
@@ -143,17 +144,18 @@ impl ChatService {
                     continue;
                 }
 
-                let name = if id.role == Role::Auditor {
+                let (name, avatar) = if id.role == Role::Auditor {
                     let auditor = request_auditor(&self.context, id.id, auth.clone()).await?;
-                    auditor.first_name().clone() + " " + auditor.last_name()
+                    (auditor.first_name().clone() + " " + auditor.last_name(), auditor.avatar().to_string())
                 } else {
                     let customer = request_customer(&self.context, id.id, auth.clone()).await?;
-                    customer.first_name + " " + &customer.last_name
+                    (customer.first_name + " " + &customer.last_name, customer.avatar)
                 };
 
                 chats.push(PublicChat {
                     id: private.id.to_hex(),
                     name,
+                    avatar: Some(avatar),
                     members: private.members.into_iter().map(ChatId::publish).collect(),
                     last_modified: private.last_modified,
                     last_message: private.last_message.clone().publish(),

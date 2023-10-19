@@ -1,7 +1,6 @@
 use actix_web::{
     get, post,
     web::{Json, Path},
-    HttpResponse,
 };
 use common::{
     api::chat::{CreateMessage, PublicMessage},
@@ -9,6 +8,7 @@ use common::{
     entities::role::Role,
     error,
 };
+use crate::repositories::chat::Chat;
 
 use crate::services::chat::{ChatService, PublicChat};
 
@@ -16,9 +16,10 @@ use crate::services::chat::{ChatService, PublicChat};
 pub async fn send_message(
     context: Context,
     Json(message): Json<CreateMessage>,
-) -> error::Result<HttpResponse> {
-    ChatService::new(context).send_message(message).await?;
-    Ok(HttpResponse::Ok().finish())
+) -> error::Result<Json<Chat>> {
+    Ok(Json(
+        ChatService::new(context).send_message(message).await?
+    ))
 }
 
 #[get("/api/chat/preview/{role}")]
