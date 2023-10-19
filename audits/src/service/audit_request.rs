@@ -122,48 +122,6 @@ impl RequestService {
             {
                 log::warn!("Failed to send notification: {}", err); // TODO: this always fails for badges, do something with it
             }
-
-            if let ExtendedAuditor::Badge(badge) = request_auditor(
-                &self.context,
-                request.auditor_id,
-                self.context.server_auth(),
-            )
-            .await?
-            {
-                let payload = BadgePayload {
-                    badge_id: badge.user_id.parse()?,
-                    email: badge.contacts.email.clone().unwrap(),
-                };
-
-                let code = post_code(&self.context, serde_json::to_string(&payload)?).await?;
-
-                // delete link
-                let delete_link = format!(
-                    "{}://{}/delete/{}/{}",
-                    PROTOCOL.as_str(),
-                    FRONTEND.as_str(),
-                    badge.user_id,
-                    code
-                );
-                // merge link
-                let merge_link = format!(
-                    "{}://{}/invite-user/{}/{}",
-                    PROTOCOL.as_str(),
-                    FRONTEND.as_str(),
-                    badge.user_id,
-                    code
-                );
-
-                // send email
-                let letter = CreateLetter {
-                    recipient_id: None,
-                    recipient_name: None,
-                    email: badge.contacts.email.unwrap(),
-                    message: format!("merge link: {}, delete link: {}", merge_link, delete_link),
-                    subject: "The badge notification".to_string(),
-                };
-                send_mail(&self.context, letter).await?;
-            }
         } else {
             let mut new_notification: NewNotification =
                 serde_json::from_str(include_str!("../../templates/new_audit_offer.txt"))?;
@@ -193,6 +151,51 @@ impl RequestService {
                 ))
                 .send()
                 .await?;
+        }
+
+        if let ExtendedAuditor::Badge(badge) = request_auditor(
+            &self.context,
+            request.auditor_id,
+            self.context.server_auth(),
+        )
+        .await?
+        {
+            let payload = BadgePayload {
+                badge_id: badge.user_id.parse()?,
+                email: badge.contacts.email.clone().unwrap(),
+            };
+
+            let code = post_code(&self.context, serde_json::to_string(&payload)?).await?;
+
+            // delete link
+            let delete_link = format!(
+                "{}://{}/delete/{}/{}",
+                PROTOCOL.as_str(),
+                FRONTEND.as_str(),
+                badge.user_id,
+                code
+            );
+            // merge link
+            let merge_link = format!(
+                "{}://{}/invite-user/{}/{}",
+                PROTOCOL.as_str(),
+                FRONTEND.as_str(),
+                badge.user_id,
+                code
+            );
+
+            let message = format!("merge link: {}, delete link: {}", merge_link, delete_link);
+
+            // send email
+            let letter = CreateLetter {
+                recipient_id: None,
+                recipient_name: None,
+                email: badge.contacts.email.unwrap(),
+                message: message.clone(),
+                subject: "The badge notification".to_string(),
+            };
+            send_mail(&self.context, letter).await?;
+            request.description = message;
         }
 
         requests.insert(&request).await?;
