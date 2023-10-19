@@ -26,6 +26,7 @@ impl Group {
             members: self.members.into_iter().map(ChatId::publish).collect(),
             last_message: self.last_message.publish(),
             last_modified: self.last_modified,
+            avatar: None
         }
     }
 }
@@ -64,6 +65,7 @@ impl Entity for PrivateChat {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub enum Chat {
     Private(PrivateChat),
     Group(Group),
