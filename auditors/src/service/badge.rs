@@ -4,7 +4,9 @@ use common::{
     api::{
         self,
         badge::BadgePayload,
-        requests::{CreateRequest, PublicRequest},
+        codes::post_code,
+        mail::send_mail,
+        requests::{get_audit_requests, CreateRequest, PublicRequest},
     },
     auth::Auth,
     context::Context,
@@ -13,9 +15,10 @@ use common::{
         auditor::{Auditor, PublicAuditor},
         badge::{Badge, PublicBadge},
         contacts::Contacts,
+        letter::CreateLetter,
     },
     error::{self, AddCode},
-    services::{AUDITS_SERVICE, PROTOCOL, SEARCH_SERVICE},
+    services::{AUDITS_SERVICE, FRONTEND, PROTOCOL, SEARCH_SERVICE},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -75,6 +78,17 @@ impl BadgeService {
 
         let badges = self.context.try_get_repository::<Badge<ObjectId>>()?;
 
+        let old_badge = badges
+            .find(
+                "contacts.email",
+                &Bson::String(badge.contacts.email.clone().unwrap()),
+            )
+            .await?;
+
+        if let Some(_badge) = old_badge {
+            return Err(anyhow::anyhow!("Badge already exists").code(400));
+        };
+
         let badge = Badge {
             user_id: ObjectId::new(),
             avatar: badge.avatar.unwrap_or_default(),
@@ -88,6 +102,42 @@ impl BadgeService {
             free_at: badge.free_at.unwrap_or_default(),
             price_range: badge.price_range.unwrap_or_default(),
         };
+
+        let payload = BadgePayload {
+            badge_id: badge.user_id,
+            email: badge.contacts.email.clone().unwrap(),
+        };
+
+        let code = post_code(&self.context, serde_json::to_string(&payload)?).await?;
+
+        // delete link
+        let delete_link = format!(
+            "{}://{}/delete/{}/{}",
+            PROTOCOL.as_str(),
+            FRONTEND.as_str(),
+            badge.user_id,
+            code
+        );
+        // merge link
+        let merge_link = format!(
+            "{}://{}/invite-user/{}/{}",
+            PROTOCOL.as_str(),
+            FRONTEND.as_str(),
+            badge.user_id,
+            code
+        );
+
+        let message = format!("merge link: {}, delete link: {}", merge_link, delete_link);
+
+        // send email
+        let letter = CreateLetter {
+            recipient_id: None,
+            recipient_name: None,
+            email: badge.contacts.email.clone().unwrap(),
+            message: message.clone(),
+            subject: "The badge notification".to_string(),
+        };
+        send_mail(&self.context, letter).await?;
 
         badges.insert(&badge).await?;
 
@@ -235,20 +285,7 @@ impl BadgeService {
         };
         // get all audit requests
 
-        let mut requests: Vec<PublicRequest> = self
-            .context
-            .make_request::<Vec<PublicRequest>>()
-            .auth(auth)
-            .get(format!(
-                "{}://{}/api/audit_request/all/auditor/{}",
-                PROTOCOL.as_str(),
-                AUDITS_SERVICE.as_str(),
-                payload.badge_id,
-            ))
-            .send()
-            .await?
-            .json()
-            .await?;
+        let mut requests = get_audit_requests(&self.context, auth).await?;
 
         // delete all audit requests
 
@@ -343,20 +380,7 @@ impl BadgeService {
 
         // get all audit requests
 
-        let requests: Vec<PublicRequest> = self
-            .context
-            .make_request::<Vec<PublicRequest>>()
-            .auth(auth)
-            .get(format!(
-                "{}://{}/api/audit_request/all/auditor/{}",
-                PROTOCOL.as_str(),
-                AUDITS_SERVICE.as_str(),
-                payload.badge_id,
-            ))
-            .send()
-            .await?
-            .json()
-            .await?;
+        let requests = get_audit_requests(&self.context, auth).await?;
 
         // delete all audit requests
 
