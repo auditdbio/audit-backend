@@ -21,7 +21,7 @@ pub async fn post_code(context: &Context, payload: String) -> error::Result<Stri
 
 pub async fn get_code(context: &Context, code: String) -> error::Result<Option<String>> {
     Ok(context
-        .make_request::<String>()
+        .make_request::<()>()
         .get(format!(
             "{}://{}/api/code/{}",
             PROTOCOL.as_str(),

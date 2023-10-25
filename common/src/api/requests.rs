@@ -124,7 +124,7 @@ impl PublicRequest {
 pub async fn get_audit_requests(
     context: &Context,
     auth: Auth,
-) -> error::Result<Vec<AuditRequest<String>>> {
+) -> error::Result<Vec<PublicRequest>> {
     Ok(context
         .make_request::<Vec<PublicRequest>>()
         .get(format!(
@@ -135,7 +135,7 @@ pub async fn get_audit_requests(
         .auth(auth)
         .send()
         .await?
-        .json::<Vec<AuditRequest<String>>>()
+        .json::<Vec<PublicRequest>>()
         .await?)
 }
 

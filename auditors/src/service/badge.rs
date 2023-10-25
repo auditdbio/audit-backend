@@ -285,7 +285,8 @@ impl BadgeService {
         };
         // get all audit requests
 
-        let mut requests = get_audit_requests(&self.context, auth).await?;
+        let mut requests =
+            get_audit_requests(&self.context, Auth::User(badge.user_id.parse()?)).await?;
 
         // delete all audit requests
 
