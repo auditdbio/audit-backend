@@ -7,11 +7,13 @@ use common::{
     context::Context,
     error::{self, AddCode},
     repository::Repository,
+    services::{CUSTOMERS_SERVICE, PROTOCOL},
 };
 
-use mongodb::bson::{oid::ObjectId, Bson, Document};
+use mongodb::bson::{oid::ObjectId, Bson, Document, to_document};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use common::entities::customer::{PublicCustomer};
 
 use crate::repositories::{search::SearchRepo, since::SinceRepo};
 
@@ -161,7 +163,28 @@ impl SearchService {
 
         log::info!("Responces: {:?}", results);
 
-        let result = results.into_iter().filter(|doc| !doc.is_empty()).collect();
+        let mut result: Vec<Document> = results.into_iter().filter(|doc| !doc.is_empty()).collect();
+
+        for doc in result.iter_mut() {
+            if doc.get_str("kind")? == "project" {
+                let customer = self
+                  .context
+                  .make_request::<PublicCustomer>()
+                  .get(format!(
+                      "{}://{}/api/customer/{}",
+                      PROTOCOL.as_str(),
+                      CUSTOMERS_SERVICE.as_str(),
+                      doc.get_str("customer_id")?
+                  ))
+                  .auth(self.context.server_auth())
+                  .send()
+                  .await?
+                  .json::<PublicCustomer>()
+                  .await?;
+
+                doc.insert("creator_contacts", to_document(&customer.contacts).unwrap());
+            }
+        }
 
         Ok(SearchResult {
             result,
