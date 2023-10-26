@@ -24,11 +24,19 @@ impl ChatId {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum MessageKind {
+    Text,
+    Image,
+    File,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateMessage {
     pub chat: Option<String>,
     pub to: Option<PublicChatId>,
     pub role: Role,
     pub text: String,
+    pub kind: Option<MessageKind>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -53,6 +61,7 @@ pub struct PublicMessage {
     pub chat: String,
     pub time: i64,
     pub text: String,
+    pub kind: Option<MessageKind>,
 }
 
 pub fn create_message(message: CreateMessage, auth: Auth) -> error::Result<()> {
