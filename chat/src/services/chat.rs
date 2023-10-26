@@ -4,7 +4,7 @@ use chrono::Utc;
 use common::{
     api::{
         auditor::request_auditor,
-        chat::{ChatId, CreateMessage, PublicChatId, PublicMessage},
+        chat::{ChatId, CreateMessage, PublicChatId, PublicMessage, MessageKind},
         customer::request_customer,
         events::{EventPayload, PublicEvent},
     },
@@ -44,6 +44,7 @@ pub struct Message {
     pub chat: ObjectId,
     pub time: i64,
     pub text: String,
+    pub kind: Option<MessageKind>,
 }
 
 impl Message {
@@ -54,6 +55,7 @@ impl Message {
             chat: self.chat.to_hex(),
             time: self.time,
             text: self.text,
+            kind: self.kind,
         }
     }
 }
@@ -82,6 +84,7 @@ impl ChatService {
                 chat: chat.parse()?,
                 time: Utc::now().timestamp_micros(),
                 text: message.text,
+                kind: message.kind,
             }
         } else {
             let stored_message = Message {
@@ -93,6 +96,7 @@ impl ChatService {
                 chat: ObjectId::new(),
                 time: Utc::now().timestamp_micros(),
                 text: message.text,
+                kind: message.kind,
             };
 
             repo.create_private(stored_message.clone(), message.to.unwrap().parse()?)
