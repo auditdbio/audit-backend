@@ -224,7 +224,11 @@ impl SearchRepo {
     pub async fn delete(&self, id: ObjectId) -> error::Result<()> {
         self.0
             .collection
-            .update_one(doc! {"id": id}, doc! {"$set": {"deleted": true}}, None)
+            .update_one(
+                doc! {"id": id.to_hex()},
+                doc! {"$set": {"deleted": true}},
+                None,
+            )
             .await?;
         Ok(())
     }

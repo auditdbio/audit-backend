@@ -332,6 +332,8 @@ impl BadgeService {
             price_range: badge.price_range,
         };
 
+        auditors.delete("user_id", &id).await?;
+
         auditors.insert(&auditor).await?;
 
         // delete badge
