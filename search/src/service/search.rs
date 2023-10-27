@@ -176,7 +176,7 @@ impl SearchService {
                       CUSTOMERS_SERVICE.as_str(),
                       doc.get_str("customer_id")?
                   ))
-                  .auth(self.context.server_auth())
+                  .auth(auth)
                   .send()
                   .await?
                   .json::<PublicCustomer>()
