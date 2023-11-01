@@ -3,6 +3,7 @@ use actix_multipart::Multipart;
 use actix_web::{delete, get, post, web::Path, HttpResponse};
 use common::{context::Context, error};
 use futures::StreamExt;
+use mongodb::bson::oid::ObjectId;
 
 use crate::service::file::FileService;
 
@@ -15,6 +16,7 @@ pub async fn create_file(context: Context, mut payload: Multipart) -> error::Res
     let mut original_name = String::new();
     let mut customer_id = String::new();
     let mut auditor_id = String::new();
+    let mut full_access = String::new();
 
     while let Some(item) = payload.next().await {
         let mut field = item.unwrap();
@@ -59,17 +61,28 @@ pub async fn create_file(context: Context, mut payload: Multipart) -> error::Res
                     auditor_id.push_str(&String::from_utf8(data.to_vec()).unwrap());
                 }
             }
+
+            "full_access" => {
+                while let Some(chunk) = field.next().await {
+                    let data = chunk.unwrap();
+                    full_access.push_str(&String::from_utf8(data.to_vec()).unwrap());
+                }
+            }
             _ => (),
         }
     }
 
-    let mut allowed_users = vec![];
+    let mut full_access = full_access
+        .split(' ')
+        .map(|s| s.parse())
+        .collect::<Result<Vec<ObjectId>, _>>()?;
+
     if private {
-        allowed_users = vec![customer_id.parse()?, auditor_id.parse()?];
+        full_access.extend(&[customer_id.parse()?, auditor_id.parse()?]);
     }
 
     FileService::new(context)
-        .create_file(path, allowed_users, private, original_name, file.concat())
+        .create_file(path, full_access, private, original_name, file.concat())
         .await?;
 
     Ok(HttpResponse::Ok().finish())
