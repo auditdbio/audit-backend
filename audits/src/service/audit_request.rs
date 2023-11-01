@@ -22,7 +22,6 @@ use common::{
     services::{CUSTOMERS_SERVICE, EVENTS_SERVICE, FRONTEND, PROTOCOL},
 };
 
-use log::info;
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
 

@@ -6,7 +6,7 @@ use common::{
         badge::BadgePayload,
         codes::post_code,
         mail::send_mail,
-        requests::{get_audit_requests, CreateRequest, PublicRequest},
+        requests::{get_audit_requests, CreateRequest},
     },
     auth::Auth,
     context::Context,
@@ -18,7 +18,7 @@ use common::{
         letter::CreateLetter,
     },
     error::{self, AddCode},
-    services::{AUDITS_SERVICE, FRONTEND, PROTOCOL, SEARCH_SERVICE},
+    services::{FRONTEND, PROTOCOL, SEARCH_SERVICE},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -234,43 +234,6 @@ impl BadgeService {
         Ok(badge.stringify())
     }
 
-    // pub async fn substitute(&self, badge_id: ObjectId) -> error::Result<()> {
-    //     let auth = self.context.auth();
-
-    //     let Some(&user_id) = auth.id() else {
-    //         return Err(anyhow::anyhow!("User is not available to change this badge").code(400));
-    //     };
-
-    //     let payload = MergePayload { badge_id, user_id };
-    //     // create code
-    //     let code = post_code(&self.context, serde_json::to_string(&payload)?).await?;
-
-    //     let badges = self.context.try_get_repository::<Badge<ObjectId>>()?;
-
-    //     let Some(badge) = badges.find("user_id", &Bson::ObjectId(badge_id)).await? else {
-    //         return Err(anyhow::anyhow!("No badge found").code(400));
-    //     };
-
-    //     // send link with code
-    //     let link = format!(
-    //         "https://{}/api/badge/merge/run/{}",
-    //         AUDITORS_SERVICE.as_str(),
-    //         code
-    //     );
-
-    //     let letter = CreateLetter {
-    //         email: badge.contacts.email.unwrap(),
-    //         message: include_str!("../../templates/code.txt").replace("{link}", &link),
-    //         subject: include_str!("../../templates/code_subject.txt").to_owned(),
-
-    //         ..CreateLetter::default()
-    //     };
-
-    //     api::mail::send_mail(&self.context, letter).await?;
-
-    //     Ok(())
-    // }
-
     pub async fn merge(&self, code: String) -> error::Result<PublicAuditor> {
         let auth = *self.context.auth();
 
@@ -304,7 +267,7 @@ impl BadgeService {
             // CreateRequest
             let new_request = CreateRequest {
                 customer_id: request.customer_id.clone(),
-                auditor_id: request.auditor_id.clone(),
+                auditor_id: id.to_hex(),
                 project_id: request.project_id.clone(),
                 price: request.price,
                 description: request.description.clone(),
@@ -344,37 +307,6 @@ impl BadgeService {
 
         Ok(auth.public_auditor(auditor))
     }
-
-    // pub async fn delete(&self, badge_id: ObjectId) -> error::Result<()> {
-    //     let payload = DeletePayload { badge_id };
-    //     // create code
-    //     let code = post_code(&self.context, serde_json::to_string(&payload)?).await?;
-
-    //     let badges = self.context.try_get_repository::<Badge<ObjectId>>()?;
-
-    //     let Some(badge) = badges.find("user_id", &Bson::ObjectId(badge_id)).await? else {
-    //         return Err(anyhow::anyhow!("No badge found").code(400));
-    //     };
-
-    //     // send link with code
-    //     let link = format!(
-    //         "https://{}/api/badge/delete/run/{}",
-    //         AUDITORS_SERVICE.as_str(),
-    //         code
-    //     );
-
-    //     let letter = CreateLetter {
-    //         email: badge.contacts.email.unwrap(),
-    //         message: include_str!("../../templates/code.txt").replace("{link}", &link),
-    //         subject: include_str!("../../templates/code_subject.txt").to_owned(),
-
-    //         ..CreateLetter::default()
-    //     };
-
-    //     api::mail::send_mail(&self.context, letter).await?;
-
-    //     Ok(())
-    // }
 
     pub async fn delete(&self, code: String) -> error::Result<()> {
         let payload: BadgePayload =
