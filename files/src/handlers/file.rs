@@ -75,10 +75,17 @@ pub async fn create_file(
         }
     }
 
+    fn parse_id(id: &str) -> Option<ObjectId> {
+        if id.len() != 12 {
+            return None;
+        }
+        id.parse().ok()
+    }
+
     let mut full_access = full_access
         .split(' ')
-        .map(|s| s.parse())
-        .collect::<Result<Vec<ObjectId>, _>>()?;
+        .filter_map(parse_id)
+        .collect::<Vec<ObjectId>>();
 
     if private {
         full_access.extend(&[customer_id.parse()?, auditor_id.parse()?]);
