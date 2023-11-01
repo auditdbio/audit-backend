@@ -238,6 +238,7 @@ impl BadgeService {
         let auth = self.context.auth();
 
         let id = auth.id().unwrap();
+        let id_str = id.to_hex();
 
         // get payload from code
         let payload: BadgePayload =
@@ -260,23 +261,6 @@ impl BadgeService {
                 request.id.parse()?,
             )
             .await?;
-        }
-        // create new audit requests
-
-        for request in &mut requests {
-            // CreateRequest
-            let new_request = CreateRequest {
-                customer_id: request.customer_id.clone(),
-                auditor_id: id.to_hex(),
-                project_id: request.project_id.clone(),
-                price: request.price,
-                description: request.description.clone(),
-                time: request.time.clone(),
-            };
-
-            let auth = Auth::User(request.customer_id.parse()?);
-
-            api::requests::create_request(&self.context, auth, new_request).await?;
         }
 
         let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
@@ -308,6 +292,27 @@ impl BadgeService {
         badges.delete("user_id", &payload.badge_id).await?;
 
         delete_from_search(&self.context, payload.badge_id).await?;
+
+        // create new audit requests
+
+        for request in &mut requests {
+            if &request.customer_id == &id_str {
+                continue;
+            }
+            // CreateRequest
+            let new_request = CreateRequest {
+                customer_id: request.customer_id.clone(),
+                auditor_id: id_str.clone(),
+                project_id: request.project_id.clone(),
+                price: request.price,
+                description: request.description.clone(),
+                time: request.time.clone(),
+            };
+
+            let auth = Auth::User(request.customer_id.parse()?);
+
+            api::requests::create_request(&self.context, auth, new_request).await?;
+        }
 
         Ok(auth.public_auditor(auditor))
     }
