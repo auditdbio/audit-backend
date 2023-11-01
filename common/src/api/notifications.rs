@@ -47,7 +47,7 @@ pub async fn send_notification(
         mut message,
         links,
         role,
-        substitutions,
+        mut substitutions,
         title,
         ..
     } = new_notification;
@@ -55,6 +55,9 @@ pub async fn send_notification(
         message = message.replace(&format!("{{{}}}", key), &value);
         subject = subject.replace(&format!("{{{}}}", key), &value);
         alert = alert.replace(&format!("{{{}}}", key), &value);
+        for sub in &mut substitutions {
+            sub.text = sub.text.replace(&format!("{{{}}}", key), &value);
+        }
     }
 
     let user_id = user_id.unwrap();
