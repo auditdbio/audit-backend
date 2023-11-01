@@ -295,9 +295,13 @@ impl BadgeService {
             price_range: badge.price_range,
         };
 
-        auditors.delete("user_id", &id).await?;
-
-        auditors.insert(&auditor).await?;
+        if auditors
+            .find("user_id", &Bson::ObjectId(id))
+            .await?
+            .is_none()
+        {
+            auditors.insert(&auditor).await?;
+        }
 
         // delete badge
         let badges = self.context.try_get_repository::<Badge<ObjectId>>()?;
