@@ -12,7 +12,7 @@ COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 
 COPY . .
-RUN cargo build --release
+RUN cargo build --release --features "test_server"
 
 RUN chmod +x ./setup.sh
 CMD ["./setup.sh"]
