@@ -2,14 +2,14 @@ use mongodb::bson::oid::ObjectId;
 
 use crate::{
     auth::Auth,
-    context::Context,
+    context::GeneralContext,
     entities::customer::PublicCustomer,
     error,
     services::{CUSTOMERS_SERVICE, PROTOCOL},
 };
 
 pub async fn request_customer(
-    context: &Context,
+    context: &GeneralContext,
     id: ObjectId,
     auth: Auth,
 ) -> error::Result<PublicCustomer> {

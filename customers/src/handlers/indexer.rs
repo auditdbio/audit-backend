@@ -4,7 +4,7 @@ use actix_web::{
     HttpResponse,
 };
 use common::{
-    context::Context,
+    context::GeneralContext,
     entities::{customer::PublicCustomer, project::PublicProject},
     error,
 };
@@ -14,7 +14,7 @@ use crate::service::indexer::IndexerService;
 
 #[get("/api/customer/data/{since}")]
 pub async fn provide_customer_data(
-    context: Context,
+    context: GeneralContext,
     since: web::Path<i64>,
 ) -> error::Result<Json<Vec<Document>>> {
     Ok(Json(
@@ -26,7 +26,7 @@ pub async fn provide_customer_data(
 
 #[get("/api/project/data/{since}")]
 pub async fn provide_project_data(
-    context: Context,
+    context: GeneralContext,
     since: web::Path<i64>,
 ) -> error::Result<Json<Vec<Document>>> {
     Ok(Json(
@@ -38,7 +38,7 @@ pub async fn provide_project_data(
 
 #[post("/api/customer/data")]
 pub async fn get_customer_data(
-    context: Context,
+    context: GeneralContext,
     Json(ids): web::Json<Vec<ObjectId>>,
 ) -> error::Result<Json<Vec<PublicCustomer>>> {
     Ok(Json(
@@ -48,7 +48,7 @@ pub async fn get_customer_data(
 
 #[post("/api/project/data")]
 pub async fn get_project_data(
-    context: Context,
+    context: GeneralContext,
     Json(ids): web::Json<Vec<ObjectId>>,
 ) -> error::Result<Json<Vec<PublicProject>>> {
     Ok(Json(IndexerService::new(context).find_projects(ids).await?))

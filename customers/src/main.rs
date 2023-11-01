@@ -2,14 +2,14 @@ use std::{env, sync::Arc};
 
 use actix_web::HttpServer;
 use common::{
-    context::ServiceState,
+    context::effectfull_context::ServiceState,
     entities::{customer::Customer, project::Project},
     repository::mongo_repository::MongoRepository,
 };
 
+use common::auth::Service;
 use customers::create_app;
 use mongodb::bson::oid::ObjectId;
-use common::auth::Service;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

@@ -10,7 +10,7 @@ use common::{
         issue::PublicIssue,
         send_notification, NewNotification,
     },
-    context::Context,
+    context::GeneralContext,
     entities::{
         audit::{Audit, AuditStatus},
         audit_request::AuditRequest,
@@ -25,11 +25,11 @@ use mongodb::bson::{oid::ObjectId, Bson};
 use super::audit_request::PublicRequest;
 
 pub struct AuditService {
-    context: Context,
+    context: GeneralContext,
 }
 
 impl AuditService {
-    pub fn new(context: Context) -> Self {
+    pub fn new(context: GeneralContext) -> Self {
         Self { context }
     }
 
@@ -67,7 +67,7 @@ impl AuditService {
 
         let public_audit = PublicAudit::new(&self.context, audit).await?;
 
-        let event_reciver = if auth.id().unwrap() == &customer_id {
+        let event_reciver = if auth.id().unwrap() == customer_id {
             auditor_id
         } else {
             customer_id
@@ -96,7 +96,7 @@ impl AuditService {
             return Ok(None);
         };
 
-        if !Read.get_access(auth, &audit) {
+        if !Read.get_access(&auth, &audit) {
             return Err(anyhow::anyhow!("User is not available to change this audit").code(403));
         }
 
@@ -123,12 +123,12 @@ impl AuditService {
         let audits = match role {
             Role::Auditor => {
                 audits
-                    .find_many("auditor_id", &Bson::ObjectId(*auth.id().unwrap()))
+                    .find_many("auditor_id", &Bson::ObjectId(auth.id().unwrap()))
                     .await?
             }
             Role::Customer => {
                 audits
-                    .find_many("customer_id", &Bson::ObjectId(*auth.id().unwrap()))
+                    .find_many("customer_id", &Bson::ObjectId(auth.id().unwrap()))
                     .await?
             }
         };
@@ -151,7 +151,7 @@ impl AuditService {
             return Err(anyhow::anyhow!("No audit found").code(404));
         };
 
-        if !Edit.get_access(auth, &audit) {
+        if !Edit.get_access(&auth, &audit) {
             return Err(anyhow::anyhow!("User is not available to change this audit").code(403));
         }
 
@@ -193,7 +193,7 @@ impl AuditService {
         audits.delete("_id", &id).await?;
         audits.insert(&audit).await?;
 
-        let event_reciver = if auth.id().unwrap() == &audit.customer_id {
+        let event_reciver = if auth.id().unwrap() == audit.customer_id {
             audit.auditor_id
         } else {
             audit.customer_id
@@ -220,7 +220,7 @@ impl AuditService {
             return Err(anyhow::anyhow!("No audit found").code(404));
         };
 
-        if !Edit.get_access(auth, &audit) {
+        if !Edit.get_access(&auth, &audit) {
             audits.insert(&audit).await?;
             return Err(anyhow::anyhow!("User is not available to delete this audit").code(403));
         }
@@ -286,14 +286,14 @@ impl AuditService {
     }
 
     fn create_event(
-        context: &Context,
+        context: &GeneralContext,
         issue: &mut Issue<ObjectId>,
         kind: EventKind,
         message: String,
     ) {
         let event = Event {
             timestamp: Utc::now().timestamp(),
-            user: *context.auth().id().unwrap(),
+            user: context.auth().id().unwrap(),
             kind,
             message,
             id: issue.events.len(),
@@ -312,7 +312,7 @@ impl AuditService {
             return Err(anyhow::anyhow!("No audit found").code(404));
         };
 
-        if !change.get_access(&audit, auth) {
+        if !change.get_access(&audit, &auth) {
             return Err(anyhow::anyhow!("User is not available to change this issue").code(403));
         }
 
@@ -342,7 +342,7 @@ impl AuditService {
             );
         }
 
-        let role = if auth.id().unwrap() == &audit.customer_id {
+        let role = if auth.id().unwrap() == audit.customer_id {
             Role::Customer
         } else {
             Role::Auditor
@@ -421,12 +421,7 @@ impl AuditService {
                 "deleted link".to_string()
             };
 
-            Self::create_event(
-                &self.context,
-                &mut issue,
-                EventKind::IssueLink,
-                message
-            );
+            Self::create_event(&self.context, &mut issue, EventKind::IssueLink, message);
         }
 
         if let Some(include) = change.include {
@@ -448,12 +443,7 @@ impl AuditService {
 
             issue.feedback = feedback;
 
-            Self::create_event(
-                &self.context,
-                &mut issue,
-                kind,
-                message
-            );
+            Self::create_event(&self.context, &mut issue, kind, message);
         }
 
         if let Some(events) = change.events {
@@ -461,7 +451,7 @@ impl AuditService {
 
             let project = get_project(&self.context, audit.project_id).await?;
 
-            let role = if sender_id == &audit.customer_id {
+            let role = if sender_id == audit.customer_id {
                 Role::Customer
             } else {
                 Role::Auditor
@@ -470,7 +460,7 @@ impl AuditService {
             for create_event in events {
                 let event = Event {
                     timestamp: Utc::now().timestamp(),
-                    user: *self.context.auth().id().unwrap(),
+                    user: self.context.auth().id().unwrap(),
                     kind: create_event.kind,
                     message: create_event.message,
                     id: issue.events.len(),
@@ -524,7 +514,7 @@ impl AuditService {
 
         let public_issue = auth.public_issue(issue);
 
-        let event_reciver = if auth.id().unwrap() == &audit.customer_id {
+        let event_reciver = if auth.id().unwrap() == audit.customer_id {
             audit.auditor_id
         } else {
             audit.customer_id
@@ -580,11 +570,11 @@ impl AuditService {
         let audit = self.get_audit(audit_id).await?;
 
         if let Some(audit) = audit {
-            if !Read.get_access(auth, &audit) {
+            if !Read.get_access(&auth, &audit) {
                 return Err(anyhow::anyhow!("User is not available to read this audit").code(403));
             }
 
-            let is_customer = auth.id().unwrap() == &audit.customer_id;
+            let is_customer = auth.id().unwrap() == audit.customer_id;
 
             let issues = audit.issues;
 

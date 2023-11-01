@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
 use actix_web::HttpServer;
-use common::context::ServiceState;
+use common::auth::Service;
+use common::context::effectfull_context::ServiceState;
 use event::{create_app, service::event::SessionManager};
 use tokio::sync::Mutex;
-use common::auth::Service;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

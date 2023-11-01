@@ -4,16 +4,16 @@ use actix_web::web;
 use chrono::Utc;
 use common::{
     auth::Auth,
-    context::Context,
+    context::GeneralContext,
     error::{self, AddCode},
     repository::Repository,
     services::{CUSTOMERS_SERVICE, PROTOCOL},
 };
 
-use mongodb::bson::{oid::ObjectId, Bson, Document, to_document};
+use common::entities::customer::PublicCustomer;
+use mongodb::bson::{oid::ObjectId, to_document, Bson, Document};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use common::entities::customer::{PublicCustomer};
 
 use crate::repositories::{search::SearchRepo, since::SinceRepo};
 
@@ -97,11 +97,11 @@ pub struct SearchInsertRequest {
 
 pub struct SearchService {
     pub repo: web::Data<SearchRepo>,
-    pub context: Context,
+    pub context: GeneralContext,
 }
 
 impl SearchService {
-    pub fn new(repo: web::Data<SearchRepo>, context: Context) -> Self {
+    pub fn new(repo: web::Data<SearchRepo>, context: GeneralContext) -> Self {
         Self { repo, context }
     }
 
@@ -112,7 +112,7 @@ impl SearchService {
 
     pub async fn search(&self, query: SearchQuery) -> error::Result<SearchResult> {
         let mut auth = self.context.server_auth();
-        if &Auth::None != self.context.auth() {
+        if Auth::None != self.context.auth() {
             auth = auth.authorized();
         }
 
@@ -168,19 +168,19 @@ impl SearchService {
         for doc in result.iter_mut() {
             if doc.get_str("kind")? == "project" {
                 let customer = self
-                  .context
-                  .make_request::<PublicCustomer>()
-                  .get(format!(
-                      "{}://{}/api/customer/{}",
-                      PROTOCOL.as_str(),
-                      CUSTOMERS_SERVICE.as_str(),
-                      doc.get_str("customer_id")?
-                  ))
-                  .auth(auth)
-                  .send()
-                  .await?
-                  .json::<PublicCustomer>()
-                  .await?;
+                    .context
+                    .make_request::<PublicCustomer>()
+                    .get(format!(
+                        "{}://{}/api/customer/{}",
+                        PROTOCOL.as_str(),
+                        CUSTOMERS_SERVICE.as_str(),
+                        doc.get_str("customer_id")?
+                    ))
+                    .auth(auth)
+                    .send()
+                    .await?
+                    .json::<PublicCustomer>()
+                    .await?;
 
                 doc.insert("creator_contacts", to_document(&customer.contacts).unwrap());
             }

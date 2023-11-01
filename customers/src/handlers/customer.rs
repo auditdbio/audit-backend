@@ -5,7 +5,7 @@ use actix_web::{
 };
 
 use common::{
-    context::Context,
+    context::GeneralContext,
     entities::{
         customer::{Customer, PublicCustomer},
         project::PublicProject,
@@ -19,14 +19,17 @@ use crate::service::customer::{CreateCustomer, CustomerChange, CustomerService};
 
 #[post("/api/customer")]
 pub async fn post_customer(
-    context: Context,
+    context: GeneralContext,
     Json(data): web::Json<CreateCustomer>,
 ) -> error::Result<Json<Customer<String>>> {
     Ok(Json(CustomerService::new(context).create(data).await?))
 }
 
 #[get("/api/customer/{id}")]
-pub async fn get_customer(context: Context, id: web::Path<String>) -> error::Result<HttpResponse> {
+pub async fn get_customer(
+    context: GeneralContext,
+    id: web::Path<String>,
+) -> error::Result<HttpResponse> {
     let res = CustomerService::new(context).find(id.parse()?).await?;
     if let Some(res) = res {
         Ok(HttpResponse::Ok().json(res))
@@ -36,7 +39,7 @@ pub async fn get_customer(context: Context, id: web::Path<String>) -> error::Res
 }
 
 #[get("/api/my_customer")]
-pub async fn my_customer(context: Context) -> error::Result<HttpResponse> {
+pub async fn my_customer(context: GeneralContext) -> error::Result<HttpResponse> {
     let res = CustomerService::new(context).my_customer().await?;
     if let Some(res) = res {
         Ok(HttpResponse::Ok().json(res))
@@ -47,7 +50,7 @@ pub async fn my_customer(context: Context) -> error::Result<HttpResponse> {
 
 #[patch("/api/my_customer")]
 pub async fn patch_customer(
-    context: Context,
+    context: GeneralContext,
     Json(data): Json<CustomerChange>,
 ) -> error::Result<Json<Customer<String>>> {
     Ok(Json(CustomerService::new(context).change(data).await?))
@@ -55,7 +58,7 @@ pub async fn patch_customer(
 
 #[delete("/api/customer/{id}")]
 pub async fn delete_customer(
-    context: Context,
+    context: GeneralContext,
     id: web::Path<String>,
 ) -> error::Result<Json<PublicCustomer>> {
     Ok(Json(
@@ -65,7 +68,7 @@ pub async fn delete_customer(
 
 #[get("/api/customer/{id}/project")]
 pub async fn get_customer_projects(
-    context: Context,
+    context: GeneralContext,
     id: web::Path<String>,
 ) -> error::Result<Json<Vec<PublicProject>>> {
     Ok(Json(

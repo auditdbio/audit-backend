@@ -4,11 +4,11 @@ use chrono::Utc;
 use common::{
     api::{
         auditor::request_auditor,
-        chat::{ChatId, CreateMessage, PublicChatId, PublicMessage, MessageKind},
+        chat::{ChatId, CreateMessage, MessageKind, PublicChatId, PublicMessage},
         customer::request_customer,
         events::{EventPayload, PublicEvent},
     },
-    context::Context,
+    context::GeneralContext,
     entities::role::Role,
     error,
     services::{EVENTS_SERVICE, PROTOCOL},
@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use crate::repositories::chat::{Chat, ChatRepository, Group};
 
 pub struct ChatService {
-    context: Context,
+    context: GeneralContext,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -61,7 +61,7 @@ impl Message {
 }
 
 impl ChatService {
-    pub fn new(context: Context) -> Self {
+    pub fn new(context: GeneralContext) -> Self {
         Self { context }
     }
 
@@ -78,7 +78,7 @@ impl ChatService {
             Message {
                 id: ObjectId::new(),
                 from: ChatId {
-                    id: *auth.id().unwrap(),
+                    id: auth.id().unwrap(),
                     role: message.role,
                 },
                 chat: chat.parse()?,
@@ -90,7 +90,7 @@ impl ChatService {
             let stored_message = Message {
                 id: ObjectId::new(),
                 from: ChatId {
-                    id: *auth.id().unwrap(),
+                    id: auth.id().unwrap(),
                     role: message.role,
                 },
                 chat: ObjectId::new(),
@@ -135,7 +135,7 @@ impl ChatService {
 
         let id = ChatId {
             role,
-            id: *auth.id().unwrap(),
+            id: auth.id().unwrap(),
         };
 
         let (chats, privates) = repo.groups_by_user(id).await?;
@@ -144,16 +144,22 @@ impl ChatService {
 
         for private in privates {
             for id in private.members {
-                if &id.id == auth.id().unwrap() {
+                if id.id == auth.id().unwrap() {
                     continue;
                 }
 
                 let (name, avatar) = if id.role == Role::Auditor {
                     let auditor = request_auditor(&self.context, id.id, auth.clone()).await?;
-                    (auditor.first_name().clone() + " " + auditor.last_name(), auditor.avatar().to_string())
+                    (
+                        auditor.first_name().clone() + " " + auditor.last_name(),
+                        auditor.avatar().to_string(),
+                    )
                 } else {
                     let customer = request_customer(&self.context, id.id, auth.clone()).await?;
-                    (customer.first_name + " " + &customer.last_name, customer.avatar)
+                    (
+                        customer.first_name + " " + &customer.last_name,
+                        customer.avatar,
+                    )
                 };
 
                 chats.push(PublicChat {

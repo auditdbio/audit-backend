@@ -6,14 +6,14 @@ use actix_web::{
 
 use crate::service::badge::{BadgeService, CreateBadge};
 use common::{
-    context::Context,
+    context::GeneralContext,
     entities::badge::{Badge, PublicBadge},
     error,
 };
 
 #[post("/api/badge")]
 pub async fn post_badge(
-    context: Context,
+    context: GeneralContext,
     Json(data): web::Json<CreateBadge>,
 ) -> error::Result<Json<Badge<String>>> {
     Ok(Json(BadgeService::new(context).create(data).await?))
@@ -21,7 +21,7 @@ pub async fn post_badge(
 
 #[get("/api/badge/{email}")]
 pub async fn find_badge(
-    context: Context,
+    context: GeneralContext,
     email: web::Path<String>,
 ) -> error::Result<Json<Option<PublicBadge>>> {
     Ok(Json(
@@ -32,7 +32,10 @@ pub async fn find_badge(
 }
 
 #[patch("/api/badge/merge/{secret}")]
-pub async fn merge(context: Context, secret: web::Path<String>) -> error::Result<HttpResponse> {
+pub async fn merge(
+    context: GeneralContext,
+    secret: web::Path<String>,
+) -> error::Result<HttpResponse> {
     BadgeService::new(context)
         .merge(secret.into_inner())
         .await?;
@@ -40,7 +43,10 @@ pub async fn merge(context: Context, secret: web::Path<String>) -> error::Result
 }
 
 #[delete("/api/badge/delete/{secret}")]
-pub async fn delete(context: Context, secret: web::Path<String>) -> error::Result<HttpResponse> {
+pub async fn delete(
+    context: GeneralContext,
+    secret: web::Path<String>,
+) -> error::Result<HttpResponse> {
     BadgeService::new(context)
         .delete(secret.into_inner())
         .await?;

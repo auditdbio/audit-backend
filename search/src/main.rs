@@ -1,6 +1,6 @@
 use actix_web::rt::{spawn, time};
 use common::auth::{Auth, Service};
-use common::context::ServiceState;
+use common::context::effectfull_context::ServiceState;
 use common::repository::mongo_repository::MongoRepository;
 use common::repository::Repository;
 use common::services::{AUDITORS_SERVICE, CUSTOMERS_SERVICE};

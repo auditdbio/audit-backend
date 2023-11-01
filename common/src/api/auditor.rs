@@ -2,14 +2,14 @@ use mongodb::bson::oid::ObjectId;
 
 use crate::{
     auth::Auth,
-    context::Context,
+    context::GeneralContext,
     entities::auditor::{ExtendedAuditor, PublicAuditor},
     error,
     services::{AUDITORS_SERVICE, PROTOCOL},
 };
 
 pub async fn request_auditor(
-    context: &Context,
+    context: &GeneralContext,
     id: ObjectId,
     auth: Auth,
 ) -> error::Result<ExtendedAuditor> {

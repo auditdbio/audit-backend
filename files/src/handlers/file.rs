@@ -1,14 +1,17 @@
 use actix_files::NamedFile;
 use actix_multipart::Multipart;
 use actix_web::{delete, get, post, web::Path, HttpResponse};
-use common::{context::Context, error};
+use common::{context::GeneralContext, error};
 use futures::StreamExt;
 use mongodb::bson::oid::ObjectId;
 
 use crate::service::file::FileService;
 
 #[post("/api/file")]
-pub async fn create_file(context: Context, mut payload: Multipart) -> error::Result<HttpResponse> {
+pub async fn create_file(
+    context: GeneralContext,
+    mut payload: Multipart,
+) -> error::Result<HttpResponse> {
     let mut file = vec![];
     let mut path = String::new();
 
@@ -89,14 +92,20 @@ pub async fn create_file(context: Context, mut payload: Multipart) -> error::Res
 }
 
 #[get("/api/file/{filename:.*}")]
-pub async fn find_file(context: Context, filename: Path<String>) -> error::Result<NamedFile> {
+pub async fn find_file(
+    context: GeneralContext,
+    filename: Path<String>,
+) -> error::Result<NamedFile> {
     FileService::new(context)
         .find_file(filename.into_inner())
         .await
 }
 
 #[delete("/api/file/{filename:.*}")]
-pub async fn delete_file(context: Context, filename: Path<String>) -> error::Result<NamedFile> {
+pub async fn delete_file(
+    context: GeneralContext,
+    filename: Path<String>,
+) -> error::Result<NamedFile> {
     FileService::new(context)
         .find_file(filename.into_inner())
         .await

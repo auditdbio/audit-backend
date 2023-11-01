@@ -1,6 +1,6 @@
 extern crate lazy_static;
 
-use common::context::ServiceState;
+use common::context::effectfull_context::ServiceState;
 
 use common::entities::letter::Letter;
 use common::repository::mongo_repository::MongoRepository;

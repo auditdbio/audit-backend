@@ -9,7 +9,7 @@ use common::{
         user::CreateUser,
     },
     auth::Auth,
-    context::Context,
+    context::GeneralContext,
     entities::{badge::PublicBadge, letter::CreateLetter, user::User},
     error::{self, AddCode},
     repository::Entity,
@@ -26,7 +26,7 @@ lazy_static::lazy_static! {
 }
 
 pub struct AuthService {
-    context: Context,
+    context: GeneralContext,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -86,7 +86,7 @@ pub struct TokenResponce {
 }
 
 impl AuthService {
-    pub fn new(context: Context) -> Self {
+    pub fn new(context: GeneralContext) -> Self {
         Self { context }
     }
 

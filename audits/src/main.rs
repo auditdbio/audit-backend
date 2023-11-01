@@ -6,7 +6,7 @@ use audits::create_app;
 
 use audits::migrations::up_migrations;
 use common::auth::Service;
-use common::context::ServiceState;
+use common::context::effectfull_context::ServiceState;
 use common::entities::audit::Audit;
 use common::entities::audit_request::AuditRequest;
 use common::repository::mongo_repository::MongoRepository;

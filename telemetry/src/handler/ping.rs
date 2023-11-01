@@ -5,20 +5,20 @@ use actix_web::{
 };
 use common::{
     api::events::{post_event, EventPayload, PublicEvent},
-    context::Context,
+    context::GeneralContext,
 };
 use mongodb::bson::oid::ObjectId;
 
 use crate::service::ping::{self, Service, Status};
 
 #[get("/api/status")]
-pub async fn status(context: Context, services: web::Data<Vec<Service>>) -> Json<Status> {
+pub async fn status(context: GeneralContext, services: web::Data<Vec<Service>>) -> Json<Status> {
     let status = ping::status(context, &services).await;
     Json(status)
 }
 
 #[get("/api/telemetry/update")]
-pub async fn update(context: Context) -> HttpResponse {
+pub async fn update(context: GeneralContext) -> HttpResponse {
     match ping::update(&context).await {
         Ok(_) => {
             let event = PublicEvent::new(ObjectId::new(), EventPayload::VersionUpdate);

@@ -3,7 +3,7 @@ use common::{
     access_rules::{AccessRules, Edit, Read},
     api::badge::merge,
     auth::Auth,
-    context::Context,
+    context::GeneralContext,
     entities::user::{PublicUser, User},
     error::{self, AddCode},
 };
@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use super::auth::ChangePassword;
 
 pub struct UserService {
-    pub context: Context,
+    pub context: GeneralContext,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -29,7 +29,7 @@ pub struct UserChange {
 }
 
 impl UserService {
-    pub fn new(context: Context) -> Self {
+    pub fn new(context: GeneralContext) -> Self {
         Self { context }
     }
 
@@ -59,7 +59,7 @@ impl UserService {
             return Ok(None);
         };
 
-        if !Read.get_access(auth, &user) {
+        if !Read.get_access(&auth, &user) {
             return Err(anyhow::anyhow!("User is not available to read this user").code(403));
         }
 
@@ -72,7 +72,7 @@ impl UserService {
         let users = self.context.try_get_repository::<User<ObjectId>>()?;
 
         let Some(user) = users
-            .find("id", &Bson::ObjectId(*auth.id().unwrap()))
+            .find("id", &Bson::ObjectId(auth.id().unwrap()))
             .await?
         else {
             return Ok(None);
@@ -90,7 +90,7 @@ impl UserService {
             return Err(anyhow::anyhow!("No user found").code(404));
         };
 
-        if !Edit.get_access(auth, &user) {
+        if !Edit.get_access(&auth, &user) {
             return Err(anyhow::anyhow!("User is not available to change this user").code(403));
         }
 
@@ -148,7 +148,7 @@ impl UserService {
             return Err(anyhow::anyhow!("No user found").code(404));
         };
 
-        if !Edit.get_access(auth, &user) {
+        if !Edit.get_access(&auth, &user) {
             users.insert(&user).await?;
             return Err(anyhow::anyhow!("User is not available to delete this user").code(403));
         }

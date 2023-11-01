@@ -2,7 +2,7 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    context::Context,
+    context::GeneralContext,
     default_timestamp,
     entities::{
         letter::CreateLetter,
@@ -34,7 +34,7 @@ pub struct NewNotification {
 }
 
 pub async fn send_notification(
-    context: &Context,
+    context: &GeneralContext,
     email: bool,
     notification: bool,
     new_notification: NewNotification,

@@ -9,7 +9,7 @@ use common::{
         requests::{get_audit_requests, CreateRequest},
     },
     auth::Auth,
-    context::Context,
+    context::GeneralContext,
     entities::{
         audit_request::PriceRange,
         auditor::{Auditor, PublicAuditor},
@@ -50,10 +50,10 @@ pub struct BadgeChange {
 }
 
 pub struct BadgeService {
-    context: Context,
+    context: GeneralContext,
 }
 
-async fn delete_from_search(context: &Context, id: ObjectId) -> error::Result<()> {
+async fn delete_from_search(context: &GeneralContext, id: ObjectId) -> error::Result<()> {
     context
         .make_request::<()>()
         .auth(context.server_auth())
@@ -69,7 +69,7 @@ async fn delete_from_search(context: &Context, id: ObjectId) -> error::Result<()
 }
 
 impl BadgeService {
-    pub fn new(context: Context) -> Self {
+    pub fn new(context: GeneralContext) -> Self {
         Self { context }
     }
 
@@ -153,7 +153,7 @@ impl BadgeService {
             return Ok(None);
         };
 
-        if !Read.get_access(auth, &badge) {
+        if !Read.get_access(&auth, &badge) {
             return Err(anyhow::anyhow!("User is not available to change this badge").code(400));
         }
 
@@ -169,7 +169,7 @@ impl BadgeService {
             return Ok(None);
         };
 
-        if !Read.get_access(auth, &badge) {
+        if !Read.get_access(&auth, &badge) {
             return Err(anyhow::anyhow!("User is not available to change this badge").code(400));
         }
 
@@ -178,7 +178,7 @@ impl BadgeService {
 
     pub async fn change(&self, change: BadgeChange) -> error::Result<Badge<String>> {
         let auth = self.context.auth();
-        let id = *auth.id().unwrap();
+        let id = auth.id().unwrap();
 
         let badges = self.context.try_get_repository::<Badge<ObjectId>>()?;
 
@@ -186,7 +186,7 @@ impl BadgeService {
             return Err(anyhow::anyhow!("No badge found").code(400));
         };
 
-        if !Edit.get_access(auth, &badge) {
+        if !Edit.get_access(&auth, &badge) {
             return Err(anyhow::anyhow!("User is not available to change this badge").code(400));
         }
 
@@ -235,9 +235,9 @@ impl BadgeService {
     }
 
     pub async fn merge(&self, code: String) -> error::Result<PublicAuditor> {
-        let auth = *self.context.auth();
+        let auth = self.context.auth();
 
-        let id = *auth.id().unwrap();
+        let id = auth.id().unwrap();
 
         // get payload from code
         let payload: BadgePayload =

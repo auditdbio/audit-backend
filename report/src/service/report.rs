@@ -3,7 +3,7 @@ use common::{
         audits::{AuditChange, PublicAudit},
         issue::PublicIssue,
     },
-    context::Context,
+    context::GeneralContext,
     entities::issue::Status,
     services::{FILES_SERVICE, FRONTEND, PROTOCOL, RENDERER_SERVICE, USERS_SERVICE},
 };
@@ -270,10 +270,13 @@ fn generate_data(audit: &PublicAudit) -> Vec<Section> {
     generate_audit_sections(audit, issues)
 }
 
-pub async fn create_report(context: Context, audit_id: String) -> anyhow::Result<PublicReport> {
+pub async fn create_report(
+    context: GeneralContext,
+    audit_id: String,
+) -> anyhow::Result<PublicReport> {
     let audit = context
         .make_request::<PublicAudit>()
-        .auth(*context.auth())
+        .auth(context.auth())
         .get(format!(
             "{}://{}/api/audit/{}",
             PROTOCOL.as_str(),
@@ -315,7 +318,7 @@ pub async fn create_report(context: Context, audit_id: String) -> anyhow::Result
 
     let path = audit.id.clone() + ".pdf";
 
-    let client = &context.0.client;
+    let client = &context.client();
     let form = Form::new()
         .part("file", Part::bytes(report.to_vec()))
         .part("path", Part::text(path.clone()))
@@ -347,7 +350,7 @@ pub async fn create_report(context: Context, audit_id: String) -> anyhow::Result
             USERS_SERVICE.as_str(),
             audit.id
         ))
-        .auth(*context.auth())
+        .auth(context.auth())
         .json(&audit_change)
         .send()
         .await

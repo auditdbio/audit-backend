@@ -1,6 +1,6 @@
 use common::{
     access_rules::{AccessRules, SendMail},
-    context::Context,
+    context::GeneralContext,
     entities::{
         letter::{CreateLetter, Letter},
         user::PublicUser,
@@ -43,11 +43,11 @@ pub struct CreateFeedback {
 }
 
 pub struct MailService {
-    pub context: Context,
+    pub context: GeneralContext,
 }
 
 impl MailService {
-    pub fn new(context: Context) -> MailService {
+    pub fn new(context: GeneralContext) -> MailService {
         MailService { context }
     }
 
@@ -110,7 +110,7 @@ impl MailService {
 
         let letters = self.context.try_get_repository::<Letter>()?;
 
-        if !SendMail.get_access(auth, ()) {
+        if !SendMail.get_access(&auth, ()) {
             return Err(anyhow::anyhow!("Users can't send mail: {:?}", auth).code(403));
         }
 
@@ -120,7 +120,7 @@ impl MailService {
             let user = self
                 .context
                 .make_request::<PublicUser>()
-                .auth(*auth)
+                .auth(auth)
                 .get(format!(
                     "{}://{}/api/user/{}",
                     PROTOCOL.as_str(),

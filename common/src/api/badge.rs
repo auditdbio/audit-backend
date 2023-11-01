@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     auth::Auth,
-    context::Context,
+    context::GeneralContext,
     entities::badge::PublicBadge,
     error,
     services::{AUDITORS_SERVICE, PROTOCOL},
@@ -17,7 +17,7 @@ pub struct BadgePayload {
     pub email: String,
 }
 
-pub async fn merge(context: &Context, auth: Auth, secret: String) -> error::Result<()> {
+pub async fn merge(context: &GeneralContext, auth: Auth, secret: String) -> error::Result<()> {
     context
         .make_request::<()>()
         .get(format!(
@@ -33,7 +33,10 @@ pub async fn merge(context: &Context, auth: Auth, secret: String) -> error::Resu
     Ok(())
 }
 
-pub async fn get_badge(context: &Context, email: String) -> error::Result<Option<PublicBadge>> {
+pub async fn get_badge(
+    context: &GeneralContext,
+    email: String,
+) -> error::Result<Option<PublicBadge>> {
     Ok(context
         .make_request::<()>()
         .get(format!(

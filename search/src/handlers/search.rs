@@ -3,7 +3,7 @@ use actix_web::{
     web::{self, Json},
     HttpResponse,
 };
-use common::{context::Context, error};
+use common::{context::GeneralContext, error};
 
 use crate::{
     repositories::search::SearchRepo,
@@ -13,7 +13,7 @@ use crate::{
 #[post("/api/search/insert")]
 pub async fn insert(
     Json(data): Json<SearchInsertRequest>,
-    context: Context,
+    context: GeneralContext,
     search_repo: web::Data<SearchRepo>,
 ) -> error::Result<HttpResponse> {
     SearchService::new(search_repo, context)
@@ -26,7 +26,7 @@ pub async fn insert(
 pub async fn search(
     query: web::Query<SearchQuery>,
     repo: web::Data<SearchRepo>,
-    context: Context,
+    context: GeneralContext,
 ) -> error::Result<Json<SearchResult>> {
     let results = SearchService::new(repo, context)
         .search(query.into_inner())
@@ -38,7 +38,7 @@ pub async fn search(
 pub async fn delete(
     id: web::Path<String>,
     repo: web::Data<SearchRepo>,
-    context: Context,
+    context: GeneralContext,
 ) -> error::Result<HttpResponse> {
     SearchService::new(repo, context)
         .delete(id.parse()?)

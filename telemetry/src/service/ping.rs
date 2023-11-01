@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use common::{
     api::events::{post_event, EventPayload, PublicEvent},
-    context::Context,
+    context::GeneralContext,
     error,
     services::{
         AUDITORS_SERVICE, AUDITS_SERVICE, CUSTOMERS_SERVICE, FILES_SERVICE, MAIL_SERVICE,
@@ -36,7 +36,7 @@ impl Service {
     }
 }
 
-pub async fn status(context: Context, services: &Vec<Service>) -> Status {
+pub async fn status(context: GeneralContext, services: &Vec<Service>) -> Status {
     let mut result = HashMap::new();
     for service in services {
         let response = context
@@ -70,7 +70,7 @@ pub fn services() -> Vec<Service> {
     ]
 }
 
-pub async fn update(context: &Context) -> error::Result<()> {
+pub async fn update(context: &GeneralContext) -> error::Result<()> {
     let event = PublicEvent::new(ObjectId::new(), EventPayload::VersionUpdate);
     post_event(context, event, context.server_auth()).await?;
     Ok(())

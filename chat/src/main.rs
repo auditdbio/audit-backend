@@ -2,8 +2,9 @@ use std::{env, sync::Arc};
 
 use actix_web::HttpServer;
 use chat::{create_app, repositories::chat::ChatRepository};
-use common::{context::ServiceState, repository::mongo_repository::MongoRepository};
 use common::auth::Service;
+use common::context::effectfull_context::ServiceState;
+use common::repository::mongo_repository::MongoRepository;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

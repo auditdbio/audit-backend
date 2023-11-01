@@ -1,8 +1,8 @@
 use std::{env, sync::Arc};
 
 use actix_web::HttpServer;
-use common::{context::ServiceState, repository::mongo_repository::MongoRepository};
-use common::auth::Service;
+use common::repository::mongo_repository::MongoRepository;
+use common::{auth::Service, context::effectfull_context::ServiceState};
 use notification::{create_app, repositories::notifications::NotificationsRepository};
 
 #[actix_web::main]

@@ -3,18 +3,18 @@ use actix_web::{
     web::{self, Json},
     HttpRequest, HttpResponse,
 };
-use common::{api::user::CreateUser, context::Context, entities::user::User, error};
+use common::{api::user::CreateUser, context::GeneralContext, entities::user::User, error};
 
 use crate::service::auth::{AuthService, ChangePasswordData, Login, Token, TokenResponce};
 
 #[post("/api/auth/login")]
-pub async fn login(context: Context, login: Json<Login>) -> error::Result<Json<Token>> {
+pub async fn login(context: GeneralContext, login: Json<Login>) -> error::Result<Json<Token>> {
     Ok(Json(AuthService::new(context).login(&login).await?))
 }
 
 #[post("/api/user")]
 pub async fn create_user(
-    context: Context,
+    context: GeneralContext,
     Json(user): web::Json<CreateUser>,
 ) -> error::Result<Json<User<String>>> {
     #[allow(unused_mut)]
@@ -34,7 +34,10 @@ pub async fn create_user(
 }
 
 #[get("/api/auth/verify/{code}")]
-pub async fn verify_link(context: Context, code: web::Path<String>) -> error::Result<HttpResponse> {
+pub async fn verify_link(
+    context: GeneralContext,
+    code: web::Path<String>,
+) -> error::Result<HttpResponse> {
     let service = AuthService::new(context);
     let result = service.verify_link(code.into_inner()).await?;
 
@@ -49,7 +52,7 @@ pub async fn verify_link(context: Context, code: web::Path<String>) -> error::Re
 
 #[get("/api/auth/forgot_password/{email}")]
 pub async fn forgot_password(
-    context: Context,
+    context: GeneralContext,
     email: web::Path<String>,
 ) -> error::Result<HttpResponse> {
     AuthService::new(context)
@@ -60,7 +63,7 @@ pub async fn forgot_password(
 
 #[post("/api/auth/reset_password")]
 pub async fn reset_password(
-    context: Context,
+    context: GeneralContext,
     Json(code): web::Json<ChangePasswordData>,
 ) -> error::Result<HttpResponse> {
     AuthService::new(context).reset_password(code).await?;
@@ -70,7 +73,7 @@ pub async fn reset_password(
 
 #[get("/api/auth/restore_token")]
 pub async fn restore_token(
-    context: Context,
+    context: GeneralContext,
     req: HttpRequest,
 ) -> error::Result<Json<TokenResponce>> {
     Ok(Json(AuthService::new(context).restore(req).await?))

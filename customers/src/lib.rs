@@ -12,7 +12,7 @@ use actix_web::middleware;
 use actix_web::web;
 use actix_web::App;
 
-use common::context::ServiceState;
+use common::context::effectfull_context::ServiceState;
 use handlers::indexer::get_customer_data;
 use handlers::indexer::get_project_data;
 use handlers::indexer::ping;

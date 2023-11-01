@@ -1,7 +1,7 @@
 pub use common::api::notifications::PublicNotification;
 use common::{
     api::events::{EventPayload, PublicEvent},
-    context::Context,
+    context::GeneralContext,
     entities::notification::{CreateNotification, NotificationInner},
     error::{self},
     repository::Entity,
@@ -46,7 +46,7 @@ impl From<Notification> for PublicNotification {
 }
 
 pub async fn send_notification(
-    context: Context,
+    context: GeneralContext,
     notif: CreateNotification,
     notifications: &NotificationsRepository,
 ) -> error::Result<()> {
@@ -67,7 +67,7 @@ pub async fn send_notification(
 
     context
         .make_request()
-        .auth(*auth)
+        .auth(auth)
         .post(format!(
             "{}://{}/api/event",
             PROTOCOL.as_str(),
@@ -81,7 +81,7 @@ pub async fn send_notification(
 }
 
 pub async fn read(
-    context: Context,
+    context: GeneralContext,
     notifications: &NotificationsRepository,
     id: ObjectId,
 ) -> error::Result<String> {
@@ -93,14 +93,14 @@ pub async fn read(
 }
 
 pub async fn get_unread_notifications(
-    context: Context,
+    context: GeneralContext,
     notifications: &NotificationsRepository,
 ) -> error::Result<Vec<PublicNotification>> {
     let auth = context.auth();
 
     let user_id = auth.id().unwrap();
 
-    let notifications = notifications.get_unread(user_id).await?;
+    let notifications = notifications.get_unread(&user_id).await?;
 
     Ok(notifications.into_iter().map(|n| n.into()).collect())
 }

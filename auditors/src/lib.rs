@@ -9,7 +9,7 @@ use actix_web::{
     dev::{ServiceFactory, ServiceRequest, ServiceResponse},
     middleware, web, App,
 };
-use common::context::ServiceState;
+use common::context::effectfull_context::ServiceState;
 pub use handlers::auditor::*;
 use handlers::{
     badge::{delete, find_badge, merge, post_badge},

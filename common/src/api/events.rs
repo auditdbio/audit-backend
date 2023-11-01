@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     auth::Auth,
-    context::Context,
+    context::GeneralContext,
     error,
     services::{EVENTS_SERVICE, PROTOCOL},
 };
@@ -64,7 +64,11 @@ impl PublicEvent {
     }
 }
 
-pub async fn post_event(context: &Context, event: PublicEvent, auth: Auth) -> error::Result<()> {
+pub async fn post_event(
+    context: &GeneralContext,
+    event: PublicEvent,
+    auth: Auth,
+) -> error::Result<()> {
     context
         .make_request()
         .post(format!(

@@ -2,7 +2,7 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    context::Context,
+    context::GeneralContext,
     entities::{
         audit::{Audit, AuditStatus, PublicAuditStatus},
         audit_request::TimeRange,
@@ -80,7 +80,10 @@ pub struct PublicAudit {
 }
 
 impl PublicAudit {
-    pub async fn new(context: &Context, audit: Audit<ObjectId>) -> error::Result<PublicAudit> {
+    pub async fn new(
+        context: &GeneralContext,
+        audit: Audit<ObjectId>,
+    ) -> error::Result<PublicAudit> {
         let auth = context.auth();
         let auditor = context
             .make_request::<PublicAuditor>()
