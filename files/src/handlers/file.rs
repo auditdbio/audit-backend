@@ -88,7 +88,13 @@ pub async fn create_file(
         .collect::<Vec<ObjectId>>();
 
     if private {
-        full_access.extend(&[customer_id.parse()?, auditor_id.parse()?]);
+        if let Ok(customer_id) = customer_id.parse() {
+            full_access.push(customer_id);
+        }
+
+        if let Ok(auditor_id) = auditor_id.parse() {
+            full_access.push(auditor_id);
+        }
     }
 
     FileService::new(context)
