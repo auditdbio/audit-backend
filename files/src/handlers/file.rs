@@ -75,16 +75,9 @@ pub async fn create_file(
         }
     }
 
-    fn parse_id(id: &str) -> Option<ObjectId> {
-        if id.len() != 12 {
-            return None;
-        }
-        id.parse().ok()
-    }
-
     let mut full_access = full_access
         .split(' ')
-        .filter_map(parse_id)
+        .filter_map(|id| id.trim().parse().ok())
         .collect::<Vec<ObjectId>>();
 
     if private {
