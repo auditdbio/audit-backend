@@ -168,7 +168,7 @@ impl SearchService {
 
             for id in ids {
                 if !responce_ids.contains(&id) {
-                    self.delete(id).await?;
+                    self.repo.delete(id).await?;
                 }
             }
 
