@@ -157,7 +157,11 @@ impl SearchService {
             let responce_ids: HashSet<ObjectId> = docs
                 .iter()
                 .map(|doc| {
-                    let id = doc.get_str("id").unwrap();
+                    let id = doc
+                        .get_str("id")
+                        .or_else(|_| doc.get_str("_id"))
+                        .or_else(|_| doc.get_str("user_id"))
+                        .unwrap();
                     ObjectId::from_str(id).unwrap()
                 })
                 .collect();
