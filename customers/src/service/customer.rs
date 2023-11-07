@@ -1,6 +1,7 @@
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
+    api::seartch::delete_from_search,
     context::GeneralContext,
     entities::{
         auditor::{ExtendedAuditor, PublicAuditor},
@@ -239,6 +240,8 @@ impl CustomerService {
             customers.insert(&customer).await?;
             return Err(anyhow::anyhow!("User is not available to delete this customer").code(403));
         }
+
+        delete_from_search(&self.context, id).await?;
 
         Ok(auth.public_customer(customer))
     }

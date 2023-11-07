@@ -11,11 +11,12 @@ use mongodb::{
 use crate::service::search::{SearchQuery, SearchResult};
 
 #[derive(Clone)]
-pub struct SearchRepo(Arc<MongoRepository<Document>>);
+pub struct SearchRepo(Arc<(MongoRepository<Document>, MongoRepository<Document>)>);
 
 impl SearchRepo {
     pub async fn new(mongo_uri: String) -> Self {
         let repo = MongoRepository::new(&mongo_uri, "search", "queries").await;
+        let trash = MongoRepository::new(&mongo_uri, "search", "trash").await;
         repo.collection
             .create_index(
                 IndexModel::builder()
@@ -27,12 +28,13 @@ impl SearchRepo {
             )
             .await
             .unwrap();
-        Self(Arc::new(repo))
+        Self(Arc::new((repo, trash)))
     }
 
     pub async fn insert(&self, query: Vec<Document>) -> error::Result<()> {
         for doc in query.iter() {
             self.0
+                 .0
                 .collection
                 .update_one(
                     doc! {
@@ -49,15 +51,15 @@ impl SearchRepo {
         Ok(())
     }
 
-    pub async fn search(&self, mut query: SearchQuery) -> error::Result<SearchResult> {
-        let find_options = if let Some(sort_by) = query.sort_by {
+    pub async fn search(&self, query: &SearchQuery) -> error::Result<SearchResult> {
+        let find_options = if let Some(sort_by) = &query.sort_by {
             let sort_order = query.sort_order.unwrap_or(1);
             let mut sort = doc! {
                 sort_by.clone(): sort_order,
                 "_id": -1,
             };
 
-            if &sort_by == "price" {
+            if sort_by == "price" {
                 let sort_field = if sort_order == 1 {
                     "price_range.to"
                 } else {
@@ -88,6 +90,7 @@ impl SearchRepo {
 
         let kind = query
             .kind
+            .clone()
             .unwrap_or(String::new())
             .split(' ')
             .filter_map(|s| {
@@ -98,8 +101,6 @@ impl SearchRepo {
                 } // insensitive
             })
             .collect::<Vec<_>>();
-
-        query.query = query.query.to_ascii_lowercase();
 
         let mut docs = vec![
             doc! {
@@ -126,10 +127,9 @@ impl SearchRepo {
         }
 
         if !query.query.is_empty() {
-            let text = query.query;
             docs.push(doc! {
                 "$text": {
-                    "$search": text,
+                    "$search": &query.query,
                 },
             });
         }
@@ -198,6 +198,7 @@ impl SearchRepo {
 
         let result: Vec<Document> = self
             .0
+             .0
             .collection
             .find(doc! { "$and": docs.clone()}, find_options)
             .await
@@ -210,6 +211,7 @@ impl SearchRepo {
 
         let total_documents = self
             .0
+             .0
             .collection
             .count_documents(doc! { "$and": docs}, None)
             .await
@@ -222,14 +224,16 @@ impl SearchRepo {
     }
 
     pub async fn delete(&self, id: ObjectId) -> error::Result<()> {
-        self.0
+        let deleted = self
+            .0
+             .0
             .collection
-            .update_one(
-                doc! {"id": id.to_hex()},
-                doc! {"$set": {"deleted": true}},
-                None,
-            )
+            .find_one_and_delete(doc! {"id": id.to_hex()}, None)
             .await?;
+
+        if let Some(deleted) = deleted {
+            self.0 .1.collection.insert_one(deleted, None).await?;
+        }
         Ok(())
     }
 }

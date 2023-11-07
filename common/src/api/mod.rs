@@ -11,4 +11,5 @@ pub mod issue;
 pub mod mail;
 pub mod project;
 pub mod requests;
+pub mod seartch;
 pub mod user;
