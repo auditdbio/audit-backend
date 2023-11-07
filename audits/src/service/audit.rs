@@ -163,14 +163,14 @@ impl AuditService {
             if let Some(scope) = change.scope {
                 audit.scope = scope;
             }
+        }
 
-            if let Some(report) = change.report {
-                audit.report = Some(report);
-            }
+        if let Some(report) = change.report {
+            audit.report = Some(report);
+        }
 
-            if let Some(report_name) = change.report_name {
-                audit.report_name = Some(report_name);
-            }
+        if let Some(report_name) = change.report_name {
+            audit.report_name = Some(report_name);
         }
 
         if let Some(action) = change.action {
