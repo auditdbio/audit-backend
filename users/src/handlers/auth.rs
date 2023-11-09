@@ -37,12 +37,12 @@ pub async fn github_auth(
     let auth_service = AuthService::new(context.clone());
     let user_service = UserService::new(context);
 
-    let github_user = auth_service
+    let (github_user, github_id) = auth_service
         .github_auth(github_auth, data.current_role)
         .await?;
 
     let existing_user = user_service
-        .find_by_email(github_user.email.clone())
+        .find_linked_account(github_id)
         .await?;
 
     let auth_result = match existing_user {
@@ -56,7 +56,7 @@ pub async fn github_auth(
 
             match user {
                 Some(user) => create_auth_token(&user),
-                None => Err(anyhow::anyhow!("No user found").code(404)),
+                None => Err(anyhow::anyhow!("Login failed").code(404)),
             }
         }
     };

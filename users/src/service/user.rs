@@ -7,7 +7,7 @@ use common::{
     entities::user::{PublicUser, User},
     error::{self, AddCode},
 };
-use mongodb::bson::{oid::ObjectId, Bson};
+use mongodb::bson::{oid::ObjectId, Bson, doc};
 
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
@@ -71,6 +71,19 @@ impl UserService {
 
         let Some(user) = users
             .find("email", &Bson::String(email).clone())
+            .await?
+        else {
+            return Ok(None);
+        };
+
+        Ok(Some(user))
+    }
+
+    pub async fn find_linked_account(&self, id: i32) -> error::Result<Option<User<ObjectId>>> {
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
+
+        let Some(user) = users
+            .find("linked_accounts.id", &Bson::Int32(id))
             .await?
         else {
             return Ok(None);

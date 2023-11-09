@@ -23,6 +23,7 @@ pub struct CreateUser {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LinkedAccounts {
+    pub id: i32,
     pub name: String,
     pub email: String,
 }
@@ -49,6 +50,7 @@ pub struct GithubAccessResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GithubUserData {
+  pub id: i32,
   pub login: String,
   pub name: String,
   pub avatar_url: String,

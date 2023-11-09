@@ -23,6 +23,7 @@ use mongodb::bson::{oid::ObjectId, Bson};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use reqwest::{Client, header};
+use common::api::user::LinkedAccounts;
 
 use super::user::UserService;
 
@@ -110,9 +111,16 @@ impl AuthService {
             return Err(anyhow::anyhow!("No user found").code(404));
         };
 
+        if let Some(is_passwordless) = user.is_passwordless {
+            if is_passwordless && user.password == "".to_string() {
+                return Err(anyhow::anyhow!("Incorrect password").code(401));
+            }
+        }
+
         if !Self::request_access(login.password.clone(), &user.password, &user.salt) {
             return Err(anyhow::anyhow!("Incorrect password").code(401));
         }
+
         let auth = if user.is_admin {
             Auth::Admin(user.id)
         } else {
@@ -219,6 +227,8 @@ impl AuthService {
             last_modified: Utc::now().timestamp_micros(),
             is_new: true,
             is_admin,
+            linked_accounts: user.linked_accounts,
+            is_passwordless: user.is_passwordless,
         };
 
         let link = Link {
@@ -239,7 +249,7 @@ impl AuthService {
     pub async fn github_auth(
         &self, data: GetGithubAccessToken,
         current_role: String,
-    ) -> error::Result<CreateUser> {
+    ) -> error::Result<(CreateUser, i32)> {
         let client = Client::new();
 
         let access_response = client
@@ -282,19 +292,25 @@ impl AuthService {
                 return Err(anyhow::anyhow!("No email found").code(404));
         };
 
+        let linked_account = LinkedAccounts {
+            id: user_data.id.clone(),
+            name: "GitHub".to_string(),
+            email: email.clone(),
+        };
+
         let user = CreateUser {
             email,
-            password: "12345678".to_string(),  // TODO: paswordless
+            password: "".to_string(),
             name: user_data.login,
             current_role,
             use_email: None,
             admin_creation_password: None,
             secret: None,
-            linked_accounts: None,
+            linked_accounts: Some(vec![linked_account]),
             is_passwordless: Some(true),
         };
 
-        return Ok(user);
+        return Ok((user, user_data.id));
     }
 
     pub async fn verify_link(&self, code: String) -> error::Result<bool> {
