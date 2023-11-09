@@ -1,15 +1,67 @@
+use std::env::var;
 use actix_web::{
     get, post,
     web::{self, Json},
     HttpRequest, HttpResponse,
 };
-use common::{api::user::CreateUser, context::GeneralContext, entities::user::User, error};
+use mongodb::bson::{oid::ObjectId};
+use common::{
+    api::user::{CreateUser, GithubAuth, GetGithubAccessToken},
+    context::GeneralContext,
+    entities::user::User,
+    auth::Auth,
+    error::{self, AddCode},
+};
 
-use crate::service::auth::{AuthService, ChangePasswordData, Login, Token, TokenResponce};
+use crate::service::{
+    auth::{AuthService, ChangePasswordData, Login, Token, TokenResponce, create_auth_token},
+    user::UserService,
+};
 
 #[post("/api/auth/login")]
 pub async fn login(context: GeneralContext, login: Json<Login>) -> error::Result<Json<Token>> {
     Ok(Json(AuthService::new(context).login(&login).await?))
+}
+
+#[post("/api/auth/github")]
+pub async fn github_auth(
+    context: GeneralContext,
+    Json(data): Json<GithubAuth>,
+) -> error::Result<Json<Token>> {
+    let github_auth = GetGithubAccessToken {
+        code: data.code,
+        client_id: var("GITHUB_CLIENT_ID").unwrap(),
+        client_secret: var("GITHUB_CLIENT_SECRET").unwrap(),
+    };
+
+    let auth_service = AuthService::new(context.clone());
+    let user_service = UserService::new(context);
+
+    let github_user = auth_service
+        .github_auth(github_auth, data.current_role)
+        .await?;
+
+    let existing_user = user_service
+        .find_by_email(github_user.email.clone())
+        .await?;
+
+    let auth_result = match existing_user {
+        Some(user) => create_auth_token(&user),
+        None => {
+            let verify_email = false;
+            auth_service.authentication(github_user.clone(), verify_email).await?;
+            let user = user_service
+                .find_by_email(github_user.email.clone())
+                .await?;
+
+            match user {
+                Some(user) => create_auth_token(&user),
+                None => Err(anyhow::anyhow!("No user found").code(404)),
+            }
+        }
+    };
+
+    auth_result
 }
 
 #[post("/api/user")]

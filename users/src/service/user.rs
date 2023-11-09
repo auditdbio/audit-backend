@@ -66,6 +66,19 @@ impl UserService {
         Ok(Some(user.into()))
     }
 
+    pub async fn find_by_email(&self, email: String) -> error::Result<Option<User<ObjectId>>> {
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
+
+        let Some(user) = users
+            .find("email", &Bson::String(email).clone())
+            .await?
+        else {
+            return Ok(None);
+        };
+
+        Ok(Some(user))
+    }
+
     pub async fn my_user(&self) -> error::Result<Option<User<String>>> {
         let auth = self.context.auth();
 

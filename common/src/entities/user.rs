@@ -1,6 +1,7 @@
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
+use crate::api::user::LinkedAccounts;
 use crate::repository::Entity;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -15,6 +16,7 @@ pub struct User<Id> {
     pub is_new: bool,
     #[serde(default)]
     pub is_admin: bool,
+    //pub linked_accounts: Option<Vec<LinkedAccounts>>,
 }
 
 impl User<String> {

@@ -1,4 +1,4 @@
-use actix_web::HttpRequest;
+use actix_web::{HttpRequest, web::Json};
 use chrono::Utc;
 use common::{
     access_rules::AccessRules,
@@ -6,7 +6,11 @@ use common::{
         self,
         badge::{get_badge, BadgePayload},
         codes::post_code,
-        user::CreateUser,
+        user::{
+            CreateUser, GetGithubAccessToken,
+            GithubAccessResponse, GithubUserData,
+            GithubUserEmails,
+        },
     },
     auth::Auth,
     context::GeneralContext,
@@ -18,6 +22,7 @@ use common::{
 use mongodb::bson::{oid::ObjectId, Bson};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
+use reqwest::{Client, header};
 
 use super::user::UserService;
 
@@ -231,6 +236,67 @@ impl AuthService {
         Ok(link.user.stringify())
     }
 
+    pub async fn github_auth(
+        &self, data: GetGithubAccessToken,
+        current_role: String,
+    ) -> error::Result<CreateUser> {
+        let client = Client::new();
+
+        let access_response = client
+            .post(format!(
+                "https://github.com/login/oauth/access_token?code={}&client_id={}&client_secret={}",
+                data.code,
+                data.client_id,
+                data.client_secret,
+            ))
+            .send()
+            .await?
+            .text()
+            .await?;
+
+        let access_json: GithubAccessResponse = serde_json::from_str(&access_response)?;
+        let access_token = access_json.access_token;
+
+        let user_response = client
+            .get("https://api.github.com/user")
+            .header(header::AUTHORIZATION, format!("Bearer {}", access_token))
+            .send()
+            .await?
+            .text()
+            .await?;
+
+        let emails_response = client
+            .get("https://api.github.com/user/emails")
+            .header(header::AUTHORIZATION, format!("Bearer {}", access_token))
+            .send()
+            .await?
+            .text()
+            .await?;
+
+        let user_data: GithubUserData = serde_json::from_str(&user_response)?;
+        let emails: Vec<GithubUserEmails> = serde_json::from_str(&emails_response)?;
+
+        let Some(email) = emails.iter()
+            .find(|email| email.primary)
+            .map(|email| email.email.to_string()) else {
+                return Err(anyhow::anyhow!("No email found").code(404));
+        };
+
+        let user = CreateUser {
+            email,
+            password: "12345678".to_string(),  // TODO: paswordless
+            name: user_data.login,
+            current_role,
+            use_email: None,
+            admin_creation_password: None,
+            secret: None,
+            linked_accounts: None,
+            is_passwordless: Some(true),
+        };
+
+        return Ok(user);
+    }
+
     pub async fn verify_link(&self, code: String) -> error::Result<bool> {
         let codes = self.context.try_get_repository::<Link>()?;
 
@@ -368,4 +434,16 @@ impl AuthService {
         }
         Err(anyhow::anyhow!("Invalid token").code(401))
     }
+}
+
+pub fn create_auth_token(user: &User<ObjectId>) -> error::Result<Json<Token>> {
+    let auth = if user.is_admin {
+        Auth::Admin(user.id)
+    } else {
+        Auth::User(user.id)
+    };
+    Ok(Json(Token {
+        user: user.clone().stringify(),
+        token: auth.to_token()?,
+    }))
 }
