@@ -11,6 +11,7 @@ use mongodb::bson::{oid::ObjectId, Bson, doc};
 
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
+use common::api::user::LinkedAccount;
 
 use super::auth::ChangePassword;
 
@@ -88,6 +89,26 @@ impl UserService {
         else {
             return Ok(None);
         };
+
+        Ok(Some(user))
+    }
+
+    pub async fn add_linked_account(
+        &self,
+        id: ObjectId,
+        account: LinkedAccount
+    ) -> error::Result<Option<User<ObjectId>>> {
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
+
+        let Some(mut user) = users.find("id", &Bson::ObjectId(id)).await? else {
+            return Err(anyhow::anyhow!("No user found").code(404));
+        };
+
+        if let Some(ref mut linked_accounts) = user.linked_accounts {
+            linked_accounts.push(account);
+        } else {
+            user.linked_accounts = Some(vec![account]);
+        }
 
         Ok(Some(user))
     }

@@ -17,12 +17,12 @@ pub struct CreateUser {
     pub use_email: Option<bool>,
     pub admin_creation_password: Option<String>,
     pub secret: Option<String>,
-    pub linked_accounts: Option<Vec<LinkedAccounts>>,
+    pub linked_accounts: Option<Vec<LinkedAccount>>,
     pub is_passwordless: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct LinkedAccounts {
+pub struct LinkedAccount {
     pub id: i32,
     pub name: String,
     pub email: String,

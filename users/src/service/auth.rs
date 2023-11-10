@@ -23,7 +23,7 @@ use mongodb::bson::{oid::ObjectId, Bson};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use reqwest::{Client, header};
-use common::api::user::LinkedAccounts;
+use common::api::user::LinkedAccount;
 
 use super::user::UserService;
 
@@ -292,7 +292,7 @@ impl AuthService {
                 return Err(anyhow::anyhow!("No email found").code(404));
         };
 
-        let linked_account = LinkedAccounts {
+        let linked_account = LinkedAccount {
             id: user_data.id.clone(),
             name: "GitHub".to_string(),
             email: email.clone(),
