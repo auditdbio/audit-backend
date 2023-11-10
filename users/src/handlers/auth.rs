@@ -42,41 +42,32 @@ pub async fn github_auth(
         .github_auth(github_auth, data.current_role)
         .await?;
 
-    let linked_user = user_service
-        .find_linked_account(github_id.clone())
+    if let Some(user) = user_service.find_linked_account(github_id.clone()).await? {
+        return create_auth_token(&user);
+    }
+
+    let existing_email_user = user_service
+        .find_by_email(github_user.email.clone())
         .await?;
 
-    let auth_result = if let Some(user) = linked_user {
-        create_auth_token(&user)
-    } else {
-        let existing_email_user = user_service
-            .find_by_email(github_user.email.clone())
-            .await?;
+    if let Some(user) = existing_email_user {
+        let account = LinkedAccount {
+            id: github_id,
+            name: "GitHub".to_string(),
+            email: github_user.email.clone(),
+        };
+        let _ = user_service.add_linked_account(user.id, account).await?;
+        return create_auth_token(&user);
+    }
 
-        if let Some(user) = existing_email_user {
-            let account = LinkedAccount {
-                id: github_id,
-                name: "GitHub".to_string(),
-                email: github_user.email.clone(),
-            };
-            let _ = user_service.add_linked_account(user.id, account).await?;
-            create_auth_token(&user)
-        } else {
-            let verify_email = false;
-            auth_service.authentication(github_user.clone(), verify_email).await?;
-            let user = user_service
-                .find_by_email(github_user.email.clone())
-                .await?;
+    let verify_email = false;
+    auth_service.authentication(github_user.clone(), verify_email).await?;
 
-            if let Some(user) = user {
-                create_auth_token(&user)
-            } else {
-                Err(anyhow::anyhow!("Login failed").code(404))
-            }
-        }
-    };
+    if let Some(user) = user_service.find_by_email(github_user.email.clone()).await? {
+        return create_auth_token(&user);
+    }
 
-    auth_result
+    Err(anyhow::anyhow!("Login failed").code(404))
 }
 
 #[post("/api/user")]
