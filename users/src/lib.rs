@@ -43,6 +43,7 @@ pub fn create_app(
         .service(create_user)
         .service(forgot_password)
         .service(reset_password)
-        .service(restore_token);
+        .service(restore_token)
+        .service(find_user_by_email);
     app
 }

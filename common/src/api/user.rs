@@ -2,6 +2,7 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    auth::Auth,
     context::GeneralContext,
     entities::user::PublicUser,
     error,
@@ -19,7 +20,11 @@ pub struct CreateUser {
     pub secret: Option<String>,
 }
 
-pub async fn get_by_id(context: &GeneralContext, id: ObjectId) -> error::Result<PublicUser> {
+pub async fn get_by_id(
+    context: &GeneralContext,
+    auth: Auth,
+    id: ObjectId,
+) -> error::Result<PublicUser> {
     Ok(context
         .make_request::<PublicUser>()
         .get(format!(
@@ -28,8 +33,28 @@ pub async fn get_by_id(context: &GeneralContext, id: ObjectId) -> error::Result<
             USERS_SERVICE.as_str(),
             id
         ))
+        .auth(auth)
         .send()
         .await?
         .json::<PublicUser>()
+        .await?)
+}
+
+pub async fn get_by_email(
+    context: &GeneralContext,
+    email: String,
+) -> error::Result<Option<PublicUser>> {
+    Ok(context
+        .make_request::<PublicUser>()
+        .get(format!(
+            "{}://{}/api/user_by_email/{}",
+            PROTOCOL.as_str(),
+            USERS_SERVICE.as_str(),
+            email
+        ))
+        .auth(context.server_auth())
+        .send()
+        .await?
+        .json::<Option<PublicUser>>()
         .await?)
 }

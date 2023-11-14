@@ -8,6 +8,7 @@ use common::{
         mail::send_mail,
         requests::{get_audit_requests, CreateRequest},
         seartch::delete_from_search,
+        user::get_by_email,
     },
     auth::Auth,
     context::GeneralContext,
@@ -73,6 +74,12 @@ impl BadgeService {
 
         if let Some(_badge) = old_badge {
             return Err(anyhow::anyhow!("Badge already exists").code(400));
+        };
+
+        let user = get_by_email(&self.context, badge.contacts.email.clone().unwrap()).await?;
+
+        if let Some(_user) = user {
+            return Err(anyhow::anyhow!("User already exists").code(400));
         };
 
         let badge = Badge {

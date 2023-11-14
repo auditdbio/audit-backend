@@ -66,6 +66,22 @@ impl UserService {
         Ok(Some(user.into()))
     }
 
+    pub async fn find_by_email(&self, email: String) -> error::Result<Option<PublicUser>> {
+        let auth = self.context.auth();
+
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
+
+        let Some(user) = users.find("email", &email.into()).await? else {
+            return Ok(None);
+        };
+
+        if !Read.get_access(&auth, &user) {
+            return Err(anyhow::anyhow!("User is not available to read this user").code(403));
+        }
+
+        Ok(Some(user.into()))
+    }
+
     pub async fn my_user(&self) -> error::Result<Option<User<String>>> {
         let auth = self.context.auth();
 
