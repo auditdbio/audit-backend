@@ -55,6 +55,7 @@ pub async fn get_by_email(
         .auth(context.server_auth())
         .send()
         .await?
-        .json::<Option<PublicUser>>()
-        .await?)
+        .json::<PublicUser>()
+        .await
+        .ok())
 }
