@@ -2,8 +2,9 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    auth::Auth,
     context::GeneralContext,
-    entities::user::PublicUser,
+    entities::user::{PublicUser, User},
     error,
     services::{PROTOCOL, USERS_SERVICE},
 };
@@ -64,7 +65,11 @@ pub struct GithubUserEmails {
   pub verified: bool,
 }
 
-pub async fn get_by_id(context: &GeneralContext, id: ObjectId) -> error::Result<PublicUser> {
+pub async fn get_by_id(
+    context: &GeneralContext,
+    auth: Auth,
+    id: ObjectId,
+) -> error::Result<PublicUser> {
     Ok(context
         .make_request::<PublicUser>()
         .get(format!(
@@ -73,8 +78,29 @@ pub async fn get_by_id(context: &GeneralContext, id: ObjectId) -> error::Result<
             USERS_SERVICE.as_str(),
             id
         ))
+        .auth(auth)
         .send()
         .await?
         .json::<PublicUser>()
         .await?)
+}
+
+pub async fn get_by_email(
+    context: &GeneralContext,
+    email: String,
+) -> error::Result<Option<User<ObjectId>>> {
+    Ok(context
+        .make_request::<User<ObjectId>>()
+        .get(format!(
+            "{}://{}/api/user_by_email/{}",
+            PROTOCOL.as_str(),
+            USERS_SERVICE.as_str(),
+            email
+        ))
+        .auth(context.server_auth())
+        .send()
+        .await?
+        .json::<User<ObjectId>>()
+        .await
+        .ok())
 }

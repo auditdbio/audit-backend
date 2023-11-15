@@ -194,7 +194,6 @@ impl RequestService {
                 subject: "The badge notification".to_string(),
             };
             send_mail(&self.context, letter).await?;
-            request.description = message;
         }
 
         requests.insert(&request).await?;

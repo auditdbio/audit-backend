@@ -7,7 +7,7 @@ use common::{
     entities::user::{PublicUser, User},
     error::{self, AddCode},
 };
-use mongodb::bson::{oid::ObjectId, Bson, doc};
+use mongodb::bson::{oid::ObjectId, Bson};
 
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
@@ -68,14 +68,17 @@ impl UserService {
     }
 
     pub async fn find_by_email(&self, email: String) -> error::Result<Option<User<ObjectId>>> {
+        let auth = self.context.auth();
+
         let users = self.context.try_get_repository::<User<ObjectId>>()?;
 
-        let Some(user) = users
-            .find("email", &Bson::String(email).clone())
-            .await?
-        else {
+        let Some(user) = users.find("email", &email.into()).await? else {
             return Ok(None);
         };
+
+        if !Read.get_access(&auth, &user) {
+            return Err(anyhow::anyhow!("User is not available to read this user").code(403));
+        }
 
         Ok(Some(user))
     }

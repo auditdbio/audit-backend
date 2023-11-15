@@ -75,20 +75,19 @@ pub async fn create_file(
         }
     }
 
-    fn parse_id(id: &str) -> Option<ObjectId> {
-        if id.len() != 12 {
-            return None;
-        }
-        id.parse().ok()
-    }
-
     let mut full_access = full_access
         .split(' ')
-        .filter_map(parse_id)
+        .filter_map(|id| id.trim().parse().ok())
         .collect::<Vec<ObjectId>>();
 
     if private {
-        full_access.extend(&[customer_id.parse()?, auditor_id.parse()?]);
+        if let Ok(customer_id) = customer_id.parse() {
+            full_access.push(customer_id);
+        }
+
+        if let Ok(auditor_id) = auditor_id.parse() {
+            full_access.push(auditor_id);
+        }
     }
 
     FileService::new(context)

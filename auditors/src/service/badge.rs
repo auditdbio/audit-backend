@@ -7,6 +7,8 @@ use common::{
         codes::post_code,
         mail::send_mail,
         requests::{get_audit_requests, CreateRequest},
+        seartch::delete_from_search,
+        user::get_by_email,
     },
     auth::Auth,
     context::GeneralContext,
@@ -53,21 +55,6 @@ pub struct BadgeService {
     context: GeneralContext,
 }
 
-async fn delete_from_search(context: &GeneralContext, id: ObjectId) -> error::Result<()> {
-    context
-        .make_request::<()>()
-        .auth(context.server_auth())
-        .delete(format!(
-            "{}://{}/api/search/{}",
-            PROTOCOL.as_str(),
-            SEARCH_SERVICE.as_str(),
-            id,
-        ))
-        .send()
-        .await?;
-    Ok(())
-}
-
 impl BadgeService {
     pub fn new(context: GeneralContext) -> Self {
         Self { context }
@@ -87,6 +74,12 @@ impl BadgeService {
 
         if let Some(_badge) = old_badge {
             return Err(anyhow::anyhow!("Badge already exists").code(400));
+        };
+
+        let user = get_by_email(&self.context, badge.contacts.email.clone().unwrap()).await?;
+
+        if let Some(_user) = user {
+            return Err(anyhow::anyhow!("User already exists").code(400));
         };
 
         let badge = Badge {

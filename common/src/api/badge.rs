@@ -20,7 +20,7 @@ pub struct BadgePayload {
 pub async fn merge(context: &GeneralContext, auth: Auth, secret: String) -> error::Result<()> {
     context
         .make_request::<()>()
-        .get(format!(
+        .patch(format!(
             "{}://{}/api/badge/merge/{}",
             PROTOCOL.as_str(),
             AUDITORS_SERVICE.as_str(),

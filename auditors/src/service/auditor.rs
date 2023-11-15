@@ -1,6 +1,7 @@
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
+    api::seartch::delete_from_search,
     context::GeneralContext,
     entities::{
         audit_request::PriceRange,
@@ -247,6 +248,7 @@ impl AuditorService {
             auditors.insert(&auditor).await?;
             return Err(anyhow::anyhow!("User is not available to delete this auditor").code(400));
         }
+        delete_from_search(&self.context, id).await?;
 
         Ok(auth.public_auditor(auditor))
     }

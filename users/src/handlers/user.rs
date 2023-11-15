@@ -8,6 +8,19 @@ use serde_json::json;
 
 use crate::service::user::{UserChange, UserService};
 
+#[get("/api/user_by_email/{id}")]
+pub async fn find_user_by_email(
+    context: GeneralContext,
+    id: Path<String>,
+) -> error::Result<HttpResponse> {
+    let user = UserService::new(context).find_by_email(id.parse()?).await?;
+    if let Some(user) = user {
+        Ok(HttpResponse::Ok().json(user))
+    } else {
+        Ok(HttpResponse::Ok().json(json! {{}}))
+    }
+}
+
 #[get("/api/user/{id}")]
 pub async fn find_user(context: GeneralContext, id: Path<String>) -> error::Result<HttpResponse> {
     let user = UserService::new(context).find(id.parse()?).await?;

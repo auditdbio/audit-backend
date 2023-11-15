@@ -241,7 +241,9 @@ impl AuthService {
         if verify_email {
             links.insert(&link).await?;
         } else {
-            users.insert(&link.user).await?;
+            UserService::new(self.context.clone())
+                .create(link.user.clone(), link.secret)
+                .await?;
         }
 
         Ok(link.user.stringify())

@@ -1,4 +1,5 @@
 use chrono::Utc;
+use common::api::seartch::delete_from_search;
 use common::entities::customer::PublicCustomer;
 use common::{
     access_rules::{AccessRules, Edit, Read},
@@ -199,6 +200,8 @@ impl ProjectService {
             projects.insert(&project).await?;
             return Err(anyhow::anyhow!("User is not available to delete this project").code(403));
         }
+
+        delete_from_search(&self.context, id).await?;
 
         Ok(auth.public_project(project))
     }
