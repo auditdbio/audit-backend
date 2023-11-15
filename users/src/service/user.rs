@@ -11,6 +11,7 @@ use mongodb::bson::{oid::ObjectId, Bson};
 
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
+use common::api::user::LinkedAccount;
 
 use super::auth::ChangePassword;
 
@@ -66,7 +67,7 @@ impl UserService {
         Ok(Some(user.into()))
     }
 
-    pub async fn find_by_email(&self, email: String) -> error::Result<Option<PublicUser>> {
+    pub async fn find_by_email(&self, email: String) -> error::Result<Option<User<ObjectId>>> {
         let auth = self.context.auth();
 
         let users = self.context.try_get_repository::<User<ObjectId>>()?;
@@ -79,7 +80,40 @@ impl UserService {
             return Err(anyhow::anyhow!("User is not available to read this user").code(403));
         }
 
-        Ok(Some(user.into()))
+        Ok(Some(user))
+    }
+
+    pub async fn find_linked_account(&self, id: i32) -> error::Result<Option<User<ObjectId>>> {
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
+
+        let Some(user) = users
+            .find("linked_accounts.id", &Bson::Int32(id))
+            .await?
+        else {
+            return Ok(None);
+        };
+
+        Ok(Some(user))
+    }
+
+    pub async fn add_linked_account(
+        &self,
+        id: ObjectId,
+        account: LinkedAccount
+    ) -> error::Result<Option<User<ObjectId>>> {
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
+
+        let Some(mut user) = users.find("id", &Bson::ObjectId(id)).await? else {
+            return Err(anyhow::anyhow!("No user found").code(404));
+        };
+
+        if let Some(ref mut linked_accounts) = user.linked_accounts {
+            linked_accounts.push(account);
+        } else {
+            user.linked_accounts = Some(vec![account]);
+        }
+
+        Ok(Some(user))
     }
 
     pub async fn my_user(&self) -> error::Result<Option<User<String>>> {

@@ -1,6 +1,7 @@
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
+use crate::api::user::LinkedAccount;
 use crate::repository::Entity;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -15,6 +16,8 @@ pub struct User<Id> {
     pub is_new: bool,
     #[serde(default)]
     pub is_admin: bool,
+    pub linked_accounts: Option<Vec<LinkedAccount>>,
+    pub is_passwordless: Option<bool>,
 }
 
 impl User<String> {
@@ -29,6 +32,8 @@ impl User<String> {
             last_modified: self.last_modified,
             is_new: self.is_new,
             is_admin: self.is_admin,
+            linked_accounts: self.linked_accounts,
+            is_passwordless: self.is_passwordless,
         }
     }
 }
@@ -45,6 +50,8 @@ impl User<ObjectId> {
             last_modified: self.last_modified,
             is_new: self.is_new,
             is_admin: self.is_admin,
+            linked_accounts: self.linked_accounts,
+            is_passwordless: self.is_passwordless,
         }
     }
 }

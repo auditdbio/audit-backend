@@ -3,13 +3,30 @@ use actix_web::{
     web::{self, Json},
     HttpRequest, HttpResponse,
 };
-use common::{api::user::CreateUser, context::GeneralContext, entities::user::User, error};
+use common::{
+    api::user::{CreateUser, GithubAuth},
+    context::GeneralContext,
+    entities::user::User,
+    error,
+};
 
-use crate::service::auth::{AuthService, ChangePasswordData, Login, Token, TokenResponce};
+use crate::service::auth::{
+    AuthService, ChangePasswordData,
+    Login, Token,
+    TokenResponce
+};
 
 #[post("/api/auth/login")]
 pub async fn login(context: GeneralContext, login: Json<Login>) -> error::Result<Json<Token>> {
     Ok(Json(AuthService::new(context).login(&login).await?))
+}
+
+#[post("/api/auth/github")]
+pub async fn github_auth(
+    context: GeneralContext,
+    Json(data): Json<GithubAuth>,
+) -> error::Result<Json<Token>> {
+    Ok(Json(AuthService::new(context).github_auth(data).await?))
 }
 
 #[post("/api/user")]

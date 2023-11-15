@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     auth::Auth,
     context::GeneralContext,
-    entities::user::PublicUser,
+    entities::user::{PublicUser, User},
     error,
     services::{PROTOCOL, USERS_SERVICE},
 };
@@ -18,6 +18,51 @@ pub struct CreateUser {
     pub use_email: Option<bool>,
     pub admin_creation_password: Option<String>,
     pub secret: Option<String>,
+    pub linked_accounts: Option<Vec<LinkedAccount>>,
+    pub is_passwordless: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LinkedAccount {
+    pub id: i32,
+    pub name: String,
+    pub email: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct GithubAuth {
+  pub code: String,
+  pub current_role: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct GetGithubAccessToken {
+  pub code: String,
+  pub client_id: String,
+  pub client_secret: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct GithubAccessResponse {
+  pub access_token: String,
+  pub token_type: String,
+  pub scope: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct GithubUserData {
+  pub id: i32,
+  pub login: String,
+  pub name: String,
+  pub avatar_url: String,
+  pub company: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct GithubUserEmails {
+  pub email: String,
+  pub primary: bool,
+  pub verified: bool,
 }
 
 pub async fn get_by_id(
@@ -43,9 +88,9 @@ pub async fn get_by_id(
 pub async fn get_by_email(
     context: &GeneralContext,
     email: String,
-) -> error::Result<Option<PublicUser>> {
+) -> error::Result<Option<User<ObjectId>>> {
     Ok(context
-        .make_request::<PublicUser>()
+        .make_request::<User<ObjectId>>()
         .get(format!(
             "{}://{}/api/user_by_email/{}",
             PROTOCOL.as_str(),
@@ -55,7 +100,7 @@ pub async fn get_by_email(
         .auth(context.server_auth())
         .send()
         .await?
-        .json::<PublicUser>()
+        .json::<User<ObjectId>>()
         .await
         .ok())
 }

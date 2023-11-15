@@ -1,3 +1,4 @@
+use std::env::var;
 use actix_web::HttpRequest;
 use chrono::Utc;
 use common::{
@@ -6,7 +7,11 @@ use common::{
         self,
         badge::{get_badge, BadgePayload},
         codes::post_code,
-        user::CreateUser,
+        user::{
+            CreateUser, GetGithubAccessToken,
+            GithubAccessResponse, GithubUserData,
+            GithubUserEmails,
+        },
     },
     auth::Auth,
     context::GeneralContext,
@@ -18,6 +23,8 @@ use common::{
 use mongodb::bson::{oid::ObjectId, Bson};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
+use reqwest::{Client, header};
+use common::api::user::{GithubAuth, LinkedAccount};
 
 use super::user::UserService;
 
@@ -105,9 +112,16 @@ impl AuthService {
             return Err(anyhow::anyhow!("No user found").code(404));
         };
 
+        if let Some(is_passwordless) = user.is_passwordless {
+            if is_passwordless && user.password == "".to_string() {
+                return Err(anyhow::anyhow!("Incorrect password").code(401));
+            }
+        }
+
         if !Self::request_access(login.password.clone(), &user.password, &user.salt) {
             return Err(anyhow::anyhow!("Incorrect password").code(401));
         }
+
         let auth = if user.is_admin {
             Auth::Admin(user.id)
         } else {
@@ -214,6 +228,8 @@ impl AuthService {
             last_modified: Utc::now().timestamp_micros(),
             is_new: true,
             is_admin,
+            linked_accounts: user.linked_accounts,
+            is_passwordless: user.is_passwordless,
         };
 
         let link = Link {
@@ -231,6 +247,114 @@ impl AuthService {
         }
 
         Ok(link.user.stringify())
+    }
+
+    pub async fn github_get_user(
+        &self, data: GetGithubAccessToken,
+        current_role: String,
+    ) -> error::Result<(CreateUser, i32)> {
+        let client = Client::new();
+
+        let access_response = client
+            .post(format!(
+                "https://github.com/login/oauth/access_token?code={}&client_id={}&client_secret={}",
+                data.code,
+                data.client_id,
+                data.client_secret,
+            ))
+            .send()
+            .await?
+            .text()
+            .await?;
+
+        let access_json: GithubAccessResponse = serde_json::from_str(&access_response)?;
+        let access_token = access_json.access_token;
+
+        let user_response = client
+            .get("https://api.github.com/user")
+            .header(header::AUTHORIZATION, format!("Bearer {}", access_token))
+            .send()
+            .await?
+            .text()
+            .await?;
+
+        let emails_response = client
+            .get("https://api.github.com/user/emails")
+            .header(header::AUTHORIZATION, format!("Bearer {}", access_token))
+            .send()
+            .await?
+            .text()
+            .await?;
+
+        let user_data: GithubUserData = serde_json::from_str(&user_response)?;
+        let emails: Vec<GithubUserEmails> = serde_json::from_str(&emails_response)?;
+
+        let Some(email) = emails.iter()
+            .find(|email| email.primary)
+            .map(|email| email.email.to_string()) else {
+                return Err(anyhow::anyhow!("No email found").code(404));
+        };
+
+        let linked_account = LinkedAccount {
+            id: user_data.id.clone(),
+            name: "GitHub".to_string(),
+            email: email.clone(),
+        };
+
+        let user = CreateUser {
+            email,
+            password: "".to_string(),
+            name: user_data.login,
+            current_role,
+            use_email: None,
+            admin_creation_password: None,
+            secret: None,
+            linked_accounts: Some(vec![linked_account]),
+            is_passwordless: Some(true),
+        };
+
+        return Ok((user, user_data.id));
+    }
+
+    pub async fn github_auth(&self, data: GithubAuth) -> error::Result<Token> {
+        let github_auth = GetGithubAccessToken {
+            code: data.code,
+            client_id: var("GITHUB_CLIENT_ID").unwrap(),
+            client_secret: var("GITHUB_CLIENT_SECRET").unwrap(),
+        };
+
+        let user_service = UserService::new(self.context.clone());
+
+        let (github_user, github_id) = self
+            .github_get_user(github_auth, data.current_role)
+            .await?;
+
+        if let Some(user) = user_service.find_linked_account(github_id.clone()).await? {
+            return create_auth_token(&user);
+        }
+
+        let existing_email_user = user_service
+            .find_by_email(github_user.email.clone())
+            .await?;
+
+        if let Some(user) = existing_email_user {
+            let account = LinkedAccount {
+                id: github_id,
+                name: "GitHub".to_string(),
+                email: github_user.email.clone(),
+            };
+            let _ = user_service.add_linked_account(user.id, account).await?;
+            return create_auth_token(&user);
+        }
+
+        let verify_email = false;
+        self.authentication(github_user.clone(), verify_email).await?;
+
+        if let Some(user) = user_service.find_by_email(github_user.email.clone()).await? {
+            return create_auth_token(&user);
+        }
+
+        Err(anyhow::anyhow!("Login failed").code(404))
     }
 
     pub async fn verify_link(&self, code: String) -> error::Result<bool> {
@@ -370,4 +494,16 @@ impl AuthService {
         }
         Err(anyhow::anyhow!("Invalid token").code(401))
     }
+}
+
+pub fn create_auth_token(user: &User<ObjectId>) -> error::Result<Token> {
+    let auth = if user.is_admin {
+        Auth::Admin(user.id)
+    } else {
+        Auth::User(user.id)
+    };
+    Ok(Token {
+        user: user.clone().stringify(),
+        token: auth.to_token()?,
+    })
 }
