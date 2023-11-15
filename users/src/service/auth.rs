@@ -250,7 +250,8 @@ impl AuthService {
     }
 
     pub async fn github_get_user(
-        &self, data: GetGithubAccessToken,
+        &self,
+        data: GetGithubAccessToken,
         current_role: String,
     ) -> error::Result<(CreateUser, i32)> {
         let client = Client::new();
@@ -262,6 +263,7 @@ impl AuthService {
                 data.client_id,
                 data.client_secret,
             ))
+            .header(header::ACCEPT, "application/json")
             .send()
             .await?
             .text()
@@ -273,6 +275,8 @@ impl AuthService {
         let user_response = client
             .get("https://api.github.com/user")
             .header(header::AUTHORIZATION, format!("Bearer {}", access_token))
+            .header(header::ACCEPT, "application/json")
+            .header("User-Agent", "auditdbio")
             .send()
             .await?
             .text()
@@ -281,6 +285,8 @@ impl AuthService {
         let emails_response = client
             .get("https://api.github.com/user/emails")
             .header(header::AUTHORIZATION, format!("Bearer {}", access_token))
+            .header(header::ACCEPT, "application/json")
+            .header("User-Agent", "auditdbio")
             .send()
             .await?
             .text()
