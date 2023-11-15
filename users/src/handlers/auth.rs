@@ -1,22 +1,19 @@
-use std::env::var;
 use actix_web::{
     get, post,
     web::{self, Json},
     HttpRequest, HttpResponse,
 };
-use mongodb::bson::{oid::ObjectId};
 use common::{
-    api::user::{CreateUser, GithubAuth, GetGithubAccessToken},
+    api::user::{CreateUser, GithubAuth},
     context::GeneralContext,
     entities::user::User,
-    auth::Auth,
-    error::{self, AddCode},
+    error,
 };
-use common::api::user::LinkedAccount;
 
-use crate::service::{
-    auth::{AuthService, ChangePasswordData, Login, Token, TokenResponce, create_auth_token},
-    user::UserService,
+use crate::service::auth::{
+    AuthService, ChangePasswordData,
+    Login, Token,
+    TokenResponce
 };
 
 #[post("/api/auth/login")]
@@ -29,45 +26,7 @@ pub async fn github_auth(
     context: GeneralContext,
     Json(data): Json<GithubAuth>,
 ) -> error::Result<Json<Token>> {
-    let github_auth = GetGithubAccessToken {
-        code: data.code,
-        client_id: var("GITHUB_CLIENT_ID").unwrap(),
-        client_secret: var("GITHUB_CLIENT_SECRET").unwrap(),
-    };
-
-    let auth_service = AuthService::new(context.clone());
-    let user_service = UserService::new(context);
-
-    let (github_user, github_id) = auth_service
-        .github_auth(github_auth, data.current_role)
-        .await?;
-
-    if let Some(user) = user_service.find_linked_account(github_id.clone()).await? {
-        return create_auth_token(&user);
-    }
-
-    let existing_email_user = user_service
-        .find_by_email(github_user.email.clone())
-        .await?;
-
-    if let Some(user) = existing_email_user {
-        let account = LinkedAccount {
-            id: github_id,
-            name: "GitHub".to_string(),
-            email: github_user.email.clone(),
-        };
-        let _ = user_service.add_linked_account(user.id, account).await?;
-        return create_auth_token(&user);
-    }
-
-    let verify_email = false;
-    auth_service.authentication(github_user.clone(), verify_email).await?;
-
-    if let Some(user) = user_service.find_by_email(github_user.email.clone()).await? {
-        return create_auth_token(&user);
-    }
-
-    Err(anyhow::anyhow!("Login failed").code(404))
+    Ok(Json(AuthService::new(context).github_auth(data).await?))
 }
 
 #[post("/api/user")]

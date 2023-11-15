@@ -1,4 +1,5 @@
-use actix_web::{HttpRequest, web::Json};
+use std::env::var;
+use actix_web::HttpRequest;
 use chrono::Utc;
 use common::{
     access_rules::AccessRules,
@@ -23,7 +24,7 @@ use mongodb::bson::{oid::ObjectId, Bson};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use reqwest::{Client, header};
-use common::api::user::LinkedAccount;
+use common::api::user::{GithubAuth, LinkedAccount};
 
 use super::user::UserService;
 
@@ -246,7 +247,7 @@ impl AuthService {
         Ok(link.user.stringify())
     }
 
-    pub async fn github_auth(
+    pub async fn github_get_user(
         &self, data: GetGithubAccessToken,
         current_role: String,
     ) -> error::Result<(CreateUser, i32)> {
@@ -311,6 +312,47 @@ impl AuthService {
         };
 
         return Ok((user, user_data.id));
+    }
+
+    pub async fn github_auth(&self, data: GithubAuth) -> error::Result<Token> {
+        let github_auth = GetGithubAccessToken {
+            code: data.code,
+            client_id: var("GITHUB_CLIENT_ID").unwrap(),
+            client_secret: var("GITHUB_CLIENT_SECRET").unwrap(),
+        };
+
+        let user_service = UserService::new(self.context.clone());
+
+        let (github_user, github_id) = self
+            .github_get_user(github_auth, data.current_role)
+            .await?;
+
+        if let Some(user) = user_service.find_linked_account(github_id.clone()).await? {
+            return create_auth_token(&user);
+        }
+
+        let existing_email_user = user_service
+            .find_by_email(github_user.email.clone())
+            .await?;
+
+        if let Some(user) = existing_email_user {
+            let account = LinkedAccount {
+                id: github_id,
+                name: "GitHub".to_string(),
+                email: github_user.email.clone(),
+            };
+            let _ = user_service.add_linked_account(user.id, account).await?;
+            return create_auth_token(&user);
+        }
+
+        let verify_email = false;
+        self.authentication(github_user.clone(), verify_email).await?;
+
+        if let Some(user) = user_service.find_by_email(github_user.email.clone()).await? {
+            return create_auth_token(&user);
+        }
+
+        Err(anyhow::anyhow!("Login failed").code(404))
     }
 
     pub async fn verify_link(&self, code: String) -> error::Result<bool> {
@@ -452,14 +494,14 @@ impl AuthService {
     }
 }
 
-pub fn create_auth_token(user: &User<ObjectId>) -> error::Result<Json<Token>> {
+pub fn create_auth_token(user: &User<ObjectId>) -> error::Result<Token> {
     let auth = if user.is_admin {
         Auth::Admin(user.id)
     } else {
         Auth::User(user.id)
     };
-    Ok(Json(Token {
+    Ok(Token {
         user: user.clone().stringify(),
         token: auth.to_token()?,
-    }))
+    })
 }
