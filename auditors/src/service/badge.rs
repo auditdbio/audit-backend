@@ -120,7 +120,7 @@ impl BadgeService {
             code
         );
 
-        let message = include!("../../templates/new_user.txt")
+        let message = include_str!("../../templates/new_user.txt")
             .replace("{delete_link}", &delete_link)
             .replace("{merge_link}", &merge_link);
 
