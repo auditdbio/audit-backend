@@ -183,7 +183,9 @@ impl RequestService {
                 code
             );
 
-            let message = format!("merge link: {}, delete link: {}", merge_link, delete_link);
+            let message = include_str!("../../templates/badge_link.txt")
+                .replace("{merge_link}", &merge_link)
+                .replace("{delete_link}", &delete_link);
 
             // send email
             let letter = CreateLetter {
@@ -191,7 +193,7 @@ impl RequestService {
                 recipient_name: None,
                 email: badge.contacts.email.unwrap(),
                 message: message.clone(),
-                subject: "The badge notification".to_string(),
+                subject: "AuditDB Audit Request".to_string(),
             };
             send_mail(&self.context, letter).await?;
         }

@@ -120,7 +120,9 @@ impl BadgeService {
             code
         );
 
-        let message = format!("merge link: {}, delete link: {}", merge_link, delete_link);
+        let message = include!("../../templates/new_user.txt")
+            .replace("{delete_link}", &delete_link)
+            .replace("{merge_link}", &merge_link);
 
         // send email
         let letter = CreateLetter {
@@ -128,7 +130,7 @@ impl BadgeService {
             recipient_name: None,
             email: badge.contacts.email.clone().unwrap(),
             message: message.clone(),
-            subject: "The badge notification".to_string(),
+            subject: "AuditDB Introduction".to_string(),
         };
         send_mail(&self.context, letter).await?;
 
