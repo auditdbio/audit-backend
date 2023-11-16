@@ -113,6 +113,11 @@ impl UserService {
             user.linked_accounts = Some(vec![account]);
         }
 
+        user.last_modified = Utc::now().timestamp_micros();
+
+        users.delete("id", &id).await?;
+        users.insert(&user).await?;
+
         Ok(Some(user))
     }
 
