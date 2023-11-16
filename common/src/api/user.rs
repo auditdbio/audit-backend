@@ -31,22 +31,22 @@ pub struct LinkedAccount {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GithubAuth {
-  pub code: String,
-  pub current_role: String,
+    pub code: String,
+    pub current_role: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GetGithubAccessToken {
-  pub code: String,
-  pub client_id: String,
-  pub client_secret: String,
+    pub code: String,
+    pub client_id: String,
+    pub client_secret: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GithubAccessResponse {
-  pub access_token: String,
-  pub token_type: String,
-  pub scope: String,
+    pub access_token: String,
+    pub token_type: String,
+    pub scope: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -60,9 +60,9 @@ pub struct GithubUserData {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GithubUserEmails {
-  pub email: String,
-  pub primary: bool,
-  pub verified: bool,
+    pub email: String,
+    pub primary: bool,
+    pub verified: bool,
 }
 
 pub async fn get_by_id(
