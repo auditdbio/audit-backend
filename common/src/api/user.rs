@@ -53,9 +53,9 @@ pub struct GithubAccessResponse {
 pub struct GithubUserData {
   pub id: i32,
   pub login: String,
-  pub name: String,
+  pub name: Option<String>,
   pub avatar_url: String,
-  pub company: String,
+  pub company: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
