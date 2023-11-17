@@ -113,7 +113,7 @@ impl AuthService {
         };
 
         if let Some(is_passwordless) = user.is_passwordless {
-            if is_passwordless && user.password == "".to_string() {
+            if is_passwordless {
                 return Err(anyhow::anyhow!("Incorrect password").code(401));
             }
         }

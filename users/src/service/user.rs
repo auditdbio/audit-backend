@@ -172,6 +172,7 @@ impl UserService {
             let password = sha256::digest(password);
             user.password = password;
             user.salt = salt;
+            user.is_passwordless = Some(false);
         }
 
         if let Some(name) = change.name {
