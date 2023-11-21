@@ -83,6 +83,7 @@ impl PublicAudit {
     pub async fn new(
         context: &GeneralContext,
         audit: Audit<ObjectId>,
+        no_customer: Option<bool>,
     ) -> error::Result<PublicAudit> {
         let auth = context.auth();
         let auditor = context
@@ -129,6 +130,12 @@ impl PublicAudit {
             AuditStatus::Resolved => PublicAuditStatus::Resolved,
         };
 
+        let project_name = if audit.project_name == "" {
+            project.name
+        } else {
+            audit.project_name
+        };
+
         let public_audit = PublicAudit {
             id: audit.id.to_hex(),
             auditor_id: audit.auditor_id.to_hex(),
@@ -136,7 +143,7 @@ impl PublicAudit {
             project_id: audit.project_id.to_hex(),
             auditor_first_name: auditor.first_name().clone(),
             auditor_last_name: auditor.last_name().clone(),
-            project_name: project.name,
+            project_name,
             avatar: auditor.avatar().clone(),
             description: audit.description,
             status,
@@ -159,4 +166,26 @@ impl PublicAudit {
 
         Ok(public_audit)
     }
+}
+
+#[derive(Clone, Deserialize, Serialize, Debug)]
+pub struct NoCustomerAuditRequest {
+    pub auditor_id: String,
+    pub auditor_first_name: String,
+    pub auditor_last_name: String,
+    pub auditor_contacts: Contacts,
+    pub avatar: String,
+
+    pub project_name: String,
+    pub description: String,
+    pub status: PublicAuditStatus,
+    pub scope: Vec<String>,
+    pub tags: Vec<String>,
+    pub last_modified: i64,
+    pub report: Option<String>,
+    pub report_name: Option<String>,
+    #[serde(rename = "isPublic")]
+    pub public: bool,
+
+    pub issues: Vec<PublicIssue>,
 }

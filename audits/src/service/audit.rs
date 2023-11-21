@@ -21,6 +21,10 @@ use common::{
     error::{self, AddCode},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
+use common::api::audits::NoCustomerAuditRequest;
+use common::entities::audit_request::TimeRange;
+use common::entities::contacts::Contacts;
+use common::entities::project::{PublicProject, PublishOptions};
 
 use super::audit_request::PublicRequest;
 
@@ -45,6 +49,7 @@ impl AuditService {
             customer_id,
             auditor_id,
             project_id: request.project_id.parse()?,
+            project_name: request.project_name,
             description: request.description,
             status: AuditStatus::Waiting,
             scope: request.project_scope,
@@ -85,6 +90,62 @@ impl AuditService {
         post_event(&self.context, event, self.context.server_auth()).await?;
 
         Ok(public_audit)
+    }
+
+    pub async fn create_no_customer(&self, request: NoCustomerAuditRequest) -> error::Result<PublicAudit> {
+        let _auth = self.context.auth();
+        let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
+
+        let auditor_id: ObjectId = request.auditor_id.parse()?;
+        let customer_id: ObjectId = auditor_id;
+
+        let time = TimeRange {
+            from: Utc::now().timestamp_micros(),
+            to: Utc::now().timestamp_micros(),
+        };
+
+        let project = PublicProject {
+            id: ObjectId::new().to_hex(),
+            customer_id: customer_id.to_hex(),
+            name: request.project_name,
+            description: request.description,
+            scope: request.scope,
+            tags: request.tags,
+            status: "Resolved".to_string(),
+            publish_options: PublishOptions {
+                publish: false,
+                ready_to_wait: false
+            },
+            creator_contacts: Contacts {
+                email: None,
+                telegram: None,
+                public_contacts: false
+            },
+            kind: "project".to_string(),
+            price: 0
+        };
+
+        let audit = Audit {
+            id: ObjectId::new(),
+            customer_id,
+            auditor_id,
+            project_id: project.id.parse()?,
+            project_name: project.name.clone(),
+            description: project.description.clone(),
+            status: AuditStatus::Resolved,
+            scope: project.scope.clone(),
+            price: 0,
+            last_modified: Utc::now().timestamp_micros(),
+            report: None,
+            report_name: None,
+            time,
+            issues: Vec::new(),
+            public: false,
+        };
+
+        audits.insert(&audit).await?;
+
+        Ok(PublicAudit::new(&self.context, audit, Some(true)).await?)
     }
 
     async fn get_audit(&self, id: ObjectId) -> error::Result<Option<Audit<ObjectId>>> {

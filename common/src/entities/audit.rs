@@ -38,6 +38,8 @@ pub struct Audit<Id: Eq + Hash> {
     #[serde(default)]
     pub public: bool,
 
+    #[serde(default)]
+    pub project_name: String,
     pub description: String,
     pub status: AuditStatus,
     pub scope: Vec<String>,
@@ -59,6 +61,7 @@ impl Audit<String> {
             customer_id: self.customer_id.parse().unwrap(),
             auditor_id: self.auditor_id.parse().unwrap(),
             project_id: self.project_id.parse().unwrap(),
+            project_name: self.project_name,
             description: self.description,
             status: self.status,
             scope: self.scope,
@@ -80,6 +83,7 @@ impl Audit<ObjectId> {
             customer_id: self.customer_id.to_hex(),
             auditor_id: self.auditor_id.to_hex(),
             project_id: self.project_id.to_hex(),
+            project_name: self.project_name,
             description: self.description,
             status: self.status,
             scope: self.scope,
