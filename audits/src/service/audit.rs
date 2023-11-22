@@ -112,7 +112,7 @@ impl AuditService {
             description: request.description,
             scope: request.scope,
             tags: request.tags,
-            status: "Resolved".to_string(),
+            status: "InProgress".to_string(),
             publish_options: PublishOptions {
                 publish: false,
                 ready_to_wait: false
@@ -133,7 +133,7 @@ impl AuditService {
             project_id: project.id.parse()?,
             project_name: project.name.clone(),
             description: project.description.clone(),
-            status: AuditStatus::Resolved,
+            status: AuditStatus::Started,
             scope: project.scope.clone(),
             price: 0,
             last_modified: Utc::now().timestamp_micros(),
