@@ -306,7 +306,8 @@ pub async fn create_report(
     let report = context
         .make_request()
         .post(format!(
-            "http://{}/api/generate-report",
+            "{}://{}/api/generate-report",
+            PROTOCOL.as_str(),
             RENDERER_SERVICE.as_str()
         ))
         .json(&input)
