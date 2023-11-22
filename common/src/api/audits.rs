@@ -83,7 +83,6 @@ impl PublicAudit {
     pub async fn new(
         context: &GeneralContext,
         audit: Audit<ObjectId>,
-        no_customer: Option<bool>,
     ) -> error::Result<PublicAudit> {
         let auth = context.auth();
         let auditor = context
@@ -100,19 +99,24 @@ impl PublicAudit {
             .json::<ExtendedAuditor>()
             .await?;
 
-        let project = context
-            .make_request::<PublicProject>()
-            .get(format!(
-                "{}://{}/api/project/{}",
-                PROTOCOL.as_str(),
-                CUSTOMERS_SERVICE.as_str(),
-                audit.project_id
-            ))
-            .auth(context.server_auth())
-            .send()
-            .await?
-            .json::<PublicProject>()
-            .await?;
+        let project = match audit.no_customer {
+            true => None,
+            _ => Some(
+                context
+                    .make_request::<PublicProject>()
+                    .get(format!(
+                        "{}://{}/api/project/{}",
+                        PROTOCOL.as_str(),
+                        CUSTOMERS_SERVICE.as_str(),
+                        audit.project_id
+                    ))
+                    .auth(context.server_auth())
+                    .send()
+                    .await?
+                    .json::<PublicProject>()
+                    .await?,
+            ),
+        };
 
         let status = match audit.status {
             AuditStatus::Waiting => PublicAuditStatus::WaitingForAudit,
@@ -130,10 +134,20 @@ impl PublicAudit {
             AuditStatus::Resolved => PublicAuditStatus::Resolved,
         };
 
-        let project_name = if audit.project_name == "" {
-            project.name
+        let customer_contacts = if let Some(project) = &project {
+            project.creator_contacts.clone()
         } else {
-            audit.project_name
+            Contacts {
+                email: None,
+                telegram: None,
+                public_contacts: false,
+            }
+        };
+
+        let tags = if let Some(project_ref) = &project {
+            project_ref.tags.clone()
+        } else {
+            Vec::new()
         };
 
         let public_audit = PublicAudit {
@@ -143,15 +157,15 @@ impl PublicAudit {
             project_id: audit.project_id.to_hex(),
             auditor_first_name: auditor.first_name().clone(),
             auditor_last_name: auditor.last_name().clone(),
-            project_name,
+            project_name: audit.project_name,
             avatar: auditor.avatar().clone(),
             description: audit.description,
             status,
             scope: audit.scope,
             price: audit.price,
             auditor_contacts: auditor.contacts().clone(),
-            customer_contacts: project.creator_contacts,
-            tags: project.tags,
+            customer_contacts,
+            tags,
             last_modified: audit.last_modified,
             report: audit.report,
             report_name: audit.report_name,

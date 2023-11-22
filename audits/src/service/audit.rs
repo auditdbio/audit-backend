@@ -60,6 +60,7 @@ impl AuditService {
             time: request.time,
             issues: Vec::new(),
             public: false,
+            no_customer: false
         };
 
         audits.insert(&audit).await?;
@@ -141,11 +142,12 @@ impl AuditService {
             time,
             issues: Vec::new(),
             public: false,
+            no_customer: true,
         };
 
         audits.insert(&audit).await?;
 
-        Ok(PublicAudit::new(&self.context, audit, Some(true)).await?)
+        Ok(PublicAudit::new(&self.context, audit).await?)
     }
 
     async fn get_audit(&self, id: ObjectId) -> error::Result<Option<Audit<ObjectId>>> {

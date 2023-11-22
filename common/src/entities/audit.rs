@@ -52,6 +52,9 @@ pub struct Audit<Id: Eq + Hash> {
 
     #[serde(default)]
     pub issues: Vec<Issue<Id>>,
+
+    #[serde(default)]
+    pub no_customer: bool,
 }
 
 impl Audit<String> {
@@ -72,6 +75,7 @@ impl Audit<String> {
             time: self.time,
             issues: Issue::parse_map(self.issues),
             public: self.public,
+            no_customer: self.no_customer,
         }
     }
 }
@@ -94,6 +98,7 @@ impl Audit<ObjectId> {
             time: self.time,
             issues: Issue::to_string_map(self.issues),
             public: self.public,
+            no_customer: self.no_customer,
         }
     }
 }
