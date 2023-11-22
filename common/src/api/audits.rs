@@ -144,10 +144,20 @@ impl PublicAudit {
             }
         };
 
-        let tags = if let Some(project_ref) = &project {
-            project_ref.tags.clone()
+        let tags = if let Some(project) = &project {
+            project.tags.clone()
         } else {
             Vec::new()
+        };
+
+        let project_name = if let Some(project) = &project {
+            if audit.project_name == "" {
+                project.name.clone()
+            } else {
+                audit.project_name
+            }
+        } else {
+            audit.project_name
         };
 
         let public_audit = PublicAudit {
@@ -157,7 +167,7 @@ impl PublicAudit {
             project_id: audit.project_id.to_hex(),
             auditor_first_name: auditor.first_name().clone(),
             auditor_last_name: auditor.last_name().clone(),
-            project_name: audit.project_name,
+            project_name,
             avatar: auditor.avatar().clone(),
             description: audit.description,
             status,
