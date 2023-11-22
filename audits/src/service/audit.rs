@@ -330,6 +330,10 @@ impl AuditService {
 
         audits.insert(&audit).await?;
 
+        if audit.no_customer {
+            return Ok(auth.public_issue(issue))
+        }
+
         let mut new_notification: NewNotification =
             serde_json::from_str(include_str!("../../templates/audit_issue_disclosed.txt"))?;
 
@@ -422,26 +426,29 @@ impl AuditService {
                 return Err(anyhow::anyhow!("Invalid action").code(400));
             };
 
-            let mut new_notification: NewNotification = if role == Role::Customer {
-                serde_json::from_str(include_str!(
-                    "../../templates/audit_issue_status_change_auditor.txt"
-                ))?
-            } else {
-                serde_json::from_str(include_str!(
-                    "../../templates/audit_issue_status_change_customer.txt"
-                ))?
-            };
+            if !audit.no_customer {
+                let mut new_notification: NewNotification = if role == Role::Customer {
+                    serde_json::from_str(include_str!(
+                        "../../templates/audit_issue_status_change_auditor.txt"
+                    ))?
+                } else {
+                    serde_json::from_str(include_str!(
+                        "../../templates/audit_issue_status_change_customer.txt"
+                    ))?
+                };
 
-            new_notification.user_id = Some(receiver_id);
+                new_notification.user_id = Some(receiver_id);
 
-            let project = get_project(&self.context, audit.project_id).await?;
+                let project = get_project(&self.context, audit.project_id).await?;
 
-            let variables = vec![
-                ("issue".to_owned(), issue.name.clone()),
-                ("audit".to_owned(), project.name),
-            ];
+                let variables = vec![
+                    ("issue".to_owned(), issue.name.clone()),
+                    ("audit".to_owned(), project.name),
+                ];
 
-            send_notification(&self.context, true, true, new_notification, variables).await?;
+                send_notification(&self.context, true, true, new_notification, variables).await?;
+            }
+
             issue.status = new_state.clone();
 
             Self::create_event(
@@ -637,7 +644,7 @@ impl AuditService {
                 return Err(anyhow::anyhow!("User is not available to read this audit").code(403));
             }
 
-            let is_customer = auth.id().unwrap() == audit.customer_id;
+            let is_customer = auth.id().unwrap() == audit.customer_id && !audit.no_customer;
 
             let issues = audit.issues;
 
