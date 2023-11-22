@@ -5,7 +5,7 @@ use actix_web::{
 };
 
 use common::{
-    api::audits::{AuditChange, CreateIssue, PublicAudit},
+    api::audits::{AuditChange, CreateIssue, PublicAudit, NoCustomerAuditRequest},
     context::GeneralContext,
     entities::{issue::ChangeIssue, role::Role},
     error,
@@ -21,6 +21,14 @@ pub async fn post_audit(
     Json(data): web::Json<PublicRequest>,
 ) -> error::Result<Json<PublicAudit>> {
     Ok(Json(AuditService::new(context).create(data).await?))
+}
+
+#[post("/api/no_customer_audit")]
+pub async fn post_no_customer_audit(
+    context: GeneralContext,
+    Json(data): Json<NoCustomerAuditRequest>
+) -> error::Result<Json<PublicAudit>> {
+    Ok(Json(AuditService::new(context).create_no_customer(data).await?))
 }
 
 #[get("/api/audit/{id}")]
