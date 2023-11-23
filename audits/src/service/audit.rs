@@ -385,7 +385,11 @@ impl AuditService {
             return Err(anyhow::anyhow!("User is not available to change this issue").code(403));
         }
 
-        let Some(mut issue) = audit.issues.get(issue_id).cloned() else {
+        let Some(mut issue) = audit
+            .issues
+            .iter()
+            .find(|issue| issue.id == issue_id)
+            .cloned() else {
             return Err(anyhow::anyhow!("No issue found").code(404));
         };
 
