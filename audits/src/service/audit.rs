@@ -94,6 +94,8 @@ impl AuditService {
     }
 
     pub async fn create_no_customer(&self, request: NoCustomerAuditRequest) -> error::Result<PublicAudit> {
+        // TODO auth
+
         let _auth = self.context.auth();
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
@@ -426,7 +428,7 @@ impl AuditService {
                 return Err(anyhow::anyhow!("Invalid action").code(400));
             };
 
-            if !audit.no_customer {
+            if !&audit.no_customer {
                 let mut new_notification: NewNotification = if role == Role::Customer {
                     serde_json::from_str(include_str!(
                         "../../templates/audit_issue_status_change_auditor.txt"
@@ -516,59 +518,64 @@ impl AuditService {
             Self::create_event(&self.context, &mut issue, kind, message);
         }
 
-        if let Some(events) = change.events {
-            let sender_id = auth.id().unwrap();
+        if !audit.no_customer {
+            if let Some(events) = change.events {
+                let sender_id = auth.id().unwrap();
 
-            let project = get_project(&self.context, audit.project_id).await?;
+                let project = get_project(&self.context, audit.project_id).await?;
 
-            let role = if sender_id == audit.customer_id {
-                Role::Customer
-            } else {
-                Role::Auditor
-            };
-
-            for create_event in events {
-                let event = Event {
-                    timestamp: Utc::now().timestamp(),
-                    user: self.context.auth().id().unwrap(),
-                    kind: create_event.kind,
-                    message: create_event.message,
-                    id: issue.events.len(),
+                let role = if sender_id == audit.customer_id {
+                    Role::Customer
+                } else {
+                    Role::Auditor
                 };
 
-                if event.kind == EventKind::Comment {
-                    let mut new_notification: NewNotification = if role == Role::Customer {
-                        serde_json::from_str(include_str!(
-                            "../../templates/audit_issue_comment_auditor.txt"
-                        ))?
-                    } else {
-                        serde_json::from_str(include_str!(
-                            "../../templates/audit_issue_comment_customer.txt"
-                        ))?
+                for create_event in events {
+                    let event = Event {
+                        timestamp: Utc::now().timestamp(),
+                        user: self.context.auth().id().unwrap(),
+                        kind: create_event.kind,
+                        message: create_event.message,
+                        id: issue.events.len(),
                     };
 
-                    new_notification.user_id = Some(receiver_id);
+                    if event.kind == EventKind::Comment {
+                        let mut new_notification: NewNotification = if role == Role::Customer {
+                            serde_json::from_str(include_str!(
+                                "../../templates/audit_issue_comment_auditor.txt"
+                            ))?
+                        } else {
+                            serde_json::from_str(include_str!(
+                                "../../templates/audit_issue_comment_customer.txt"
+                            ))?
+                        };
 
-                    let variables = vec![
-                        ("audit".to_owned(), project.name.clone()),
-                        ("issue".to_owned(), issue.name.clone()),
-                    ];
+                        new_notification.user_id = Some(receiver_id);
 
-                    send_notification(&self.context, true, true, new_notification, variables)
-                        .await?;
+                        let variables = vec![
+                            ("audit".to_owned(), project.name.clone()),
+                            ("issue".to_owned(), issue.name.clone()),
+                        ];
+
+                        send_notification(&self.context, true, true, new_notification, variables)
+                            .await?;
+                    }
+
+                    issue.events.push(event);
                 }
 
-                issue.events.push(event);
+                issue
+                    .read
+                    .insert(sender_id.to_hex(), issue.events.len() as u64);
             }
-
-            issue
-                .read
-                .insert(sender_id.to_hex(), issue.events.len() as u64);
         }
 
         issue.last_modified = Utc::now().timestamp();
 
-        audit.issues[issue_id] = issue.clone();
+        // audit.issues[issue_id] = issue.clone();
+        if let Some(idx) = audit.issues.iter().position(|issue| issue.id == issue_id) {
+            audit.issues[idx] = issue.clone();
+        }
 
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
