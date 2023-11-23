@@ -6,22 +6,22 @@ import getPageForStrings from './getPageForStrings.js'
 const createTOC = async (project, pdfDoc, pdfBuffer) => {
   const tocReducer = (report_data, num) => {
     let idx = 1
-    return report_data.reduce((acc, item) => {
+    return report_data?.reduce((acc, item) => {
       const numeration = num ? ` ${num}.${idx}` : idx
       let subsections = []
-      if (item.subsections?.length) {
+      if (item?.subsections?.length) {
         subsections = tocReducer(item.subsections, numeration)
       }
-      const title = `${numeration}. ${item.title}`
-      if (item.include_in_toc) {
+      const title = `${numeration}. ${item?.title}`
+      if (item?.include_in_toc) {
         idx += 1
         return [...acc, title, ...subsections]
       }
       return acc
-    }, [])
+    }, []) || []
   }
 
-  const itemsForToc = tocReducer(project.report_data)
+  const itemsForToc = tocReducer(project?.report_data)
   const tableOfContents = await getPageForStrings(pdfBuffer, itemsForToc)
 
   const tableOfContentsWithCoords = []

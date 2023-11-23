@@ -18,29 +18,33 @@ const pdfOptions = {
   },
 }
 
-export const generateReport = async (req, res) => {
-  const project = req.body
+export const generateReport = async (req, res, next) => {
+  try {
+    const project = req.body
 
-  const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
-  const browserPage = await browser.newPage()
-  await browserPage.setContent(getHTML(project), { waitUntil: 'networkidle0' })
-  await browserPage.evaluateHandle('document.fonts.ready')
-  await browserPage.evaluate(() => (document.body.style.zoom = 0.6))
-  const pdfBuffer = await browserPage.pdf(pdfOptions)
-  await browser.close()
+    const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
+    const browserPage = await browser.newPage()
+    await browserPage.setContent(getHTML(project), { waitUntil: 'networkidle0' })
+    await browserPage.evaluateHandle('document.fonts.ready')
+    await browserPage.evaluate(() => (document.body.style.zoom = 0.6))
+    const pdfBuffer = await browserPage.pdf(pdfOptions)
+    await browser.close()
 
-  const pdfDoc = await PDFDocument.load(pdfBuffer)
+    const pdfDoc = await PDFDocument.load(pdfBuffer)
 
-  const { tableOfContentsWithCoords, tocPagesCounter } = await createTOC(project, pdfDoc, pdfBuffer)
-  await addBackgroundToPages(pdfDoc)
-  await createPageLinkAnnotation(pdfDoc, tableOfContentsWithCoords, tocPagesCounter, project.profile_link)
+    const { tableOfContentsWithCoords, tocPagesCounter } = await createTOC(project, pdfDoc, pdfBuffer)
+    await addBackgroundToPages(pdfDoc)
+    await createPageLinkAnnotation(pdfDoc, tableOfContentsWithCoords, tocPagesCounter, project?.profile_link)
 
-  const pdfBytes = await pdfDoc.save()
+    const pdfBytes = await pdfDoc.save()
 
-  // --- Save generated report in temp directory:
-  // fs.writeFileSync(`temp/output-${Date.now()}.pdf`, pdfBytes)
-  // fs.writeFileSync(`temp/output-${Date.now()}.html`, getHTML(project)) // save in html format for debugging
+    // --- Save generated report in temp directory:
+    // fs.writeFileSync(`temp/output-${Date.now()}.pdf`, pdfBytes)
+    // fs.writeFileSync(`temp/output-${Date.now()}.html`, getHTML(project)) // save in html format for debugging
 
-  res.contentType('application/pdf')
-  res.end(pdfBytes, 'binary')
+    res.contentType('application/pdf')
+    res.end(pdfBytes, 'binary')
+  } catch (err) {
+    next(err)
+  }
 }
