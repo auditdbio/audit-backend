@@ -94,9 +94,7 @@ impl AuditService {
     }
 
     pub async fn create_no_customer(&self, request: NoCustomerAuditRequest) -> error::Result<PublicAudit> {
-        // TODO auth
-
-        let _auth = self.context.auth();
+        let auth = self.context.auth();
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
         let auditor_id: ObjectId = request.auditor_id.parse()?;
@@ -107,45 +105,28 @@ impl AuditService {
             to: Utc::now().timestamp_micros(),
         };
 
-        let project = PublicProject {
-            id: ObjectId::new().to_hex(),
-            customer_id: customer_id.to_hex(),
-            name: request.project_name,
-            description: request.description,
-            scope: request.scope,
-            tags: request.tags,
-            status: "InProgress".to_string(),
-            publish_options: PublishOptions {
-                publish: false,
-                ready_to_wait: false
-            },
-            creator_contacts: Contacts {
-                email: None,
-                telegram: None,
-                public_contacts: false
-            },
-            kind: "project".to_string(),
-            price: 0
-        };
-
         let audit = Audit {
             id: ObjectId::new(),
             customer_id,
             auditor_id,
-            project_id: project.id.parse()?,
-            project_name: project.name.clone(),
-            description: project.description.clone(),
-            status: AuditStatus::Started,
-            scope: project.scope.clone(),
+            project_id: ObjectId::new(),
+            project_name: request.project_name,
+            description: request.description,
+            status: request.status,
+            scope: request.scope,
             price: 0,
             last_modified: Utc::now().timestamp_micros(),
             report: None,
             report_name: None,
             time,
-            issues: Vec::new(),
             public: false,
             no_customer: true,
+            issues: CreateIssue::to_issue_map(request.issues),
         };
+
+        if !Edit.get_access(&auth, &audit) {
+            return Err(anyhow::anyhow!("User is not available to create this audit").code(403));
+        }
 
         audits.insert(&audit).await?;
 

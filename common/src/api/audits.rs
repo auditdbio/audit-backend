@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+use chrono::Utc;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
@@ -8,7 +10,7 @@ use crate::{
         audit_request::TimeRange,
         auditor::{ExtendedAuditor, PublicAuditor},
         contacts::Contacts,
-        issue::Status,
+        issue::{Status, Issue},
         project::PublicProject,
     },
     error,
@@ -38,7 +40,7 @@ pub struct AuditChange {
     pub public: Option<bool>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CreateIssue {
     pub name: String,
     pub description: String,
@@ -47,6 +49,33 @@ pub struct CreateIssue {
     pub category: String,
     #[serde(default)]
     pub links: Vec<String>,
+    pub feedback: Option<String>,
+}
+
+impl CreateIssue {
+    pub fn to_issue(self, id: usize) -> Issue<ObjectId> {
+        Issue {
+            id,
+            name: self.name,
+            description: self.description,
+            status: self.status,
+            severity: self.severity,
+            events: Vec::new(),
+            category: self.category,
+            links: self.links,
+            include: true,
+            feedback: self.feedback.unwrap_or_default(),
+            last_modified: Utc::now().timestamp(),
+            read: HashMap::new(),
+        }
+    }
+
+    pub fn to_issue_map(map: Vec<Self>) -> Vec<Issue<ObjectId>> {
+        map.into_iter()
+            .enumerate()
+            .map(|(idx, issue)| issue.to_issue(idx))
+            .collect()
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
@@ -77,6 +106,9 @@ pub struct PublicAudit {
     pub time: TimeRange,
 
     pub issues: Vec<PublicIssue>,
+
+    #[serde(default)]
+    pub no_customer: bool,
 }
 
 impl PublicAudit {
@@ -186,6 +218,7 @@ impl PublicAudit {
                 .map(|i| auth.public_issue(i))
                 .collect(),
             public: audit.public,
+            no_customer: audit.no_customer,
         };
 
         Ok(public_audit)
@@ -202,7 +235,7 @@ pub struct NoCustomerAuditRequest {
 
     pub project_name: String,
     pub description: String,
-    pub status: PublicAuditStatus,
+    pub status: AuditStatus,
     pub scope: Vec<String>,
     pub tags: Vec<String>,
     pub last_modified: i64,
@@ -211,5 +244,5 @@ pub struct NoCustomerAuditRequest {
     #[serde(rename = "isPublic")]
     pub public: bool,
 
-    pub issues: Vec<PublicIssue>,
+    pub issues: Vec<CreateIssue>,
 }
