@@ -18,11 +18,16 @@ use common::{
     entities::{badge::PublicBadge, letter::CreateLetter, user::User},
     error::{self, AddCode},
     repository::Entity,
-    services::{FRONTEND, MAIL_SERVICE, PROTOCOL, USERS_SERVICE},
+    services::{
+        FRONTEND, MAIL_SERVICE,
+        PROTOCOL, USERS_SERVICE,
+        AUDITORS_SERVICE, CUSTOMERS_SERVICE,
+    },
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use reqwest::{Client, header};
 use common::api::user::{GithubAuth, LinkedAccount};
 
@@ -253,7 +258,7 @@ impl AuthService {
         &self,
         data: GetGithubAccessToken,
         current_role: String,
-    ) -> error::Result<(CreateUser, i32)> {
+    ) -> error::Result<(CreateUser, i32, String)> {
         let client = Client::new();
 
         let access_response = client
@@ -319,7 +324,7 @@ impl AuthService {
             is_passwordless: Some(true),
         };
 
-        return Ok((user, user_data.id));
+        return Ok((user, user_data.id, user_data.avatar_url));
     }
 
     pub async fn github_auth(&self, data: GithubAuth) -> error::Result<Token> {
@@ -331,7 +336,7 @@ impl AuthService {
 
         let user_service = UserService::new(self.context.clone());
 
-        let (github_user, github_id) = self
+        let (github_user, github_id, avatar) = self
             .github_get_user(github_auth, data.current_role)
             .await?;
 
@@ -357,6 +362,32 @@ impl AuthService {
         self.authentication(github_user.clone(), verify_email).await?;
 
         if let Some(user) = user_service.find_by_email(github_user.email.clone()).await? {
+            let payload = json!({ "avatar": avatar });
+
+            self.context
+                .make_request()
+                .patch(format!(
+                    "{}://{}/api/my_auditor",
+                    PROTOCOL.as_str(),
+                    AUDITORS_SERVICE.as_str()
+                ))
+                .auth(self.context.server_auth())
+                .json(&payload)
+                .send()
+                .await?;
+
+            self.context
+                .make_request()
+                .patch(format!(
+                    "{}://{}/api/my_customer",
+                    PROTOCOL.as_str(),
+                    CUSTOMERS_SERVICE.as_str()
+                ))
+                .auth(self.context.server_auth())
+                .json(&payload)
+                .send()
+                .await?;
+
             return create_auth_token(&user);
         }
 
