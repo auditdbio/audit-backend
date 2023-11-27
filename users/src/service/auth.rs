@@ -10,12 +10,16 @@ use common::{
         user::{
             CreateUser, GetGithubAccessToken,
             GithubAccessResponse, GithubUserData,
-            GithubUserEmails,
+            GithubUserEmails, GithubAuth,
         },
     },
     auth::Auth,
     context::GeneralContext,
-    entities::{badge::PublicBadge, letter::CreateLetter, user::User},
+    entities::{
+        badge::PublicBadge,
+        letter::CreateLetter,
+        user::{User, LinkedAccount},
+    },
     error::{self, AddCode},
     repository::Entity,
     services::{
@@ -29,7 +33,6 @@ use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use reqwest::{Client, header};
-use common::api::user::{GithubAuth, LinkedAccount};
 
 use super::user::UserService;
 
@@ -258,7 +261,7 @@ impl AuthService {
         &self,
         data: GetGithubAccessToken,
         current_role: String,
-    ) -> error::Result<(CreateUser, i32, String)> {
+    ) -> error::Result<(CreateUser, LinkedAccount)> {
         let client = Client::new();
 
         let access_response = client
@@ -310,6 +313,8 @@ impl AuthService {
             id: user_data.id.clone(),
             name: "GitHub".to_string(),
             email: email.clone(),
+            url: user_data.html_url,
+            avatar: user_data.avatar_url,
         };
 
         let user = CreateUser {
@@ -320,11 +325,11 @@ impl AuthService {
             use_email: None,
             admin_creation_password: None,
             secret: None,
-            linked_accounts: Some(vec![linked_account]),
+            linked_accounts: Some(vec![linked_account.clone()]),
             is_passwordless: Some(true),
         };
 
-        return Ok((user, user_data.id, user_data.avatar_url));
+        return Ok((user, linked_account));
     }
 
     pub async fn github_auth(&self, data: GithubAuth) -> error::Result<Token> {
@@ -336,11 +341,11 @@ impl AuthService {
 
         let user_service = UserService::new(self.context.clone());
 
-        let (github_user, github_id, avatar) = self
+        let (github_user, linked_account) = self
             .github_get_user(github_auth, data.current_role)
             .await?;
 
-        if let Some(user) = user_service.find_linked_account(github_id.clone()).await? {
+        if let Some(user) = user_service.find_linked_account(linked_account.id.clone()).await? {
             return create_auth_token(&user);
         }
 
@@ -349,12 +354,7 @@ impl AuthService {
             .await?;
 
         if let Some(user) = existing_email_user {
-            let account = LinkedAccount {
-                id: github_id,
-                name: "GitHub".to_string(),
-                email: github_user.email.clone(),
-            };
-            let _ = user_service.add_linked_account(user.id, account).await?;
+            let _ = user_service.add_linked_account(user.id, linked_account).await?;
             return create_auth_token(&user);
         }
 
@@ -362,31 +362,31 @@ impl AuthService {
         self.authentication(github_user.clone(), verify_email).await?;
 
         if let Some(user) = user_service.find_by_email(github_user.email.clone()).await? {
-            let payload = json!({ "avatar": avatar });
-
-            self.context
-                .make_request()
-                .patch(format!(
-                    "{}://{}/api/my_auditor",
-                    PROTOCOL.as_str(),
-                    AUDITORS_SERVICE.as_str()
-                ))
-                .auth(self.context.server_auth())
-                .json(&payload)
-                .send()
-                .await?;
-
-            self.context
-                .make_request()
-                .patch(format!(
-                    "{}://{}/api/my_customer",
-                    PROTOCOL.as_str(),
-                    CUSTOMERS_SERVICE.as_str()
-                ))
-                .auth(self.context.server_auth())
-                .json(&payload)
-                .send()
-                .await?;
+            // let payload = json!({ "avatar": linked_account.avatar });
+            //
+            // self.context
+            //     .make_request()
+            //     .patch(format!(
+            //         "{}://{}/api/my_auditor",
+            //         PROTOCOL.as_str(),
+            //         AUDITORS_SERVICE.as_str()
+            //     ))
+            //     .auth(self.context.server_auth())
+            //     .json(&payload)
+            //     .send()
+            //     .await?;
+            //
+            // self.context
+            //     .make_request()
+            //     .patch(format!(
+            //         "{}://{}/api/my_customer",
+            //         PROTOCOL.as_str(),
+            //         CUSTOMERS_SERVICE.as_str()
+            //     ))
+            //     .auth(self.context.server_auth())
+            //     .json(&payload)
+            //     .send()
+            //     .await?;
 
             return create_auth_token(&user);
         }
