@@ -513,6 +513,7 @@ impl AuthService {
 
         user.password = new_password;
         user.salt = salt;
+        user.is_passwordless = Some(false);
 
         users.insert(&user).await?;
         Ok(())
