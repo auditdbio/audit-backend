@@ -145,6 +145,7 @@ impl AuthService {
         mut verify_email: bool,
     ) -> error::Result<User<String>> {
         if let Some(secret) = &user.secret {
+            log::info!("Secret: {}", secret);
             let payload: BadgePayload = serde_json::from_str(
                 &api::codes::get_code(&self.context, secret.clone())
                     .await?
