@@ -5,6 +5,7 @@ import CornerLogo from '../images/CornerLogo.js'
 
 const TitlePage = ({ project }) => {
   const titleSize = project?.project_name?.length <= 100 ? '60px' : '50px'
+  const link = project?.profile_link || 'https://auditdb.io/'
 
   return (
     <div className="container">
@@ -19,11 +20,11 @@ const TitlePage = ({ project }) => {
               <div className="auditor-info auditor-info-heading">By</div>
               <div className="auditor-info">{project?.auditor_name}</div>
               <div className="QR-wrapper">
-                <QRCode.QRCodeSVG value={project?.profile_link} />
+                <QRCode.QRCodeSVG value={link} />
               </div>
               <div>
-                <a className="auditor-info" href={project?.profile_link}>
-                  Profile link
+                <a className="auditor-info" href={link}>
+                  {project?.profile_link ? "Profile link" : "auditdb.io"}
                 </a>
               </div>
             </div>

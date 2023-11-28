@@ -17,7 +17,7 @@ const createPageLinkAnnotation = async (pdfDoc, tableOfContents, tocPagesCounter
   }
 
   if (profileLink) {
-    pdfDocPages[0].node.set(PDFName.of('Annots'), pdfDoc.context.obj([createProfileLinkAnnot(profileLink)]))
+    pdfDocPages[0]?.node.set(PDFName.of('Annots'), pdfDoc.context.obj([createProfileLinkAnnot(profileLink)]))
   }
 
   const createAnnot = (pageRef, tocStringCoordY, destCoordY, tocStringNumberOfLines) => {
@@ -39,9 +39,9 @@ const createPageLinkAnnotation = async (pdfDoc, tableOfContents, tocPagesCounter
   }
 
   let links = []
-  let currentTocPage = tableOfContents[0].tocPage
+  let currentTocPage = tableOfContents[0]?.tocPage
 
-  for (let i = 0; i < tableOfContents.length; i++) {
+  for (let i = 0; i < tableOfContents?.length; i++) {
     try {
       const additionalTOCPages = tocPagesCounter - 1
       const destPage = tableOfContents[i].destPage + additionalTOCPages
@@ -51,9 +51,9 @@ const createPageLinkAnnotation = async (pdfDoc, tableOfContents, tocPagesCounter
       const tocStringNumberOfLines = tableOfContents[i].tocStringNumberOfLines
       const link = createAnnot(pageRef, tocStringCoordY, destCoordY, tocStringNumberOfLines)
 
-      if (tableOfContents[i].tocPage !== currentTocPage) {
-        pdfDocPages[currentTocPage].node.set(PDFName.of('Annots'), pdfDoc.context.obj(links))
-        currentTocPage = tableOfContents[i].tocPage
+      if (tableOfContents[i]?.tocPage !== currentTocPage) {
+        pdfDocPages[currentTocPage]?.node.set(PDFName.of('Annots'), pdfDoc.context.obj(links))
+        currentTocPage = tableOfContents[i]?.tocPage
         links = []
       }
 
@@ -63,7 +63,7 @@ const createPageLinkAnnotation = async (pdfDoc, tableOfContents, tocPagesCounter
     }
   }
 
-  pdfDocPages[currentTocPage].node.set(PDFName.of('Annots'), pdfDoc.context.obj(links))
+  pdfDocPages[currentTocPage]?.node.set(PDFName.of('Annots'), pdfDoc.context.obj(links))
 }
 
 export default createPageLinkAnnotation

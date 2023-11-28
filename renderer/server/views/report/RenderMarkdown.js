@@ -6,7 +6,7 @@ import rehypeKatex from 'rehype-katex'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 
 const RenderMarkdown = ({ markdown }) => {
-  const markdownForPrint = markdown.replace(/(?<!!)\[[^\]]+]\((https?:\/\/[^)]+)\)/g, '$1')
+  const markdownForPrint = markdown?.replace(/(?<!!)\[[^\]]+]\((https?:\/\/[^)]+)\)/g, '$1')
 
   return React.createElement(ReactMarkdown, {
     remarkPlugins: [remarkMath, remarkGfm],

@@ -4,14 +4,13 @@ use common::{
     api::badge::merge,
     auth::Auth,
     context::GeneralContext,
-    entities::user::{PublicUser, User},
+    entities::user::{PublicUser, User, LinkedAccount},
     error::{self, AddCode},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
-use common::api::user::LinkedAccount;
 
 use super::auth::ChangePassword;
 
@@ -113,6 +112,11 @@ impl UserService {
             user.linked_accounts = Some(vec![account]);
         }
 
+        user.last_modified = Utc::now().timestamp_micros();
+
+        users.delete("id", &id).await?;
+        users.insert(&user).await?;
+
         Ok(Some(user))
     }
 
@@ -167,6 +171,7 @@ impl UserService {
             let password = sha256::digest(password);
             user.password = password;
             user.salt = salt;
+            user.is_passwordless = Some(false);
         }
 
         if let Some(name) = change.name {

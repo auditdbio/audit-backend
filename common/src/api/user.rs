@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     auth::Auth,
     context::GeneralContext,
-    entities::user::{PublicUser, User},
+    entities::user::{PublicUser, User, LinkedAccount},
     error,
     services::{PROTOCOL, USERS_SERVICE},
 };
@@ -20,13 +20,6 @@ pub struct CreateUser {
     pub secret: Option<String>,
     pub linked_accounts: Option<Vec<LinkedAccount>>,
     pub is_passwordless: Option<bool>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct LinkedAccount {
-    pub id: i32,
-    pub name: String,
-    pub email: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -51,11 +44,12 @@ pub struct GithubAccessResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GithubUserData {
-    pub id: i32,
-    pub login: String,
-    pub name: String,
-    pub avatar_url: String,
-    pub company: String,
+  pub id: i32,
+  pub login: String,
+  pub name: Option<String>,
+  pub html_url: String,
+  pub avatar_url: String,
+  pub company: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

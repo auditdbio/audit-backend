@@ -6,7 +6,7 @@ const StatisticsBlock = ({ data, num, subsectionLevel }) => {
   return (
     <div className="report-block page-break">
       <h2 className={subsectionLevel ? 'subsection-title' : 'report-block-title'}>
-        {num}. {data.title}
+        {num}. {data?.title}
         <TitleLabel show={true} />
       </h2>
 
@@ -31,17 +31,17 @@ const StatisticsBlock = ({ data, num, subsectionLevel }) => {
         <tbody>
           <tr>
             <td className="table-heading">Fixed</td>
-            <td>{data.statistics?.fixed?.critical}</td>
-            <td>{data.statistics?.fixed?.major}</td>
-            <td>{data.statistics?.fixed?.medium}</td>
-            <td>{data.statistics?.fixed?.minor}</td>
+            <td>{data?.statistics?.fixed?.critical}</td>
+            <td>{data?.statistics?.fixed?.major}</td>
+            <td>{data?.statistics?.fixed?.medium}</td>
+            <td>{data?.statistics?.fixed?.minor}</td>
           </tr>
           <tr>
             <td className="table-heading">Not Fixed</td>
-            <td>{data.statistics?.not_fixed?.critical}</td>
-            <td>{data.statistics?.not_fixed?.major}</td>
-            <td>{data.statistics?.not_fixed?.medium}</td>
-            <td>{data.statistics?.not_fixed?.minor}</td>
+            <td>{data?.statistics?.not_fixed?.critical}</td>
+            <td>{data?.statistics?.not_fixed?.major}</td>
+            <td>{data?.statistics?.not_fixed?.medium}</td>
+            <td>{data?.statistics?.not_fixed?.minor}</td>
           </tr>
         </tbody>
       </table>
