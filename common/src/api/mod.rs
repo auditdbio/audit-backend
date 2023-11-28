@@ -10,6 +10,7 @@ pub mod events;
 pub mod issue;
 pub mod mail;
 pub mod project;
+pub mod report;
 pub mod requests;
 pub mod seartch;
 pub mod user;

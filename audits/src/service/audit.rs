@@ -2,6 +2,10 @@ use std::collections::HashMap;
 
 use chrono::Utc;
 
+use common::api::audits::NoCustomerAuditRequest;
+use common::entities::audit_request::TimeRange;
+use common::entities::contacts::Contacts;
+use common::entities::project::{PublicProject, PublishOptions};
 use common::{
     access_rules::{AccessRules, Edit, Read},
     api::{
@@ -21,10 +25,6 @@ use common::{
     error::{self, AddCode},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
-use common::api::audits::NoCustomerAuditRequest;
-use common::entities::audit_request::TimeRange;
-use common::entities::contacts::Contacts;
-use common::entities::project::{PublicProject, PublishOptions};
 
 use super::audit_request::PublicRequest;
 
@@ -60,7 +60,7 @@ impl AuditService {
             time: request.time,
             issues: Vec::new(),
             public: false,
-            no_customer: false
+            no_customer: false,
         };
 
         audits.insert(&audit).await?;
@@ -93,7 +93,10 @@ impl AuditService {
         Ok(public_audit)
     }
 
-    pub async fn create_no_customer(&self, request: NoCustomerAuditRequest) -> error::Result<PublicAudit> {
+    pub async fn create_no_customer(
+        &self,
+        request: NoCustomerAuditRequest,
+    ) -> error::Result<PublicAudit> {
         let auth = self.context.auth();
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
@@ -229,6 +232,7 @@ impl AuditService {
                 AuditAction::Resolve => {
                     if audit.status == AuditStatus::Started {
                         audit.status = AuditStatus::Resolved;
+                        audit.resolve(&self.context).await;
                     }
                 }
             }
@@ -314,7 +318,7 @@ impl AuditService {
         audits.insert(&audit).await?;
 
         if audit.no_customer {
-            return Ok(auth.public_issue(issue))
+            return Ok(auth.public_issue(issue));
         }
 
         let mut new_notification: NewNotification =
@@ -370,7 +374,8 @@ impl AuditService {
             .issues
             .iter()
             .find(|issue| issue.id == issue_id)
-            .cloned() else {
+            .cloned()
+        else {
             return Err(anyhow::anyhow!("No issue found").code(404));
         };
 

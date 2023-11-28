@@ -1,4 +1,3 @@
-use std::env::var;
 use actix_web::HttpRequest;
 use chrono::Utc;
 use common::{
@@ -8,9 +7,8 @@ use common::{
         badge::{get_badge, BadgePayload},
         codes::post_code,
         user::{
-            CreateUser, GetGithubAccessToken,
-            GithubAccessResponse, GithubUserData,
-            GithubUserEmails, GithubAuth,
+            CreateUser, GetGithubAccessToken, GithubAccessResponse, GithubAuth, GithubUserData,
+            GithubUserEmails,
         },
     },
     auth::Auth,
@@ -18,21 +16,20 @@ use common::{
     entities::{
         badge::PublicBadge,
         letter::CreateLetter,
-        user::{User, LinkedAccount},
+        user::{LinkedAccount, User},
     },
     error::{self, AddCode},
     repository::Entity,
     services::{
-        FRONTEND, MAIL_SERVICE,
-        PROTOCOL, USERS_SERVICE,
-        AUDITORS_SERVICE, CUSTOMERS_SERVICE,
+        AUDITORS_SERVICE, CUSTOMERS_SERVICE, FRONTEND, MAIL_SERVICE, PROTOCOL, USERS_SERVICE,
     },
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use rand::{distributions::Alphanumeric, Rng};
+use reqwest::{header, Client};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use reqwest::{Client, header};
+use std::env::var;
 
 use super::user::UserService;
 
@@ -267,9 +264,7 @@ impl AuthService {
         let access_response = client
             .post(format!(
                 "https://github.com/login/oauth/access_token?code={}&client_id={}&client_secret={}",
-                data.code,
-                data.client_id,
-                data.client_secret,
+                data.code, data.client_id, data.client_secret,
             ))
             .header(header::ACCEPT, "application/json")
             .send()
@@ -303,10 +298,12 @@ impl AuthService {
         let user_data: GithubUserData = serde_json::from_str(&user_response)?;
         let emails: Vec<GithubUserEmails> = serde_json::from_str(&emails_response)?;
 
-        let Some(email) = emails.iter()
+        let Some(email) = emails
+            .iter()
             .find(|email| email.primary)
-            .map(|email| email.email.to_string()) else {
-                return Err(anyhow::anyhow!("No email found").code(404));
+            .map(|email| email.email.to_string())
+        else {
+            return Err(anyhow::anyhow!("No email found").code(404));
         };
 
         let linked_account = LinkedAccount {
@@ -341,11 +338,13 @@ impl AuthService {
 
         let user_service = UserService::new(self.context.clone());
 
-        let (github_user, linked_account) = self
-            .github_get_user(github_auth, data.current_role)
-            .await?;
+        let (github_user, linked_account) =
+            self.github_get_user(github_auth, data.current_role).await?;
 
-        if let Some(user) = user_service.find_linked_account(linked_account.id.clone()).await? {
+        if let Some(user) = user_service
+            .find_linked_account(linked_account.id.clone())
+            .await?
+        {
             return create_auth_token(&user);
         }
 
@@ -354,14 +353,20 @@ impl AuthService {
             .await?;
 
         if let Some(user) = existing_email_user {
-            let _ = user_service.add_linked_account(user.id, linked_account).await?;
+            let _ = user_service
+                .add_linked_account(user.id, linked_account)
+                .await?;
             return create_auth_token(&user);
         }
 
         let verify_email = false;
-        self.authentication(github_user.clone(), verify_email).await?;
+        self.authentication(github_user.clone(), verify_email)
+            .await?;
 
-        if let Some(user) = user_service.find_by_email(github_user.email.clone()).await? {
+        if let Some(user) = user_service
+            .find_by_email(github_user.email.clone())
+            .await?
+        {
             // let payload = json!({ "avatar": linked_account.avatar });
             //
             // self.context

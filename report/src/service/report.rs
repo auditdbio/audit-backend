@@ -2,7 +2,9 @@ use common::{
     api::{
         audits::{AuditChange, PublicAudit},
         issue::PublicIssue,
+        report::PublicReport,
     },
+    auth::{Auth, Service},
     context::GeneralContext,
     entities::issue::Status,
     services::{FILES_SERVICE, FRONTEND, PROTOCOL, RENDERER_SERVICE, USERS_SERVICE},
@@ -39,11 +41,6 @@ pub struct RendererInput {
     pub project_name: String,
     pub scope: Vec<String>,
     pub report_data: Vec<Section>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct PublicReport {
-    path: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -338,24 +335,27 @@ pub async fn create_report(
         .send()
         .await?;
 
-    let audit_change = AuditChange {
-        report: Some(path.clone()),
-        ..AuditChange::default()
-    };
+    if let Auth::Service(Service::Audits, _) = context.auth() {
+    } else {
+        let audit_change = AuditChange {
+            report: Some(path.clone()),
+            ..AuditChange::default()
+        };
 
-    let _ = context
-        .make_request()
-        .patch(format!(
-            "{}://{}/api/audit/{}",
-            PROTOCOL.as_str(),
-            USERS_SERVICE.as_str(),
-            audit.id
-        ))
-        .auth(context.auth())
-        .json(&audit_change)
-        .send()
-        .await
-        .unwrap();
+        let _ = context
+            .make_request()
+            .patch(format!(
+                "{}://{}/api/audit/{}",
+                PROTOCOL.as_str(),
+                USERS_SERVICE.as_str(),
+                audit.id
+            ))
+            .auth(context.auth())
+            .json(&audit_change)
+            .send()
+            .await
+            .unwrap();
+    }
 
     Ok(PublicReport { path })
 }

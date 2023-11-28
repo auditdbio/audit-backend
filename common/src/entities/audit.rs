@@ -3,7 +3,12 @@ use std::hash::Hash;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-use crate::repository::Entity;
+use crate::{
+    api::report::PublicReport,
+    context::{self, context_trait::Context, GeneralContext},
+    repository::Entity,
+    services::{PROTOCOL, REPORT_SERVICE},
+};
 
 use super::{audit_request::TimeRange, issue::Issue};
 
@@ -99,6 +104,28 @@ impl Audit<ObjectId> {
             issues: Issue::to_string_map(self.issues),
             public: self.public,
             no_customer: self.no_customer,
+        }
+    }
+
+    pub async fn resolve(&mut self, context: &GeneralContext) {
+        if self.report.is_none() {
+            let public_report = context
+                .make_request::<()>()
+                .post(format!(
+                    "{}://{}/api/report/{}",
+                    PROTOCOL.as_str(),
+                    REPORT_SERVICE.as_str(),
+                    self.id
+                ))
+                .auth(context.server_auth())
+                .send()
+                .await
+                .unwrap()
+                .json::<PublicReport>()
+                .await
+                .unwrap();
+            self.report = Some(public_report.path.clone());
+            self.report_name = Some(public_report.path);
         }
     }
 }

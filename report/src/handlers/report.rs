@@ -2,9 +2,7 @@ use actix_web::{
     post,
     web::{Json, Path},
 };
-use common::{context::GeneralContext, error};
-
-use crate::service::report::PublicReport;
+use common::{api::report::PublicReport, context::GeneralContext, error};
 
 #[post("/api/report/{id}")]
 pub async fn create_report(
