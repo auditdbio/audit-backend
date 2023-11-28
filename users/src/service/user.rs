@@ -4,14 +4,13 @@ use common::{
     api::badge::merge,
     auth::Auth,
     context::GeneralContext,
-    entities::user::{PublicUser, User},
+    entities::user::{PublicUser, User, LinkedAccount},
     error::{self, AddCode},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
-use common::api::user::LinkedAccount;
 
 use super::auth::ChangePassword;
 
