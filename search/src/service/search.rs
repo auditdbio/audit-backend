@@ -193,6 +193,8 @@ impl SearchService {
             (result, total_documents) = self.get_entries(&query, auth).await?;
         }
 
+        let _ = result.split_at(query.per_page as usize);
+
         Ok(SearchResult {
             result,
             total_documents,
