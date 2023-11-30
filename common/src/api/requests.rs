@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     auth::Auth,
-    context::Context,
+    context::GeneralContext,
     entities::{
         audit_request::{AuditRequest, TimeRange},
         auditor::PublicAuditor,
@@ -36,7 +36,7 @@ pub struct PublicRequest {
 
 impl PublicRequest {
     pub async fn new(
-        context: &Context,
+        context: &GeneralContext,
         request: AuditRequest<ObjectId>,
     ) -> error::Result<PublicRequest> {
         let auth = context.auth();
@@ -48,7 +48,7 @@ impl PublicRequest {
                 CUSTOMERS_SERVICE.as_str(),
                 request.project_id
             ))
-            .auth(*auth)
+            .auth(auth)
             .send()
             .await?
             .json::<PublicProject>()
@@ -77,7 +77,7 @@ impl PublicRequest {
                     CUSTOMERS_SERVICE.as_str(),
                     request.project_id
                 ))
-                .auth(*auth)
+                .auth(auth)
                 .send()
                 .await?
                 .json::<PublicProject>()
@@ -94,7 +94,7 @@ impl PublicRequest {
                 AUDITORS_SERVICE.as_str(),
                 request.auditor_id
             ))
-            .auth(*auth)
+            .auth(auth)
             .send()
             .await?
             .json::<PublicAuditor>()
@@ -122,7 +122,7 @@ impl PublicRequest {
 }
 
 pub async fn get_audit_requests(
-    context: &Context,
+    context: &GeneralContext,
     auth: Auth,
 ) -> error::Result<Vec<PublicRequest>> {
     Ok(context
@@ -151,7 +151,7 @@ pub struct CreateRequest {
 }
 
 pub async fn create_request(
-    context: &Context,
+    context: &GeneralContext,
     auth: Auth,
     data: CreateRequest,
 ) -> error::Result<()> {
@@ -170,7 +170,7 @@ pub async fn create_request(
     Ok(())
 }
 
-pub async fn delete(context: &Context, auth: Auth, id: ObjectId) -> error::Result<()> {
+pub async fn delete(context: &GeneralContext, auth: Auth, id: ObjectId) -> error::Result<()> {
     context
         .make_request::<()>()
         .delete(format!(

@@ -1,6 +1,6 @@
 use common::{
     access_rules::{AccessRules, GetData},
-    context::Context,
+    context::GeneralContext,
     entities::{
         customer::{Customer, PublicCustomer},
         project::{Project, PublicProject},
@@ -10,18 +10,18 @@ use common::{
 use mongodb::bson::{oid::ObjectId, Document};
 
 pub struct IndexerService {
-    context: Context,
+    context: GeneralContext,
 }
 
 impl IndexerService {
-    pub fn new(context: Context) -> Self {
+    pub fn new(context: GeneralContext) -> Self {
         Self { context }
     }
 
     pub async fn index_customer(&self, since: i64) -> error::Result<Vec<Document>> {
         let auth = self.context.auth();
 
-        if !GetData.get_access(auth, ()) {
+        if !GetData.get_access(&auth, ()) {
             return Err(anyhow::anyhow!("No access to get customer data {:?}", auth).code(400));
         }
 
@@ -38,7 +38,7 @@ impl IndexerService {
     pub async fn index_project(&self, since: i64) -> error::Result<Vec<Document>> {
         let auth = self.context.auth();
 
-        if !GetData.get_access(auth, ()) {
+        if !GetData.get_access(&auth, ()) {
             return Err(anyhow::anyhow!("No access to get customer data: {:?}", auth).code(400));
         }
         let customers = self.context.try_get_repository::<Project<ObjectId>>()?;
@@ -54,7 +54,7 @@ impl IndexerService {
     pub async fn find_customers(&self, ids: Vec<ObjectId>) -> error::Result<Vec<PublicCustomer>> {
         let auth = self.context.auth();
 
-        if !GetData.get_access(auth, ()) {
+        if !GetData.get_access(&auth, ()) {
             return Err(anyhow::anyhow!("No access to get customer data: {:?}", auth).code(400));
         }
 
@@ -71,7 +71,7 @@ impl IndexerService {
     pub async fn find_projects(&self, ids: Vec<ObjectId>) -> error::Result<Vec<PublicProject>> {
         let auth = self.context.auth();
 
-        if !GetData.get_access(auth, ()) {
+        if !GetData.get_access(&auth, ()) {
             return Err(anyhow::anyhow!("No access to get customer data: {:?}", auth).code(400));
         }
 

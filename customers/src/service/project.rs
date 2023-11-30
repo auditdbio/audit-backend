@@ -1,7 +1,9 @@
 use chrono::Utc;
+use common::api::seartch::delete_from_search;
+use common::entities::customer::PublicCustomer;
 use common::{
     access_rules::{AccessRules, Edit, Read},
-    context::Context,
+    context::GeneralContext,
     entities::{
         contacts::Contacts,
         customer::Customer,
@@ -12,7 +14,6 @@ use common::{
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
-use common::entities::customer::PublicCustomer;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateProject {
@@ -37,11 +38,11 @@ pub struct ProjectChange {
 }
 
 pub struct ProjectService {
-    context: Context,
+    context: GeneralContext,
 }
 
 impl ProjectService {
-    pub fn new(context: Context) -> Self {
+    pub fn new(context: GeneralContext) -> Self {
         Self { context }
     }
 
@@ -53,7 +54,7 @@ impl ProjectService {
         let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
 
         let customer = customers
-            .find("user_id", &Bson::ObjectId(*auth.id().unwrap()))
+            .find("user_id", &Bson::ObjectId(auth.id().unwrap()))
             .await?
             .unwrap();
 
@@ -70,7 +71,7 @@ impl ProjectService {
 
         let project = Project {
             id: ObjectId::new(),
-            customer_id: *auth.id().ok_or(anyhow::anyhow!("No customer id found"))?,
+            customer_id: auth.id().ok_or(anyhow::anyhow!("No customer id found"))?,
             name: project.name,
             description: project.description,
             scope: project.scope,
@@ -94,26 +95,27 @@ impl ProjectService {
         let projects = self.context.try_get_repository::<Project<ObjectId>>()?;
 
         let Some(mut project) = projects.find("id", &Bson::ObjectId(id)).await? else {
-            return Ok(None)
+            return Ok(None);
         };
 
-        if !Read.get_access(auth, &project) {
+        if !Read.get_access(&auth, &project) {
             return Err(anyhow::anyhow!("User is not available to read this project").code(403));
         }
 
-        let customer = self.context
-          .make_request::<PublicCustomer>()
-          .get(format!(
-              "{}://{}/api/customer/{}",
-              PROTOCOL.as_str(),
-              CUSTOMERS_SERVICE.as_str(),
-              project.customer_id
-          ))
-          .auth(self.context.server_auth())
-          .send()
-          .await?
-          .json::<PublicCustomer>()
-          .await?;
+        let customer = self
+            .context
+            .make_request::<PublicCustomer>()
+            .get(format!(
+                "{}://{}/api/customer/{}",
+                PROTOCOL.as_str(),
+                CUSTOMERS_SERVICE.as_str(),
+                project.customer_id
+            ))
+            .auth(self.context.server_auth())
+            .send()
+            .await?
+            .json::<PublicCustomer>()
+            .await?;
 
         project.creator_contacts = customer.contacts;
 
@@ -126,7 +128,7 @@ impl ProjectService {
         let projects = self.context.try_get_repository::<Project<ObjectId>>()?;
 
         let projects = projects
-            .find_many("customer_id", &Bson::ObjectId(*auth.id().unwrap()))
+            .find_many("customer_id", &Bson::ObjectId(auth.id().unwrap()))
             .await?;
 
         Ok(projects.into_iter().map(Project::stringify).collect())
@@ -145,7 +147,7 @@ impl ProjectService {
             return Err(anyhow::anyhow!("No project found").code(404));
         };
 
-        if !Edit.get_access(auth, &project) {
+        if !Edit.get_access(&auth, &project) {
             return Err(anyhow::anyhow!("User is not available to change this project").code(403));
         }
 
@@ -194,10 +196,12 @@ impl ProjectService {
             return Err(anyhow::anyhow!("No project found").code(404));
         };
 
-        if !Edit.get_access(auth, &project) {
+        if !Edit.get_access(&auth, &project) {
             projects.insert(&project).await?;
             return Err(anyhow::anyhow!("User is not available to delete this project").code(403));
         }
+
+        delete_from_search(&self.context, id).await?;
 
         Ok(auth.public_project(project))
     }
@@ -214,7 +218,7 @@ impl ProjectService {
             return Err(anyhow::anyhow!("No project found").code(404));
         };
 
-        if !Edit.get_access(auth, &project) {
+        if !Edit.get_access(&auth, &project) {
             return Err(anyhow::anyhow!("User is not available to change this project").code(403));
         }
 
@@ -238,7 +242,7 @@ impl ProjectService {
             return Err(anyhow::anyhow!("No project found").code(404));
         };
 
-        if !Edit.get_access(auth, &project) {
+        if !Edit.get_access(&auth, &project) {
             return Err(anyhow::anyhow!("User is not available to change this project").code(403));
         }
 

@@ -4,12 +4,12 @@ use std::sync::Arc;
 use actix_web::HttpServer;
 use auditors::create_app;
 
-use common::context::ServiceState;
+use common::auth::Service;
+use common::context::effectfull_context::ServiceState;
 use common::entities::auditor::Auditor;
 use common::entities::badge::Badge;
 use common::repository::mongo_repository::MongoRepository;
 use mongodb::bson::oid::ObjectId;
-use common::auth::Service;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

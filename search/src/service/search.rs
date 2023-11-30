@@ -1,19 +1,22 @@
-use std::{collections::HashMap, str::FromStr};
+use std::{
+    collections::{HashMap, HashSet},
+    str::FromStr,
+};
 
 use actix_web::web;
 use chrono::Utc;
 use common::{
     auth::Auth,
-    context::Context,
+    context::GeneralContext,
     error::{self, AddCode},
     repository::Repository,
     services::{CUSTOMERS_SERVICE, PROTOCOL},
 };
 
-use mongodb::bson::{oid::ObjectId, Bson, Document, to_document};
+use common::entities::customer::PublicCustomer;
+use mongodb::bson::{oid::ObjectId, to_document, Bson, Document};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use common::entities::customer::{PublicCustomer};
 
 use crate::repositories::{search::SearchRepo, since::SinceRepo};
 
@@ -97,11 +100,11 @@ pub struct SearchInsertRequest {
 
 pub struct SearchService {
     pub repo: web::Data<SearchRepo>,
-    pub context: Context,
+    pub context: GeneralContext,
 }
 
 impl SearchService {
-    pub fn new(repo: web::Data<SearchRepo>, context: Context) -> Self {
+    pub fn new(repo: web::Data<SearchRepo>, context: GeneralContext) -> Self {
         Self { repo, context }
     }
 
@@ -110,12 +113,16 @@ impl SearchService {
         Ok(())
     }
 
-    pub async fn search(&self, query: SearchQuery) -> error::Result<SearchResult> {
-        let mut auth = self.context.server_auth();
-        if &Auth::None != self.context.auth() {
-            auth = auth.authorized();
-        }
+    fn normalize(mut query: SearchQuery) -> SearchQuery {
+        query.query = query.query.to_ascii_lowercase();
+        query
+    }
 
+    pub async fn get_entries(
+        &self,
+        query: &SearchQuery,
+        auth: Auth,
+    ) -> error::Result<(Vec<Document>, u64)> {
         let SearchResult {
             total_documents,
             result,
@@ -146,45 +153,47 @@ impl SearchService {
                 .await?;
 
             let docs = docs.json::<Vec<Document>>().await?;
+
+            let responce_ids: HashSet<ObjectId> = docs
+                .iter()
+                .map(|doc| {
+                    let id = doc
+                        .get_str("id")
+                        .or_else(|_| doc.get_str("_id"))
+                        .or_else(|_| doc.get_str("user_id"))
+                        .unwrap();
+                    ObjectId::from_str(id).unwrap()
+                })
+                .collect();
+
+            for id in ids {
+                if !responce_ids.contains(&id) {
+                    self.repo.delete(id).await?;
+                }
+            }
+
             responces.extend_from_slice(&docs);
         }
 
-        let mut results = vec![Document::new(); result.len()];
+        Ok((responces, total_documents))
+    }
 
-        for doc in responces.iter() {
-            let id = ObjectId::from_str(
-                doc.get_str("id")
-                    .unwrap_or_else(|_| doc.get_str("user_id").unwrap()),
-            )
-            .unwrap();
-            let index = indexes.get(&id).unwrap();
-            results[*index] = doc.clone();
+    pub async fn search(&self, query: SearchQuery) -> error::Result<SearchResult> {
+        let mut auth = self.context.server_auth();
+        if Auth::None != self.context.auth() {
+            auth = auth.authorized();
         }
 
-        log::info!("Responces: {:?}", results);
+        let query = Self::normalize(query);
 
-        let mut result: Vec<Document> = results.into_iter().filter(|doc| !doc.is_empty()).collect();
-
-        for doc in result.iter_mut() {
-            if doc.get_str("kind")? == "project" {
-                let customer = self
-                  .context
-                  .make_request::<PublicCustomer>()
-                  .get(format!(
-                      "{}://{}/api/customer/{}",
-                      PROTOCOL.as_str(),
-                      CUSTOMERS_SERVICE.as_str(),
-                      doc.get_str("customer_id")?
-                  ))
-                  .auth(auth)
-                  .send()
-                  .await?
-                  .json::<PublicCustomer>()
-                  .await?;
-
-                doc.insert("creator_contacts", to_document(&customer.contacts).unwrap());
-            }
+        let (mut result, mut total_documents) = self.get_entries(&query, auth).await?;
+        while result.len() < query.per_page as usize
+            && (query.page - 1) * query.per_page + (result.len() as u64) < total_documents
+        {
+            (result, total_documents) = self.get_entries(&query, auth).await?;
         }
+
+        let _ = result.split_at(query.per_page as usize);
 
         Ok(SearchResult {
             result,

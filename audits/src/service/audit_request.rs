@@ -10,7 +10,7 @@ use common::{
         requests::CreateRequest,
         send_notification, NewNotification,
     },
-    context::Context,
+    context::GeneralContext,
     entities::{
         audit_request::{AuditRequest, PriceRange, TimeRange},
         auditor::ExtendedAuditor,
@@ -22,7 +22,6 @@ use common::{
     services::{CUSTOMERS_SERVICE, EVENTS_SERVICE, FRONTEND, PROTOCOL},
 };
 
-use log::info;
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
 
@@ -38,12 +37,12 @@ pub struct RequestChange {
 pub use common::api::requests::PublicRequest;
 
 pub struct RequestService {
-    context: Context,
+    context: GeneralContext,
 }
 
 impl RequestService {
     #[must_use]
-    pub const fn new(context: Context) -> Self {
+    pub const fn new(context: GeneralContext) -> Self {
         Self { context }
     }
 
@@ -67,9 +66,9 @@ impl RequestService {
             return Err(anyhow::anyhow!("You can't create audit with yourself").code(400));
         }
 
-        let last_changer = if user_id == &customer_id {
+        let last_changer = if user_id == customer_id {
             Role::Customer
-        } else if user_id == &auditor_id {
+        } else if user_id == auditor_id {
             Role::Auditor
         } else {
             return Err(
@@ -141,7 +140,7 @@ impl RequestService {
         if last_changer == Role::Customer {
             self.context
                 .make_request::<()>()
-                .auth(*auth)
+                .auth(auth)
                 .post(format!(
                     "{}://{}/project/auditor/{}/{}",
                     PROTOCOL.as_str(),
@@ -184,7 +183,9 @@ impl RequestService {
                 code
             );
 
-            let message = format!("merge link: {}, delete link: {}", merge_link, delete_link);
+            let message = include_str!("../../templates/badge_link.txt")
+                .replace("{merge_link}", &merge_link)
+                .replace("{delete_link}", &delete_link);
 
             // send email
             let letter = CreateLetter {
@@ -192,15 +193,14 @@ impl RequestService {
                 recipient_name: None,
                 email: badge.contacts.email.unwrap(),
                 message: message.clone(),
-                subject: "The badge notification".to_string(),
+                subject: "AuditDB Audit Request".to_string(),
             };
             send_mail(&self.context, letter).await?;
-            request.description = message;
         }
 
         requests.insert(&request).await?;
 
-        let event_reciver = if auth.id().unwrap() == &customer_id {
+        let event_reciver = if auth.id().unwrap() == customer_id {
             auditor_id
         } else {
             customer_id
@@ -239,7 +239,7 @@ impl RequestService {
             return Ok(None);
         };
 
-        if !Read.get_access(auth, &request) {
+        if !Read.get_access(&auth, &request) {
             return Err(anyhow::anyhow!("User is not available to change this customer").code(400));
         }
 
@@ -266,7 +266,7 @@ impl RequestService {
             Role::Customer => "customer_id",
         };
 
-        let result = requests.find_many(id, &Bson::ObjectId(*user_id)).await?;
+        let result = requests.find_many(id, &Bson::ObjectId(user_id)).await?;
 
         let mut public_requests = Vec::new();
 
@@ -294,7 +294,7 @@ impl RequestService {
             return Err(anyhow::anyhow!("No customer found").code(404));
         };
 
-        if !Edit.get_access(auth, &request) {
+        if !Edit.get_access(&auth, &request) {
             return Err(anyhow::anyhow!("User is not available to change this customer").code(400));
         }
 
@@ -310,9 +310,9 @@ impl RequestService {
             request.price = price;
         }
 
-        let role = if auth.id() == Some(&request.customer_id) {
+        let role = if auth.id() == Some(request.customer_id) {
             Role::Customer
-        } else if auth.id() == Some(&request.auditor_id) {
+        } else if auth.id() == Some(request.auditor_id) {
             Role::Auditor
         } else {
             return Err(anyhow::anyhow!("User is not available to change this customer").code(400));
@@ -341,14 +341,14 @@ impl RequestService {
             return Err(anyhow::anyhow!("No customer found").code(404));
         };
 
-        if !Edit.get_access(auth, &request) {
+        if !Edit.get_access(&auth, &request) {
             requests.insert(&request).await?;
             return Err(anyhow::anyhow!("User is not available to delete this customer").code(400));
         }
 
-        let current_role = if auth.id() == Some(&request.customer_id) {
+        let current_role = if auth.id() == Some(request.customer_id) {
             Role::Customer
-        } else if auth.id() == Some(&request.auditor_id) {
+        } else if auth.id() == Some(request.auditor_id) {
             Role::Auditor
         } else {
             return Err(anyhow::anyhow!("User is not available to change this customer").code(400));
@@ -359,7 +359,7 @@ impl RequestService {
         if current_role == Role::Customer {
             self.context
                 .make_request::<()>()
-                .auth(*auth)
+                .auth(auth)
                 .post(format!(
                     "{}://{}/project/auditor/{}/{}",
                     PROTOCOL.as_str(),

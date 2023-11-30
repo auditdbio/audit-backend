@@ -4,18 +4,23 @@ use common::{
     api::{
         self,
         badge::BadgePayload,
-        requests::{CreateRequest, PublicRequest},
+        codes::post_code,
+        mail::send_mail,
+        requests::{get_audit_requests, CreateRequest},
+        seartch::delete_from_search,
+        user::get_by_email,
     },
     auth::Auth,
-    context::Context,
+    context::GeneralContext,
     entities::{
         audit_request::PriceRange,
         auditor::{Auditor, PublicAuditor},
         badge::{Badge, PublicBadge},
         contacts::Contacts,
+        letter::CreateLetter,
     },
     error::{self, AddCode},
-    services::{AUDITS_SERVICE, PROTOCOL, SEARCH_SERVICE},
+    services::{FRONTEND, PROTOCOL, SEARCH_SERVICE},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -47,26 +52,11 @@ pub struct BadgeChange {
 }
 
 pub struct BadgeService {
-    context: Context,
-}
-
-async fn delete_from_search(context: &Context, id: ObjectId) -> error::Result<()> {
-    context
-        .make_request::<()>()
-        .auth(context.server_auth())
-        .delete(format!(
-            "{}://{}/api/search/{}",
-            PROTOCOL.as_str(),
-            SEARCH_SERVICE.as_str(),
-            id,
-        ))
-        .send()
-        .await?;
-    Ok(())
+    context: GeneralContext,
 }
 
 impl BadgeService {
-    pub fn new(context: Context) -> Self {
+    pub fn new(context: GeneralContext) -> Self {
         Self { context }
     }
 
@@ -74,6 +64,23 @@ impl BadgeService {
         let _auth = self.context.auth();
 
         let badges = self.context.try_get_repository::<Badge<ObjectId>>()?;
+
+        let old_badge = badges
+            .find(
+                "contacts.email",
+                &Bson::String(badge.contacts.email.clone().unwrap()),
+            )
+            .await?;
+
+        if let Some(_badge) = old_badge {
+            return Err(anyhow::anyhow!("Badge already exists").code(400));
+        };
+
+        let user = get_by_email(&self.context, badge.contacts.email.clone().unwrap()).await?;
+
+        if let Some(_user) = user {
+            return Err(anyhow::anyhow!("User already exists").code(400));
+        };
 
         let badge = Badge {
             user_id: ObjectId::new(),
@@ -89,6 +96,44 @@ impl BadgeService {
             price_range: badge.price_range.unwrap_or_default(),
         };
 
+        let payload = BadgePayload {
+            badge_id: badge.user_id,
+            email: badge.contacts.email.clone().unwrap(),
+        };
+
+        let code = post_code(&self.context, serde_json::to_string(&payload)?).await?;
+
+        // delete link
+        let delete_link = format!(
+            "{}://{}/delete/{}/{}",
+            PROTOCOL.as_str(),
+            FRONTEND.as_str(),
+            badge.user_id,
+            code
+        );
+        // merge link
+        let merge_link = format!(
+            "{}://{}/invite-user/{}/{}",
+            PROTOCOL.as_str(),
+            FRONTEND.as_str(),
+            badge.user_id,
+            code
+        );
+
+        let message = include_str!("../../templates/new_user.txt")
+            .replace("{delete_link}", &delete_link)
+            .replace("{merge_link}", &merge_link);
+
+        // send email
+        let letter = CreateLetter {
+            recipient_id: None,
+            recipient_name: None,
+            email: badge.contacts.email.clone().unwrap(),
+            message: message.clone(),
+            subject: "AuditDB Introduction".to_string(),
+        };
+        send_mail(&self.context, letter).await?;
+
         badges.insert(&badge).await?;
 
         Ok(badge.stringify())
@@ -103,7 +148,7 @@ impl BadgeService {
             return Ok(None);
         };
 
-        if !Read.get_access(auth, &badge) {
+        if !Read.get_access(&auth, &badge) {
             return Err(anyhow::anyhow!("User is not available to change this badge").code(400));
         }
 
@@ -119,7 +164,7 @@ impl BadgeService {
             return Ok(None);
         };
 
-        if !Read.get_access(auth, &badge) {
+        if !Read.get_access(&auth, &badge) {
             return Err(anyhow::anyhow!("User is not available to change this badge").code(400));
         }
 
@@ -128,7 +173,7 @@ impl BadgeService {
 
     pub async fn change(&self, change: BadgeChange) -> error::Result<Badge<String>> {
         let auth = self.context.auth();
-        let id = *auth.id().unwrap();
+        let id = auth.id().unwrap();
 
         let badges = self.context.try_get_repository::<Badge<ObjectId>>()?;
 
@@ -136,7 +181,7 @@ impl BadgeService {
             return Err(anyhow::anyhow!("No badge found").code(400));
         };
 
-        if !Edit.get_access(auth, &badge) {
+        if !Edit.get_access(&auth, &badge) {
             return Err(anyhow::anyhow!("User is not available to change this badge").code(400));
         }
 
@@ -184,47 +229,11 @@ impl BadgeService {
         Ok(badge.stringify())
     }
 
-    // pub async fn substitute(&self, badge_id: ObjectId) -> error::Result<()> {
-    //     let auth = self.context.auth();
-
-    //     let Some(&user_id) = auth.id() else {
-    //         return Err(anyhow::anyhow!("User is not available to change this badge").code(400));
-    //     };
-
-    //     let payload = MergePayload { badge_id, user_id };
-    //     // create code
-    //     let code = post_code(&self.context, serde_json::to_string(&payload)?).await?;
-
-    //     let badges = self.context.try_get_repository::<Badge<ObjectId>>()?;
-
-    //     let Some(badge) = badges.find("user_id", &Bson::ObjectId(badge_id)).await? else {
-    //         return Err(anyhow::anyhow!("No badge found").code(400));
-    //     };
-
-    //     // send link with code
-    //     let link = format!(
-    //         "https://{}/api/badge/merge/run/{}",
-    //         AUDITORS_SERVICE.as_str(),
-    //         code
-    //     );
-
-    //     let letter = CreateLetter {
-    //         email: badge.contacts.email.unwrap(),
-    //         message: include_str!("../../templates/code.txt").replace("{link}", &link),
-    //         subject: include_str!("../../templates/code_subject.txt").to_owned(),
-
-    //         ..CreateLetter::default()
-    //     };
-
-    //     api::mail::send_mail(&self.context, letter).await?;
-
-    //     Ok(())
-    // }
-
     pub async fn merge(&self, code: String) -> error::Result<PublicAuditor> {
-        let auth = *self.context.auth();
+        let auth = self.context.auth();
 
-        let id = *auth.id().unwrap();
+        let id = auth.id().unwrap();
+        let id_str = id.to_hex();
 
         // get payload from code
         let payload: BadgePayload =
@@ -235,20 +244,8 @@ impl BadgeService {
         };
         // get all audit requests
 
-        let mut requests: Vec<PublicRequest> = self
-            .context
-            .make_request::<Vec<PublicRequest>>()
-            .auth(auth)
-            .get(format!(
-                "{}://{}/api/audit_request/all/auditor/{}",
-                PROTOCOL.as_str(),
-                AUDITS_SERVICE.as_str(),
-                payload.badge_id,
-            ))
-            .send()
-            .await?
-            .json()
-            .await?;
+        let mut requests =
+            get_audit_requests(&self.context, Auth::User(badge.user_id.parse()?)).await?;
 
         // delete all audit requests
 
@@ -259,23 +256,6 @@ impl BadgeService {
                 request.id.parse()?,
             )
             .await?;
-        }
-        // create new audit requests
-
-        for request in &mut requests {
-            // CreateRequest
-            let new_request = CreateRequest {
-                customer_id: request.customer_id.clone(),
-                auditor_id: request.auditor_id.clone(),
-                project_id: request.project_id.clone(),
-                price: request.price,
-                description: request.description.clone(),
-                time: request.time.clone(),
-            };
-
-            let auth = Auth::User(request.customer_id.parse()?);
-
-            api::requests::create_request(&self.context, auth, new_request).await?;
         }
 
         let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
@@ -294,7 +274,13 @@ impl BadgeService {
             price_range: badge.price_range,
         };
 
-        auditors.insert(&auditor).await?;
+        if auditors
+            .find("user_id", &Bson::ObjectId(id))
+            .await?
+            .is_none()
+        {
+            auditors.insert(&auditor).await?;
+        }
 
         // delete badge
         let badges = self.context.try_get_repository::<Badge<ObjectId>>()?;
@@ -302,39 +288,29 @@ impl BadgeService {
 
         delete_from_search(&self.context, payload.badge_id).await?;
 
+        // create new audit requests
+
+        for request in &mut requests {
+            if &request.customer_id == &id_str {
+                continue;
+            }
+            // CreateRequest
+            let new_request = CreateRequest {
+                customer_id: request.customer_id.clone(),
+                auditor_id: id_str.clone(),
+                project_id: request.project_id.clone(),
+                price: request.price,
+                description: request.description.clone(),
+                time: request.time.clone(),
+            };
+
+            let auth = Auth::User(request.customer_id.parse()?);
+
+            api::requests::create_request(&self.context, auth, new_request).await?;
+        }
+
         Ok(auth.public_auditor(auditor))
     }
-
-    // pub async fn delete(&self, badge_id: ObjectId) -> error::Result<()> {
-    //     let payload = DeletePayload { badge_id };
-    //     // create code
-    //     let code = post_code(&self.context, serde_json::to_string(&payload)?).await?;
-
-    //     let badges = self.context.try_get_repository::<Badge<ObjectId>>()?;
-
-    //     let Some(badge) = badges.find("user_id", &Bson::ObjectId(badge_id)).await? else {
-    //         return Err(anyhow::anyhow!("No badge found").code(400));
-    //     };
-
-    //     // send link with code
-    //     let link = format!(
-    //         "https://{}/api/badge/delete/run/{}",
-    //         AUDITORS_SERVICE.as_str(),
-    //         code
-    //     );
-
-    //     let letter = CreateLetter {
-    //         email: badge.contacts.email.unwrap(),
-    //         message: include_str!("../../templates/code.txt").replace("{link}", &link),
-    //         subject: include_str!("../../templates/code_subject.txt").to_owned(),
-
-    //         ..CreateLetter::default()
-    //     };
-
-    //     api::mail::send_mail(&self.context, letter).await?;
-
-    //     Ok(())
-    // }
 
     pub async fn delete(&self, code: String) -> error::Result<()> {
         let payload: BadgePayload =
@@ -343,20 +319,7 @@ impl BadgeService {
 
         // get all audit requests
 
-        let requests: Vec<PublicRequest> = self
-            .context
-            .make_request::<Vec<PublicRequest>>()
-            .auth(auth)
-            .get(format!(
-                "{}://{}/api/audit_request/all/auditor/{}",
-                PROTOCOL.as_str(),
-                AUDITS_SERVICE.as_str(),
-                payload.badge_id,
-            ))
-            .send()
-            .await?
-            .json()
-            .await?;
+        let requests = get_audit_requests(&self.context, auth).await?;
 
         // delete all audit requests
 

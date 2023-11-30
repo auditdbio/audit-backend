@@ -12,7 +12,7 @@ use actix_web::middleware;
 use actix_web::web;
 use actix_web::App;
 
-use common::context::ServiceState;
+use common::context::effectfull_context::ServiceState;
 pub use handlers::auth::*;
 pub use handlers::user::*;
 
@@ -43,6 +43,8 @@ pub fn create_app(
         .service(create_user)
         .service(forgot_password)
         .service(reset_password)
-        .service(restore_token);
+        .service(restore_token)
+        .service(github_auth)
+        .service(find_user_by_email);
     app
 }

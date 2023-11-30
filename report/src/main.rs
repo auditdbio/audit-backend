@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use actix_web::HttpServer;
 use common::auth::Service;
-use common::context::ServiceState;
+use common::context::effectfull_context::ServiceState;
 use report::create_app;
 
 #[actix_web::main]

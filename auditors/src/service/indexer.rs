@@ -1,6 +1,6 @@
 use common::{
     access_rules::{AccessRules, GetData},
-    context::Context,
+    context::GeneralContext,
     entities::{
         auditor::{Auditor, PublicAuditor},
         badge::{Badge, PublicBadge},
@@ -10,18 +10,18 @@ use common::{
 use mongodb::bson::{oid::ObjectId, Document};
 
 pub struct IndexerService {
-    context: Context,
+    context: GeneralContext,
 }
 
 impl IndexerService {
-    pub fn new(context: Context) -> Self {
+    pub fn new(context: GeneralContext) -> Self {
         Self { context }
     }
 
     pub async fn index_auditor(&self, since: i64) -> error::Result<Vec<Document>> {
         let auth = self.context.auth();
 
-        if !GetData.get_access(auth, ()) {
+        if !GetData.get_access(&auth, ()) {
             return Err(anyhow::anyhow!("No access to get auditor data {:?}", auth).code(400));
         }
 
@@ -38,7 +38,7 @@ impl IndexerService {
     pub async fn find_auditors(&self, ids: Vec<ObjectId>) -> error::Result<Vec<PublicAuditor>> {
         let auth = self.context.auth();
 
-        if !GetData.get_access(auth, ()) {
+        if !GetData.get_access(&auth, ()) {
             return Err(anyhow::anyhow!("No access to get auditor data: {:?}", auth).code(400));
         }
 
@@ -55,7 +55,7 @@ impl IndexerService {
     pub async fn index_badges(&self, since: i64) -> error::Result<Vec<Document>> {
         let auth = self.context.auth();
 
-        if !GetData.get_access(auth, ()) {
+        if !GetData.get_access(&auth, ()) {
             return Err(anyhow::anyhow!("No access to get auditor data {:?}", auth).code(400));
         }
 
@@ -72,7 +72,7 @@ impl IndexerService {
     pub async fn find_badges(&self, ids: Vec<ObjectId>) -> error::Result<Vec<PublicBadge>> {
         let auth = self.context.auth();
 
-        if !GetData.get_access(auth, ()) {
+        if !GetData.get_access(&auth, ()) {
             return Err(anyhow::anyhow!("No access to get auditor data: {:?}", auth).code(400));
         }
 

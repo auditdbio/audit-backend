@@ -1,10 +1,10 @@
 use crate::{
-    context::Context,
+    context::GeneralContext,
     error,
     services::{MAIL_SERVICE, PROTOCOL},
 };
 
-pub async fn post_code(context: &Context, payload: String) -> error::Result<String> {
+pub async fn post_code(context: &GeneralContext, payload: String) -> error::Result<String> {
     Ok(context
         .make_request::<String>()
         .post(format!(
@@ -19,9 +19,9 @@ pub async fn post_code(context: &Context, payload: String) -> error::Result<Stri
         .await?)
 }
 
-pub async fn get_code(context: &Context, code: String) -> error::Result<Option<String>> {
+pub async fn get_code(context: &GeneralContext, code: String) -> error::Result<Option<String>> {
     Ok(context
-        .make_request::<String>()
+        .make_request::<()>()
         .get(format!(
             "{}://{}/api/code/{}",
             PROTOCOL.as_str(),

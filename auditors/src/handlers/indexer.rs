@@ -4,7 +4,7 @@ use actix_web::{
     HttpResponse,
 };
 use common::{
-    context::Context,
+    context::GeneralContext,
     entities::{auditor::PublicAuditor, badge::PublicBadge},
     error,
 };
@@ -14,7 +14,7 @@ use crate::service::indexer::IndexerService;
 
 #[get("/api/auditor/data/{since}")]
 pub async fn provide_auditor_data(
-    context: Context,
+    context: GeneralContext,
     since: web::Path<i64>,
 ) -> error::Result<Json<Vec<Document>>> {
     Ok(Json(
@@ -26,7 +26,7 @@ pub async fn provide_auditor_data(
 
 #[post("/api/auditor/data")]
 pub async fn get_auditor_data(
-    context: Context,
+    context: GeneralContext,
     Json(ids): web::Json<Vec<ObjectId>>,
 ) -> error::Result<Json<Vec<PublicAuditor>>> {
     Ok(Json(IndexerService::new(context).find_auditors(ids).await?))
@@ -34,7 +34,7 @@ pub async fn get_auditor_data(
 
 #[get("/api/badge/data/{since}")]
 pub async fn provide_badges_data(
-    context: Context,
+    context: GeneralContext,
     since: web::Path<i64>,
 ) -> error::Result<Json<Vec<Document>>> {
     Ok(Json(
@@ -46,7 +46,7 @@ pub async fn provide_badges_data(
 
 #[post("/api/badge/data")]
 pub async fn get_badges_data(
-    context: Context,
+    context: GeneralContext,
     Json(ids): web::Json<Vec<ObjectId>>,
 ) -> error::Result<Json<Vec<PublicBadge>>> {
     Ok(Json(IndexerService::new(context).find_badges(ids).await?))

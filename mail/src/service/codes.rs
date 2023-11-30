@@ -1,4 +1,4 @@
-use common::{context::Context, error, repository::Entity};
+use common::{context::GeneralContext, error, repository::Entity};
 use mongodb::bson::{oid::ObjectId, Bson};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
@@ -18,11 +18,11 @@ impl Entity for Code {
 }
 
 pub struct CodeService {
-    pub context: Context,
+    pub context: GeneralContext,
 }
 
 impl CodeService {
-    pub fn new(context: Context) -> Self {
+    pub fn new(context: GeneralContext) -> Self {
         Self { context }
     }
 

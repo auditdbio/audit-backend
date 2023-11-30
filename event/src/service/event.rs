@@ -10,7 +10,7 @@ use actix_web_actors::ws::{self, WsResponseBuilder};
 use common::{
     api::events::PublicEvent,
     auth::Auth,
-    context::Context,
+    context::GeneralContext,
     error::{self, AddCode},
 };
 use mongodb::bson::oid::ObjectId;
@@ -66,7 +66,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Session {
 
                     log::info!("successful auth");
 
-                    if auth.id().unwrap() != &self.user_id {
+                    if auth.id().unwrap() != self.user_id {
                         log::warn!("unsuccessful auth");
                         return;
                     }
@@ -132,8 +132,8 @@ pub async fn start_session(
         hb: Instant::now(),
     };
 
-    let Ok((addr, resp)) = WsResponseBuilder::new(session, &req, stream).start_with_addr() else{
-        return Err(anyhow::anyhow!("Failed to start websocket").code(500))
+    let Ok((addr, resp)) = WsResponseBuilder::new(session, &req, stream).start_with_addr() else {
+        return Err(anyhow::anyhow!("Failed to start websocket").code(500));
     };
 
     let mut lock = manager.lock().await;
@@ -151,7 +151,7 @@ pub async fn start_session(
 }
 
 pub async fn make_event(
-    _context: Context,
+    _context: GeneralContext,
     event: PublicEvent,
     manager: Arc<Mutex<SessionManager>>,
 ) -> error::Result<()> {

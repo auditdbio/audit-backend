@@ -2,12 +2,15 @@ use actix_web::{
     get, post,
     web::{self, Json},
 };
-use common::{context::Context, error};
+use common::{context::GeneralContext, error};
 
 use crate::service::codes::CodeService;
 
 #[post("/api/code/{payload}")]
-pub async fn post_code(context: Context, path: web::Path<String>) -> error::Result<Json<String>> {
+pub async fn post_code(
+    context: GeneralContext,
+    path: web::Path<String>,
+) -> error::Result<Json<String>> {
     CodeService::new(context)
         .create(path.into_inner())
         .await
@@ -16,7 +19,7 @@ pub async fn post_code(context: Context, path: web::Path<String>) -> error::Resu
 
 #[get("/api/code/{code}")]
 pub async fn check_code(
-    context: Context,
+    context: GeneralContext,
     code: web::Path<String>,
 ) -> error::Result<Json<Option<String>>> {
     Ok(Json(

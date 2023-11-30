@@ -1,13 +1,17 @@
 use actix_files::NamedFile;
 use actix_multipart::Multipart;
 use actix_web::{delete, get, post, web::Path, HttpResponse};
-use common::{context::Context, error};
+use common::{context::GeneralContext, error};
 use futures::StreamExt;
+use mongodb::bson::oid::ObjectId;
 
 use crate::service::file::FileService;
 
 #[post("/api/file")]
-pub async fn create_file(context: Context, mut payload: Multipart) -> error::Result<HttpResponse> {
+pub async fn create_file(
+    context: GeneralContext,
+    mut payload: Multipart,
+) -> error::Result<HttpResponse> {
     let mut file = vec![];
     let mut path = String::new();
 
@@ -15,6 +19,7 @@ pub async fn create_file(context: Context, mut payload: Multipart) -> error::Res
     let mut original_name = String::new();
     let mut customer_id = String::new();
     let mut auditor_id = String::new();
+    let mut full_access = String::new();
 
     while let Some(item) = payload.next().await {
         let mut field = item.unwrap();
@@ -59,31 +64,54 @@ pub async fn create_file(context: Context, mut payload: Multipart) -> error::Res
                     auditor_id.push_str(&String::from_utf8(data.to_vec()).unwrap());
                 }
             }
+
+            "full_access" => {
+                while let Some(chunk) = field.next().await {
+                    let data = chunk.unwrap();
+                    full_access.push_str(&String::from_utf8(data.to_vec()).unwrap());
+                }
+            }
             _ => (),
         }
     }
 
-    let mut allowed_users = vec![];
+    let mut full_access = full_access
+        .split(' ')
+        .filter_map(|id| id.trim().parse().ok())
+        .collect::<Vec<ObjectId>>();
+
     if private {
-        allowed_users = vec![customer_id.parse()?, auditor_id.parse()?];
+        if let Ok(customer_id) = customer_id.parse() {
+            full_access.push(customer_id);
+        }
+
+        if let Ok(auditor_id) = auditor_id.parse() {
+            full_access.push(auditor_id);
+        }
     }
 
     FileService::new(context)
-        .create_file(path, allowed_users, private, original_name, file.concat())
+        .create_file(path, full_access, private, original_name, file.concat())
         .await?;
 
     Ok(HttpResponse::Ok().finish())
 }
 
 #[get("/api/file/{filename:.*}")]
-pub async fn find_file(context: Context, filename: Path<String>) -> error::Result<NamedFile> {
+pub async fn find_file(
+    context: GeneralContext,
+    filename: Path<String>,
+) -> error::Result<NamedFile> {
     FileService::new(context)
         .find_file(filename.into_inner())
         .await
 }
 
 #[delete("/api/file/{filename:.*}")]
-pub async fn delete_file(context: Context, filename: Path<String>) -> error::Result<NamedFile> {
+pub async fn delete_file(
+    context: GeneralContext,
+    filename: Path<String>,
+) -> error::Result<NamedFile> {
     FileService::new(context)
         .find_file(filename.into_inner())
         .await

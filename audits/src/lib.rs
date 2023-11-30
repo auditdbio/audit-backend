@@ -13,7 +13,7 @@ use actix_web::middleware;
 use actix_web::web;
 use actix_web::App;
 
-use common::context::ServiceState;
+use common::context::effectfull_context::ServiceState;
 pub use handlers::audit::*;
 pub use handlers::audit_request::*;
 
@@ -53,7 +53,8 @@ pub fn create_app(
         .service(patch_audit_disclose_all)
         .service(patch_audit_issue_read)
         .service(get_public_audits)
-        .service(find_all_audit_request);
+        .service(find_all_audit_request)
+        .service(post_no_customer_audit);
 
     app
 }

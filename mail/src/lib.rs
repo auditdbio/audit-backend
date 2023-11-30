@@ -6,7 +6,7 @@ use actix_web::{
     dev::{ServiceFactory, ServiceRequest, ServiceResponse},
     middleware, web, App,
 };
-use common::context::ServiceState;
+use common::context::effectfull_context::ServiceState;
 use handlers::{
     codes::{check_code, post_code},
     indexer::ping,

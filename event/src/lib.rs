@@ -6,7 +6,7 @@ use actix_web::{
     dev::{ServiceFactory, ServiceRequest, ServiceResponse},
     middleware, web, App,
 };
-use common::context::ServiceState;
+use common::context::effectfull_context::ServiceState;
 use service::event::SessionManager;
 use tokio::sync::Mutex;
 

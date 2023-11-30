@@ -8,7 +8,7 @@ use actix_web::{
     web::Data,
     App,
 };
-use common::context::ServiceState;
+use common::context::effectfull_context::ServiceState;
 
 pub mod handlers;
 pub mod service;

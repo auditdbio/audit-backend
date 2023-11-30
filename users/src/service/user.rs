@@ -3,8 +3,8 @@ use common::{
     access_rules::{AccessRules, Edit, Read},
     api::badge::merge,
     auth::Auth,
-    context::Context,
-    entities::user::{PublicUser, User},
+    context::GeneralContext,
+    entities::user::{PublicUser, User, LinkedAccount},
     error::{self, AddCode},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use super::auth::ChangePassword;
 
 pub struct UserService {
-    pub context: Context,
+    pub context: GeneralContext,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -29,7 +29,7 @@ pub struct UserChange {
 }
 
 impl UserService {
-    pub fn new(context: Context) -> Self {
+    pub fn new(context: GeneralContext) -> Self {
         Self { context }
     }
 
@@ -59,11 +59,65 @@ impl UserService {
             return Ok(None);
         };
 
-        if !Read.get_access(auth, &user) {
+        if !Read.get_access(&auth, &user) {
             return Err(anyhow::anyhow!("User is not available to read this user").code(403));
         }
 
         Ok(Some(user.into()))
+    }
+
+    pub async fn find_by_email(&self, email: String) -> error::Result<Option<User<ObjectId>>> {
+        let auth = self.context.auth();
+
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
+
+        let Some(user) = users.find("email", &email.into()).await? else {
+            return Ok(None);
+        };
+
+        if !Read.get_access(&auth, &user) {
+            return Err(anyhow::anyhow!("User is not available to read this user").code(403));
+        }
+
+        Ok(Some(user))
+    }
+
+    pub async fn find_linked_account(&self, id: i32) -> error::Result<Option<User<ObjectId>>> {
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
+
+        let Some(user) = users
+            .find("linked_accounts.id", &Bson::Int32(id))
+            .await?
+        else {
+            return Ok(None);
+        };
+
+        Ok(Some(user))
+    }
+
+    pub async fn add_linked_account(
+        &self,
+        id: ObjectId,
+        account: LinkedAccount
+    ) -> error::Result<Option<User<ObjectId>>> {
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
+
+        let Some(mut user) = users.find("id", &Bson::ObjectId(id)).await? else {
+            return Err(anyhow::anyhow!("No user found").code(404));
+        };
+
+        if let Some(ref mut linked_accounts) = user.linked_accounts {
+            linked_accounts.push(account);
+        } else {
+            user.linked_accounts = Some(vec![account]);
+        }
+
+        user.last_modified = Utc::now().timestamp_micros();
+
+        users.delete("id", &id).await?;
+        users.insert(&user).await?;
+
+        Ok(Some(user))
     }
 
     pub async fn my_user(&self) -> error::Result<Option<User<String>>> {
@@ -72,7 +126,7 @@ impl UserService {
         let users = self.context.try_get_repository::<User<ObjectId>>()?;
 
         let Some(user) = users
-            .find("id", &Bson::ObjectId(*auth.id().unwrap()))
+            .find("id", &Bson::ObjectId(auth.id().unwrap()))
             .await?
         else {
             return Ok(None);
@@ -90,7 +144,7 @@ impl UserService {
             return Err(anyhow::anyhow!("No user found").code(404));
         };
 
-        if !Edit.get_access(auth, &user) {
+        if !Edit.get_access(&auth, &user) {
             return Err(anyhow::anyhow!("User is not available to change this user").code(403));
         }
 
@@ -117,6 +171,7 @@ impl UserService {
             let password = sha256::digest(password);
             user.password = password;
             user.salt = salt;
+            user.is_passwordless = Some(false);
         }
 
         if let Some(name) = change.name {
@@ -148,7 +203,7 @@ impl UserService {
             return Err(anyhow::anyhow!("No user found").code(404));
         };
 
-        if !Edit.get_access(auth, &user) {
+        if !Edit.get_access(&auth, &user) {
             users.insert(&user).await?;
             return Err(anyhow::anyhow!("User is not available to delete this user").code(403));
         }

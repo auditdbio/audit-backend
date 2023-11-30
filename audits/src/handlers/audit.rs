@@ -5,8 +5,8 @@ use actix_web::{
 };
 
 use common::{
-    api::audits::{AuditChange, CreateIssue, PublicAudit},
-    context::Context,
+    api::audits::{AuditChange, CreateIssue, PublicAudit, NoCustomerAuditRequest},
+    context::GeneralContext,
     entities::{issue::ChangeIssue, role::Role},
     error,
 };
@@ -17,14 +17,25 @@ use crate::service::{audit::AuditService, audit_request::PublicRequest};
 
 #[post("/api/audit")]
 pub async fn post_audit(
-    context: Context,
+    context: GeneralContext,
     Json(data): web::Json<PublicRequest>,
 ) -> error::Result<Json<PublicAudit>> {
     Ok(Json(AuditService::new(context).create(data).await?))
 }
 
+#[post("/api/no_customer_audit")]
+pub async fn post_no_customer_audit(
+    context: GeneralContext,
+    Json(data): Json<NoCustomerAuditRequest>
+) -> error::Result<Json<PublicAudit>> {
+    Ok(Json(AuditService::new(context).create_no_customer(data).await?))
+}
+
 #[get("/api/audit/{id}")]
-pub async fn get_audit(context: Context, id: web::Path<String>) -> error::Result<HttpResponse> {
+pub async fn get_audit(
+    context: GeneralContext,
+    id: web::Path<String>,
+) -> error::Result<HttpResponse> {
     let res = AuditService::new(context).find(id.parse()?).await?;
     if let Some(res) = res {
         Ok(HttpResponse::Ok().json(res))
@@ -35,7 +46,7 @@ pub async fn get_audit(context: Context, id: web::Path<String>) -> error::Result
 
 #[get("/api/my_audit/{role}")]
 pub async fn get_my_audit(
-    context: Context,
+    context: GeneralContext,
     role: web::Path<Role>,
 ) -> error::Result<Json<Vec<PublicAudit>>> {
     Ok(Json(
@@ -47,7 +58,7 @@ pub async fn get_my_audit(
 
 #[patch("/api/audit/{id}")]
 pub async fn patch_audit(
-    context: Context,
+    context: GeneralContext,
     id: web::Path<String>,
     Json(data): Json<AuditChange>,
 ) -> error::Result<Json<PublicAudit>> {
@@ -58,7 +69,7 @@ pub async fn patch_audit(
 
 #[delete("/api/audit/{id}")]
 pub async fn delete_audit(
-    context: Context,
+    context: GeneralContext,
     id: web::Path<String>,
 ) -> error::Result<Json<PublicAudit>> {
     Ok(Json(AuditService::new(context).delete(id.parse()?).await?))
@@ -66,7 +77,7 @@ pub async fn delete_audit(
 
 #[post("/api/audit/{id}/issue")]
 pub async fn post_audit_issue(
-    context: Context,
+    context: GeneralContext,
     id: web::Path<String>,
     Json(data): Json<CreateIssue>,
 ) -> error::Result<HttpResponse> {
@@ -78,7 +89,7 @@ pub async fn post_audit_issue(
 
 #[patch("/api/audit/{id}/issue/{issue_id}")]
 pub async fn patch_audit_issue(
-    context: Context,
+    context: GeneralContext,
     id: web::Path<(String, usize)>,
     Json(data): Json<ChangeIssue>,
 ) -> error::Result<HttpResponse> {
@@ -90,7 +101,7 @@ pub async fn patch_audit_issue(
 
 #[get("/api/audit/{id}/issue")]
 pub async fn get_audit_issue(
-    context: Context,
+    context: GeneralContext,
     id: web::Path<String>,
 ) -> error::Result<HttpResponse> {
     let result = AuditService::new(context).get_issues(id.parse()?).await?;
@@ -99,7 +110,7 @@ pub async fn get_audit_issue(
 
 #[get("/api/audit/{id}/issue/{issue_id}")]
 pub async fn get_audit_issue_by_id(
-    context: Context,
+    context: GeneralContext,
     id: web::Path<(String, usize)>,
 ) -> error::Result<HttpResponse> {
     let result = AuditService::new(context)
@@ -110,7 +121,7 @@ pub async fn get_audit_issue_by_id(
 
 #[patch("/api/audit/{id}/disclose_all")]
 pub async fn patch_audit_disclose_all(
-    context: Context,
+    context: GeneralContext,
     id: web::Path<String>,
 ) -> error::Result<HttpResponse> {
     let result = AuditService::new(context).disclose_all(id.parse()?).await?;
@@ -119,7 +130,7 @@ pub async fn patch_audit_disclose_all(
 
 #[patch("/api/audit/{id}/{issue_id}/read/{read}")]
 pub async fn patch_audit_issue_read(
-    context: Context,
+    context: GeneralContext,
     id: web::Path<(String, usize, u64)>,
 ) -> error::Result<HttpResponse> {
     AuditService::new(context)
@@ -130,7 +141,7 @@ pub async fn patch_audit_issue_read(
 
 #[get("/api/public_audits/{id}/{role}")]
 pub async fn get_public_audits(
-    context: Context,
+    context: GeneralContext,
     path: web::Path<(String, String)>,
 ) -> error::Result<Json<Vec<PublicAudit>>> {
     let (id, role) = path.into_inner();

@@ -6,7 +6,7 @@ use actix_web::{
 
 use common::{
     api::requests::{CreateRequest, PublicRequest},
-    context::Context,
+    context::GeneralContext,
     entities::{audit_request::AuditRequest, role::Role},
     error,
 };
@@ -17,7 +17,7 @@ use crate::service::audit_request::{RequestChange, RequestService};
 
 #[post("/api/audit_request")]
 pub async fn post_audit_request(
-    context: Context,
+    context: GeneralContext,
     Json(data): web::Json<CreateRequest>,
 ) -> error::Result<Json<PublicRequest>> {
     Ok(Json(RequestService::new(context).create(data).await?))
@@ -25,7 +25,7 @@ pub async fn post_audit_request(
 
 #[get("/api/audit_request/{id}")]
 pub async fn get_audit_request(
-    context: Context,
+    context: GeneralContext,
     id: web::Path<String>,
 ) -> error::Result<HttpResponse> {
     let res = RequestService::new(context).find(id.parse()?).await?;
@@ -38,7 +38,7 @@ pub async fn get_audit_request(
 
 #[get("/api/my_audit_request/{role}")]
 pub async fn get_my_audit_request(
-    context: Context,
+    context: GeneralContext,
     role: web::Path<Role>,
 ) -> error::Result<Json<Vec<PublicRequest>>> {
     Ok(Json(
@@ -50,7 +50,7 @@ pub async fn get_my_audit_request(
 
 #[patch("/api/audit_request/{id}")]
 pub async fn patch_audit_request(
-    context: Context,
+    context: GeneralContext,
     id: web::Path<String>,
     Json(data): Json<RequestChange>,
 ) -> error::Result<Json<PublicRequest>> {
@@ -63,7 +63,7 @@ pub async fn patch_audit_request(
 
 #[delete("/api/audit_request/{id}")]
 pub async fn delete_audit_request(
-    context: Context,
+    context: GeneralContext,
     id: web::Path<String>,
 ) -> error::Result<Json<PublicRequest>> {
     Ok(Json(
@@ -73,7 +73,7 @@ pub async fn delete_audit_request(
 
 #[get("/api/audit_request/all/{role}/{id}")]
 pub async fn find_all_audit_request(
-    context: Context,
+    context: GeneralContext,
     path: web::Path<(Role, String)>,
 ) -> error::Result<Json<Vec<AuditRequest<String>>>> {
     let (role, id) = path.into_inner();

@@ -3,7 +3,7 @@ use actix_web::{
     web::{self, Json},
     HttpRequest, HttpResponse,
 };
-use common::{api::events::PublicEvent, context::Context, error};
+use common::{api::events::PublicEvent, context::GeneralContext, error};
 use tokio::sync::Mutex;
 
 use crate::service::event::SessionManager;
@@ -26,7 +26,7 @@ pub async fn events(
 
 #[post("/api/event")]
 pub async fn make_event(
-    context: Context,
+    context: GeneralContext,
     manager: web::Data<Mutex<SessionManager>>,
     Json(event): web::Json<PublicEvent>,
 ) -> error::Result<HttpResponse> {

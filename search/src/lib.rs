@@ -12,7 +12,7 @@ use actix_web::dev::ServiceResponse;
 use actix_web::middleware;
 use actix_web::web;
 use actix_web::App;
-use common::context::ServiceState;
+use common::context::effectfull_context::ServiceState;
 pub use handlers::search::*;
 use repositories::search::SearchRepo;
 
@@ -37,6 +37,7 @@ pub fn create_app(
         .app_data(web::Data::new(state))
         .app_data(web::Data::new(search_repo))
         .service(insert)
-        .service(search);
+        .service(search)
+        .service(delete);
     app
 }

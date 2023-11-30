@@ -4,21 +4,24 @@ use actix_web::{
     HttpResponse,
 };
 
-use common::{context::Context, entities::project::PublicProject, error};
+use common::{context::GeneralContext, entities::project::PublicProject, error};
 use serde_json::json;
 
 use crate::service::project::{CreateProject, ProjectChange, ProjectService};
 
 #[post("/api/project")]
 pub async fn post_project(
-    context: Context,
+    context: GeneralContext,
     Json(data): Json<CreateProject>,
 ) -> error::Result<Json<PublicProject>> {
     Ok(Json(ProjectService::new(context).create(data).await?))
 }
 
 #[get("/api/project/{id}")]
-pub async fn get_project(context: Context, id: web::Path<String>) -> error::Result<HttpResponse> {
+pub async fn get_project(
+    context: GeneralContext,
+    id: web::Path<String>,
+) -> error::Result<HttpResponse> {
     let res = ProjectService::new(context).find(id.parse()?).await?;
     if let Some(res) = res {
         Ok(HttpResponse::Ok().json(res))
@@ -28,14 +31,14 @@ pub async fn get_project(context: Context, id: web::Path<String>) -> error::Resu
 }
 
 #[get("/api/my_project")]
-pub async fn my_project(context: Context) -> error::Result<HttpResponse> {
+pub async fn my_project(context: GeneralContext) -> error::Result<HttpResponse> {
     let res = ProjectService::new(context).my_projects().await?;
     Ok(HttpResponse::Ok().json(res))
 }
 
 #[patch("/api/project/{id}")]
 pub async fn patch_project(
-    context: Context,
+    context: GeneralContext,
     id: web::Path<String>,
     Json(data): Json<ProjectChange>,
 ) -> error::Result<Json<PublicProject>> {
@@ -48,7 +51,7 @@ pub async fn patch_project(
 
 #[delete("/api/customer/{id}")]
 pub async fn delete_project(
-    context: Context,
+    context: GeneralContext,
     id: web::Path<String>,
 ) -> error::Result<Json<PublicProject>> {
     Ok(Json(
@@ -58,7 +61,7 @@ pub async fn delete_project(
 
 #[post("/api/project/auditor/{id}/{user_id}")]
 pub async fn add_auditor(
-    context: Context,
+    context: GeneralContext,
     ids: Path<(String, String)>,
 ) -> error::Result<HttpResponse> {
     let (id, user_id) = ids.into_inner();
@@ -70,7 +73,7 @@ pub async fn add_auditor(
 
 #[delete("/api/project/auditor/{id}/{user_id}")]
 pub async fn delete_auditor(
-    context: Context,
+    context: GeneralContext,
     ids: Path<(String, String)>,
 ) -> error::Result<HttpResponse> {
     let (id, user_id) = ids.into_inner();
