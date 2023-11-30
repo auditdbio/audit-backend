@@ -37,6 +37,7 @@ pub fn create_app(
         .app_data(web::Data::new(state))
         .app_data(web::Data::new(search_repo))
         .service(insert)
-        .service(search);
+        .service(search)
+        .service(delete);
     app
 }

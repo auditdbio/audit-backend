@@ -6,15 +6,12 @@ use actix_web::{
 use common::{
     api::user::{CreateUser, GithubAuth},
     context::GeneralContext,
-    entities::user::User,
+    entities::user::{LinkedAccount, User},
     error,
 };
+use serde::{Deserialize, Serialize};
 
-use crate::service::auth::{
-    AuthService, ChangePasswordData,
-    Login, Token,
-    TokenResponce
-};
+use crate::service::auth::{AuthService, ChangePasswordData, Login, Token, TokenResponce};
 
 #[post("/api/auth/login")]
 pub async fn login(context: GeneralContext, login: Json<Login>) -> error::Result<Json<Token>> {
@@ -29,11 +26,36 @@ pub async fn github_auth(
     Ok(Json(AuthService::new(context).github_auth(data).await?))
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CreateUserResponce {
+    id: String,
+    name: String,
+    current_role: String,
+    email: String,
+    is_new: bool,
+    linked_accounts: Option<Vec<LinkedAccount>>,
+    is_passwordless: Option<bool>,
+}
+
+impl From<User<String>> for CreateUserResponce {
+    fn from(user: User<String>) -> Self {
+        Self {
+            id: user.id,
+            name: user.name,
+            current_role: user.current_role,
+            email: user.email,
+            is_new: user.is_new,
+            linked_accounts: user.linked_accounts,
+            is_passwordless: user.is_passwordless,
+        }
+    }
+}
+
 #[post("/api/user")]
 pub async fn create_user(
     context: GeneralContext,
     Json(user): web::Json<CreateUser>,
-) -> error::Result<Json<User<String>>> {
+) -> error::Result<Json<CreateUserResponce>> {
     #[allow(unused_mut)]
     let mut use_email = true;
 
@@ -46,7 +68,8 @@ pub async fn create_user(
     Ok(Json(
         AuthService::new(context)
             .authentication(user, use_email)
-            .await?,
+            .await?
+            .into(),
     ))
 }
 
