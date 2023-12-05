@@ -31,6 +31,8 @@ pub enum AuditAction {
 pub struct AuditChange {
     pub avatar: Option<String>,
     pub action: Option<AuditAction>,
+    pub project_name: Option<String>,
+    pub description: Option<String>,
     pub scope: Option<Vec<String>>,
     pub report_name: Option<String>,
     pub report: Option<String>,

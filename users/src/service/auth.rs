@@ -368,32 +368,6 @@ impl AuthService {
             .find_by_email(github_user.email.clone())
             .await?
         {
-            // let payload = json!({ "avatar": linked_account.avatar });
-            //
-            // self.context
-            //     .make_request()
-            //     .patch(format!(
-            //         "{}://{}/api/my_auditor",
-            //         PROTOCOL.as_str(),
-            //         AUDITORS_SERVICE.as_str()
-            //     ))
-            //     .auth(self.context.server_auth())
-            //     .json(&payload)
-            //     .send()
-            //     .await?;
-            //
-            // self.context
-            //     .make_request()
-            //     .patch(format!(
-            //         "{}://{}/api/my_customer",
-            //         PROTOCOL.as_str(),
-            //         CUSTOMERS_SERVICE.as_str()
-            //     ))
-            //     .auth(self.context.server_auth())
-            //     .json(&payload)
-            //     .send()
-            //     .await?;
-
             return create_auth_token(&user);
         }
 
