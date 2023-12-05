@@ -212,6 +212,15 @@ impl AuditService {
             if let Some(scope) = change.scope {
                 audit.scope = scope;
             }
+            if let Some(description) = change.description {
+                audit.description = description;
+            }
+        }
+
+        if !audit.no_customer {
+            if let Some(project_name) = change.project_name {
+                audit.project_name = project_name;
+            }
         }
 
         if let Some(report) = change.report {
