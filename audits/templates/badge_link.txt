@@ -1,8 +1,8 @@
 Hi,
 Greetings from AuditDB, the premier social network dedicated to blockchain auditors like you!
 We would like to inform you the client has discovered your company's information in our extensive database and has expressed a keen interest in engaging your services for a new audit. This presents a unique opportunity not only to showcase your expertise but also to expand your professional network within the blockchain community.
-To facilitate this connection and provide the audit, we invite you to create a comprehensive profile on AuditDB. By doing so, you can directly communicate with the client, access detailed project requirements, and begin a potentially fruitful collaboration. Should you prefer not to engage with the AuditDB community at this time, you may disregard this invitation with no further obligations. Click {merge_link} to update your personal account on AuditDB.
-Furthermore, we understand the importance of information discretion. If, for any reason, you wish to have your company's details removed from our database, please click {delete_link}.
+To facilitate this connection and provide the audit, we invite you to create a comprehensive profile on AuditDB. By doing so, you can directly communicate with the client, access detailed project requirements, and begin a potentially fruitful collaboration. Should you prefer not to engage with the AuditDB community at this time, you may disregard this invitation with no further obligations. Click <a href="{merge_link}">here</a> to update your personal account on AuditDB.
+Furthermore, we understand the importance of information discretion. If, for any reason, you wish to have your company's details removed from our database, please click <a href="{delete_link}">here</a>.
 We look forward to the possibility of your participation in AuditDB and are here to assist you in taking the next steps that best align with your company's goals.
 Stay decentralized,
 AuditDB team
