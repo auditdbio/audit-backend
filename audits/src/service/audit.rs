@@ -208,7 +208,7 @@ impl AuditService {
             audit.public = public;
         }
 
-        if audit.status != AuditStatus::Resolved {
+        if audit.status != AuditStatus::Resolved || audit.no_customer {
             if let Some(scope) = change.scope {
                 audit.scope = scope;
             }
@@ -217,7 +217,7 @@ impl AuditService {
             }
         }
 
-        if !audit.no_customer {
+        if audit.no_customer {
             if let Some(project_name) = change.project_name {
                 audit.project_name = project_name;
             }
