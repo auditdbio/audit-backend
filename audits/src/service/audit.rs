@@ -18,14 +18,13 @@ use common::{
     entities::{
         audit::{Audit, AuditStatus},
         audit_request::AuditRequest,
-        issue::{severity_to_integer, ChangeIssue, Event, EventKind, Issue, Status},
+        issue::{severity_to_integer, ChangeIssue, Event, EventKind, Issue, Status, Action},
         project::get_project,
         role::Role,
     },
     error::{self, AddCode},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
-use common::entities::issue::Action;
 
 use super::audit_request::PublicRequest;
 
