@@ -50,6 +50,7 @@ pub fn create_app(
         .service(patch_audit_issue)
         .service(get_audit_issue)
         .service(get_audit_issue_by_id)
+        .service(delete_audit_issue)
         .service(patch_audit_disclose_all)
         .service(patch_audit_issue_read)
         .service(get_public_audits)

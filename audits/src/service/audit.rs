@@ -688,6 +688,39 @@ impl AuditService {
         Err(anyhow::anyhow!("No issue found").code(404))
     }
 
+    pub async fn delete_issue(
+        &self,
+        audit_id: ObjectId,
+        issue_id: usize,
+    ) -> error::Result<PublicIssue> {
+        let auth = self.context.auth();
+        let Some(mut audit) = self.get_audit(audit_id).await? else {
+            return Err(anyhow::anyhow!("No audit found").code(404));
+        };
+
+        if !Edit.get_access(&auth, &audit) || !audit.no_customer {
+            return Err(anyhow::anyhow!("User is not available to delete this issue").code(403));
+        }
+
+        let Some(mut issue) = audit
+            .issues
+            .iter()
+            .find(|issue| issue.id == issue_id)
+            .cloned()
+            else {
+                return Err(anyhow::anyhow!("No issue found").code(404));
+            };
+
+        audit.issues.retain(|issue| issue.id != issue_id);
+
+        let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
+        audits.delete("_id", &audit_id).await?;
+        audits.insert(&audit).await?;
+        let public_issue = auth.public_issue(issue);
+
+        Ok(public_issue)
+    }
+
     pub async fn read_events(
         &self,
         audit_id: ObjectId,
