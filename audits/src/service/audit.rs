@@ -25,6 +25,7 @@ use common::{
     error::{self, AddCode},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
+use common::entities::issue::Action;
 
 use super::audit_request::PublicRequest;
 
@@ -375,7 +376,7 @@ impl AuditService {
             return Err(anyhow::anyhow!("No audit found").code(404));
         };
 
-        if !change.get_access(&audit, &auth) {
+        if !change.get_access(&audit, &auth) && !audit.no_customer {
             return Err(anyhow::anyhow!("User is not available to change this issue").code(403));
         }
 
@@ -423,11 +424,17 @@ impl AuditService {
         };
 
         if let Some(action) = change.status {
-            let Some(new_state) = issue.status.apply(&action) else {
-                return Err(anyhow::anyhow!("Invalid action").code(400));
-            };
+            if audit.no_customer {
+                issue.status = match action {
+                    Action::Fixed => Status::Fixed,
+                    Action::NotFixed => Status::NotFixed,
+                    _ => return Err(anyhow::anyhow!("Invalid action").code(400))
+                }
+            } else {
+                let Some(new_state) = issue.status.apply(&action) else {
+                    return Err(anyhow::anyhow!("Invalid action").code(400));
+                };
 
-            if !&audit.no_customer {
                 let mut new_notification: NewNotification = if role == Role::Customer {
                     serde_json::from_str(include_str!(
                         "../../templates/audit_issue_status_change_auditor.txt"
@@ -448,16 +455,16 @@ impl AuditService {
                 ];
 
                 send_notification(&self.context, true, true, new_notification, variables).await?;
-            }
 
-            issue.status = new_state.clone();
+                issue.status = new_state.clone();
 
-            Self::create_event(
-                &self.context,
-                &mut issue,
-                EventKind::StatusChange,
-                format!("changed status to {:?}", new_state),
-            );
+                Self::create_event(
+                    &self.context,
+                    &mut issue,
+                    EventKind::StatusChange,
+                    format!("changed status to {:?}", new_state),
+                );
+            };
         }
 
         if let Some(severity) = change.severity.clone() {
