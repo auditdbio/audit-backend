@@ -34,6 +34,7 @@ pub struct AuditChange {
     pub project_name: Option<String>,
     pub description: Option<String>,
     pub scope: Option<Vec<String>>,
+    pub tags: Option<Vec<String>>,
     pub report_name: Option<String>,
     pub report: Option<String>,
     pub time: Option<TimeRange>,
@@ -181,7 +182,7 @@ impl PublicAudit {
         let tags = if let Some(project) = &project {
             project.tags.clone()
         } else {
-            Vec::new()
+            audit.tags
         };
 
         let project_name = if let Some(project) = &project {
