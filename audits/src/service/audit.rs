@@ -44,6 +44,12 @@ impl AuditService {
         let auditor_id = request.auditor_id.parse()?;
         let customer_id = request.customer_id.parse()?;
 
+        let tags = if let Some(request_tags) = request.tags {
+            request_tags
+        } else {
+            Vec::new()
+        };
+
         let audit = Audit {
             id: request.id.parse()?,
             customer_id,
@@ -53,6 +59,7 @@ impl AuditService {
             description: request.description,
             status: AuditStatus::Waiting,
             scope: request.project_scope,
+            tags,
             price: request.price,
             last_modified: Utc::now().timestamp_micros(),
             report: None,
@@ -117,6 +124,7 @@ impl AuditService {
             description: request.description,
             status: request.status,
             scope: request.scope,
+            tags: request.tags,
             price: 0,
             last_modified: Utc::now().timestamp_micros(),
             report: None,
@@ -214,6 +222,9 @@ impl AuditService {
             }
             if let Some(description) = change.description {
                 audit.description = description;
+            }
+            if let Some(tags) = change.tags {
+                audit.tags = tags;
             }
         }
 
