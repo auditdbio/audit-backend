@@ -18,7 +18,7 @@ use common::{
     entities::{
         audit::{Audit, AuditStatus},
         audit_request::AuditRequest,
-        issue::{severity_to_integer, ChangeIssue, Event, EventKind, Issue, Status},
+        issue::{severity_to_integer, ChangeIssue, Event, EventKind, Issue, Status, Action},
         project::get_project,
         role::Role,
     },
@@ -44,6 +44,12 @@ impl AuditService {
         let auditor_id = request.auditor_id.parse()?;
         let customer_id = request.customer_id.parse()?;
 
+        let tags = if let Some(request_tags) = request.tags {
+            request_tags
+        } else {
+            Vec::new()
+        };
+
         let audit = Audit {
             id: request.id.parse()?,
             customer_id,
@@ -53,6 +59,7 @@ impl AuditService {
             description: request.description,
             status: AuditStatus::Waiting,
             scope: request.project_scope,
+            tags,
             price: request.price,
             last_modified: Utc::now().timestamp_micros(),
             report: None,
@@ -117,6 +124,7 @@ impl AuditService {
             description: request.description,
             status: request.status,
             scope: request.scope,
+            tags: request.tags,
             price: 0,
             last_modified: Utc::now().timestamp_micros(),
             report: None,
@@ -208,9 +216,21 @@ impl AuditService {
             audit.public = public;
         }
 
-        if audit.status != AuditStatus::Resolved {
+        if audit.status != AuditStatus::Resolved || audit.no_customer {
             if let Some(scope) = change.scope {
                 audit.scope = scope;
+            }
+            if let Some(description) = change.description {
+                audit.description = description;
+            }
+            if let Some(tags) = change.tags {
+                audit.tags = tags;
+            }
+        }
+
+        if audit.no_customer {
+            if let Some(project_name) = change.project_name {
+                audit.project_name = project_name;
             }
         }
 
@@ -366,7 +386,7 @@ impl AuditService {
             return Err(anyhow::anyhow!("No audit found").code(404));
         };
 
-        if !change.get_access(&audit, &auth) {
+        if !change.get_access(&audit, &auth) && !audit.no_customer {
             return Err(anyhow::anyhow!("User is not available to change this issue").code(403));
         }
 
@@ -414,11 +434,17 @@ impl AuditService {
         };
 
         if let Some(action) = change.status {
-            let Some(new_state) = issue.status.apply(&action) else {
-                return Err(anyhow::anyhow!("Invalid action").code(400));
-            };
+            if audit.no_customer {
+                issue.status = match action {
+                    Action::Fixed => Status::Fixed,
+                    Action::NotFixed => Status::NotFixed,
+                    _ => return Err(anyhow::anyhow!("Invalid action").code(400))
+                }
+            } else {
+                let Some(new_state) = issue.status.apply(&action) else {
+                    return Err(anyhow::anyhow!("Invalid action").code(400));
+                };
 
-            if !&audit.no_customer {
                 let mut new_notification: NewNotification = if role == Role::Customer {
                     serde_json::from_str(include_str!(
                         "../../templates/audit_issue_status_change_auditor.txt"
@@ -439,16 +465,16 @@ impl AuditService {
                 ];
 
                 send_notification(&self.context, true, true, new_notification, variables).await?;
-            }
 
-            issue.status = new_state.clone();
+                issue.status = new_state.clone();
 
-            Self::create_event(
-                &self.context,
-                &mut issue,
-                EventKind::StatusChange,
-                format!("changed status to {:?}", new_state),
-            );
+                Self::create_event(
+                    &self.context,
+                    &mut issue,
+                    EventKind::StatusChange,
+                    format!("changed status to {:?}", new_state),
+                );
+            };
         }
 
         if let Some(severity) = change.severity.clone() {
@@ -677,6 +703,39 @@ impl AuditService {
         }
 
         Err(anyhow::anyhow!("No issue found").code(404))
+    }
+
+    pub async fn delete_issue(
+        &self,
+        audit_id: ObjectId,
+        issue_id: usize,
+    ) -> error::Result<PublicIssue> {
+        let auth = self.context.auth();
+        let Some(mut audit) = self.get_audit(audit_id).await? else {
+            return Err(anyhow::anyhow!("No audit found").code(404));
+        };
+
+        if !Edit.get_access(&auth, &audit) || !audit.no_customer {
+            return Err(anyhow::anyhow!("User is not available to delete this issue").code(403));
+        }
+
+        let Some(mut issue) = audit
+            .issues
+            .iter()
+            .find(|issue| issue.id == issue_id)
+            .cloned()
+            else {
+                return Err(anyhow::anyhow!("No issue found").code(404));
+            };
+
+        audit.issues.retain(|issue| issue.id != issue_id);
+
+        let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
+        audits.delete("_id", &audit_id).await?;
+        audits.insert(&audit).await?;
+        let public_issue = auth.public_issue(issue);
+
+        Ok(public_issue)
     }
 
     pub async fn read_events(

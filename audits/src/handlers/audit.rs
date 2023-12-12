@@ -119,6 +119,15 @@ pub async fn get_audit_issue_by_id(
     Ok(HttpResponse::Ok().json(result))
 }
 
+#[delete("/api/audit/{id}/issue/{issue_id}")]
+pub async fn delete_audit_issue(
+    context: GeneralContext,
+    id: web::Path<(String, usize)>,
+) -> error::Result<HttpResponse> {
+    let result = AuditService::new(context).delete_issue(id.0.parse()?, id.1).await?;
+    Ok(HttpResponse::Ok().json(result))
+}
+
 #[patch("/api/audit/{id}/disclose_all")]
 pub async fn patch_audit_disclose_all(
     context: GeneralContext,
