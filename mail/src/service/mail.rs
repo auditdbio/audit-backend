@@ -95,18 +95,22 @@ impl MailService {
                 MultiPart::related().singlepart(
                     SinglePart::builder()
                         .header(header::ContentType::TEXT_HTML)
-                        .body(String::from(letter.message)),
+                        .body(String::from(
+                            letter.message
+                        )),
                 ),
             );
 
-        /*
-        Message::builder()
-        .from(sender_email.parse().unwrap())
-        .to(email)
-        .subject(letter.subject)
-        .body(letter.message) */
 
-        let Ok(email) = mail else {
+            /*
+            Message::builder()
+            .from(sender_email.parse().unwrap())
+            .to(email)
+            .subject(letter.subject)
+            .body(letter.message) */
+
+        let Ok(email) = mail
+        else {
             return Err(anyhow::anyhow!("Error building email").code(500));
         };
         let mailer = SmtpTransport::relay("smtp.gmail.com")
