@@ -126,8 +126,13 @@ impl Audit<ObjectId> {
                 .await
                 .unwrap()
                 .json::<PublicReport>()
-                .await
-                .unwrap();
+                .await;
+
+            if let Err(err) = public_report {
+                println!("Error in audit::resolve: {}", err);
+                return;
+            }
+            let public_report = public_report.unwrap();
             self.report = Some(public_report.path.clone());
             self.report_name = Some(public_report.path);
         }
