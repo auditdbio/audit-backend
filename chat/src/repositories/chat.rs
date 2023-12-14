@@ -16,6 +16,7 @@ pub struct Group {
     members: Vec<ChatId>,
     last_modified: i64,
     last_message: Message,
+    read: Vec<ReadId>,
 }
 
 impl Group {
@@ -26,7 +27,8 @@ impl Group {
             members: self.members.into_iter().map(ChatId::publish).collect(),
             last_message: self.last_message.publish(),
             last_modified: self.last_modified,
-            avatar: None
+            avatar: None,
+            read: self.read.into_iter().map(ReadId::publish).collect(),
         }
     }
 }
@@ -51,12 +53,34 @@ impl Entity for Messages {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PublicReadId {
+    pub id: String,
+    pub read: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReadId {
+    pub id: ObjectId,
+    pub read: i32,
+}
+
+impl ReadId {
+    pub fn publish(self) -> PublicReadId {
+        PublicReadId {
+            read: self.read,
+            id: self.id.to_hex(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrivateChat {
     #[serde(rename = "_id")]
     pub id: ObjectId,
     pub members: [ChatId; 2],
     pub last_modified: i64,
     pub last_message: Message,
+    pub read: Option<[ReadId; 2]>,
 }
 
 impl Entity for PrivateChat {
@@ -145,7 +169,6 @@ impl ChatRepository {
     pub async fn create_private(
         &self,
         message: Message,
-
         other: ChatId,
     ) -> error::Result<PrivateChat> {
         let chat = PrivateChat {
@@ -153,6 +176,10 @@ impl ChatRepository {
             members: [message.from, other],
             last_modified: Utc::now().timestamp_micros(),
             last_message: message.clone(),
+            read: Some([
+                ReadId { id: message.from.id, read: 0 },
+                ReadId { id: other.id, read: 0 },
+            ]),
         };
 
         let messages = Messages {

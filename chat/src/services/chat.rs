@@ -16,7 +16,7 @@ use common::{
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-use crate::repositories::chat::{Chat, ChatRepository, Group};
+use crate::repositories::chat::{Chat, ChatRepository, Group, PublicReadId, ReadId};
 
 pub struct ChatService {
     context: GeneralContext,
@@ -30,6 +30,7 @@ pub struct PublicChat {
     pub last_modified: i64,
     pub last_message: PublicMessage,
     pub avatar: Option<String>,
+    pub read: Vec<PublicReadId>
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -162,6 +163,19 @@ impl ChatService {
                     )
                 };
 
+                let read = if let Some(read) = private.read.clone() {
+                    read.clone().into_iter().map(ReadId::publish).collect()
+                } else {
+                    let mut read = Vec::new();
+                    for member in &private.members {
+                        read.push(PublicReadId {
+                            id: member.id.to_hex(),
+                            read: 0,
+                        });
+                    }
+                    read
+                };
+
                 chats.push(PublicChat {
                     id: private.id.to_hex(),
                     name,
@@ -169,6 +183,7 @@ impl ChatService {
                     members: private.members.into_iter().map(ChatId::publish).collect(),
                     last_modified: private.last_modified,
                     last_message: private.last_message.clone().publish(),
+                    read,
                 })
             }
         }
@@ -189,5 +204,14 @@ impl ChatService {
             .into_iter()
             .map(Message::publish)
             .collect())
+    }
+
+    pub async fn read_messages(&self, group: ObjectId, read: i32) -> error::Result<()> {
+        let repo = self
+            .context
+            .get_repository_manual::<Arc<ChatRepository>>()
+            .unwrap();
+
+        Ok(())
     }
 }
