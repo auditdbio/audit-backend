@@ -201,4 +201,21 @@ impl ChatRepository {
             .map(|x| x.messages)
             .unwrap_or(vec![]))
     }
+
+    pub async fn read(&self, group: ObjectId, user_id: ObjectId, read: i32) -> error::Result<()> {
+        let chat = self.private_chats.find("_id", &Bson::ObjectId(group)).await?;
+
+        if let Some(mut chat) = chat {
+            if let Some(ref mut read_array) = chat.read.as_mut() {
+                if let Some(user_read) = read_array.iter_mut().find(|r| r.id == user_id) {
+                    user_read.read = read
+                }
+            }
+
+            self.private_chats.delete("_id", &group).await?;
+            self.private_chats.insert(&chat).await?;
+        }
+
+        Ok(())
+    }
 }

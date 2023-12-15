@@ -207,11 +207,15 @@ impl ChatService {
     }
 
     pub async fn read_messages(&self, group: ObjectId, read: i32) -> error::Result<()> {
+        let auth = self.context.auth();
+        let user_id = auth.id().unwrap();
+
         let repo = self
             .context
             .get_repository_manual::<Arc<ChatRepository>>()
             .unwrap();
 
+        repo.read(group, user_id, read).await?;
         Ok(())
     }
 }
