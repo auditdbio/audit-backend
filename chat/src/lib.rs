@@ -33,6 +33,6 @@ pub fn create_app(
         .service(handlers::chat::messages)
         .service(handlers::chat::preview)
         .service(handlers::chat::send_message)
-        .service(handlers::chat::chat_read);
+        .service(handlers::chat::chat_unread);
     app
 }

@@ -30,7 +30,7 @@ pub struct PublicChat {
     pub last_modified: i64,
     pub last_message: PublicMessage,
     pub avatar: Option<String>,
-    pub read: Vec<PublicReadId>
+    pub unread: Vec<PublicReadId>
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -110,6 +110,8 @@ impl ChatService {
         let payload = EventPayload::ChatMessage(message.publish());
 
         for user_id in chat.members() {
+            repo.unread(chat.chat_id(), user_id.id, None).await?;
+
             let event = PublicEvent::new(user_id.id, payload.clone());
 
             self.context
@@ -163,17 +165,17 @@ impl ChatService {
                     )
                 };
 
-                let read = if let Some(read) = private.read.clone() {
-                    read.clone().into_iter().map(ReadId::publish).collect()
+                let unread = if let Some(unread) = private.unread.clone() {
+                    unread.clone().into_iter().map(ReadId::publish).collect()
                 } else {
-                    let mut read = Vec::new();
+                    let mut unread = Vec::new();
                     for member in &private.members {
-                        read.push(PublicReadId {
+                        unread.push(PublicReadId {
                             id: member.id.to_hex(),
-                            read: 0,
+                            unread: 0,
                         });
                     }
-                    read
+                    unread
                 };
 
                 chats.push(PublicChat {
@@ -183,7 +185,7 @@ impl ChatService {
                     members: private.members.into_iter().map(ChatId::publish).collect(),
                     last_modified: private.last_modified,
                     last_message: private.last_message.clone().publish(),
-                    read,
+                    unread,
                 })
             }
         }
@@ -206,7 +208,7 @@ impl ChatService {
             .collect())
     }
 
-    pub async fn read_messages(&self, group: ObjectId, read: i32) -> error::Result<()> {
+    pub async fn unread_messages(&self, group: ObjectId, unread: i32) -> error::Result<()> {
         let auth = self.context.auth();
         let user_id = auth.id().unwrap();
 
@@ -215,7 +217,7 @@ impl ChatService {
             .get_repository_manual::<Arc<ChatRepository>>()
             .unwrap();
 
-        repo.read(group, user_id, read).await?;
+        repo.unread(group, user_id, Some(unread)).await?;
         Ok(())
     }
 }
