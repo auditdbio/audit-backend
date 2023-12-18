@@ -43,11 +43,11 @@ pub async fn messages(
     ))
 }
 
-#[patch("/api/chat/{id}/read/{read}")]
-pub async fn chat_read(
+#[patch("/api/chat/{id}/unread/{unread}")]
+pub async fn chat_unread(
     context: GeneralContext,
-    id: Path<(String, i32)>,
+    params: Path<(String, i32)>,
 ) -> error::Result<HttpResponse> {
-    ChatService::new(context).read_messages(id.0.parse()?, id.1).await?;
+    ChatService::new(context).unread_messages(params.0.parse()?, params.1).await?;
     Ok(HttpResponse::Ok().finish())
 }
