@@ -110,7 +110,9 @@ impl ChatService {
         let payload = EventPayload::ChatMessage(message.publish());
 
         for user_id in chat.members() {
-            repo.unread(chat.chat_id(), user_id.id, None).await?;
+            if user_id.id != auth.id().unwrap() {
+                repo.unread(chat.chat_id(), user_id.id, None).await?;
+            }
 
             let event = PublicEvent::new(user_id.id, payload.clone());
 
