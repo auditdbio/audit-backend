@@ -26,239 +26,237 @@ x-common-variables: &common-variables
 
 
 services:
-  binaries:
+  dev-binaries:
     build:
       context: ./
       dockerfile: ./Dockerfile
     volumes:
-      - binaries:/data/binaries
+      - dev-binaries:/data/binaries
 
-  users:
+  dev-users:
     depends_on:
-      - binaries
+      - dev-binaries
     build: ./users
-    expose:
+    ports:
       - 3001
     volumes:
-      - binaries:/data/binaries
+      - dev-binaries:/data/binaries
     environment:
       VIRTUAL_HOST: dev.auditdb.io
       VIRTUAL_PATH: ~^/api/(user|auth|my_user|waiting_list)
       <<: *common-variables
     networks:
-      - database
-      - nginx-proxy
+      - dev-database
+      - dev-nginx-proxy
 
-  customers:
+  dev-customers:
     depends_on:
-      - binaries
+      - dev-binaries
     build: ./customers
-    expose:
+    ports:
       - 3002
     volumes:
-      - binaries:/data/binaries
+      - dev-binaries:/data/binaries
     environment:
       VIRTUAL_HOST: dev.auditdb.io
       VIRTUAL_PATH: ~^/api/(customer|my_customer|project|my_project)
       <<: *common-variables
     networks:
-      - nginx-proxy
-      - database
+      - dev-nginx-proxy
+      - dev-database
 
-  audits:
+  dev-audits:
     depends_on:
-      - binaries
+      - dev-binaries
     build: ./audits
     volumes:
-      - binaries:/data/binaries
-    expose:
+      - dev-binaries:/data/binaries
+    ports:
       - 3003
     environment:
       VIRTUAL_HOST: dev.auditdb.io
       VIRTUAL_PATH: ~^/api/(audit|my_audit|request|my_request|public_audits|no_customer_audit)
       <<: *common-variables
     networks:
-      - nginx-proxy
-      - database
+      - dev-nginx-proxy
+      - dev-database
 
-  auditors:
+  dev-auditors:
     depends_on:
-      - binaries
+      - dev-binaries
     build: ./auditors
-    expose:
+    ports:
       - 3004
     volumes:
-      - binaries:/data/binaries
+      - dev-binaries:/data/binaries
     environment:
       VIRTUAL_HOST: dev.auditdb.io
       VIRTUAL_PATH: ~^/api/(auditor|my_auditor|badge)
       <<: *common-variables
     networks:
-      - nginx-proxy
-      - database
+      - dev-nginx-proxy
+      - dev-database
 
-  files:
+  dev-files:
     depends_on:
-      - binaries
+      - dev-binaries
     build: ./files
-    expose:
+    ports:
       - 3005
     volumes:
-      - binaries:/data/binaries
-      - files:/auditdb-files
+      - dev-binaries:/data/binaries
+      - dev-files:/auditdb-files
     environment:
       VIRTUAL_HOST: dev.auditdb.io
       VIRTUAL_PATH: ~^/api/(file|notused1)
       <<: *common-variables
     networks:
-      - database
-      - nginx-proxy
+      - dev-database
+      - dev-nginx-proxy
 
-  search:
+  dev-search:
     depends_on:
-      - binaries
+      - dev-binaries
     build: ./search
-    expose:
+    ports:
       - 3006
     volumes:
-      - binaries:/data/binaries
+      - dev-binaries:/data/binaries
     environment:
       VIRTUAL_HOST: dev.auditdb.io
       VIRTUAL_PATH: ~^/api/(search|notused1)
       <<: *common-variables
     networks:
-      - nginx-proxy
-      - database
+      - dev-nginx-proxy
+      - dev-database
 
-  mail:
+  dev-mail:
     depends_on:
-      - binaries
+      - dev-binaries
     build: ./mail
-    expose:
+    ports:
       - 3007
     volumes:
-      - binaries:/data/binaries
+      - dev-binaries:/data/binaries
     environment:
       VIRTUAL_HOST: dev.auditdb.io
       VIRTUAL_PATH: ~^/api/(mail|feedback|code)
       <<: *common-variables
     networks:
-      - nginx-proxy
-      - database
+      - dev-nginx-proxy
+      - dev-database
 
-  notification:
+  dev-notification:
     depends_on:
-      - binaries
+      - dev-binaries
     build: ./notification
-    expose:
+    ports:
       - 3008
     volumes:
-      - binaries:/data/binaries
+      - dev-binaries:/data/binaries
     environment:
       VIRTUAL_HOST: dev.auditdb.io
       VIRTUAL_PATH: ~^/api/(send_notification|read_notification|unread_notifications)
       <<: *common-variables
     networks:
-      - nginx-proxy
-      - database
+      - dev-nginx-proxy
+      - dev-database
 
-  telemetry:
+  dev-telemetry:
     depends_on:
-      - binaries
+      - dev-binaries
     build: ./telemetry
-    expose:
+    ports:
       - 3009
     volumes:
-      - binaries:/data/binaries
+      - dev-binaries:/data/binaries
     environment:
       VIRTUAL_HOST: dev.auditdb.io
       VIRTUAL_PATH: ~^/api/(telemetry|not_used1)
       <<: *common-variables
     networks:
-      - nginx-proxy
-      - database
+      - dev-nginx-proxy
+      - dev-database
 
-  chat:
+  dev-chat:
     depends_on:
-      - binaries
+      - dev-binaries
     build: ./chat
-    expose:
+    ports:
       - 3012
     volumes:
-      - binaries:/data/binaries
+      - dev-binaries:/data/binaries
     environment:
       VIRTUAL_HOST: dev.auditdb.io
       VIRTUAL_PATH: ~^/api/(chat|not_used1)
       <<: *common-variables
     networks:
-      - nginx-proxy
-      - database
+      - dev-nginx-proxy
+      - dev-database
 
-  event:
+  dev-event:
     depends_on:
-      - binaries
+      - dev-binaries
     build: ./event
-    expose:
+    ports:
       - 3010
     volumes:
-      - binaries:/data/binaries
+      - dev-binaries:/data/binaries
     environment:
       VIRTUAL_HOST: dev.auditdb.io
       VIRTUAL_PATH: ~^/api/(notifications|event)
       <<: *common-variables
     networks:
-      - nginx-proxy
+      - dev-nginx-proxy
 
-  renderer:
+  dev-renderer:
     build:
       context: renderer
       dockerfile: Dockerfile
-    expose:
+    ports:
       - 3015
     environment:
       VIRTUAL_HOST: dev.auditdb.io
       VIRTUAL_PATH: ~^/api/(generate-report|notused2)
     networks:
-      - nginx-proxy
-      - report
+      - dev-nginx-proxy
+      - dev-report
 
-  report:
+  dev-report:
     build: ./report
     depends_on:
-      - binaries
-      - renderer
-    expose:
+      - dev-binaries
+      - dev-renderer
+    ports:
       - 3011
     volumes:
-      - binaries:/data/binaries
+      - dev-binaries:/data/binaries
     environment:
       VIRTUAL_HOST: dev.auditdb.io
       VIRTUAL_PATH: ~^/api/(report|notused2)
       <<: *common-variables
     networks:
-      - nginx-proxy
-      - report
+      - dev-nginx-proxy
+      - dev-report
 
-  database:
-    image: mongo:latest
+  dev-database:
+    build: ./mongo
     environment:
       - MONGO_INITDB_ROOT_USERNAME=root
       - MONGO_INITDB_ROOT_PASSWORD=kletska2002
     ports:
       - 27017:27017
     volumes:
-      - test:/data/db
+      - dev-database:/data/db
+      - dev-database:/mongo_backup
     networks:
-      - database
+      - dev-database
 volumes:
-  database:
-  binaries:
-  files:
-  test:
+  dev-database:
+  dev-backup:
+  dev-files:
+  dev-binaries:
 networks:
-  report:
-  database:
-  nginx-proxy:
-    external:
-      true
-
+  dev-report:
+  dev-database:
+  dev-nginx-proxy:
