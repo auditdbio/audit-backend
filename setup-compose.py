@@ -1,6 +1,6 @@
 template="""
 x-common-variables: &common-variables
-  MONGOURI: "mongodb://${MONGO_LOGIN}:${MONGO_PASSWORD}@database:27017"
+  MONGOURI: "mongodb://${MONGO_LOGIN}:${MONGO_PASSWORD}@%container_namespace%-database:27017"
   JWT_SECRET: "${JWT_SECRET}"
   HELLO_MAIL_ADDRESS: "${HELLO_MAIL_ADDRESS}"
   HELLO_MAIL_PASSWORD: "${HELLO_MAIL_PASSWORD}"
@@ -259,17 +259,7 @@ volumes:
 networks:
   %network_namespace%-report:
   %network_namespace%-database:
-  %proxy_network%:
-"""
-
-
-
-
-
-
-
-
-
+  %proxy_network%:"""
 
 # container_namespace, volume_namespace, network_namespace, load_database, open_database, with_proxy
 def create_compose(config):
@@ -312,7 +302,6 @@ preset = {
         "volume_namespace": "dev",
         "network_namespace": "dev"
     },
-
 
     "prod": {
         "load_database": False,
