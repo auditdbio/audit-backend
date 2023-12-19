@@ -242,8 +242,8 @@ services:
   %container_namespace%-database:
     build: ./mongo
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=root
-      - MONGO_INITDB_ROOT_PASSWORD=kletska2002
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_LOGIN}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
     %open_database%:
       - 27017:27017
     volumes:
@@ -261,7 +261,18 @@ networks:
   %network_namespace%-database:
   %proxy_network%:"""
 
-# container_namespace, volume_namespace, network_namespace, load_database, open_database, with_proxy
+
+import subprocess
+
+def clone_database_from(source, config, destination = None):
+    destination = destination or "%volume_namespace%-database".replace("%volume_namespace%", config.volume_namespace)
+
+    command = ["docker", "run", "--rm", "-it", "-v", f"{source}%:/from", "-v", f"{destination}:/to", "alpine", "ash", "-c", "cd /from ; to cp -av . /to"]
+    print("running a command", command)
+    subprocess.run(command)
+
+
+# container_namespace, volume_namespace, network_namespace, load_database, open_database, with_proxy, export_database, import_database
 def create_compose(config):
     global template
     template_instance = template
@@ -350,11 +361,18 @@ def get_config():
     }
     return config
     
+import sys
 
 def main():
     load_dotenv()
 
     config = get_config()
+
+    
+    if len(sys.argv) > 1:
+        clone_database_from(sys.argv[1], config)
+        return
+
     compose = create_compose(config)
 
     

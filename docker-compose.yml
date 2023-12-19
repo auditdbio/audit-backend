@@ -1,6 +1,6 @@
 
 x-common-variables: &common-variables
-  MONGOURI: "mongodb://${MONGO_LOGIN}:${MONGO_PASSWORD}@database:27017"
+  MONGOURI: "mongodb://${MONGO_LOGIN}:${MONGO_PASSWORD}@dev-database:27017/?authSource=admin"
   JWT_SECRET: "${JWT_SECRET}"
   HELLO_MAIL_ADDRESS: "${HELLO_MAIL_ADDRESS}"
   HELLO_MAIL_PASSWORD: "${HELLO_MAIL_PASSWORD}"
