@@ -32,6 +32,7 @@ pub fn create_app(
         .app_data(web::Data::new(state))
         .service(handlers::chat::messages)
         .service(handlers::chat::preview)
-        .service(handlers::chat::send_message);
+        .service(handlers::chat::send_message)
+        .service(handlers::chat::chat_unread);
     app
 }

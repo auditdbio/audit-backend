@@ -16,7 +16,7 @@ use common::{
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-use crate::repositories::chat::{Chat, ChatRepository, Group};
+use crate::repositories::chat::{Chat, ChatRepository, Group, PublicReadId, ReadId};
 
 pub struct ChatService {
     context: GeneralContext,
@@ -30,6 +30,7 @@ pub struct PublicChat {
     pub last_modified: i64,
     pub last_message: PublicMessage,
     pub avatar: Option<String>,
+    pub unread: Vec<PublicReadId>
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -109,6 +110,10 @@ impl ChatService {
         let payload = EventPayload::ChatMessage(message.publish());
 
         for user_id in chat.members() {
+            if user_id.id != auth.id().unwrap() {
+                repo.unread(chat.chat_id(), user_id.id, None).await?;
+            }
+
             let event = PublicEvent::new(user_id.id, payload.clone());
 
             self.context
@@ -162,6 +167,19 @@ impl ChatService {
                     )
                 };
 
+                let unread = if let Some(unread) = private.unread.clone() {
+                    unread.clone().into_iter().map(ReadId::publish).collect()
+                } else {
+                    let mut unread = Vec::new();
+                    for member in &private.members {
+                        unread.push(PublicReadId {
+                            id: member.id.to_hex(),
+                            unread: 0,
+                        });
+                    }
+                    unread
+                };
+
                 chats.push(PublicChat {
                     id: private.id.to_hex(),
                     name,
@@ -169,6 +187,7 @@ impl ChatService {
                     members: private.members.into_iter().map(ChatId::publish).collect(),
                     last_modified: private.last_modified,
                     last_message: private.last_message.clone().publish(),
+                    unread,
                 })
             }
         }
@@ -189,5 +208,18 @@ impl ChatService {
             .into_iter()
             .map(Message::publish)
             .collect())
+    }
+
+    pub async fn unread_messages(&self, group: ObjectId, unread: i32) -> error::Result<()> {
+        let auth = self.context.auth();
+        let user_id = auth.id().unwrap();
+
+        let repo = self
+            .context
+            .get_repository_manual::<Arc<ChatRepository>>()
+            .unwrap();
+
+        repo.unread(group, user_id, Some(unread)).await?;
+        Ok(())
     }
 }

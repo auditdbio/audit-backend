@@ -16,6 +16,7 @@ pub struct Group {
     members: Vec<ChatId>,
     last_modified: i64,
     last_message: Message,
+    unread: Vec<ReadId>,
 }
 
 impl Group {
@@ -26,7 +27,8 @@ impl Group {
             members: self.members.into_iter().map(ChatId::publish).collect(),
             last_message: self.last_message.publish(),
             last_modified: self.last_modified,
-            avatar: None
+            avatar: None,
+            unread: self.unread.into_iter().map(ReadId::publish).collect(),
         }
     }
 }
@@ -51,12 +53,34 @@ impl Entity for Messages {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PublicReadId {
+    pub id: String,
+    pub unread: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReadId {
+    pub id: ObjectId,
+    pub unread: i32,
+}
+
+impl ReadId {
+    pub fn publish(self) -> PublicReadId {
+        PublicReadId {
+            unread: self.unread,
+            id: self.id.to_hex(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrivateChat {
     #[serde(rename = "_id")]
     pub id: ObjectId,
     pub members: [ChatId; 2],
     pub last_modified: i64,
     pub last_message: Message,
+    pub unread: Option<[ReadId; 2]>,
 }
 
 impl Entity for PrivateChat {
@@ -76,6 +100,13 @@ impl Chat {
         match self {
             Chat::Private(private) => private.members.into_iter().collect(),
             Chat::Group(group) => group.members.clone(),
+        }
+    }
+
+    pub fn chat_id(&self) -> ObjectId {
+        match self {
+            Chat::Private(private) => private.id,
+            Chat::Group(group) => group.id,
         }
     }
 }
@@ -145,7 +176,6 @@ impl ChatRepository {
     pub async fn create_private(
         &self,
         message: Message,
-
         other: ChatId,
     ) -> error::Result<PrivateChat> {
         let chat = PrivateChat {
@@ -153,6 +183,10 @@ impl ChatRepository {
             members: [message.from, other],
             last_modified: Utc::now().timestamp_micros(),
             last_message: message.clone(),
+            unread: Some([
+                ReadId { id: message.from.id, unread: 0 },
+                ReadId { id: other.id, unread: 0 },
+            ]),
         };
 
         let messages = Messages {
@@ -173,5 +207,26 @@ impl ChatRepository {
             .await?
             .map(|x| x.messages)
             .unwrap_or(vec![]))
+    }
+
+    pub async fn unread(&self, group: ObjectId, user_id: ObjectId, unread: Option<i32>) -> error::Result<()> {
+        let chat = self.private_chats.find("_id", &Bson::ObjectId(group)).await?;
+
+        if let Some(mut chat) = chat {
+            if let Some(ref mut read_array) = chat.unread.as_mut() {
+                if let Some(user_read) = read_array.iter_mut().find(|r| r.id == user_id) {
+                    if let Some(unread) = unread {
+                        user_read.unread = unread
+                    } else {
+                        user_read.unread = user_read.unread.clone() + 1
+                    }
+                }
+            }
+
+            self.private_chats.delete("_id", &group).await?;
+            self.private_chats.insert(&chat).await?;
+        }
+
+        Ok(())
     }
 }

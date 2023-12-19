@@ -1,7 +1,8 @@
 use crate::repositories::chat::Chat;
 use actix_web::{
-    get, post,
+    get, post, patch,
     web::{Json, Path},
+    HttpResponse
 };
 use common::{
     api::chat::{CreateMessage, PublicMessage},
@@ -40,4 +41,13 @@ pub async fn messages(
             .messages(id.into_inner().parse()?)
             .await?,
     ))
+}
+
+#[patch("/api/chat/{id}/unread/{unread}")]
+pub async fn chat_unread(
+    context: GeneralContext,
+    params: Path<(String, i32)>,
+) -> error::Result<HttpResponse> {
+    ChatService::new(context).unread_messages(params.0.parse()?, params.1).await?;
+    Ok(HttpResponse::Ok().finish())
 }
