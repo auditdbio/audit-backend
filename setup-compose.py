@@ -265,7 +265,7 @@ networks:
 import subprocess
 
 def clone_database_from(source, config, destination = None):
-    destination = destination or "audit-backend_%volume_namespace%-database".replace("%volume_namespace%", config.volume_namespace)
+    destination = destination or "audit-backend_%volume_namespace%-database".replace("%volume_namespace%", config['volume_namespace'])
 
     command = ["docker", "run", "--rm", "-it", "-v", f"{source}%:/from", "-v", f"{destination}:/to", "alpine", "ash", "-c", "cd /from ; to cp -av . /to"]
     print("running a command", *command)
