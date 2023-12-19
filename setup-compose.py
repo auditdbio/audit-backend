@@ -288,7 +288,7 @@ def create_compose(config):
       external:
         true
     """
-    proxy_newtwork_name = "%network_namespace%-nginx-proxy"
+    proxy_newtwork_name = "nginx-proxy"
 
     if config['with_proxy']:
         port_expose = "expose"
