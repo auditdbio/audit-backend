@@ -1,6 +1,6 @@
 template="""
 x-common-variables: &common-variables
-  MONGOURI: "mongodb://${MONGO_LOGIN}:${MONGO_PASSWORD}@%container_namespace%-database:27017"
+  MONGOURI: "mongodb://${MONGO_LOGIN}:${MONGO_PASSWORD}@%container_namespace%-database:27017/?authSource=admin"
   JWT_SECRET: "${JWT_SECRET}"
   HELLO_MAIL_ADDRESS: "${HELLO_MAIL_ADDRESS}"
   HELLO_MAIL_PASSWORD: "${HELLO_MAIL_PASSWORD}"
@@ -266,8 +266,8 @@ import subprocess
 
 def clone_database_from(source, config, destination = None):
     destination = destination or "audit-backend_%volume_namespace%-database".replace("%volume_namespace%", config['volume_namespace'])
-
-    command = ["docker", "run", "--rm", "-it", "-v", f"{source}%:/from", "-v", f"{destination}:/to", "alpine", "ash", "-c", "cd /from ; to cp -av . /to"]
+    print(source)
+    command = ["docker", "run", "--rm", "-it", "-v", f"{source}:/from", "-v", f"{destination}:/to", "ubuntu", "bash", "-c", "cd /from ; cp -av . /to"]
     print("running a command", *command)
     subprocess.run(command)
 
