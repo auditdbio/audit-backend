@@ -5,17 +5,17 @@ x-common-variables: &common-variables
   HELLO_MAIL_ADDRESS: "${HELLO_MAIL_ADDRESS}"
   HELLO_MAIL_PASSWORD: "${HELLO_MAIL_PASSWORD}"
   ADMIN_CREATION_PASSWORD: "${ADMIN_CREATION_PASSWORD}"
-  AUDITORS_SERVICE_URL: "${AUDITORS_SERVICE_URL}"
-  AUDITS_SERVICE_URL: "${AUDITS_SERVICE_URL}"
-  CUSTOMERS_SERVICE_URL: "${CUSTOMERS_SERVICE_URL}"
-  FILES_SERVICE_URL: "${FILES_SERVICE_URL}"
-  MAIL_SERVICE_URL: "${MAIL_SERVICE_URL}"
-  SEARCH_SERVICE_URL: "${SEARCH_SERVICE_URL}"
-  USERS_SERVICE_URL: "${USERS_SERVICE_URL}"
-  RENDERER_SERVICE_URL: "${RENDERER_SERVICE_URL}"
-  NOTIFICATIONS_SERVICE_URL: "${NOTIFICATIONS_SERVICE_URL}"
-  EVENTS_SERVICE_URL: "${EVENTS_SERVICE_URL}"
-  FRONTEND: "${FRONTEND}"
+  AUDITORS_SERVICE_URL: "%AUDITORS_SERVICE_URL%"
+  AUDITS_SERVICE_URL: "%AUDITS_SERVICE_URL%"
+  CUSTOMERS_SERVICE_URL: "%CUSTOMERS_SERVICE_URL%"
+  FILES_SERVICE_URL: "%FILES_SERVICE_URL%"
+  MAIL_SERVICE_URL: "%MAIL_SERVICE_URL%"
+  SEARCH_SERVICE_URL: "%SEARCH_SERVICE_URL%"
+  USERS_SERVICE_URL: "%USERS_SERVICE_URL%"
+  RENDERER_SERVICE_URL: "%RENDERER_SERVICE_URL%"
+  NOTIFICATIONS_SERVICE_URL: "%NOTIFICATIONS_SERVICE_URL%"
+  EVENTS_SERVICE_URL: "%EVENTS_SERVICE_URL%"
+  FRONTEND: "%FRONTEND%"
   PROTOCOL: "${PROTOCOL}"
   FEEDBACK_EMAIL: "${FEEDBACK_EMAIL}"
   GITHUB_CLIENT_SECRET: "${GITHUB_CLIENT_SECRET}"
@@ -38,7 +38,7 @@ services:
       - %container_namespace%-binaries
     build: ./users
     %port_expose%:
-      - 3001
+      - 3001:3001
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
@@ -54,7 +54,7 @@ services:
       - %container_namespace%-binaries
     build: ./customers
     %port_expose%:
-      - 3002
+      - 3002:3002
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
@@ -72,7 +72,7 @@ services:
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     %port_expose%:
-      - 3003
+      - 3003:3003
     environment:
       VIRTUAL_HOST: dev.auditdb.io
       VIRTUAL_PATH: ~^/api/(audit|my_audit|request|my_request|public_audits|no_customer_audit)
@@ -86,7 +86,7 @@ services:
       - %container_namespace%-binaries
     build: ./auditors
     %port_expose%:
-      - 3004
+      - 3004:3004
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
@@ -102,7 +102,7 @@ services:
       - %container_namespace%-binaries
     build: ./files
     %port_expose%:
-      - 3005
+      - 3005:3005
     volumes:
       - %volume_namespace%-binaries:/data/binaries
       - %volume_namespace%-files:/auditdb-files
@@ -119,7 +119,7 @@ services:
       - %container_namespace%-binaries
     build: ./search
     %port_expose%:
-      - 3006
+      - 3006:3006
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
@@ -135,7 +135,7 @@ services:
       - %container_namespace%-binaries
     build: ./mail
     %port_expose%:
-      - 3007
+      - 3007:3007
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
@@ -151,7 +151,7 @@ services:
       - %container_namespace%-binaries
     build: ./notification
     %port_expose%:
-      - 3008
+      - 3008:3008
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
@@ -167,7 +167,7 @@ services:
       - %container_namespace%-binaries
     build: ./telemetry
     %port_expose%:
-      - 3009
+      - 3009:3009
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
@@ -183,7 +183,7 @@ services:
       - %container_namespace%-binaries
     build: ./chat
     %port_expose%:
-      - 3012
+      - 3012:3012
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
@@ -199,7 +199,7 @@ services:
       - %container_namespace%-binaries
     build: ./event
     %port_expose%:
-      - 3010
+      - 3010:3010
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
@@ -214,7 +214,7 @@ services:
       context: renderer
       dockerfile: Dockerfile
     %port_expose%:
-      - 3015
+      - 3015:3015
     environment:
       VIRTUAL_HOST: dev.auditdb.io
       VIRTUAL_PATH: ~^/api/(generate-report|notused2)
@@ -228,7 +228,7 @@ services:
       - %container_namespace%-binaries
       - %container_namespace%-renderer
     %port_expose%:
-      - 3011
+      - 3011:3011
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
@@ -262,6 +262,29 @@ networks:
   %proxy_network%:"""
 
 
+dockerbuild = """
+FROM rust:bookworm  as chef
+RUN cargo install cargo-chef --locked
+WORKDIR /app
+
+
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+
+COPY . .
+RUN cargo build --release %features%
+
+RUN chmod +x ./setup.sh
+CMD ["./setup.sh"]
+"""
+"""
+--features "test_server"
+"""
 import subprocess
 
 def clone_database_from(source, config, destination = None):
@@ -271,10 +294,23 @@ def clone_database_from(source, config, destination = None):
     print("running a command", *command)
     subprocess.run(command)
 
+services = {
+  "%AUDITORS_SERVICE_URL%": "auditors",
+  "%AUDITS_SERVICE_URL%": "audits",
+  "%CUSTOMERS_SERVICE_URL%": "customers",
+  "%FILES_SERVICE_URL%": "files",
+  "%MAIL_SERVICE_URL%": "mail",
+  "%SEARCH_SERVICE_URL%": "search",
+  "%USERS_SERVICE_URL%": "users",
+  "%RENDERER_SERVICE_URL%": "renderer",
+  "%NOTIFICATIONS_SERVICE_URL%": "notification",
+  "%EVENTS_SERVICE_URL%": "event",
+  "%FRONTEND%": "frontend"
+}
 
 # container_namespace, volume_namespace, network_namespace, load_database, open_database, with_proxy, export_database, import_database
 def create_compose(config):
-    global template
+    global template, services
     template_instance = template
     port_expose = "ports"
 
@@ -297,6 +333,12 @@ def create_compose(config):
 
     template_instance = template_instance.replace("%port_expose%", port_expose)
 
+
+    for pattern, key in services.items():
+        value = config[key] if key in config else config["proxy_address"]
+        
+        template_instance = template_instance.replace(pattern, value)
+
     template_instance = template_instance.replace("%proxy_network%", proxy_newtwork_name)
 
     template_instance = template_instance.replace("%container_namespace%", config['container_namespace'])
@@ -304,13 +346,35 @@ def create_compose(config):
     template_instance = template_instance.replace("%network_namespace%", config['network_namespace'])
     return template_instance
 
+def create_docker(config):
+    global dockerbuild
+    dockerbuild_instance = dockerbuild
+    features = ("--features " + config['features']) if 'features' in config else ""
+    dockerbuild_instance = dockerbuild_instance.replace("%features%", features)
+    return dockerbuild_instance
+
+
 preset = {
     "dev": {
         "open_database": True,
         "with_proxy": False,
         "container_namespace": "dev",
         "volume_namespace": "dev",
-        "network_namespace": "dev"
+        "network_namespace": "dev",
+        "auditors": "0.0.0.0:3004",
+        "audits": "0.0.0.0:3003",
+        "chat": "0.0.0.0:3012",
+        "customers": "0.0.0.0:3002",
+        "event": "0.0.0.0:3010",
+        "files": "0.0.0.0:3005",
+        "mail": "0.0.0.0:3007",
+        "notification": "0.0.0.0:3008",
+        "renderer": "0.0.0.0:3015",
+        "report": "0.0.0.0:3011",
+        "search": "0.0.0.0:3006",
+        "telemetry": "0.0.0.0:3009",
+        "users": "0.0.0.0:3001",
+        "frontend": "dev.auditdb.io",
     },
 
     "prod": {
@@ -318,21 +382,26 @@ preset = {
         "with_proxy": True,
         "container_namespace": "prod",
         "volume_namespace": "prod",
-        "network_namespace": "prod"
+        "network_namespace": "prod",
+        "proxy_address": "auditdb.io"
     },
     "test": {
         "open_database": True,
         "with_proxy": True,
         "container_namespace": "test",
         "volume_namespace": "test",
-        "network_namespace": "test"
+        "network_namespace": "test",
+        "proxy_address": "dev.auditdb.io",
+        "features": '"test_server"'
+
     },
     "preprod": {
         "open_database": False,
         "with_proxy": True,
         "container_namespace": "preprod",
         "volume_namespace": "preprod",
-        "network_namespace": "preprod"
+        "network_namespace": "preprod",
+        "proxy_address": "preprod.auditdb.io"
     }
 }
 
@@ -369,10 +438,14 @@ def main():
         return
 
     compose = create_compose(config)
+    docker = create_docker(config)
 
     
     with open("docker-compose.yml", "w") as f:
         f.write(compose)
+
+    with open("Dockerfile", "w") as f:
+        f.write(docker)
 
 if __name__ == "__main__":
     main()
