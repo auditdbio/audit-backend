@@ -34,7 +34,7 @@ export const generateReport = async (req, res, next) => {
 
     const { tableOfContentsWithCoords, tocPagesCounter } = await createTOC(project, pdfDoc, pdfBuffer)
     await addBackgroundToPages(pdfDoc)
-    await createPageLinkAnnotation(pdfDoc, tableOfContentsWithCoords, tocPagesCounter, project?.profile_link || "https://auditdb.io/")
+    await createPageLinkAnnotation(pdfDoc, tableOfContentsWithCoords, tocPagesCounter, project?.profile_link || "https://auditdb.io/disclaimer/")
 
     const pdfBytes = await pdfDoc.save()
 

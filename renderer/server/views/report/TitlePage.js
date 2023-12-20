@@ -5,7 +5,7 @@ import CornerLogo from '../images/CornerLogo.js'
 
 const TitlePage = ({ project }) => {
   const titleSize = project?.project_name?.length <= 100 ? '60px' : '50px'
-  const link = project?.profile_link || 'https://auditdb.io/'
+  const link = project?.profile_link || 'https://auditdb.io/disclaimer/'
 
   return (
     <div className="container">
