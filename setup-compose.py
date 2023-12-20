@@ -248,7 +248,7 @@ services:
       - 27017:27017
     volumes:
       - %volume_namespace%-database:/data/db
-      - %volume_namespace%-database:/mongo_backup
+      - %volume_namespace%-backup:/mongo_backup
     networks:
       - %network_namespace%-database
 volumes:
