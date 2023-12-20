@@ -38,7 +38,7 @@ services:
       - %container_namespace%-binaries
     build: ./users
     %port_expose%:
-      - 3001:3001
+      - 3001%optional_duplicate%
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
@@ -54,7 +54,7 @@ services:
       - %container_namespace%-binaries
     build: ./customers
     %port_expose%:
-      - 3002:3002
+      - 3002%optional_duplicate%
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
@@ -72,7 +72,7 @@ services:
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     %port_expose%:
-      - 3003:3003
+      - 3003%optional_duplicate%
     environment:
       VIRTUAL_HOST: dev.auditdb.io
       VIRTUAL_PATH: ~^/api/(audit|my_audit|request|my_request|public_audits|no_customer_audit)
@@ -86,7 +86,7 @@ services:
       - %container_namespace%-binaries
     build: ./auditors
     %port_expose%:
-      - 3004:3004
+      - 3004%optional_duplicate%
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
@@ -102,7 +102,7 @@ services:
       - %container_namespace%-binaries
     build: ./files
     %port_expose%:
-      - 3005:3005
+      - 3005%optional_duplicate%
     volumes:
       - %volume_namespace%-binaries:/data/binaries
       - %volume_namespace%-files:/auditdb-files
@@ -119,7 +119,7 @@ services:
       - %container_namespace%-binaries
     build: ./search
     %port_expose%:
-      - 3006:3006
+      - 3006%optional_duplicate%
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
@@ -135,7 +135,7 @@ services:
       - %container_namespace%-binaries
     build: ./mail
     %port_expose%:
-      - 3007:3007
+      - 3007%optional_duplicate%
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
@@ -151,7 +151,7 @@ services:
       - %container_namespace%-binaries
     build: ./notification
     %port_expose%:
-      - 3008:3008
+      - 3008%optional_duplicate%
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
@@ -167,7 +167,7 @@ services:
       - %container_namespace%-binaries
     build: ./telemetry
     %port_expose%:
-      - 3009:3009
+      - 3009%optional_duplicate%
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
@@ -183,7 +183,7 @@ services:
       - %container_namespace%-binaries
     build: ./chat
     %port_expose%:
-      - 3012:3012
+      - 3012%optional_duplicate%
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
@@ -199,7 +199,7 @@ services:
       - %container_namespace%-binaries
     build: ./event
     %port_expose%:
-      - 3010:3010
+      - 3010%optional_duplicate%
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
@@ -214,7 +214,7 @@ services:
       context: renderer
       dockerfile: Dockerfile
     %port_expose%:
-      - 3015:3015
+      - 3015%optional_duplicate%
     environment:
       VIRTUAL_HOST: dev.auditdb.io
       VIRTUAL_PATH: ~^/api/(generate-report|notused2)
@@ -228,7 +228,7 @@ services:
       - %container_namespace%-binaries
       - %container_namespace%-renderer
     %port_expose%:
-      - 3011:3011
+      - 3011%optional_duplicate%
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
@@ -329,6 +329,11 @@ def create_compose(config):
     if config['with_proxy']:
         port_expose = "expose"
         template_instance += proxy_network_external
+        template_instance = template_instance.replace("%optional_duplicate%", "")
+    else:
+        while "%optional_duplicate%" in template_instance:
+            pos = template_instance.find("%optional_duplicate%")
+            template_instance = template_instance[:pos] + ":" + template_instance[pos-4:pos] + template_instance[pos + len("%optional_duplicate%"):]
 
 
     template_instance = template_instance.replace("%port_expose%", port_expose)
