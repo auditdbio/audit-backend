@@ -306,7 +306,6 @@ def create_compose(config):
 
 preset = {
     "dev": {
-        "load_database": False,
         "open_database": True,
         "with_proxy": False,
         "container_namespace": "dev",
@@ -315,7 +314,6 @@ preset = {
     },
 
     "prod": {
-        "load_database": False,
         "open_database": False,
         "with_proxy": True,
         "container_namespace": "prod",
@@ -323,7 +321,6 @@ preset = {
         "network_namespace": "prod"
     },
     "test": {
-        "load_database": False,
         "open_database": True,
         "with_proxy": True,
         "container_namespace": "test",
@@ -352,7 +349,6 @@ def get_config():
 
 
     config = {
-        "load_database": os.environ["LOAD_DATABASE"], 
         "open_dtabase": os.environ["OPEN_DATABASE"], 
         "with_proxy": os.environ["WITH_PROXY"], 
         "container_namespace": os.environ["CONTAINER_NAMESPACE"], 
