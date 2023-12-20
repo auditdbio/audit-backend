@@ -328,7 +328,6 @@ preset = {
         "network_namespace": "test"
     },
     "preprod": {
-        "load_database": True,
         "open_database": False,
         "with_proxy": True,
         "container_namespace": "preprod",
@@ -349,7 +348,7 @@ def get_config():
 
 
     config = {
-        "open_dtabase": os.environ["OPEN_DATABASE"], 
+        "open_database": os.environ["OPEN_DATABASE"], 
         "with_proxy": os.environ["WITH_PROXY"], 
         "container_namespace": os.environ["CONTAINER_NAMESPACE"], 
         "volume_namespace": os.environ["VOLUME_NAMESPACE"], 
