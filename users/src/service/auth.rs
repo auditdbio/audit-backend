@@ -232,6 +232,7 @@ impl AuthService {
             password,
             current_role: user.current_role,
             last_modified: Utc::now().timestamp_micros(),
+            created_at: Some(Utc::now().timestamp_micros()),
             is_new: true,
             is_admin,
             linked_accounts: user.linked_accounts,

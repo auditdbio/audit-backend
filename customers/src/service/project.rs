@@ -81,6 +81,7 @@ impl ProjectService {
             creator_contacts,
             price: project.price,
             last_modified: Utc::now().timestamp_micros(),
+            created_at: Some(Utc::now().timestamp_micros()),
             auditors: Vec::new(),
         };
 
