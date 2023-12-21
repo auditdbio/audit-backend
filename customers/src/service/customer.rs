@@ -62,6 +62,7 @@ impl CustomerService {
             contacts: customer.contacts,
             tags: customer.tags.unwrap_or_default(),
             last_modified: Utc::now().timestamp_micros(),
+            created_at: Some(Utc::now().timestamp_micros()),
         };
 
         customers.insert(&customer).await?;

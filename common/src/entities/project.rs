@@ -29,6 +29,7 @@ pub struct Project<Id> {
     pub status: String,
     pub creator_contacts: Contacts,
     pub last_modified: i64,
+    pub created_at: Option<i64>,
     pub price: i64,
     #[serde(default)]
     pub auditors: Vec<Id>,
@@ -47,6 +48,7 @@ impl Project<String> {
             status: self.status,
             creator_contacts: self.creator_contacts,
             last_modified: self.last_modified,
+            created_at: self.created_at,
             price: self.price,
             auditors: self
                 .auditors
@@ -70,6 +72,7 @@ impl Project<ObjectId> {
             status: self.status,
             creator_contacts: self.creator_contacts,
             last_modified: self.last_modified,
+            created_at: self.created_at,
             price: self.price,
             auditors: self.auditors.into_iter().map(|id| id.to_hex()).collect(),
         }
@@ -95,6 +98,7 @@ pub struct PublicProject {
     pub creator_contacts: Contacts,
     pub kind: String,
     pub price: i64,
+    pub created_at: Option<i64>,
 }
 
 impl From<Project<ObjectId>> for Option<Document> {

@@ -67,6 +67,7 @@ impl AuditorService {
             contacts: auditor.contacts,
             tags: auditor.tags.unwrap_or_default(),
             last_modified: Utc::now().timestamp_micros(),
+            created_at: Some(Utc::now().timestamp_micros()),
             free_at: auditor.free_at.unwrap_or_default(),
             price_range: auditor.price_range.unwrap_or_default(),
         };
