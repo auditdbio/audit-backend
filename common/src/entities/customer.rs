@@ -20,6 +20,7 @@ pub struct Customer<Id> {
     pub contacts: Contacts,
     pub tags: Vec<String>,
     pub last_modified: i64,
+    pub created_at: Option<i64>,
 }
 
 impl Customer<String> {
@@ -34,6 +35,7 @@ impl Customer<String> {
             contacts: self.contacts,
             tags: self.tags,
             last_modified: self.last_modified,
+            created_at: self.created_at,
         }
     }
 }
@@ -50,6 +52,7 @@ impl Customer<ObjectId> {
             contacts: self.contacts,
             tags: self.tags,
             last_modified: self.last_modified,
+            created_at: self.created_at,
         }
     }
 }

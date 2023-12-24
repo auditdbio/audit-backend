@@ -179,12 +179,6 @@ impl PublicAudit {
             }
         };
 
-        let tags = if let Some(project) = &project {
-            project.tags.clone()
-        } else {
-            audit.tags
-        };
-
         let project_name = if let Some(project) = &project {
             if audit.project_name == "" {
                 project.name.clone()
@@ -210,7 +204,7 @@ impl PublicAudit {
             price: audit.price,
             auditor_contacts: auditor.contacts().clone(),
             customer_contacts,
-            tags,
+            tags: audit.tags,
             last_modified: audit.last_modified,
             report: audit.report,
             report_name: audit.report_name,

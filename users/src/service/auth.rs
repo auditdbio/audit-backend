@@ -16,7 +16,7 @@ use common::{
     entities::{
         badge::PublicBadge,
         letter::CreateLetter,
-        user::{LinkedAccount, User},
+        user::{LinkedAccount, User, UserLogin},
     },
     error::{self, AddCode},
     repository::Entity,
@@ -50,7 +50,7 @@ pub struct Login {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Token {
     pub token: String,
-    pub user: User<String>,
+    pub user: UserLogin,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -134,7 +134,7 @@ impl AuthService {
         };
 
         Ok(Token {
-            user: user.stringify(),
+            user: UserLogin::from(user),
             token: auth.to_token()?,
         })
     }
@@ -232,6 +232,7 @@ impl AuthService {
             password,
             current_role: user.current_role,
             last_modified: Utc::now().timestamp_micros(),
+            created_at: Some(Utc::now().timestamp_micros()),
             is_new: true,
             is_admin,
             linked_accounts: user.linked_accounts,
@@ -521,7 +522,7 @@ pub fn create_auth_token(user: &User<ObjectId>) -> error::Result<Token> {
         Auth::User(user.id)
     };
     Ok(Token {
-        user: user.clone().stringify(),
+        user: UserLogin::from(user.clone()),
         token: auth.to_token()?,
     })
 }

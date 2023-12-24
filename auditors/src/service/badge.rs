@@ -92,6 +92,7 @@ impl BadgeService {
             contacts: badge.contacts,
             tags: badge.tags.unwrap_or_default(),
             last_modified: Utc::now().timestamp_micros(),
+            created_at: Some(Utc::now().timestamp_micros()),
             free_at: badge.free_at.unwrap_or_default(),
             price_range: badge.price_range.unwrap_or_default(),
         };
@@ -270,6 +271,7 @@ impl BadgeService {
             contacts: badge.contacts,
             tags: badge.tags,
             last_modified: Utc::now().timestamp_micros(),
+            created_at: Some(Utc::now().timestamp_micros()),
             free_at: badge.free_at,
             price_range: badge.price_range,
         };
