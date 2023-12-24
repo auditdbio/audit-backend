@@ -42,7 +42,7 @@ services:
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
-      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_HOST: "${VIRTUAL_HOST}"
       VIRTUAL_PATH: ~^/api/(user|auth|my_user|waiting_list)
       <<: *common-variables
     networks:
@@ -58,7 +58,7 @@ services:
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
-      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_HOST: "${VIRTUAL_HOST}"
       VIRTUAL_PATH: ~^/api/(customer|my_customer|project|my_project)
       <<: *common-variables
     networks:
@@ -74,7 +74,7 @@ services:
     %port_expose%:
       - 3003%optional_duplicate%
     environment:
-      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_HOST: "${VIRTUAL_HOST}"
       VIRTUAL_PATH: ~^/api/(audit|my_audit|request|my_request|public_audits|no_customer_audit)
       <<: *common-variables
     networks:
@@ -90,7 +90,7 @@ services:
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
-      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_HOST: "${VIRTUAL_HOST}"
       VIRTUAL_PATH: ~^/api/(auditor|my_auditor|badge)
       <<: *common-variables
     networks:
@@ -107,7 +107,7 @@ services:
       - %volume_namespace%-binaries:/data/binaries
       - %volume_namespace%-files:/auditdb-files
     environment:
-      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_HOST: "${VIRTUAL_HOST}"
       VIRTUAL_PATH: ~^/api/(file|notused1)
       <<: *common-variables
     networks:
@@ -123,7 +123,7 @@ services:
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
-      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_HOST: "${VIRTUAL_HOST}"
       VIRTUAL_PATH: ~^/api/(search|notused1)
       <<: *common-variables
     networks:
@@ -139,7 +139,7 @@ services:
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
-      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_HOST: "${VIRTUAL_HOST}"
       VIRTUAL_PATH: ~^/api/(mail|feedback|code)
       <<: *common-variables
     networks:
@@ -155,7 +155,7 @@ services:
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
-      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_HOST: "${VIRTUAL_HOST}"
       VIRTUAL_PATH: ~^/api/(send_notification|read_notification|unread_notifications)
       <<: *common-variables
     networks:
@@ -171,7 +171,7 @@ services:
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
-      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_HOST: "${VIRTUAL_HOST}"
       VIRTUAL_PATH: ~^/api/(telemetry|not_used1)
       <<: *common-variables
     networks:
@@ -187,7 +187,7 @@ services:
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
-      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_HOST: "${VIRTUAL_HOST}"
       VIRTUAL_PATH: ~^/api/(chat|not_used1)
       <<: *common-variables
     networks:
@@ -203,7 +203,7 @@ services:
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
-      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_HOST: "${VIRTUAL_HOST}"
       VIRTUAL_PATH: ~^/api/(notifications|event)
       <<: *common-variables
     networks:
@@ -216,7 +216,7 @@ services:
     %port_expose%:
       - 3015%optional_duplicate%
     environment:
-      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_HOST: "${VIRTUAL_HOST}"
       VIRTUAL_PATH: ~^/api/(generate-report|notused2)
     networks:
       - %proxy_network%
@@ -232,7 +232,7 @@ services:
     volumes:
       - %volume_namespace%-binaries:/data/binaries
     environment:
-      VIRTUAL_HOST: dev.auditdb.io
+      VIRTUAL_HOST: "${VIRTUAL_HOST}"
       VIRTUAL_PATH: ~^/api/(report|notused2)
       <<: *common-variables
     networks:
