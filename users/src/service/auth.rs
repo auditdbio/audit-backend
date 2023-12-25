@@ -344,7 +344,7 @@ impl AuthService {
             self.github_get_user(github_auth, data.current_role).await?;
 
         if let Some(user) = user_service
-            .find_linked_account(linked_account.id.clone())
+            .find_linked_account(linked_account.id.clone(), &linked_account.name)
             .await?
         {
             return create_auth_token(&user);
