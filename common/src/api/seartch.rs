@@ -1,4 +1,5 @@
 use mongodb::bson::oid::ObjectId;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     context::GeneralContext,
@@ -19,4 +20,10 @@ pub async fn delete_from_search(context: &GeneralContext, id: ObjectId) -> error
         .send()
         .await?;
     Ok(())
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct PaginationParams {
+    pub page: Option<i32>,
+    pub per_page: Option<i32>,
 }

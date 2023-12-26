@@ -9,6 +9,7 @@ use common::{
         mail::send_mail,
         requests::CreateRequest,
         send_notification, NewNotification,
+        seartch::PaginationParams,
     },
     context::GeneralContext,
     entities::{
@@ -24,6 +25,7 @@ use common::{
 
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
+pub use common::api::requests::PublicRequest;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RequestChange {
@@ -34,7 +36,12 @@ pub struct RequestChange {
     price: Option<i64>,
 }
 
-pub use common::api::requests::PublicRequest;
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MyAuditRequestResult {
+    pub result: Vec<PublicRequest>,
+    #[serde(rename = "totalDocuments")]
+    pub total_documents: u64,
+}
 
 pub struct RequestService {
     context: GeneralContext,
@@ -248,7 +255,16 @@ impl RequestService {
         Ok(Some(public_request))
     }
 
-    pub async fn my_request(&self, role: Role) -> error::Result<Vec<PublicRequest>> {
+    pub async fn my_request(
+        &self,
+        role: Role,
+        pagination: PaginationParams
+    ) -> error::Result<MyAuditRequestResult> {
+        let page = pagination.page.unwrap_or(0);
+        let per_page = pagination.per_page.unwrap_or(0);
+        let limit = pagination.per_page.unwrap_or(1000);
+        let skip = (page - 1) * per_page;
+
         let auth = self.context.auth();
 
         let requests = self
@@ -266,7 +282,9 @@ impl RequestService {
             Role::Customer => "customer_id",
         };
 
-        let result = requests.find_many(id, &Bson::ObjectId(user_id)).await?;
+        let (result, total_documents) = requests
+            .find_many_limit(id, &Bson::ObjectId(user_id), skip, limit)
+            .await?;
 
         let mut public_requests = Vec::new();
 
@@ -276,7 +294,10 @@ impl RequestService {
             public_requests.push(public_request);
         }
 
-        Ok(public_requests)
+        Ok(MyAuditRequestResult {
+            result: public_requests,
+            total_documents,
+        })
     }
 
     pub async fn change(

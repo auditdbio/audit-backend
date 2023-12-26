@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-
+use serde::{Deserialize, Serialize};
 use chrono::Utc;
 
 use common::api::audits::NoCustomerAuditRequest;
@@ -13,6 +13,7 @@ use common::{
         events::{post_event, EventPayload, PublicEvent},
         issue::PublicIssue,
         send_notification, NewNotification,
+        seartch::PaginationParams,
     },
     context::GeneralContext,
     entities::{
@@ -27,6 +28,13 @@ use common::{
 use mongodb::bson::{oid::ObjectId, Bson};
 
 use super::audit_request::PublicRequest;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MyAuditResult {
+    pub result: Vec<PublicAudit>,
+    #[serde(rename = "totalDocuments")]
+    pub total_documents: u64,
+}
 
 pub struct AuditService {
     context: GeneralContext,
@@ -172,21 +180,38 @@ impl AuditService {
         Ok(None)
     }
 
-    pub async fn my_audit(&self, role: Role) -> error::Result<Vec<PublicAudit>> {
+    pub async fn my_audit(
+        &self,
+        role: Role,
+        pagination: PaginationParams
+    ) -> error::Result<MyAuditResult> {
+        let page = pagination.page.unwrap_or(0);
+        let per_page = pagination.per_page.unwrap_or(0);
+        let limit = pagination.per_page.unwrap_or(1000);
+        let skip = (page - 1) * per_page;
+
         let auth = self.context.auth();
 
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
-        let audits = match role {
+        let (audits, total_documents) = match role {
             Role::Auditor => {
                 audits
-                    .find_many("auditor_id", &Bson::ObjectId(auth.id().unwrap()))
-                    .await?
+                    .find_many_limit(
+                        "auditor_id",
+                        &Bson::ObjectId(auth.id().unwrap()),
+                        skip,
+                        limit,
+                    ).await?
             }
             Role::Customer => {
                 audits
-                    .find_many("customer_id", &Bson::ObjectId(auth.id().unwrap()))
-                    .await?
+                    .find_many_limit(
+                        "customer_id",
+                        &Bson::ObjectId(auth.id().unwrap()),
+                        skip,
+                        limit,
+                    ).await?
             }
         };
 
@@ -196,7 +221,10 @@ impl AuditService {
             public_audits.push(PublicAudit::new(&self.context, audit).await?);
         }
 
-        Ok(public_audits)
+        Ok(MyAuditResult {
+            result: public_audits,
+            total_documents,
+        })
     }
 
     pub async fn change(&self, id: ObjectId, change: AuditChange) -> error::Result<PublicAudit> {

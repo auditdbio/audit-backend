@@ -1,11 +1,14 @@
 use actix_web::{
     delete, get, patch, post,
-    web::{self, Json},
+    web::{self, Json, Query},
     HttpResponse,
 };
 
 use common::{
-    api::requests::{CreateRequest, PublicRequest},
+    api::{
+        requests::{CreateRequest, PublicRequest},
+        seartch::PaginationParams
+    },
     context::GeneralContext,
     entities::{audit_request::AuditRequest, role::Role},
     error,
@@ -13,7 +16,7 @@ use common::{
 
 use serde_json::json;
 
-use crate::service::audit_request::{RequestChange, RequestService};
+use crate::service::audit_request::{MyAuditRequestResult, RequestChange, RequestService};
 
 #[post("/api/audit_request")]
 pub async fn post_audit_request(
@@ -40,10 +43,11 @@ pub async fn get_audit_request(
 pub async fn get_my_audit_request(
     context: GeneralContext,
     role: web::Path<Role>,
-) -> error::Result<Json<Vec<PublicRequest>>> {
+    pagination: Query<PaginationParams>,
+) -> error::Result<Json<MyAuditRequestResult>> {
     Ok(Json(
         RequestService::new(context)
-            .my_request(role.into_inner())
+            .my_request(role.into_inner(), pagination.into_inner())
             .await?,
     ))
 }

@@ -90,6 +90,25 @@ where
             .collect())
     }
 
+    async fn find_many_limit(
+        &self,
+        field: &str,
+        value: &Bson,
+        skip: i32,
+        limit: i32,
+    ) -> error::Result<(Vec<T>, u64)> {
+        let db = self.db.lock().unwrap();
+        let result: Vec<_> = db
+            .iter()
+            .filter(|x| x.as_document().unwrap().get(field).unwrap() == value)
+            .map(|x| bson::from_bson(x.clone()).unwrap())
+            .collect();
+        let skip = skip as usize;
+        let limit = limit as usize;
+
+        Ok((result[skip..=limit].to_vec(), db.len() as u64))
+    }
+
     async fn get_all_since(&self, since: i64) -> error::Result<Vec<T>> {
         let db = self.db.lock().unwrap();
         Ok(db

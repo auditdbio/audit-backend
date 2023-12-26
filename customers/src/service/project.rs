@@ -9,6 +9,7 @@ use common::{
         customer::Customer,
         project::{Project, PublicProject, PublishOptions},
     },
+    api::seartch::PaginationParams,
     error::{self, AddCode},
     services::{CUSTOMERS_SERVICE, PROTOCOL},
 };
@@ -35,6 +36,13 @@ pub struct ProjectChange {
     pub publish_options: Option<PublishOptions>,
     pub status: Option<String>,
     pub price: Option<i64>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MyProjectsResult {
+    pub result: Vec<Project<String>>,
+    #[serde(rename = "totalDocuments")]
+    pub total_documents: u64,
 }
 
 pub struct ProjectService {
@@ -123,16 +131,24 @@ impl ProjectService {
         Ok(Some(auth.public_project(project)))
     }
 
-    pub async fn my_projects(&self) -> error::Result<Vec<Project<String>>> {
+    pub async fn my_projects(&self, pagination: PaginationParams) -> error::Result<MyProjectsResult> {
+        let page = pagination.page.unwrap_or(0);
+        let per_page = pagination.per_page.unwrap_or(0);
+        let limit = pagination.per_page.unwrap_or(1000);
+        let skip = (page - 1) * per_page;
+
         let auth = self.context.auth();
 
         let projects = self.context.try_get_repository::<Project<ObjectId>>()?;
 
-        let projects = projects
-            .find_many("customer_id", &Bson::ObjectId(auth.id().unwrap()))
+        let (projects, total_documents) = projects
+            .find_many_limit("customer_id", &Bson::ObjectId(auth.id().unwrap()), skip, limit)
             .await?;
 
-        Ok(projects.into_iter().map(Project::stringify).collect())
+        Ok(MyProjectsResult {
+            result: projects.into_iter().map(Project::stringify).collect(),
+            total_documents,
+        })
     }
 
     pub async fn change(

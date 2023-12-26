@@ -1,10 +1,15 @@
 use actix_web::{
     delete, get, patch, post,
-    web::{self, Json, Path},
+    web::{self, Json, Path, Query},
     HttpResponse,
 };
 
-use common::{context::GeneralContext, entities::project::PublicProject, error};
+use common::{
+    context::GeneralContext,
+    entities::project::PublicProject,
+    api::seartch::PaginationParams,
+    error
+};
 use serde_json::json;
 
 use crate::service::project::{CreateProject, ProjectChange, ProjectService};
@@ -31,8 +36,11 @@ pub async fn get_project(
 }
 
 #[get("/api/my_project")]
-pub async fn my_project(context: GeneralContext) -> error::Result<HttpResponse> {
-    let res = ProjectService::new(context).my_projects().await?;
+pub async fn my_project(
+    context: GeneralContext,
+    pagination: Query<PaginationParams>,
+) -> error::Result<HttpResponse> {
+    let res = ProjectService::new(context).my_projects(pagination.into_inner()).await?;
     Ok(HttpResponse::Ok().json(res))
 }
 
