@@ -20,6 +20,7 @@ pub struct User<Id> {
     pub name: String,
     pub current_role: String,
     pub last_modified: i64,
+    pub created_at: Option<i64>,
     pub is_new: bool,
     #[serde(default)]
     pub is_admin: bool,
@@ -37,6 +38,7 @@ impl User<String> {
             name: self.name,
             current_role: self.current_role,
             last_modified: self.last_modified,
+            created_at: self.created_at,
             is_new: self.is_new,
             is_admin: self.is_admin,
             linked_accounts: self.linked_accounts,
@@ -55,6 +57,7 @@ impl User<ObjectId> {
             name: self.name,
             current_role: self.current_role,
             last_modified: self.last_modified,
+            created_at: self.created_at,
             is_new: self.is_new,
             is_admin: self.is_admin,
             linked_accounts: self.linked_accounts,
@@ -84,6 +87,37 @@ impl From<User<ObjectId>> for PublicUser {
             email: user.email,
             name: user.name,
             current_role: user.current_role,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserLogin {
+    pub id: String,
+    pub email: String,
+    pub name: String,
+    pub current_role: String,
+    pub last_modified: i64,
+    pub created_at: Option<i64>,
+    pub is_new: bool,
+    pub is_admin: bool,
+    pub linked_accounts: Option<Vec<LinkedAccount>>,
+    pub is_passwordless: Option<bool>,
+}
+
+impl From<User<ObjectId>> for UserLogin {
+    fn from(user: User<ObjectId>) -> Self {
+        Self {
+            id: user.id.to_hex(),
+            email: user.email,
+            name: user.name,
+            current_role: user.current_role,
+            last_modified: user.last_modified,
+            created_at: user.created_at,
+            is_new: user.is_new,
+            is_admin: user.is_admin,
+            linked_accounts: user.linked_accounts,
+            is_passwordless: user.is_passwordless,
         }
     }
 }

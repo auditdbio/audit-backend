@@ -82,6 +82,32 @@ where
         Ok(result.into_iter().collect::<mongodb::error::Result<_>>()?)
     }
 
+    async fn find_many_limit(
+        &self,
+        field: &str,
+        value: &Bson,
+        skip: i32,
+        limit: i32,
+    ) -> error::Result<(Vec<T>, u64)> {
+        let find_options = FindOptions::builder()
+            .skip(skip as u64)
+            .limit(limit as i64)
+            .build();
+
+        let result: Vec<mongodb::error::Result<T>> = self
+            .collection
+            .find(doc! {field: value}, find_options)
+            .await?
+            .collect()
+            .await;
+
+        let total_documents = self
+            .collection.count_documents(doc! {field: value}, None)
+            .await?;
+
+        Ok((result.into_iter().collect::<mongodb::error::Result<_>>()?, total_documents))
+    }
+
     async fn get_all_since(&self, since: i64) -> error::Result<Vec<T>> {
         let result: Vec<mongodb::error::Result<T>> = self
             .collection

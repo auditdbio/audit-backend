@@ -22,6 +22,7 @@ pub struct Badge<Id> {
     pub contacts: Contacts,
     pub price_range: PriceRange,
     pub last_modified: i64,
+    pub created_at: Option<i64>,
 }
 
 impl Badge<String> {
@@ -38,6 +39,7 @@ impl Badge<String> {
             contacts: self.contacts,
             price_range: self.price_range,
             last_modified: self.last_modified,
+            created_at: self.created_at,
         }
     }
 }
@@ -56,6 +58,7 @@ impl Badge<ObjectId> {
             contacts: self.contacts,
             price_range: self.price_range,
             last_modified: self.last_modified,
+            created_at: self.created_at,
         }
     }
 }

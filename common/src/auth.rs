@@ -198,6 +198,7 @@ impl Auth {
             creator_contacts: contacts,
             price: project.price,
             kind: "project".to_string(),
+            created_at: Some(Utc::now().timestamp_micros()),
         }
     }
 
