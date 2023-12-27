@@ -218,6 +218,7 @@ services:
     environment:
       VIRTUAL_HOST: dev.auditdb.io
       VIRTUAL_PATH: ~^/api/(generate-report|notused2)
+      <<: *common-variables
     networks:
       - dev-nginx-proxy
       - dev-report
