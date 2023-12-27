@@ -221,6 +221,11 @@ impl ChatRepository {
                         user_read.unread = user_read.unread.clone() + 1
                     }
                 }
+            } else {
+                chat.unread = Some([
+                    ReadId { id: chat.members[0].id, unread: 0 },
+                    ReadId { id: chat.members[1].id, unread: 0 },
+                ])
             }
 
             self.private_chats.delete("_id", &group).await?;
