@@ -131,7 +131,7 @@ impl ProjectService {
         Ok(Some(auth.public_project(project)))
     }
 
-    pub async fn my_projects(&self, pagination: PaginationParams) -> error::Result<MyProjectsResult> {
+    pub async fn my_projects(&self, pagination: PaginationParams) -> error::Result<Vec<Project<String>>> {
         let page = pagination.page.unwrap_or(0);
         let per_page = pagination.per_page.unwrap_or(0);
         let limit = pagination.per_page.unwrap_or(1000);
@@ -145,10 +145,11 @@ impl ProjectService {
             .find_many_limit("customer_id", &Bson::ObjectId(auth.id().unwrap()), skip, limit)
             .await?;
 
-        Ok(MyProjectsResult {
-            result: projects.into_iter().map(Project::stringify).collect(),
-            total_documents,
-        })
+        // Ok(MyProjectsResult {
+        //     result: projects.into_iter().map(Project::stringify).collect(),
+        //     total_documents,
+        // })
+        Ok(projects.into_iter().map(Project::stringify).collect())
     }
 
     pub async fn change(

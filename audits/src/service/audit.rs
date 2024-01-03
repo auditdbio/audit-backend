@@ -4,7 +4,6 @@ use chrono::Utc;
 
 use common::api::audits::NoCustomerAuditRequest;
 use common::entities::audit_request::TimeRange;
-use common::entities::contacts::Contacts;
 use common::entities::project::{PublicProject, PublishOptions};
 use common::{
     access_rules::{AccessRules, Edit, Read},
@@ -184,7 +183,7 @@ impl AuditService {
         &self,
         role: Role,
         pagination: PaginationParams
-    ) -> error::Result<MyAuditResult> {
+    ) -> error::Result<Vec<PublicAudit>> {
         let page = pagination.page.unwrap_or(0);
         let per_page = pagination.per_page.unwrap_or(0);
         let limit = pagination.per_page.unwrap_or(1000);
@@ -221,10 +220,11 @@ impl AuditService {
             public_audits.push(PublicAudit::new(&self.context, audit).await?);
         }
 
-        Ok(MyAuditResult {
-            result: public_audits,
-            total_documents,
-        })
+        // Ok(MyAuditResult {
+        //     result: public_audits,
+        //     total_documents,
+        // })
+        Ok(public_audits)
     }
 
     pub async fn change(&self, id: ObjectId, change: AuditChange) -> error::Result<PublicAudit> {

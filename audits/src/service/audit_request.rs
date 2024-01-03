@@ -259,7 +259,7 @@ impl RequestService {
         &self,
         role: Role,
         pagination: PaginationParams
-    ) -> error::Result<MyAuditRequestResult> {
+    ) -> error::Result<Vec<PublicRequest>> {
         let page = pagination.page.unwrap_or(0);
         let per_page = pagination.per_page.unwrap_or(0);
         let limit = pagination.per_page.unwrap_or(1000);
@@ -294,10 +294,11 @@ impl RequestService {
             public_requests.push(public_request);
         }
 
-        Ok(MyAuditRequestResult {
-            result: public_requests,
-            total_documents,
-        })
+        // Ok(MyAuditRequestResult {
+        //     result: public_requests,
+        //     total_documents,
+        // })
+        Ok(public_requests)
     }
 
     pub async fn change(

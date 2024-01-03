@@ -16,8 +16,10 @@ use common::{
 
 use serde_json::json;
 
-use crate::service::{audit::AuditService, audit_request::PublicRequest};
-use crate::service::audit::MyAuditResult;
+use crate::service::{
+    audit::{AuditService, MyAuditResult},
+    audit_request::PublicRequest
+};
 
 #[post("/api/audit")]
 pub async fn post_audit(
@@ -53,7 +55,7 @@ pub async fn get_my_audit(
     context: GeneralContext,
     role: web::Path<Role>,
     pagination: Query<PaginationParams>,
-) -> error::Result<Json<MyAuditResult>> {
+) -> error::Result<Json<Vec<PublicAudit>>> {
     Ok(Json(
         AuditService::new(context)
             .my_audit(role.into_inner(), pagination.into_inner())
