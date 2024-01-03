@@ -55,7 +55,7 @@ pub async fn get_my_audit(
     context: GeneralContext,
     role: web::Path<Role>,
     pagination: Query<PaginationParams>,
-) -> error::Result<Json<Vec<PublicAudit>>> {
+) -> error::Result<Json<MyAuditResult>> {
     Ok(Json(
         AuditService::new(context)
             .my_audit(role.into_inner(), pagination.into_inner())

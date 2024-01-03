@@ -4,7 +4,6 @@ use chrono::Utc;
 
 use common::api::audits::NoCustomerAuditRequest;
 use common::entities::audit_request::TimeRange;
-use common::entities::project::{PublicProject, PublishOptions};
 use common::{
     access_rules::{AccessRules, Edit, Read},
     api::{
@@ -183,7 +182,7 @@ impl AuditService {
         &self,
         role: Role,
         pagination: PaginationParams
-    ) -> error::Result<Vec<PublicAudit>> {
+    ) -> error::Result<MyAuditResult> {
         let page = pagination.page.unwrap_or(0);
         let per_page = pagination.per_page.unwrap_or(0);
         let limit = pagination.per_page.unwrap_or(1000);
@@ -220,11 +219,10 @@ impl AuditService {
             public_audits.push(PublicAudit::new(&self.context, audit).await?);
         }
 
-        // Ok(MyAuditResult {
-        //     result: public_audits,
-        //     total_documents,
-        // })
-        Ok(public_audits)
+        Ok(MyAuditResult {
+            result: public_audits,
+            total_documents,
+        })
     }
 
     pub async fn change(&self, id: ObjectId, change: AuditChange) -> error::Result<PublicAudit> {
@@ -747,7 +745,7 @@ impl AuditService {
             return Err(anyhow::anyhow!("User is not available to delete this issue").code(403));
         }
 
-        let Some(mut issue) = audit
+        let Some(issue) = audit
             .issues
             .iter()
             .find(|issue| issue.id == issue_id)
