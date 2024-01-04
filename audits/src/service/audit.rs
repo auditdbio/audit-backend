@@ -23,7 +23,7 @@ use common::{
     },
     error::{self, AddCode},
 };
-use mongodb::bson::{oid::ObjectId, Bson};
+use mongodb::bson::{oid::ObjectId, Bson, doc};
 
 use super::audit_request::PublicRequest;
 
@@ -200,6 +200,7 @@ impl AuditService {
                         &Bson::ObjectId(auth.id().unwrap()),
                         skip,
                         limit,
+                        Some(doc! {"status": -1, "last_modified": 1}),
                     ).await?
             }
             Role::Customer => {
@@ -209,6 +210,7 @@ impl AuditService {
                         &Bson::ObjectId(auth.id().unwrap()),
                         skip,
                         limit,
+                        Some(doc! {"status": -1, "last_modified": 1}),
                     ).await?
             }
         };

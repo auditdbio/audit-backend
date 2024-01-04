@@ -283,7 +283,7 @@ impl RequestService {
         };
 
         let (result, total_documents) = requests
-            .find_many_limit(id, &Bson::ObjectId(user_id), skip, limit)
+            .find_many_limit(id, &Bson::ObjectId(user_id), skip, limit, None)
             .await?;
 
         let mut public_requests = Vec::new();
