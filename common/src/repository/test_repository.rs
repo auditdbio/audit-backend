@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 
 use async_trait::async_trait;
-use mongodb::bson::{self, oid::ObjectId, Bson};
+use mongodb::bson::{self, oid::ObjectId, Bson, Document};
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::error;
@@ -96,6 +96,7 @@ where
         value: &Bson,
         skip: i32,
         limit: i32,
+        sort: Option<Document>,
     ) -> error::Result<(Vec<T>, u64)> {
         let db = self.db.lock().unwrap();
         let result: Vec<_> = db

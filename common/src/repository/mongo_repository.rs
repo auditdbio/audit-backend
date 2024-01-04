@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use futures::StreamExt;
 use mongodb::{
-    bson::{doc, oid::ObjectId, Bson},
+    bson::{doc, oid::ObjectId, Bson, Document},
     options::FindOptions,
 };
 use serde::{de::DeserializeOwned, Serialize};
@@ -88,8 +88,10 @@ where
         value: &Bson,
         skip: i32,
         limit: i32,
+        sort: Option<Document>
     ) -> error::Result<(Vec<T>, u64)> {
         let find_options = FindOptions::builder()
+            .sort(sort)
             .skip(skip as u64)
             .limit(limit as i64)
             .build();

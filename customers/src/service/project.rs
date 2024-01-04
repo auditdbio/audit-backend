@@ -142,7 +142,7 @@ impl ProjectService {
         let projects = self.context.try_get_repository::<Project<ObjectId>>()?;
 
         let (projects, total_documents) = projects
-            .find_many_limit("customer_id", &Bson::ObjectId(auth.id().unwrap()), skip, limit)
+            .find_many_limit("customer_id", &Bson::ObjectId(auth.id().unwrap()), skip, limit, None)
             .await?;
 
         Ok(MyProjectsResult {
