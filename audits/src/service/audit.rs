@@ -200,7 +200,7 @@ impl AuditService {
                         &Bson::ObjectId(auth.id().unwrap()),
                         skip,
                         limit,
-                        Some(doc! {"status": -1, "last_modified": 1}),
+                        Some(doc! {"status": -1, "last_modified": -1}),
                     ).await?
             }
             Role::Customer => {
@@ -210,7 +210,7 @@ impl AuditService {
                         &Bson::ObjectId(auth.id().unwrap()),
                         skip,
                         limit,
-                        Some(doc! {"status": -1, "last_modified": 1}),
+                        Some(doc! {"status": -1, "last_modified": -1}),
                     ).await?
             }
         };
