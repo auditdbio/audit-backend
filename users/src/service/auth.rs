@@ -333,7 +333,7 @@ impl AuthService {
 
     pub async fn github_auth(&self, data: GithubAuth) -> error::Result<Token> {
         let github_auth = GetGithubAccessToken {
-            code: data.code,
+            code: data.clone().code,
             client_id: var("GITHUB_CLIENT_ID").unwrap(),
             client_secret: var("GITHUB_CLIENT_SECRET").unwrap(),
         };
@@ -341,12 +341,26 @@ impl AuthService {
         let user_service = UserService::new(self.context.clone());
 
         let (github_user, linked_account) =
-            self.github_get_user(github_auth, data.current_role).await?;
+            self.github_get_user(github_auth, data.clone().current_role).await?;
 
         if let Some(user) = user_service
-            .find_linked_account(linked_account.id.clone())
+            .find_linked_account(linked_account.id.clone(), &linked_account.name)
             .await?
         {
+            let _ = self.context
+                .make_request()
+                .patch(format!(
+                    "{}://{}/api/user/{}",
+                    PROTOCOL.as_str(),
+                    USERS_SERVICE.as_str(),
+                    user.id
+                ))
+                .auth(self.context.server_auth())
+                .json(&data)
+                .send()
+                .await
+                .unwrap();
+
             return create_auth_token(&user);
         }
 
@@ -358,6 +372,21 @@ impl AuthService {
             let _ = user_service
                 .add_linked_account(user.id, linked_account)
                 .await?;
+
+            let _ = self.context
+                .make_request()
+                .patch(format!(
+                    "{}://{}/api/user/{}",
+                    PROTOCOL.as_str(),
+                    USERS_SERVICE.as_str(),
+                    user.id
+                ))
+                .auth(self.context.server_auth())
+                .json(&data)
+                .send()
+                .await
+                .unwrap();
+
             return create_auth_token(&user);
         }
 
