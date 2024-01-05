@@ -343,10 +343,11 @@ impl AuthService {
         let (github_user, linked_account) =
             self.github_get_user(github_auth, data.clone().current_role).await?;
 
-        if let Some(user) = user_service
+        if let Some(mut user) = user_service
             .find_linked_account(linked_account.id.clone(), &linked_account.name)
             .await?
         {
+            user.current_role = data.clone().current_role;
             let _ = self.context
                 .make_request()
                 .patch(format!(
@@ -368,11 +369,12 @@ impl AuthService {
             .find_by_email(github_user.email.clone())
             .await?;
 
-        if let Some(user) = existing_email_user {
+        if let Some(mut user) = existing_email_user {
             let _ = user_service
                 .add_linked_account(user.id, linked_account)
                 .await?;
 
+            user.current_role = data.clone().current_role;
             let _ = self.context
                 .make_request()
                 .patch(format!(
