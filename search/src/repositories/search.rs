@@ -73,9 +73,8 @@ impl SearchRepo {
             if kind.contains(&"auditor".to_string()) {
                 sort.insert("kind", 1);
             }
-            sort.insert(sort_by.clone(), sort_order.clone());
-            sort.insert("_id", -1);
 
+            sort.insert(sort_by.clone(), sort_order.clone());
             if sort_by == "price" {
                 let sort_field = if sort_order == 1 {
                     "price_range.to"
@@ -85,6 +84,8 @@ impl SearchRepo {
                 .to_string();
                 sort.insert(sort_field, sort_order);
             }
+
+            sort.insert("_id", -1);
 
             let mut skip = (query.page - 1) * query.per_page;
             let mut limit = (query.per_page * query.pages.unwrap_or(1)) as i64;
