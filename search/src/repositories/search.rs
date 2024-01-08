@@ -158,7 +158,7 @@ impl SearchRepo {
             });
         }
 
-        if kind.contains(&"auditor".to_string()) || kind.contains(&"badge".to_string()) {
+        if !kind.contains(&"customer".to_string()) {
             let price_from = query.price_from.unwrap_or(0);
             let price_to = query.price_to.unwrap_or(i64::MAX);
             docs.push(doc! {
