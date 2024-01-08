@@ -68,10 +68,13 @@ impl SearchRepo {
 
         let find_options = if let Some(sort_by) = &query.sort_by {
             let sort_order = query.sort_order.unwrap_or(1);
-            let mut sort = doc! {
-                sort_by.clone(): sort_order,
-                "_id": -1,
-            };
+            let mut sort = doc! {};
+
+            if kind.contains(&"auditor".to_string()) {
+                sort.insert("kind", 1);
+            }
+            sort.insert(sort_by.clone(), sort_order.clone());
+            sort.insert("_id", -1);
 
             if sort_by == "price" {
                 let sort_field = if sort_order == 1 {
@@ -81,10 +84,6 @@ impl SearchRepo {
                 }
                 .to_string();
                 sort.insert(sort_field, sort_order);
-            }
-
-            if kind.contains(&"auditor".to_string()) {
-                sort.insert("kind", 1);
             }
 
             let mut skip = (query.page - 1) * query.per_page;
