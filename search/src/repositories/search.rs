@@ -52,6 +52,20 @@ impl SearchRepo {
     }
 
     pub async fn search(&self, query: &SearchQuery) -> error::Result<SearchResult> {
+        let kind = query
+            .kind
+            .clone()
+            .unwrap_or(String::new())
+            .split(' ')
+            .filter_map(|s| {
+                if !s.is_empty() {
+                    Some(s.to_ascii_lowercase())
+                } else {
+                    None
+                } // insensitive
+            })
+            .collect::<Vec<_>>();
+
         let find_options = if let Some(sort_by) = &query.sort_by {
             let sort_order = query.sort_order.unwrap_or(1);
             let mut sort = doc! {
@@ -67,6 +81,10 @@ impl SearchRepo {
                 }
                 .to_string();
                 sort.insert(sort_field, sort_order);
+            }
+
+            if kind.contains(&"auditor".to_string()) {
+                sort.insert("kind", 1);
             }
 
             let mut skip = (query.page - 1) * query.per_page;
@@ -87,20 +105,6 @@ impl SearchRepo {
         } else {
             None
         };
-
-        let kind = query
-            .kind
-            .clone()
-            .unwrap_or(String::new())
-            .split(' ')
-            .filter_map(|s| {
-                if !s.is_empty() {
-                    Some(s.to_ascii_lowercase())
-                } else {
-                    None
-                } // insensitive
-            })
-            .collect::<Vec<_>>();
 
         let mut docs = vec![
             doc! {
