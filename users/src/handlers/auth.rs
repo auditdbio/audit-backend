@@ -4,7 +4,7 @@ use actix_web::{
     HttpRequest, HttpResponse,
 };
 use common::{
-    api::user::{CreateUser, AddLinkedAccount},
+    api::{user::CreateUser, linked_accounts::AddLinkedAccount},
     context::GeneralContext,
     entities::user::{LinkedAccount, User},
     error,

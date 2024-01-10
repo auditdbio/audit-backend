@@ -6,31 +6,27 @@ use common::{
         self,
         badge::{BadgePayload, get_badge},
         codes::post_code,
-        user::{AddLinkedAccount, CreateUser},
+        user::CreateUser,
         linked_accounts::{
             LinkedService, GithubUserEmails,
             GetGithubAccessToken, GithubAccessResponse,
-            GithubUserData
+            GithubUserData, AddLinkedAccount,
         },
     },
     auth::Auth,
     context::GeneralContext,
     entities::{
-        badge::PublicBadge,
         letter::CreateLetter,
         user::{LinkedAccount, User, UserLogin},
     },
     error::{self, AddCode},
     repository::Entity,
-    services::{
-        AUDITORS_SERVICE, CUSTOMERS_SERVICE, FRONTEND, MAIL_SERVICE, PROTOCOL, USERS_SERVICE,
-    },
+    services::{FRONTEND, MAIL_SERVICE, PROTOCOL, USERS_SERVICE},
 };
 use mongodb::bson::{Bson, oid::ObjectId};
 use rand::{distributions::Alphanumeric, Rng};
 use reqwest::{Client, header};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use std::env::var;
 
 use super::user::UserService;

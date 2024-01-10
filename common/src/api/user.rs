@@ -2,7 +2,6 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    api::linked_accounts::LinkedService,
     auth::Auth,
     context::GeneralContext,
     entities::user::{LinkedAccount, PublicUser, User},
@@ -21,13 +20,6 @@ pub struct CreateUser {
     pub secret: Option<String>,
     pub linked_accounts: Option<Vec<LinkedAccount>>,
     pub is_passwordless: Option<bool>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct AddLinkedAccount {
-    pub code: String,
-    pub current_role: String,
-    pub service: LinkedService,
 }
 
 pub async fn get_by_id(

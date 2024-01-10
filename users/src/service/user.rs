@@ -3,8 +3,11 @@ use common::{
     access_rules::{AccessRules, Edit, Read},
     api::{
         badge::merge,
-        user::AddLinkedAccount,
-        linked_accounts::{LinkedService, GetXAccessToken, XAccessResponse, XUserResponse}
+        linked_accounts::{
+            AddLinkedAccount, LinkedService,
+            GetXAccessToken, XAccessResponse,
+            XUserResponse
+        },
     },
     auth::Auth,
     context::GeneralContext,
@@ -15,7 +18,6 @@ use mongodb::bson::{oid::ObjectId, Bson};
 
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use reqwest::{header, Client};
 use std::env::var;
 
@@ -180,17 +182,21 @@ impl UserService {
         Ok(user.into())
     }
 
-    pub async fn find_linked_account(&self, id: String, name: &LinkedService) -> error::Result<Option<User<ObjectId>>> {
+    pub async fn find_linked_account(
+        &self,
+        account_id: String,
+        name: &LinkedService
+    ) -> error::Result<Option<User<ObjectId>>> {
         let users = self.context.try_get_repository::<User<ObjectId>>()?;
 
         let users = users
-            .find_many("linked_accounts.id", &Bson::String(id.clone()))
+            .find_many("linked_accounts.id", &Bson::String(account_id.clone()))
             .await?;
 
         let user = users.iter().cloned().find(|user| {
             if let Some(accounts) = &user.linked_accounts {
                 accounts.iter().any(|account| {
-                    account.id == id && account.name == *name
+                    account.id == account_id && account.name == *name
                 })
             } else { false }
         });
@@ -200,13 +206,13 @@ impl UserService {
 
     pub async fn add_linked_account(
         &self,
-        id: ObjectId,
+        user_id: ObjectId,
         account: LinkedAccount,
         auth: Auth,
     ) -> error::Result<Option<User<ObjectId>>> {
         let users = self.context.try_get_repository::<User<ObjectId>>()?;
 
-        let Some(mut user) = users.find("id", &Bson::ObjectId(id)).await? else {
+        let Some(mut user) = users.find("id", &Bson::ObjectId(user_id)).await? else {
             return Err(anyhow::anyhow!("No user found").code(404));
         };
 
@@ -222,7 +228,7 @@ impl UserService {
 
         user.last_modified = Utc::now().timestamp_micros();
 
-        users.delete("id", &id).await?;
+        users.delete("id", &user_id).await?;
         users.insert(&user).await?;
 
         Ok(Some(user))
@@ -271,17 +277,25 @@ impl UserService {
                 .text()
                 .await?;
 
-            let user_data: XUserResponse = serde_json::from_str(&user_response)?;
+            let account_data: XUserResponse = serde_json::from_str(&user_response)?;
 
             let linked_account = LinkedAccount {
-                id: user_data.data.id,
+                id: account_data.data.id,
                 name: LinkedService::X,
                 email: "".to_string(),
-                url: format!("https://twitter.com/{}", user_data.data.username),
-                avatar: user_data.data.profile_image_url.unwrap_or_default(),
+                url: format!("https://twitter.com/{}", account_data.data.username),
+                avatar: account_data.data.profile_image_url.unwrap_or_default(),
                 is_public: false,
-                username: user_data.data.username
+                username: account_data.data.username
             };
+
+            if Self::find_linked_account(
+                &self,
+                linked_account.id.clone(),
+                &LinkedService::X
+            ).await?.is_some() {
+                return Err(anyhow::anyhow!("Account has already been added").code(404))
+            }
 
             Self::add_linked_account(&self, id, linked_account.clone(), auth).await?;
 

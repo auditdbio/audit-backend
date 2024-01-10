@@ -10,6 +10,13 @@ pub enum LinkedService {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct AddLinkedAccount {
+    pub code: String,
+    pub current_role: String,
+    pub service: LinkedService,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GetGithubAccessToken {
     pub code: String,
     pub client_id: String,

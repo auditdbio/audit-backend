@@ -5,12 +5,11 @@ use actix_web::{
 };
 use common::{
     context::GeneralContext,
-    entities::user::PublicUser,
+    entities::user::{PublicUser, LinkedAccount},
     error,
-    api::user::AddLinkedAccount,
+    api::linked_accounts::AddLinkedAccount,
 };
 use serde_json::json;
-use common::entities::user::LinkedAccount;
 
 use crate::service::user::{UserChange, UserService};
 
