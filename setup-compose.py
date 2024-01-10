@@ -20,6 +20,8 @@ x-common-variables: &common-variables
   FEEDBACK_EMAIL: "${FEEDBACK_EMAIL}"
   GITHUB_CLIENT_SECRET: "${GITHUB_CLIENT_SECRET}"
   GITHUB_CLIENT_ID: "${GITHUB_CLIENT_ID}"
+  X_CLIENT_SECRET: "${X_CLIENT_SECRET}"
+  X_CLIENT_ID: "${X_CLIENT_ID}"
   RUST_LOG: actix=info,reqwest=info,search=info,common=info,audits=trace
   TIMEOUT: "60"
 
@@ -342,7 +344,7 @@ def create_compose(config):
 
     for pattern, key in services.items():
         value = config[key] if key in config else config["proxy_address"]
-        
+
         template_instance = template_instance.replace(pattern, value)
 
     template_instance = template_instance.replace("%proxy_network%", proxy_newtwork_name)
@@ -423,14 +425,14 @@ def get_config():
 
 
     config = {
-        "open_database": os.environ["OPEN_DATABASE"], 
-        "with_proxy": os.environ["WITH_PROXY"], 
-        "container_namespace": os.environ["CONTAINER_NAMESPACE"], 
-        "volume_namespace": os.environ["VOLUME_NAMESPACE"], 
+        "open_database": os.environ["OPEN_DATABASE"],
+        "with_proxy": os.environ["WITH_PROXY"],
+        "container_namespace": os.environ["CONTAINER_NAMESPACE"],
+        "volume_namespace": os.environ["VOLUME_NAMESPACE"],
         "network_namespace": os.environ["NETWORK_NAMESPACE"]
     }
     return config
-    
+
 import sys
 
 def main():
@@ -438,7 +440,7 @@ def main():
 
     config = get_config()
 
-    
+
     if len(sys.argv) > 1:
         clone_database_from(sys.argv[1], config)
         return
@@ -446,7 +448,7 @@ def main():
     compose = create_compose(config)
     docker = create_docker(config)
 
-    
+
     with open("docker-compose.yml", "w") as f:
         f.write(compose)
 

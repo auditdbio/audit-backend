@@ -1,14 +1,19 @@
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
+use crate::api::linked_accounts::LinkedService;
 use crate::repository::Entity;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LinkedAccount {
-    pub id: i32,
-    pub name: String,
+    pub id: String,
+    pub name: LinkedService,
     pub email: String,
     pub url: String,
     pub avatar: String,
+    #[serde(default)]
+    pub is_public: bool,
+    #[serde(default)]
+    pub username: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

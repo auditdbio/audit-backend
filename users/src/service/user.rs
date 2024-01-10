@@ -1,7 +1,11 @@
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
-    api::badge::merge,
+    api::{
+        badge::merge,
+        user::AddLinkedAccount,
+        linked_accounts::{LinkedService, GetXAccessToken, XAccessResponse, XUserResponse}
+    },
     auth::Auth,
     context::GeneralContext,
     entities::user::{PublicUser, User, LinkedAccount},
@@ -11,6 +15,9 @@ use mongodb::bson::{oid::ObjectId, Bson};
 
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
+use reqwest::{header, Client};
+use std::env::var;
 
 use super::auth::ChangePassword;
 
@@ -78,49 +85,6 @@ impl UserService {
         if !Read.get_access(&auth, &user) {
             return Err(anyhow::anyhow!("User is not available to read this user").code(403));
         }
-
-        Ok(Some(user))
-    }
-
-    pub async fn find_linked_account(&self, id: i32, name: &str) -> error::Result<Option<User<ObjectId>>> {
-        let users = self.context.try_get_repository::<User<ObjectId>>()?;
-
-        let users = users
-            .find_many("linked_accounts.id", &Bson::Int32(id))
-            .await?;
-
-        let user = users.iter().cloned().find(|user| {
-            if let Some(accounts) = &user.linked_accounts {
-                accounts.iter().any(|account| {
-                    account.id == id && account.name == name
-                })
-            } else { false }
-        });
-
-        Ok(user)
-    }
-
-    pub async fn add_linked_account(
-        &self,
-        id: ObjectId,
-        account: LinkedAccount
-    ) -> error::Result<Option<User<ObjectId>>> {
-        let users = self.context.try_get_repository::<User<ObjectId>>()?;
-
-        let Some(mut user) = users.find("id", &Bson::ObjectId(id)).await? else {
-            return Err(anyhow::anyhow!("No user found").code(404));
-        };
-
-        if let Some(ref mut linked_accounts) = user.linked_accounts {
-            linked_accounts.push(account);
-        } else {
-            user.linked_accounts = Some(vec![account]);
-        }
-
-        user.last_modified = Utc::now().timestamp_micros();
-
-        users.delete("id", &id).await?;
-        users.insert(&user).await?;
 
         Ok(Some(user))
     }
@@ -214,5 +178,116 @@ impl UserService {
         }
 
         Ok(user.into())
+    }
+
+    pub async fn find_linked_account(&self, id: String, name: &LinkedService) -> error::Result<Option<User<ObjectId>>> {
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
+
+        let users = users
+            .find_many("linked_accounts.id", &Bson::String(id.clone()))
+            .await?;
+
+        let user = users.iter().cloned().find(|user| {
+            if let Some(accounts) = &user.linked_accounts {
+                accounts.iter().any(|account| {
+                    account.id == id && account.name == *name
+                })
+            } else { false }
+        });
+
+        Ok(user)
+    }
+
+    pub async fn add_linked_account(
+        &self,
+        id: ObjectId,
+        account: LinkedAccount,
+        auth: Auth,
+    ) -> error::Result<Option<User<ObjectId>>> {
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
+
+        let Some(mut user) = users.find("id", &Bson::ObjectId(id)).await? else {
+            return Err(anyhow::anyhow!("No user found").code(404));
+        };
+
+        if !Edit.get_access(&auth, &user) {
+            return Err(anyhow::anyhow!("User is not available to change this user").code(403));
+        }
+
+        if let Some(ref mut linked_accounts) = user.linked_accounts {
+            linked_accounts.push(account);
+        } else {
+            user.linked_accounts = Some(vec![account]);
+        }
+
+        user.last_modified = Utc::now().timestamp_micros();
+
+        users.delete("id", &id).await?;
+        users.insert(&user).await?;
+
+        Ok(Some(user))
+    }
+
+    pub async fn create_linked_account(
+        &self,
+        id: ObjectId,
+        data: AddLinkedAccount,
+    ) -> error::Result<LinkedAccount> {
+        let auth = self.context.auth();
+        let client = Client::new();
+
+        if data.service == LinkedService::X {
+            let client_id = var("X_CLIENT_ID").unwrap();
+            let client_secret = var("X_CLIENT_SECRET").unwrap();
+
+            let x_auth = GetXAccessToken {
+                code: data.code,
+                client_id: client_id.clone(),
+                grant_type: "authorization_code".to_string(),
+                redirect_uri: "https://dev.auditdb.io/oauth/callback".to_string(),
+                code_verifier: "challenge".to_string(),
+            };
+
+            let access_response = client
+                .post("https://api.twitter.com/2/oauth2/token")
+                .header(header::ACCEPT, "application/json")
+                .header(header::CONTENT_TYPE, "application/json")
+                .basic_auth(client_id, Some(client_secret))
+                .json(&x_auth)
+                .send()
+                .await?
+                .text()
+                .await?;
+
+            let access_json: XAccessResponse = serde_json::from_str(&access_response)?;
+            let access_token = access_json.access_token;
+
+            let user_response = client
+                .get("https://api.twitter.com/2/users/me?user.fields=profile_image_url,url")
+                .header(header::ACCEPT, "application/json")
+                .bearer_auth(access_token)
+                .send()
+                .await?
+                .text()
+                .await?;
+
+            let user_data: XUserResponse = serde_json::from_str(&user_response)?;
+
+            let linked_account = LinkedAccount {
+                id: user_data.data.id,
+                name: LinkedService::X,
+                email: "".to_string(),
+                url: format!("https://twitter.com/{}", user_data.data.username),
+                avatar: user_data.data.profile_image_url.unwrap_or_default(),
+                is_public: false,
+                username: user_data.data.username
+            };
+
+            Self::add_linked_account(&self, id, linked_account.clone(), auth).await?;
+
+            return Ok(linked_account)
+        }
+
+        Err(anyhow::anyhow!("Error adding account").code(404))
     }
 }

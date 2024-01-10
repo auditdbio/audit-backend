@@ -4,7 +4,7 @@ use actix_web::{
     HttpRequest, HttpResponse,
 };
 use common::{
-    api::user::{CreateUser, GithubAuth},
+    api::user::{CreateUser, AddLinkedAccount},
     context::GeneralContext,
     entities::user::{LinkedAccount, User},
     error,
@@ -21,7 +21,7 @@ pub async fn login(context: GeneralContext, login: Json<Login>) -> error::Result
 #[post("/api/auth/github")]
 pub async fn github_auth(
     context: GeneralContext,
-    Json(data): Json<GithubAuth>,
+    Json(data): Json<AddLinkedAccount>,
 ) -> error::Result<Json<Token>> {
     Ok(Json(AuthService::new(context).github_auth(data).await?))
 }

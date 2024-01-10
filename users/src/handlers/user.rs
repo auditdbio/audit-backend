@@ -1,10 +1,16 @@
 use actix_web::{
-    delete, get, patch,
+    delete, get, patch, post,
     web::{Json, Path},
     HttpResponse,
 };
-use common::{context::GeneralContext, entities::user::PublicUser, error};
+use common::{
+    context::GeneralContext,
+    entities::user::PublicUser,
+    error,
+    api::user::AddLinkedAccount,
+};
 use serde_json::json;
+use common::entities::user::LinkedAccount;
 
 use crate::service::user::{UserChange, UserService};
 
@@ -39,6 +45,17 @@ pub async fn my_user(context: GeneralContext) -> error::Result<HttpResponse> {
     } else {
         Ok(HttpResponse::Ok().json(json! {{}}))
     }
+}
+
+#[post("/api/user/add_account/{id}")]
+pub async fn add_linked_account(
+    context: GeneralContext,
+    id: Path<String>,
+    Json(data): Json<AddLinkedAccount>,
+) -> error::Result<Json<LinkedAccount>> {
+    Ok(Json(
+        UserService::new(context).create_linked_account(id.parse()?, data).await?
+    ))
 }
 
 #[patch("/api/user/{id}")]

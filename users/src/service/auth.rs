@@ -4,11 +4,13 @@ use common::{
     access_rules::AccessRules,
     api::{
         self,
-        badge::{get_badge, BadgePayload},
+        badge::{BadgePayload, get_badge},
         codes::post_code,
-        user::{
-            CreateUser, GetGithubAccessToken, GithubAccessResponse, GithubAuth, GithubUserData,
-            GithubUserEmails,
+        user::{AddLinkedAccount, CreateUser},
+        linked_accounts::{
+            LinkedService, GithubUserEmails,
+            GetGithubAccessToken, GithubAccessResponse,
+            GithubUserData
         },
     },
     auth::Auth,
@@ -24,9 +26,9 @@ use common::{
         AUDITORS_SERVICE, CUSTOMERS_SERVICE, FRONTEND, MAIL_SERVICE, PROTOCOL, USERS_SERVICE,
     },
 };
-use mongodb::bson::{oid::ObjectId, Bson};
+use mongodb::bson::{Bson, oid::ObjectId};
 use rand::{distributions::Alphanumeric, Rng};
-use reqwest::{header, Client};
+use reqwest::{Client, header};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::env::var;
@@ -279,9 +281,9 @@ impl AuthService {
 
         let user_response = client
             .get("https://api.github.com/user")
-            .header(header::AUTHORIZATION, format!("Bearer {}", access_token))
             .header(header::ACCEPT, "application/json")
             .header("User-Agent", "auditdbio")
+            .bearer_auth(access_token.clone())
             .send()
             .await?
             .text()
@@ -289,9 +291,9 @@ impl AuthService {
 
         let emails_response = client
             .get("https://api.github.com/user/emails")
-            .header(header::AUTHORIZATION, format!("Bearer {}", access_token))
             .header(header::ACCEPT, "application/json")
             .header("User-Agent", "auditdbio")
+            .bearer_auth(access_token)
             .send()
             .await?
             .text()
@@ -309,11 +311,13 @@ impl AuthService {
         };
 
         let linked_account = LinkedAccount {
-            id: user_data.id.clone(),
-            name: "GitHub".to_string(),
+            id: user_data.id.to_string(),
+            name: LinkedService::GitHub,
             email: email.clone(),
             url: user_data.html_url,
             avatar: user_data.avatar_url,
+            is_public: false,
+            username: user_data.login.clone(),
         };
 
         let user = CreateUser {
@@ -331,7 +335,7 @@ impl AuthService {
         return Ok((user, linked_account));
     }
 
-    pub async fn github_auth(&self, data: GithubAuth) -> error::Result<Token> {
+    pub async fn github_auth(&self, data: AddLinkedAccount) -> error::Result<Token> {
         let github_auth = GetGithubAccessToken {
             code: data.clone().code,
             client_id: var("GITHUB_CLIENT_ID").unwrap(),
@@ -371,7 +375,7 @@ impl AuthService {
 
         if let Some(mut user) = existing_email_user {
             let _ = user_service
-                .add_linked_account(user.id, linked_account)
+                .add_linked_account(user.id, linked_account, self.context.server_auth())
                 .await?;
 
             user.current_role = data.clone().current_role;
