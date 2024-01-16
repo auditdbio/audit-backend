@@ -1,4 +1,10 @@
 use chrono::Utc;
+use mongodb::bson::{oid::ObjectId, Bson};
+use rand::{distributions::Alphanumeric, Rng};
+use serde::{Deserialize, Serialize};
+use reqwest::{header, Client};
+use std::env::var;
+
 use common::{
     access_rules::{AccessRules, Edit, Read},
     api::{
@@ -6,7 +12,8 @@ use common::{
         linked_accounts::{
             AddLinkedAccount, LinkedService,
             GetXAccessToken, XAccessResponse,
-            XUserResponse
+            XUserResponse, GetLinkedInAccessToken,
+            LinkedInAccessResponse, LinkedInUserResponse,
         },
     },
     auth::Auth,
@@ -14,12 +21,6 @@ use common::{
     entities::user::{PublicUser, User, LinkedAccount},
     error::{self, AddCode},
 };
-use mongodb::bson::{oid::ObjectId, Bson};
-
-use rand::{distributions::Alphanumeric, Rng};
-use serde::{Deserialize, Serialize};
-use reqwest::{header, Client};
-use std::env::var;
 
 use super::auth::ChangePassword;
 
@@ -241,6 +242,8 @@ impl UserService {
     ) -> error::Result<LinkedAccount> {
         let auth = self.context.auth();
         let client = Client::new();
+        let protocol = var("PROTOCOL").unwrap();
+        let frontend = var("FRONTEND").unwrap();
 
         if data.service == LinkedService::X {
             let client_id = var("X_CLIENT_ID").unwrap();
@@ -250,7 +253,7 @@ impl UserService {
                 code: data.code,
                 client_id: client_id.clone(),
                 grant_type: "authorization_code".to_string(),
-                redirect_uri: "https://dev.auditdb.io/oauth/callback".to_string(),
+                redirect_uri: format!("{}://{}/oauth/callback", protocol, frontend),
                 code_verifier: "challenge".to_string(),
             };
 
@@ -293,6 +296,63 @@ impl UserService {
                 &self,
                 linked_account.id.clone(),
                 &LinkedService::X
+            ).await?.is_some() {
+                return Err(anyhow::anyhow!("Account has already been added").code(404))
+            }
+
+            Self::add_linked_account(&self, id, linked_account.clone(), auth).await?;
+
+            return Ok(linked_account)
+        }
+
+        if data.service == LinkedService::LinkedIn {
+            let client_id = var("LINKEDIN_CLIENT_ID").unwrap();
+            let client_secret = var("LINKEDIN_CLIENT_SECRET").unwrap();
+
+            let linkedin_auth = GetLinkedInAccessToken {
+                code: data.code,
+                client_id: client_id.clone(),
+                client_secret,
+                grant_type: "authorization_code".to_string(),
+                redirect_uri: format!("{}://{}/oauth/callback", protocol, frontend),
+            };
+
+            let access_response = client
+                .post("https://www.linkedin.com/oauth/v2/accessToken")
+                .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .form(&linkedin_auth)
+                .send()
+                .await?
+                .text()
+                .await?;
+
+            let access_json: LinkedInAccessResponse = serde_json::from_str(&access_response)?;
+            let access_token = access_json.access_token;
+
+            let user_response = client
+                .get("https://api.linkedin.com/v2/userinfo")
+                .bearer_auth(access_token)
+                .send()
+                .await?
+                .text()
+                .await?;
+
+            let account_data: LinkedInUserResponse = serde_json::from_str(&user_response)?;
+
+            let linked_account = LinkedAccount {
+                id: account_data.sub,
+                name: LinkedService::LinkedIn,
+                email: account_data.email.unwrap_or_default(),
+                url: "".to_string(),
+                avatar: account_data.picture.unwrap_or_default(),
+                is_public: false,
+                username: account_data.name,
+            };
+
+            if Self::find_linked_account(
+                &self,
+                linked_account.id.clone(),
+                &LinkedService::LinkedIn,
             ).await?.is_some() {
                 return Err(anyhow::anyhow!("Account has already been added").code(404))
             }

@@ -75,3 +75,27 @@ pub struct XUserData {
     pub profile_image_url: Option<String>,
     pub url: Option<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GetLinkedInAccessToken {
+    pub code: String,
+    pub client_id: String,
+    pub client_secret: String,
+    pub grant_type: String,
+    pub redirect_uri: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LinkedInAccessResponse {
+    pub access_token: String,
+    pub scope: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LinkedInUserResponse {
+    pub sub: String,
+    pub name: String,
+    pub given_name: String,
+    pub email: Option<String>,
+    pub picture: Option<String>,
+}

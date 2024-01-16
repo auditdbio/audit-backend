@@ -1,7 +1,9 @@
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use crate::api::linked_accounts::LinkedService;
-use crate::repository::Entity;
+use crate::{
+    api::linked_accounts::LinkedService,
+    repository::Entity,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LinkedAccount {
