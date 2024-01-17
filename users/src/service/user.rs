@@ -419,7 +419,7 @@ impl UserService {
             linked_accounts.retain(|account| account.id != account_id);
             user.last_modified = Utc::now().timestamp_micros();
 
-            users.delete("_id", &user_id).await?;
+            users.delete("id", &user_id).await?;
             users.insert(&user).await?;
 
             return Ok(account);
