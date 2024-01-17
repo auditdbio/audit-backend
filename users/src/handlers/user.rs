@@ -46,7 +46,7 @@ pub async fn my_user(context: GeneralContext) -> error::Result<HttpResponse> {
     }
 }
 
-#[post("/api/user/add_account/{id}")]
+#[post("/api/user/{id}/linked_account")]
 pub async fn add_linked_account(
     context: GeneralContext,
     id: Path<String>,
@@ -54,6 +54,16 @@ pub async fn add_linked_account(
 ) -> error::Result<Json<LinkedAccount>> {
     Ok(Json(
         UserService::new(context).create_linked_account(id.parse()?, data).await?
+    ))
+}
+
+#[delete("/api/user/{user_id}/linked_account/{account_id}")]
+pub async fn delete_linked_account(
+    context: GeneralContext,
+    id: Path<(String, String)>,
+) -> error::Result<Json<LinkedAccount>> {
+    Ok(Json(
+        UserService::new(context).delete_linked_account(id.0.parse()?, id.1.clone()).await?
     ))
 }
 

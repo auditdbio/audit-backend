@@ -364,4 +364,42 @@ impl UserService {
 
         Err(anyhow::anyhow!("Error adding account").code(404))
     }
+
+    pub async fn delete_linked_account(
+        &self,
+        user_id: ObjectId,
+        account_id: String,
+    ) -> error::Result<LinkedAccount> {
+        let auth = self.context.auth();
+
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
+
+        let Some(mut user) = users.find("id", &Bson::ObjectId(user_id)).await? else {
+            return Err(anyhow::anyhow!("No user found").code(404));
+        };
+
+        if !Edit.get_access(&auth, &user) {
+            return Err(anyhow::anyhow!("User is not available to change this user").code(403));
+        }
+
+        if let Some(ref mut linked_accounts) = user.linked_accounts {
+            let Some(account) = linked_accounts
+                .iter()
+                .find(|account| account.id == account_id)
+                .cloned()
+            else {
+                return Err(anyhow::anyhow!("No linked account found").code(404));
+            };
+
+            linked_accounts.retain(|account| account.id != account_id);
+            user.last_modified = Utc::now().timestamp_micros();
+
+            users.delete("_id", &user_id).await?;
+            users.insert(&user).await?;
+
+            return Ok(account);
+        }
+
+        Err(anyhow::anyhow!("No linked account found").code(404))
+    }
 }
