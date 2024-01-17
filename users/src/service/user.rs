@@ -14,6 +14,7 @@ use common::{
             GetXAccessToken, XAccessResponse,
             XUserResponse, GetLinkedInAccessToken,
             LinkedInAccessResponse, LinkedInUserResponse,
+            GetGithubAccessToken,
         },
     },
     auth::Auth,
@@ -21,6 +22,7 @@ use common::{
     entities::user::{PublicUser, User, LinkedAccount},
     error::{self, AddCode},
 };
+use crate::service::auth::AuthService;
 
 use super::auth::ChangePassword;
 
@@ -244,6 +246,29 @@ impl UserService {
         let client = Client::new();
         let protocol = var("PROTOCOL").unwrap();
         let frontend = var("FRONTEND").unwrap();
+
+        if data.service == LinkedService::GitHub {
+            let github_auth = GetGithubAccessToken {
+                code: data.clone().code,
+                client_id: var("GITHUB_CLIENT_ID").unwrap(),
+                client_secret: var("GITHUB_CLIENT_SECRET").unwrap(),
+            };
+
+            let (_, linked_account) = AuthService::new(self.context.clone())
+                .github_get_user(github_auth, data.clone().current_role).await?;
+
+            if Self::find_linked_account(
+                &self,
+                linked_account.id.clone(),
+                &LinkedService::GitHub
+            ).await?.is_some() {
+                return Err(anyhow::anyhow!("Account has already been added").code(404))
+            }
+
+            Self::add_linked_account(&self, id, linked_account.clone(), auth).await?;
+
+            return Ok(linked_account)
+        }
 
         if data.service == LinkedService::X {
             let client_id = var("X_CLIENT_ID").unwrap();
