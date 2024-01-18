@@ -7,7 +7,7 @@ use common::{
     context::GeneralContext,
     entities::user::{PublicUser, LinkedAccount},
     error,
-    api::linked_accounts::AddLinkedAccount,
+    api::linked_accounts::{AddLinkedAccount, UpdateLinkedAccount},
 };
 use serde_json::json;
 
@@ -57,23 +57,28 @@ pub async fn add_linked_account(
     ))
 }
 
-// #[patch("/api/user/{user_id}/linked_account/{account_id}")]
-// pub async fn patch_linked_account(
-//     context: GeneralContext,
-//     id: Path<(String, String)>,
-// ) -> error::Result<Json<LinkedAccount>> {
-//     Ok(Json(
-//         UserService::new(context).delete_linked_account(id.0.parse()?, id.1.clone()).await?
-//     ))
-// }
+#[patch("/api/user/{id}/linked_account/{account_id}")]
+pub async fn patch_linked_account(
+    context: GeneralContext,
+    id: Path<(String, String)>,
+    Json(data): Json<UpdateLinkedAccount>,
+) -> error::Result<Json<LinkedAccount>> {
+    Ok(Json(
+        UserService::new(context)
+            .change_linked_account(id.0.parse()?, id.1.clone(), data)
+            .await?
+    ))
+}
 
-#[delete("/api/user/{user_id}/linked_account/{account_id}")]
+#[delete("/api/user/{id}/linked_account/{account_id}")]
 pub async fn delete_linked_account(
     context: GeneralContext,
     id: Path<(String, String)>,
 ) -> error::Result<Json<LinkedAccount>> {
     Ok(Json(
-        UserService::new(context).delete_linked_account(id.0.parse()?, id.1.clone()).await?
+        UserService::new(context)
+            .delete_linked_account(id.0.parse()?, id.1.clone())
+            .await?
     ))
 }
 

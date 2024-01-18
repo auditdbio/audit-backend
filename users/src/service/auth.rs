@@ -344,7 +344,7 @@ impl AuthService {
             self.github_get_user(github_auth, data.clone().current_role).await?;
 
         if let Some(mut user) = user_service
-            .find_linked_account(linked_account.id.clone(), &linked_account.name)
+            .find_user_by_linked_account(linked_account.id.clone(), &linked_account.name)
             .await?
         {
             user.current_role = data.clone().current_role;

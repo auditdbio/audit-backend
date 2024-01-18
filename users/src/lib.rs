@@ -46,7 +46,7 @@ pub fn create_app(
         .service(restore_token)
         .service(github_auth)
         .service(add_linked_account)
-        //.service(patch_linked_account)
+        .service(patch_linked_account)
         .service(delete_linked_account)
         .service(find_user_by_email);
     app

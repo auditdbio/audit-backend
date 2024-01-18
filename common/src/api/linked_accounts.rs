@@ -16,6 +16,11 @@ pub struct AddLinkedAccount {
     pub service: LinkedService,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateLinkedAccount {
+    pub is_public: Option<bool>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GetGithubAccessToken {
     pub code: String,

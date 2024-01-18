@@ -14,7 +14,7 @@ use common::{
             GetXAccessToken, XAccessResponse,
             XUserResponse, GetLinkedInAccessToken,
             LinkedInAccessResponse, LinkedInUserResponse,
-            GetGithubAccessToken,
+            GetGithubAccessToken, UpdateLinkedAccount,
         },
     },
     auth::Auth,
@@ -185,7 +185,7 @@ impl UserService {
         Ok(user.into())
     }
 
-    pub async fn find_linked_account(
+    pub async fn find_user_by_linked_account(
         &self,
         account_id: String,
         name: &LinkedService
@@ -257,7 +257,7 @@ impl UserService {
             let (_, linked_account) = AuthService::new(self.context.clone())
                 .github_get_user(github_auth, data.clone().current_role).await?;
 
-            if Self::find_linked_account(
+            if Self::find_user_by_linked_account(
                 &self,
                 linked_account.id.clone(),
                 &LinkedService::GitHub
@@ -317,7 +317,7 @@ impl UserService {
                 username: account_data.data.username
             };
 
-            if Self::find_linked_account(
+            if Self::find_user_by_linked_account(
                 &self,
                 linked_account.id.clone(),
                 &LinkedService::X
@@ -374,7 +374,7 @@ impl UserService {
                 username: account_data.name,
             };
 
-            if Self::find_linked_account(
+            if Self::find_user_by_linked_account(
                 &self,
                 linked_account.id.clone(),
                 &LinkedService::LinkedIn,
@@ -423,6 +423,53 @@ impl UserService {
             users.insert(&user).await?;
 
             return Ok(account);
+        }
+
+        Err(anyhow::anyhow!("No linked account found").code(404))
+    }
+
+    pub async fn change_linked_account(
+        &self,
+        user_id: ObjectId,
+        account_id: String,
+        data: UpdateLinkedAccount,
+    ) -> error::Result<LinkedAccount> {
+        let auth = self.context.auth();
+
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
+
+        let Some(mut user) = users.find("id", &Bson::ObjectId(user_id)).await? else {
+            return Err(anyhow::anyhow!("No user found").code(404));
+        };
+
+        if !Edit.get_access(&auth, &user) {
+            return Err(anyhow::anyhow!("User is not available to change this user").code(403));
+        }
+
+        if let Some(ref mut linked_accounts) = user.linked_accounts {
+            if let Some(mut account) = linked_accounts
+                .iter()
+                .find(|account| account.id == account_id)
+                .cloned()
+            {
+                if let Some(is_public) = data.is_public {
+                    account.is_public = is_public;
+                }
+
+                if let Some(idx) = linked_accounts
+                    .iter()
+                    .position(|acc| acc.id == account_id)
+                {
+                    linked_accounts[idx] = account.clone();
+                }
+
+                user.last_modified = Utc::now().timestamp_micros();
+
+                users.delete("id", &user_id).await?;
+                users.insert(&user).await?;
+
+                return Ok(account);
+            }
         }
 
         Err(anyhow::anyhow!("No linked account found").code(404))
