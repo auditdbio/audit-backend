@@ -19,9 +19,7 @@ use common::{
     },
     error::{self, AddCode},
     repository::Entity,
-    services::{
-        FRONTEND, MAIL_SERVICE, PROTOCOL, USERS_SERVICE,
-    },
+    services::{API_PREFIX, FRONTEND, MAIL_SERVICE, PROTOCOL, USERS_SERVICE},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use rand::{distributions::Alphanumeric, Rng};
@@ -185,9 +183,10 @@ impl AuthService {
                 .replace(
                     "{link}",
                     format!(
-                        "{}://{}/api/auth/verify/{}",
+                        "{}://{}/{}/auth/verify/{}",
                         PROTOCOL.as_str(),
                         USERS_SERVICE.as_str(),
+                        API_PREFIX.as_str(),
                         code
                     )
                     .as_str(),
@@ -205,9 +204,10 @@ impl AuthService {
                 .make_request()
                 .auth(self.context.server_auth())
                 .post(format!(
-                    "{}://{}/api/mail",
+                    "{}://{}/{}/mail",
                     PROTOCOL.as_str(),
-                    MAIL_SERVICE.as_str()
+                    MAIL_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
                 ))
                 .json(&letter)
                 .send()
@@ -339,20 +339,23 @@ impl AuthService {
 
         let user_service = UserService::new(self.context.clone());
 
-        let (github_user, linked_account) =
-            self.github_get_user(github_auth, data.clone().current_role).await?;
+        let (github_user, linked_account) = self
+            .github_get_user(github_auth, data.clone().current_role)
+            .await?;
 
         if let Some(mut user) = user_service
             .find_linked_account(linked_account.id.clone(), &linked_account.name)
             .await?
         {
             user.current_role = data.clone().current_role;
-            let _ = self.context
+            let _ = self
+                .context
                 .make_request()
                 .patch(format!(
-                    "{}://{}/api/user/{}",
+                    "{}://{}/{}/user/{}",
                     PROTOCOL.as_str(),
                     USERS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
                     user.id
                 ))
                 .auth(self.context.server_auth())
@@ -374,12 +377,14 @@ impl AuthService {
                 .await?;
 
             user.current_role = data.clone().current_role;
-            let _ = self.context
+            let _ = self
+                .context
                 .make_request()
                 .patch(format!(
-                    "{}://{}/api/user/{}",
+                    "{}://{}/{}/user/{}",
                     PROTOCOL.as_str(),
                     USERS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
                     user.id
                 ))
                 .auth(self.context.server_auth())
@@ -487,9 +492,10 @@ impl AuthService {
             .make_request()
             .auth(self.context.server_auth())
             .post(format!(
-                "{}://{}/api/mail",
+                "{}://{}/{}/mail",
                 PROTOCOL.as_str(),
-                MAIL_SERVICE.as_str()
+                MAIL_SERVICE.as_str(),
+                API_PREFIX.as_str(),
             ))
             .json(&letter)
             .send()

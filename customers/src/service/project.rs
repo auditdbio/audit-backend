@@ -1,6 +1,7 @@
 use chrono::Utc;
 use common::api::seartch::delete_from_search;
 use common::entities::customer::PublicCustomer;
+use common::services::API_PREFIX;
 use common::{
     access_rules::{AccessRules, Edit, Read},
     api::seartch::PaginationParams,
@@ -115,9 +116,10 @@ impl ProjectService {
             .context
             .make_request::<PublicCustomer>()
             .get(format!(
-                "{}://{}/api/customer/{}",
+                "{}://{}/{}/customer/{}",
                 PROTOCOL.as_str(),
                 CUSTOMERS_SERVICE.as_str(),
+                API_PREFIX.as_str(),
                 project.customer_id
             ))
             .auth(self.context.server_auth())

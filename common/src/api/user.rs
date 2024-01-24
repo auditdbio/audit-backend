@@ -4,9 +4,9 @@ use serde::{Deserialize, Serialize};
 use crate::{
     auth::Auth,
     context::GeneralContext,
-    entities::user::{PublicUser, User, LinkedAccount},
+    entities::user::{LinkedAccount, PublicUser, User},
     error,
-    services::{PROTOCOL, USERS_SERVICE},
+    services::{API_PREFIX, PROTOCOL, USERS_SERVICE},
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -44,12 +44,12 @@ pub struct GithubAccessResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GithubUserData {
-  pub id: i32,
-  pub login: String,
-  pub name: Option<String>,
-  pub html_url: String,
-  pub avatar_url: String,
-  pub company: Option<String>,
+    pub id: i32,
+    pub login: String,
+    pub name: Option<String>,
+    pub html_url: String,
+    pub avatar_url: String,
+    pub company: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -67,9 +67,10 @@ pub async fn get_by_id(
     Ok(context
         .make_request::<PublicUser>()
         .get(format!(
-            "{}://{}/api/user/{}",
+            "{}://{}/{}/user/{}",
             PROTOCOL.as_str(),
             USERS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
             id
         ))
         .auth(auth)
@@ -86,9 +87,10 @@ pub async fn get_by_email(
     Ok(context
         .make_request::<User<ObjectId>>()
         .get(format!(
-            "{}://{}/api/user_by_email/{}",
+            "{}://{}/{}/user_by_email/{}",
             PROTOCOL.as_str(),
             USERS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
             email
         ))
         .auth(context.server_auth())

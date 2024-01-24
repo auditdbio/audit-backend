@@ -5,7 +5,7 @@ use crate::{
     auth::Auth,
     entities::role::Role,
     error,
-    services::{CHAT_SERVICE, PROTOCOL},
+    services::{API_PREFIX, CHAT_SERVICE, PROTOCOL},
 };
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -66,9 +66,10 @@ pub struct PublicMessage {
 
 pub fn create_message(message: CreateMessage, auth: Auth) -> error::Result<()> {
     ureq::post(&format!(
-        "{}://{}/api/chat/message",
+        "{}://{}/{}/chat/message",
         PROTOCOL.as_str(),
-        CHAT_SERVICE.as_str()
+        CHAT_SERVICE.as_str(),
+        API_PREFIX.as_str(),
     ))
     .set("Authorization", &format!("Bearer {}", auth.to_token()?))
     .send_json(message)?;

@@ -11,7 +11,7 @@ use common::{
     context::GeneralContext,
     entities::role::Role,
     error,
-    services::{EVENTS_SERVICE, PROTOCOL},
+    services::{API_PREFIX, EVENTS_SERVICE, PROTOCOL},
 };
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -119,9 +119,10 @@ impl ChatService {
             self.context
                 .make_request()
                 .post(format!(
-                    "{}://{}/api/event",
+                    "{}://{}/{}/event",
                     PROTOCOL.as_str(),
-                    EVENTS_SERVICE.as_str()
+                    EVENTS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
                 ))
                 .json(&event)
                 .send()

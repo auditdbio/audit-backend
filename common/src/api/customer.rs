@@ -5,7 +5,7 @@ use crate::{
     context::GeneralContext,
     entities::customer::PublicCustomer,
     error,
-    services::{CUSTOMERS_SERVICE, PROTOCOL},
+    services::{API_PREFIX, CUSTOMERS_SERVICE, PROTOCOL},
 };
 
 pub async fn request_customer(
@@ -16,9 +16,10 @@ pub async fn request_customer(
     Ok(context
         .make_request::<PublicCustomer>()
         .get(format!(
-            "{}://{}/api/customer/{}",
+            "{}://{}/{}/customer/{}",
             PROTOCOL.as_str(),
             CUSTOMERS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
             id
         ))
         .auth(auth)

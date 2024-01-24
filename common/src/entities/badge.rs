@@ -4,7 +4,7 @@ use utoipa::ToSchema;
 
 use crate::{
     repository::Entity,
-    services::{AUDITORS_SERVICE, PROTOCOL},
+    services::{API_PREFIX, AUDITORS_SERVICE, PROTOCOL},
 };
 
 use super::{audit_request::PriceRange, contacts::Contacts};
@@ -101,9 +101,10 @@ impl From<Badge<ObjectId>> for Option<Document> {
         document.insert(
             "request_url",
             format!(
-                "{}://{}/api/badge/data",
+                "{}://{}/{}/badge/data",
                 PROTOCOL.as_str(),
-                AUDITORS_SERVICE.as_str()
+                AUDITORS_SERVICE.as_str(),
+                API_PREFIX.as_str(),
             ),
         );
         document.insert(

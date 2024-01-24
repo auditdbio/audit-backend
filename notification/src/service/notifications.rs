@@ -5,7 +5,7 @@ use common::{
     entities::notification::{CreateNotification, NotificationInner},
     error::{self},
     repository::Entity,
-    services::{EVENTS_SERVICE, PROTOCOL},
+    services::{API_PREFIX, EVENTS_SERVICE, PROTOCOL},
 };
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -69,9 +69,10 @@ pub async fn send_notification(
         .make_request()
         .auth(auth)
         .post(format!(
-            "{}://{}/api/event",
+            "{}://{}/{}/event",
             PROTOCOL.as_str(),
-            EVENTS_SERVICE.as_str()
+            EVENTS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
         ))
         .json(&event)
         .send()

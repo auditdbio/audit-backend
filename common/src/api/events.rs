@@ -5,7 +5,7 @@ use crate::{
     auth::Auth,
     context::GeneralContext,
     error,
-    services::{EVENTS_SERVICE, PROTOCOL},
+    services::{API_PREFIX, EVENTS_SERVICE, PROTOCOL},
 };
 
 use super::{
@@ -72,9 +72,10 @@ pub async fn post_event(
     context
         .make_request()
         .post(format!(
-            "{}://{}/api/event",
+            "{}://{}/{}/event",
             PROTOCOL.as_str(),
-            EVENTS_SERVICE.as_str()
+            EVENTS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
         ))
         .auth(auth)
         .json(&event)

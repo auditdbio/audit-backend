@@ -7,7 +7,7 @@ use common::{
     auth::{Auth, Service},
     context::GeneralContext,
     entities::issue::Status,
-    services::{FILES_SERVICE, FRONTEND, PROTOCOL, RENDERER_SERVICE, USERS_SERVICE},
+    services::{API_PREFIX, FILES_SERVICE, FRONTEND, PROTOCOL, RENDERER_SERVICE, USERS_SERVICE},
 };
 use reqwest::multipart::{Form, Part};
 use serde::{Deserialize, Serialize};
@@ -275,9 +275,10 @@ pub async fn create_report(
         .make_request::<PublicAudit>()
         .auth(context.auth())
         .get(format!(
-            "{}://{}/api/audit/{}",
+            "{}://{}/{}/audit/{}",
             PROTOCOL.as_str(),
             USERS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
             audit_id
         ))
         .send()
@@ -303,9 +304,10 @@ pub async fn create_report(
     let report = context
         .make_request()
         .post(format!(
-            "{}://{}/api/generate-report",
+            "{}://{}/{}/generate-report",
             PROTOCOL.as_str(),
-            RENDERER_SERVICE.as_str()
+            RENDERER_SERVICE.as_str(),
+            API_PREFIX.as_str(),
         ))
         .json(&input)
         .send()
@@ -327,9 +329,10 @@ pub async fn create_report(
 
     let _ = client
         .post(format!(
-            "{}://{}/api/file",
+            "{}://{}/{}/file",
             PROTOCOL.as_str(),
-            FILES_SERVICE.as_str()
+            FILES_SERVICE.as_str(),
+            API_PREFIX.as_str(),
         ))
         .multipart(form)
         .send()
@@ -345,9 +348,10 @@ pub async fn create_report(
         let _ = context
             .make_request()
             .patch(format!(
-                "{}://{}/api/audit/{}",
+                "{}://{}/{}/audit/{}",
                 PROTOCOL.as_str(),
                 USERS_SERVICE.as_str(),
+                API_PREFIX.as_str(),
                 audit.id
             ))
             .auth(context.auth())

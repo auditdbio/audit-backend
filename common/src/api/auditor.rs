@@ -5,7 +5,7 @@ use crate::{
     context::GeneralContext,
     entities::auditor::{ExtendedAuditor, PublicAuditor},
     error,
-    services::{AUDITORS_SERVICE, PROTOCOL},
+    services::{API_PREFIX, AUDITORS_SERVICE, PROTOCOL},
 };
 
 pub async fn request_auditor(
@@ -16,9 +16,10 @@ pub async fn request_auditor(
     Ok(context
         .make_request::<PublicAuditor>()
         .get(format!(
-            "{}://{}/api/auditor/{}",
+            "{}://{}/{}/auditor/{}",
             PROTOCOL.as_str(),
             AUDITORS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
             id
         ))
         .auth(auth)

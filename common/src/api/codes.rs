@@ -1,16 +1,17 @@
 use crate::{
     context::GeneralContext,
     error,
-    services::{MAIL_SERVICE, PROTOCOL},
+    services::{API_PREFIX, MAIL_SERVICE, PROTOCOL},
 };
 
 pub async fn post_code(context: &GeneralContext, payload: String) -> error::Result<String> {
     Ok(context
         .make_request::<String>()
         .post(format!(
-            "{}://{}/api/code/{}",
+            "{}://{}/{}/code/{}",
             PROTOCOL.as_str(),
             MAIL_SERVICE.as_str(),
+            API_PREFIX.as_str(),
             payload
         ))
         .send()
@@ -23,9 +24,10 @@ pub async fn get_code(context: &GeneralContext, code: String) -> error::Result<O
     Ok(context
         .make_request::<()>()
         .get(format!(
-            "{}://{}/api/code/{}",
+            "{}://{}/{}/code/{}",
             PROTOCOL.as_str(),
             MAIL_SERVICE.as_str(),
+            API_PREFIX.as_str(),
             code
         ))
         .send()
