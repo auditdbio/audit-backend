@@ -766,6 +766,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "cloc"
+version = "0.1.0"
+dependencies = [
+ "actix-cors",
+ "actix-web",
+ "anyhow",
+ "async-trait",
+ "awc",
+ "chrono",
+ "common",
+ "derive_more",
+ "dotenv",
+ "env_logger",
+ "futures",
+ "log",
+ "mongodb",
+ "mongodb-migrator",
+ "serde",
+ "serde_json",
+ "tokio",
+ "utoipa",
+ "utoipa-swagger-ui",
+]
+
+[[package]]
 name = "codespan-reporting"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -30,7 +30,7 @@ pub struct PublicChat {
     pub last_modified: i64,
     pub last_message: PublicMessage,
     pub avatar: Option<String>,
-    pub unread: Vec<PublicReadId>
+    pub unread: Vec<PublicReadId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
