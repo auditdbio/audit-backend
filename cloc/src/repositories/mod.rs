@@ -1,4 +1,4 @@
-use std::{collections::HashMap, ops::Index, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use common::{
     error,
@@ -6,7 +6,6 @@ use common::{
 };
 use mongodb::{
     bson::{doc, oid::ObjectId},
-    options::{FindOneAndReplaceOptions, ReplaceOptions},
 };
 use serde::{Deserialize, Serialize};
 use tokio::process::Command;

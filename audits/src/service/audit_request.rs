@@ -282,7 +282,7 @@ impl RequestService {
             Role::Customer => "customer_id",
         };
 
-        let (result, total_documents) = requests
+        let (result, _total_documents) = requests
             .find_many_limit(id, &Bson::ObjectId(user_id), skip, limit)
             .await?;
 

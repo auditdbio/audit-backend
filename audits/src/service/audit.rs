@@ -5,7 +5,7 @@ use rand::Rng;
 
 use common::api::audits::NoCustomerAuditRequest;
 use common::entities::audit_request::TimeRange;
-use common::entities::project::{PublicProject, PublishOptions};
+
 use common::{
     access_rules::{AccessRules, Edit, Read},
     api::{
@@ -194,7 +194,7 @@ impl AuditService {
 
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
-        let (audits, total_documents) = match role {
+        let (audits, _total_documents) = match role {
             Role::Auditor => {
                 audits
                     .find_many_limit(

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::repositories::{ClocRepo, GitRepoEntity};
 use common::{context::GeneralContext, error};
-use serde::{de::value, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tokio::process::Command;
 

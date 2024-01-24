@@ -16,7 +16,7 @@ use common::{
 
 use serde_json::json;
 
-use crate::service::audit_request::{MyAuditRequestResult, RequestChange, RequestService};
+use crate::service::audit_request::{RequestChange, RequestService};
 
 #[post("/audit_request")]
 pub async fn post_audit_request(

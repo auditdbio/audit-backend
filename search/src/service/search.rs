@@ -10,11 +10,10 @@ use common::{
     context::GeneralContext,
     error::{self, AddCode},
     repository::Repository,
-    services::{CUSTOMERS_SERVICE, PROTOCOL},
 };
 
-use common::entities::customer::PublicCustomer;
-use mongodb::bson::{oid::ObjectId, to_document, Bson, Document};
+
+use mongodb::bson::{oid::ObjectId, Bson, Document};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 

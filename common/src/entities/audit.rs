@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     api::report::PublicReport,
-    context::{self, context_trait::Context, GeneralContext},
+    context::GeneralContext,
     repository::Entity,
     services::{PROTOCOL, REPORT_SERVICE},
 };

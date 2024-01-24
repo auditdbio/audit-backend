@@ -17,7 +17,7 @@ use common::{
 use serde_json::json;
 
 use crate::service::{
-    audit::{AuditService, MyAuditResult},
+    audit::{AuditService},
     audit_request::PublicRequest,
 };
 

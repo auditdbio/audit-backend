@@ -1,14 +1,14 @@
 pub mod handlers;
 pub mod service;
 
-use std::{sync::Arc, thread::scope};
+use std::{sync::Arc};
 
 use actix_cors::Cors;
 use actix_web::{
     body::MessageBody,
-    dev::{HttpServiceFactory, ServiceFactory, ServiceRequest, ServiceResponse},
+    dev::{ServiceFactory, ServiceRequest, ServiceResponse},
     middleware,
-    web::{self, resource, route, service},
+    web::{self},
     App,
 };
 use common::{context::effectfull_context::ServiceState, services::API_PREFIX};
