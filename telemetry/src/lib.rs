@@ -12,6 +12,7 @@ use actix_web::middleware;
 use actix_web::web;
 use actix_web::App;
 use common::context::effectfull_context::ServiceState;
+use common::services::API_PREFIX;
 use handler::ping;
 
 pub fn create_app(
@@ -32,6 +33,6 @@ pub fn create_app(
         .wrap(cors)
         .wrap(middleware::Logger::default())
         .app_data(web::Data::new(state))
-        .service(ping::update);
+        .service(web::scope(&API_PREFIX).service(ping::update));
     app
 }

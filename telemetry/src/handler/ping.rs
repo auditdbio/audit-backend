@@ -11,13 +11,13 @@ use mongodb::bson::oid::ObjectId;
 
 use crate::service::ping::{self, Service, Status};
 
-#[get("/api/status")]
+#[get("/status")]
 pub async fn status(context: GeneralContext, services: web::Data<Vec<Service>>) -> Json<Status> {
     let status = ping::status(context, &services).await;
     Json(status)
 }
 
-#[get("/api/telemetry/update")]
+#[get("/telemetry/update")]
 pub async fn update(context: GeneralContext) -> HttpResponse {
     match ping::update(&context).await {
         Ok(_) => {

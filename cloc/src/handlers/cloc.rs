@@ -12,7 +12,7 @@ pub struct ClocRequest {
     pub commit: Option<String>,
 }
 
-#[post("/api/cloc/count")]
+#[post("/cloc/count")]
 pub async fn count(
     context: GeneralContext,
     Json(request): Json<ClocRequest>,

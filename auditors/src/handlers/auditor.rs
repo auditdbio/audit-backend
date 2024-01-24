@@ -14,7 +14,7 @@ use serde_json::json;
 
 use crate::service::auditor::{AuditorChange, AuditorService, CreateAuditor};
 
-#[post("/api/auditor")]
+#[post("/auditor")]
 pub async fn post_auditor(
     context: GeneralContext,
     Json(data): web::Json<CreateAuditor>,
@@ -22,7 +22,7 @@ pub async fn post_auditor(
     Ok(Json(AuditorService::new(context).create(data).await?))
 }
 
-#[get("/api/auditor/{id}")]
+#[get("/auditor/{id}")]
 pub async fn get_auditor(
     context: GeneralContext,
     id: web::Path<String>,
@@ -36,7 +36,7 @@ pub async fn get_auditor(
     }
 }
 
-#[get("/api/my_auditor")]
+#[get("/my_auditor")]
 pub async fn get_my_auditor(context: GeneralContext) -> error::Result<HttpResponse> {
     let res = AuditorService::new(context).my_auditor().await?;
     if let Some(res) = res {
@@ -46,7 +46,7 @@ pub async fn get_my_auditor(context: GeneralContext) -> error::Result<HttpRespon
     }
 }
 
-#[patch("/api/my_auditor")]
+#[patch("/my_auditor")]
 pub async fn patch_auditor(
     context: GeneralContext,
     Json(data): Json<AuditorChange>,
@@ -54,7 +54,7 @@ pub async fn patch_auditor(
     Ok(Json(AuditorService::new(context).change(data).await?))
 }
 
-#[delete("/api/auditor/{id}")]
+#[delete("/auditor/{id}")]
 pub async fn delete_auditor(
     context: GeneralContext,
     id: web::Path<String>,

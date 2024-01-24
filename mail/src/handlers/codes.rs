@@ -6,7 +6,7 @@ use common::{context::GeneralContext, error};
 
 use crate::service::codes::CodeService;
 
-#[post("/api/code/{payload}")]
+#[post("/code/{payload}")]
 pub async fn post_code(
     context: GeneralContext,
     path: web::Path<String>,
@@ -17,7 +17,7 @@ pub async fn post_code(
         .map(Json)
 }
 
-#[get("/api/code/{code}")]
+#[get("/code/{code}")]
 pub async fn check_code(
     context: GeneralContext,
     code: web::Path<String>,

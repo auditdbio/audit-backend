@@ -20,7 +20,7 @@ use common::{
         letter::CreateLetter,
     },
     error::{self, AddCode},
-    services::{FRONTEND, PROTOCOL, SEARCH_SERVICE},
+    services::{FRONTEND, PROTOCOL},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};

@@ -10,7 +10,7 @@ use crate::{
     service::search::{SearchInsertRequest, SearchQuery, SearchResult, SearchService},
 };
 
-#[post("/api/search/insert")]
+#[post("/search/insert")]
 pub async fn insert(
     Json(data): Json<SearchInsertRequest>,
     context: GeneralContext,
@@ -22,7 +22,7 @@ pub async fn insert(
     Ok(HttpResponse::Ok().finish())
 }
 
-#[get("/api/search")]
+#[get("/search")]
 pub async fn search(
     query: web::Query<SearchQuery>,
     repo: web::Data<SearchRepo>,
@@ -34,7 +34,7 @@ pub async fn search(
     Ok(Json(results))
 }
 
-#[delete("/api/search/{id}")]
+#[delete("/search/{id}")]
 pub async fn delete(
     id: web::Path<String>,
     repo: web::Data<SearchRepo>,

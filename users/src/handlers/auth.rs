@@ -13,12 +13,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::service::auth::{AuthService, ChangePasswordData, Login, Token, TokenResponce};
 
-#[post("/api/auth/login")]
+#[post("/auth/login")]
 pub async fn login(context: GeneralContext, login: Json<Login>) -> error::Result<Json<Token>> {
     Ok(Json(AuthService::new(context).login(&login).await?))
 }
 
-#[post("/api/auth/github")]
+#[post("/auth/github")]
 pub async fn github_auth(
     context: GeneralContext,
     Json(data): Json<GithubAuth>,
@@ -51,7 +51,7 @@ impl From<User<String>> for CreateUserResponce {
     }
 }
 
-#[post("/api/user")]
+#[post("/user")]
 pub async fn create_user(
     context: GeneralContext,
     Json(user): web::Json<CreateUser>,
@@ -73,7 +73,7 @@ pub async fn create_user(
     ))
 }
 
-#[get("/api/auth/verify/{code}")]
+#[get("/auth/verify/{code}")]
 pub async fn verify_link(
     context: GeneralContext,
     code: web::Path<String>,
@@ -90,7 +90,7 @@ pub async fn verify_link(
         .finish())
 }
 
-#[get("/api/auth/forgot_password/{email}")]
+#[get("/auth/forgot_password/{email}")]
 pub async fn forgot_password(
     context: GeneralContext,
     email: web::Path<String>,
@@ -101,7 +101,7 @@ pub async fn forgot_password(
     Ok(HttpResponse::Ok().finish())
 }
 
-#[post("/api/auth/reset_password")]
+#[post("/auth/reset_password")]
 pub async fn reset_password(
     context: GeneralContext,
     Json(code): web::Json<ChangePasswordData>,
@@ -111,7 +111,7 @@ pub async fn reset_password(
     Ok(HttpResponse::Ok().finish())
 }
 
-#[get("/api/auth/restore_token")]
+#[get("/auth/restore_token")]
 pub async fn restore_token(
     context: GeneralContext,
     req: HttpRequest,

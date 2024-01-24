@@ -12,7 +12,7 @@ use crate::{
     service::notifications::{get_unread_notifications, read, PublicNotification},
 };
 
-#[post("/api/send_notification")]
+#[post("/send_notification")]
 pub async fn send_notification(
     context: GeneralContext,
     Json(new_notification): web::Json<CreateNotification>,
@@ -23,7 +23,7 @@ pub async fn send_notification(
     Ok(HttpResponse::Ok().finish())
 }
 
-#[patch("/api/read_notification/{id}")]
+#[patch("/read_notification/{id}")]
 pub async fn read_notification(
     context: GeneralContext,
     notifs: web::Data<NotificationsRepository>,
@@ -34,7 +34,7 @@ pub async fn read_notification(
     Ok(HttpResponse::Ok().json(doc! {"id": id}))
 }
 
-#[get("/api/unread_notifications")]
+#[get("/unread_notifications")]
 pub async fn unread_notifications(
     context: GeneralContext,
     notifs: web::Data<NotificationsRepository>,

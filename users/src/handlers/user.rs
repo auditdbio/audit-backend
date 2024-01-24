@@ -8,7 +8,7 @@ use serde_json::json;
 
 use crate::service::user::{UserChange, UserService};
 
-#[get("/api/user_by_email/{id}")]
+#[get("/user_by_email/{id}")]
 pub async fn find_user_by_email(
     context: GeneralContext,
     id: Path<String>,
@@ -21,7 +21,7 @@ pub async fn find_user_by_email(
     }
 }
 
-#[get("/api/user/{id}")]
+#[get("/user/{id}")]
 pub async fn find_user(context: GeneralContext, id: Path<String>) -> error::Result<HttpResponse> {
     let user = UserService::new(context).find(id.parse()?).await?;
     if let Some(user) = user {
@@ -31,7 +31,7 @@ pub async fn find_user(context: GeneralContext, id: Path<String>) -> error::Resu
     }
 }
 
-#[get("/api/user/my_user")]
+#[get("/user/my_user")]
 pub async fn my_user(context: GeneralContext) -> error::Result<HttpResponse> {
     let user = UserService::new(context).my_user().await?;
     if let Some(user) = user {
@@ -41,7 +41,7 @@ pub async fn my_user(context: GeneralContext) -> error::Result<HttpResponse> {
     }
 }
 
-#[patch("/api/user/{id}")]
+#[patch("/user/{id}")]
 pub async fn change_user(
     context: GeneralContext,
     id: Path<String>,
@@ -54,7 +54,7 @@ pub async fn change_user(
     ))
 }
 
-#[delete("/api/user/{id}")]
+#[delete("/user/{id}")]
 pub async fn delete_user(
     context: GeneralContext,
     id: Path<String>,

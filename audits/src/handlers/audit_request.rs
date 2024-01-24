@@ -7,7 +7,7 @@ use actix_web::{
 use common::{
     api::{
         requests::{CreateRequest, PublicRequest},
-        seartch::PaginationParams
+        seartch::PaginationParams,
     },
     context::GeneralContext,
     entities::{audit_request::AuditRequest, role::Role},
@@ -18,7 +18,7 @@ use serde_json::json;
 
 use crate::service::audit_request::{MyAuditRequestResult, RequestChange, RequestService};
 
-#[post("/api/audit_request")]
+#[post("/audit_request")]
 pub async fn post_audit_request(
     context: GeneralContext,
     Json(data): web::Json<CreateRequest>,
@@ -26,7 +26,7 @@ pub async fn post_audit_request(
     Ok(Json(RequestService::new(context).create(data).await?))
 }
 
-#[get("/api/audit_request/{id}")]
+#[get("/audit_request/{id}")]
 pub async fn get_audit_request(
     context: GeneralContext,
     id: web::Path<String>,
@@ -39,7 +39,7 @@ pub async fn get_audit_request(
     }
 }
 
-#[get("/api/my_audit_request/{role}")]
+#[get("/my_audit_request/{role}")]
 pub async fn get_my_audit_request(
     context: GeneralContext,
     role: web::Path<Role>,
@@ -52,7 +52,7 @@ pub async fn get_my_audit_request(
     ))
 }
 
-#[patch("/api/audit_request/{id}")]
+#[patch("/audit_request/{id}")]
 pub async fn patch_audit_request(
     context: GeneralContext,
     id: web::Path<String>,
@@ -65,7 +65,7 @@ pub async fn patch_audit_request(
     ))
 }
 
-#[delete("/api/audit_request/{id}")]
+#[delete("/audit_request/{id}")]
 pub async fn delete_audit_request(
     context: GeneralContext,
     id: web::Path<String>,
@@ -75,7 +75,7 @@ pub async fn delete_audit_request(
     ))
 }
 
-#[get("/api/audit_request/all/{role}/{id}")]
+#[get("/audit_request/all/{role}/{id}")]
 pub async fn find_all_audit_request(
     context: GeneralContext,
     path: web::Path<(Role, String)>,

@@ -11,7 +11,7 @@ use common::{
     error,
 };
 
-#[post("/api/badge")]
+#[post("/badge")]
 pub async fn post_badge(
     context: GeneralContext,
     Json(data): web::Json<CreateBadge>,
@@ -19,7 +19,7 @@ pub async fn post_badge(
     Ok(Json(BadgeService::new(context).create(data).await?))
 }
 
-#[get("/api/badge/{email}")]
+#[get("/badge/{email}")]
 pub async fn find_badge(
     context: GeneralContext,
     email: web::Path<String>,
@@ -31,7 +31,7 @@ pub async fn find_badge(
     ))
 }
 
-#[patch("/api/badge/merge/{secret}")]
+#[patch("/badge/merge/{secret}")]
 pub async fn merge(
     context: GeneralContext,
     secret: web::Path<String>,
@@ -42,7 +42,7 @@ pub async fn merge(
     Ok(HttpResponse::Ok().finish())
 }
 
-#[delete("/api/badge/delete/{secret}")]
+#[delete("/badge/delete/{secret}")]
 pub async fn delete(
     context: GeneralContext,
     secret: web::Path<String>,

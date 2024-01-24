@@ -8,7 +8,7 @@ use tokio::sync::Mutex;
 
 use crate::service::event::SessionManager;
 
-#[get("/api/notifications/{user_id}")]
+#[get("/notifications/{user_id}")]
 pub async fn events(
     req: HttpRequest,
     stream: web::Payload,
@@ -24,7 +24,7 @@ pub async fn events(
     .await
 }
 
-#[post("/api/event")]
+#[post("/event")]
 pub async fn make_event(
     context: GeneralContext,
     manager: web::Data<Mutex<SessionManager>>,

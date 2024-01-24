@@ -13,6 +13,7 @@ use actix_web::web;
 use actix_web::App;
 
 use common::context::effectfull_context::ServiceState;
+use common::services::API_PREFIX;
 pub use handlers::auth::*;
 pub use handlers::user::*;
 
@@ -34,17 +35,20 @@ pub fn create_app(
         .wrap(cors)
         .wrap(middleware::Logger::default())
         .app_data(web::Data::new(state))
-        .service(change_user)
-        .service(delete_user)
-        .service(find_user)
-        .service(login)
-        .service(my_user)
-        .service(verify_link)
-        .service(create_user)
-        .service(forgot_password)
-        .service(reset_password)
-        .service(restore_token)
-        .service(github_auth)
-        .service(find_user_by_email);
+        .service(
+            web::scope(&API_PREFIX)
+                .service(change_user)
+                .service(delete_user)
+                .service(find_user)
+                .service(login)
+                .service(my_user)
+                .service(verify_link)
+                .service(create_user)
+                .service(forgot_password)
+                .service(reset_password)
+                .service(restore_token)
+                .service(github_auth)
+                .service(find_user_by_email),
+        );
     app
 }

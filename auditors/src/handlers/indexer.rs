@@ -12,7 +12,7 @@ use mongodb::bson::{oid::ObjectId, Document};
 
 use crate::service::indexer::IndexerService;
 
-#[get("/api/auditor/data/{since}")]
+#[get("/auditor/data/{since}")]
 pub async fn provide_auditor_data(
     context: GeneralContext,
     since: web::Path<i64>,
@@ -24,7 +24,7 @@ pub async fn provide_auditor_data(
     ))
 }
 
-#[post("/api/auditor/data")]
+#[post("/auditor/data")]
 pub async fn get_auditor_data(
     context: GeneralContext,
     Json(ids): web::Json<Vec<ObjectId>>,
@@ -32,7 +32,7 @@ pub async fn get_auditor_data(
     Ok(Json(IndexerService::new(context).find_auditors(ids).await?))
 }
 
-#[get("/api/badge/data/{since}")]
+#[get("/badge/data/{since}")]
 pub async fn provide_badges_data(
     context: GeneralContext,
     since: web::Path<i64>,
@@ -44,7 +44,7 @@ pub async fn provide_badges_data(
     ))
 }
 
-#[post("/api/badge/data")]
+#[post("/badge/data")]
 pub async fn get_badges_data(
     context: GeneralContext,
     Json(ids): web::Json<Vec<ObjectId>>,
@@ -52,7 +52,7 @@ pub async fn get_badges_data(
     Ok(Json(IndexerService::new(context).find_badges(ids).await?))
 }
 
-#[get("/api/auditors/ping")]
+#[get("/auditors/ping")]
 pub async fn ping() -> HttpResponse {
     HttpResponse::Ok().finish()
 }
