@@ -15,6 +15,7 @@ x-common-variables: &common-variables
   RENDERER_SERVICE_URL: "%RENDERER_SERVICE_URL%"
   NOTIFICATIONS_SERVICE_URL: "%NOTIFICATIONS_SERVICE_URL%"
   EVENTS_SERVICE_URL: "%EVENTS_SERVICE_URL%"
+  API_PREFIX: "%API_PREFIX%"
   FRONTEND: "%FRONTEND%"
   PROTOCOL: "${PROTOCOL}"
   FEEDBACK_EMAIL: "${FEEDBACK_EMAIL}"
@@ -43,7 +44,7 @@ services:
       - %volume_namespace%-binaries:/data/binaries
     environment:
       VIRTUAL_HOST: "${VIRTUAL_HOST}"
-      VIRTUAL_PATH: ~^/api/(user|auth|my_user|waiting_list)
+      VIRTUAL_PATH: ~^/%API_PREFIX%/(user|auth|my_user|waiting_list)
       <<: *common-variables
     networks:
       - %network_namespace%-database
@@ -59,7 +60,7 @@ services:
       - %volume_namespace%-binaries:/data/binaries
     environment:
       VIRTUAL_HOST: "${VIRTUAL_HOST}"
-      VIRTUAL_PATH: ~^/api/(customer|my_customer|project|my_project)
+      VIRTUAL_PATH: ~^/%API_PREFIX%/(customer|my_customer|project|my_project)
       <<: *common-variables
     networks:
       - %proxy_network%
@@ -75,7 +76,7 @@ services:
       - 3003%optional_duplicate%
     environment:
       VIRTUAL_HOST: "${VIRTUAL_HOST}"
-      VIRTUAL_PATH: ~^/api/(audit|my_audit|request|my_request|public_audits|no_customer_audit)
+      VIRTUAL_PATH: ~^/%API_PREFIX%/(audit|my_audit|request|my_request|public_audits|no_customer_audit)
       <<: *common-variables
     networks:
       - %proxy_network%
@@ -91,7 +92,7 @@ services:
       - %volume_namespace%-binaries:/data/binaries
     environment:
       VIRTUAL_HOST: "${VIRTUAL_HOST}"
-      VIRTUAL_PATH: ~^/api/(auditor|my_auditor|badge)
+      VIRTUAL_PATH: ~^/%API_PREFIX%/(auditor|my_auditor|badge)
       <<: *common-variables
     networks:
       - %proxy_network%
@@ -108,7 +109,7 @@ services:
       - %volume_namespace%-files:/auditdb-files
     environment:
       VIRTUAL_HOST: "${VIRTUAL_HOST}"
-      VIRTUAL_PATH: ~^/api/(file|notused1)
+      VIRTUAL_PATH: ~^/%API_PREFIX%/(file|notused1)
       <<: *common-variables
     networks:
       - %network_namespace%-database
@@ -124,7 +125,7 @@ services:
       - %volume_namespace%-binaries:/data/binaries
     environment:
       VIRTUAL_HOST: "${VIRTUAL_HOST}"
-      VIRTUAL_PATH: ~^/api/(search|notused1)
+      VIRTUAL_PATH: ~^/%API_PREFIX%/(search|notused1)
       <<: *common-variables
     networks:
       - %proxy_network%
@@ -140,7 +141,7 @@ services:
       - %volume_namespace%-binaries:/data/binaries
     environment:
       VIRTUAL_HOST: "${VIRTUAL_HOST}"
-      VIRTUAL_PATH: ~^/api/(mail|feedback|code)
+      VIRTUAL_PATH: ~^/%API_PREFIX%/(mail|feedback|code)
       <<: *common-variables
     networks:
       - %proxy_network%
@@ -156,7 +157,7 @@ services:
       - %volume_namespace%-binaries:/data/binaries
     environment:
       VIRTUAL_HOST: "${VIRTUAL_HOST}"
-      VIRTUAL_PATH: ~^/api/(send_notification|read_notification|unread_notifications)
+      VIRTUAL_PATH: ~^/%API_PREFIX%/(send_notification|read_notification|unread_notifications)
       <<: *common-variables
     networks:
       - %proxy_network%
@@ -172,7 +173,7 @@ services:
       - %volume_namespace%-binaries:/data/binaries
     environment:
       VIRTUAL_HOST: "${VIRTUAL_HOST}"
-      VIRTUAL_PATH: ~^/api/(telemetry|not_used1)
+      VIRTUAL_PATH: ~^/%API_PREFIX%/(telemetry|not_used1)
       <<: *common-variables
     networks:
       - %proxy_network%
@@ -188,7 +189,7 @@ services:
       - %volume_namespace%-binaries:/data/binaries
     environment:
       VIRTUAL_HOST: "${VIRTUAL_HOST}"
-      VIRTUAL_PATH: ~^/api/(chat|not_used1)
+      VIRTUAL_PATH: ~^/%API_PREFIX%/(chat|not_used1)
       <<: *common-variables
     networks:
       - %proxy_network%
@@ -204,7 +205,7 @@ services:
       - %volume_namespace%-binaries:/data/binaries
     environment:
       VIRTUAL_HOST: "${VIRTUAL_HOST}"
-      VIRTUAL_PATH: ~^/api/(notifications|event)
+      VIRTUAL_PATH: ~^/%API_PREFIX%/(notifications|event)
       <<: *common-variables
     networks:
       - %proxy_network%
@@ -217,7 +218,7 @@ services:
       - 3015%optional_duplicate%
     environment:
       VIRTUAL_HOST: "${VIRTUAL_HOST}"
-      VIRTUAL_PATH: ~^/api/(generate-report|notused2)
+      VIRTUAL_PATH: ~^/%API_PREFIX%/(generate-report|notused2)
       <<: *common-variables
     networks:
       - %proxy_network%
@@ -234,7 +235,7 @@ services:
       - %volume_namespace%-binaries:/data/binaries
     environment:
       VIRTUAL_HOST: "${VIRTUAL_HOST}"
-      VIRTUAL_PATH: ~^/api/(report|notused2)
+      VIRTUAL_PATH: ~^/%API_PREFIX%/(report|notused2)
       <<: *common-variables
     networks:
       - %proxy_network%
@@ -338,6 +339,8 @@ def create_compose(config):
 
 
     template_instance = template_instance.replace("%port_expose%", port_expose)
+    
+    template_instance = template_instance.replace("%API_PREFIX%", config["api_prefix"] if config["api_prefix"] else 'api')
 
 
     for pattern, key in services.items():
@@ -381,6 +384,7 @@ preset = {
         "telemetry": "0.0.0.0:3009",
         "users": "0.0.0.0:3001",
         "frontend": "dev.auditdb.io",
+        "api_prefix": "api"
     },
 
     "prod": {
@@ -389,7 +393,9 @@ preset = {
         "container_namespace": "prod",
         "volume_namespace": "prod",
         "network_namespace": "prod",
-        "proxy_address": "auditdb.io"
+        "proxy_address": "auditdb.io",
+        "api_prefix": "api"
+
     },
     "test": {
         "open_database": True,
@@ -398,7 +404,9 @@ preset = {
         "volume_namespace": "test",
         "network_namespace": "test",
         "proxy_address": "dev.auditdb.io",
-        "features": '"test_server"'
+        "features": '"test_server"',
+        "api_prefix": "api"
+
 
     },
     "preprod": {
@@ -407,7 +415,8 @@ preset = {
         "container_namespace": "preprod",
         "volume_namespace": "preprod",
         "network_namespace": "preprod",
-        "proxy_address": "preprod.auditdb.io"
+        "proxy_address": "preprod.auditdb.io",
+        "api_prefix": "api"
     }
 }
 
@@ -418,17 +427,23 @@ import os
 
 def get_config():
     global preset
-    if os.environ["PRESET"] is not None:
-        return preset[os.environ["PRESET"]]
 
 
     config = {
-        "open_database": os.environ["OPEN_DATABASE"], 
-        "with_proxy": os.environ["WITH_PROXY"], 
-        "container_namespace": os.environ["CONTAINER_NAMESPACE"], 
-        "volume_namespace": os.environ["VOLUME_NAMESPACE"], 
-        "network_namespace": os.environ["NETWORK_NAMESPACE"]
+        "open_database": os.getenv("OPEN_DATABASE"), 
+        "with_proxy": os.getenv("WITH_PROXY"), 
+        "container_namespace": os.getenv("CONTAINER_NAMESPACE"), 
+        "volume_namespace": os.getenv("VOLUME_NAMESPACE"), 
+        "network_namespace": os.getenv("NETWORK_NAMESPACE"),
+        "api_prefix": os.getenv("API_PREFIX")
     }
+    
+    if os.environ["PRESET"] is not None:
+        preset_config = preset[os.environ["PRESET"]]
+        for key, value in config.items():
+            if preset_config[key] is not None and value is not None:
+              preset_config[key] = value 
+        return preset_config
     return config
     
 import sys
