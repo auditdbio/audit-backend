@@ -1,10 +1,10 @@
 use std::collections::HashMap;
-
+use serde::{Deserialize, Serialize};
 use chrono::Utc;
+use rand::Rng;
 
 use common::api::audits::NoCustomerAuditRequest;
 use common::entities::audit_request::TimeRange;
-use common::entities::contacts::Contacts;
 use common::entities::project::{PublicProject, PublishOptions};
 use common::{
     access_rules::{AccessRules, Edit, Read},
@@ -13,6 +13,7 @@ use common::{
         events::{post_event, EventPayload, PublicEvent},
         issue::PublicIssue,
         send_notification, NewNotification,
+        seartch::PaginationParams,
     },
     context::GeneralContext,
     entities::{
@@ -27,6 +28,13 @@ use common::{
 use mongodb::bson::{oid::ObjectId, Bson};
 
 use super::audit_request::PublicRequest;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MyAuditResult {
+    pub result: Vec<PublicAudit>,
+    #[serde(rename = "totalDocuments")]
+    pub total_documents: u64,
+}
 
 pub struct AuditService {
     context: GeneralContext,
@@ -172,21 +180,38 @@ impl AuditService {
         Ok(None)
     }
 
-    pub async fn my_audit(&self, role: Role) -> error::Result<Vec<PublicAudit>> {
+    pub async fn my_audit(
+        &self,
+        role: Role,
+        pagination: PaginationParams
+    ) -> error::Result<Vec<PublicAudit>> {
+        let page = pagination.page.unwrap_or(0);
+        let per_page = pagination.per_page.unwrap_or(0);
+        let limit = pagination.per_page.unwrap_or(1000);
+        let skip = (page - 1) * per_page;
+
         let auth = self.context.auth();
 
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
-        let audits = match role {
+        let (audits, total_documents) = match role {
             Role::Auditor => {
                 audits
-                    .find_many("auditor_id", &Bson::ObjectId(auth.id().unwrap()))
-                    .await?
+                    .find_many_limit(
+                        "auditor_id",
+                        &Bson::ObjectId(auth.id().unwrap()),
+                        skip,
+                        limit,
+                    ).await?
             }
             Role::Customer => {
                 audits
-                    .find_many("customer_id", &Bson::ObjectId(auth.id().unwrap()))
-                    .await?
+                    .find_many_limit(
+                        "customer_id",
+                        &Bson::ObjectId(auth.id().unwrap()),
+                        skip,
+                        limit,
+                    ).await?
             }
         };
 
@@ -196,6 +221,10 @@ impl AuditService {
             public_audits.push(PublicAudit::new(&self.context, audit).await?);
         }
 
+        // Ok(MyAuditResult {
+        //     result: public_audits,
+        //     total_documents,
+        // })
         Ok(public_audits)
     }
 
@@ -311,7 +340,7 @@ impl AuditService {
         };
 
         let issue: Issue<ObjectId> = Issue {
-            id: audit.issues.len(),
+            id: rand::thread_rng().gen_range(10000..=99999) + audit.issues.len(),
             name: issue.name,
             description: issue.description,
             status: issue.status,
@@ -395,9 +424,9 @@ impl AuditService {
             .iter()
             .find(|issue| issue.id == issue_id)
             .cloned()
-        else {
-            return Err(anyhow::anyhow!("No issue found").code(404));
-        };
+            else {
+                return Err(anyhow::anyhow!("No issue found").code(404));
+            };
 
         if let Some(name) = change.name {
             issue.name = name;
@@ -695,7 +724,11 @@ impl AuditService {
         let audit = self.get_audit(audit_id).await?;
 
         if let Some(audit) = audit {
-            let issue = audit.issues.get(issue_id).cloned();
+            let issue = audit
+                .issues
+                .iter()
+                .find(|issue| issue.id == issue_id)
+                .cloned();
 
             if let Some(issue) = issue {
                 return Ok(auth.public_issue(issue));
@@ -719,7 +752,7 @@ impl AuditService {
             return Err(anyhow::anyhow!("User is not available to delete this issue").code(403));
         }
 
-        let Some(mut issue) = audit
+        let Some(issue) = audit
             .issues
             .iter()
             .find(|issue| issue.id == issue_id)
@@ -749,7 +782,10 @@ impl AuditService {
         let audit = self.get_audit(audit_id).await?;
 
         if let Some(mut audit) = audit {
-            let issue = audit.issues.get_mut(issue_id);
+            let issue = audit
+                .issues
+                .iter_mut()
+                .find(|issue| issue.id == issue_id);
 
             if let Some(issue) = issue {
                 issue.read.insert(auth.id().unwrap().to_hex(), read);

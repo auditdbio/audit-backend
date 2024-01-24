@@ -218,6 +218,7 @@ services:
     environment:
       VIRTUAL_HOST: "${VIRTUAL_HOST}"
       VIRTUAL_PATH: ~^/api/(generate-report|notused2)
+      <<: *common-variables
     networks:
       - %proxy_network%
       - %network_namespace%-report

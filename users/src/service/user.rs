@@ -82,17 +82,22 @@ impl UserService {
         Ok(Some(user))
     }
 
-    pub async fn find_linked_account(&self, id: i32) -> error::Result<Option<User<ObjectId>>> {
+    pub async fn find_linked_account(&self, id: i32, name: &str) -> error::Result<Option<User<ObjectId>>> {
         let users = self.context.try_get_repository::<User<ObjectId>>()?;
 
-        let Some(user) = users
-            .find("linked_accounts.id", &Bson::Int32(id))
-            .await?
-        else {
-            return Ok(None);
-        };
+        let users = users
+            .find_many("linked_accounts.id", &Bson::Int32(id))
+            .await?;
 
-        Ok(Some(user))
+        let user = users.iter().cloned().find(|user| {
+            if let Some(accounts) = &user.linked_accounts {
+                accounts.iter().any(|account| {
+                    account.id == id && account.name == name
+                })
+            } else { false }
+        });
+
+        Ok(user)
     }
 
     pub async fn add_linked_account(

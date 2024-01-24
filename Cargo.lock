@@ -479,6 +479,7 @@ dependencies = [
  "log",
  "mongodb",
  "mongodb-migrator",
+ "rand",
  "serde",
  "serde_json",
  "utoipa",
