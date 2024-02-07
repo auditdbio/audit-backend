@@ -320,8 +320,12 @@ impl AuthService {
             crypto::blockmodes::PkcsPadding,
         );
 
-        let mut buffer = Vec::new();
+        let mut buffer = Vec::with_capacity(2 * access_token.len());
         let mut read_buffer = RefReadBuffer::new(access_token.as_bytes());
+
+        if buffer.capacity() < access_token.len() {
+            return Err(anyhow::anyhow!("Buffer size is insufficient for encryption").code(500));
+        }
 
         let ciphertext = {
             let mut write_buffer = RefWriteBuffer::new(&mut buffer);
