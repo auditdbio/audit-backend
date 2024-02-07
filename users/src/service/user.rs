@@ -582,6 +582,6 @@ impl UserService {
             .text()
             .await?;
 
-        Ok(HttpResponse::Ok().json(github_response))
+        Ok(HttpResponse::Ok().body(github_response))
     }
 }
