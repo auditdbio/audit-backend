@@ -110,27 +110,3 @@ pub async fn proxy_github_api(
 ) -> error::Result<HttpResponse> {
     Ok(UserService::new(context).proxy_github_api(path.into_inner()).await?)
 }
-
-// Repo *
-// https://api.github.com/user/repos?per_page=10&page=1
-
-// Branches
-// https://api.github.com/repos/auditdbio/badges/branches?per_page=10&page=1
-//                             [   full_name    ]
-
-// Commits
-// https://api.github.com/repos/auditdbio/badges/commits?sha=56a828a6de9d2a9a94065e23ac497f6512835121&per_page=100&page=1
-//                             [   full_name    ]
-
-// Commit data
-// https://api.github.com/repos/auditdbio/badges/git/trees/56a828a6de9d2a9a94065e23ac497f6512835121?recursive=100
-//                             [   full_name    ]
-
-// Commit
-// https://api.github.com/repos/auditdbio/badges/commits/56a828a6de9d2a9a94065e23ac497f6512835121
-
-// Default branch
-// https://api.github.com/repos/auditdbio/badges
-
-// Total commits
-// https://api.github.com/repos/auditdbio/badges/commits?sha=56a828a6de9d2a9a94065e23ac497f6512835121&per_page=100&page=1

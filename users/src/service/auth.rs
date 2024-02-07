@@ -31,7 +31,7 @@ use serde::{Deserialize, Serialize};
 use std::env::var;
 
 extern crate crypto;
-use crypto::{ symmetriccipher, buffer, aes, blockmodes };
+use crypto::{ buffer, aes, blockmodes };
 use crypto::buffer::{ ReadBuffer, WriteBuffer, BufferResult };
 
 use super::user::UserService;
@@ -348,20 +348,6 @@ impl AuthService {
                 BufferResult::BufferOverflow => {}
             }
         }
-
-        // let mut buffer = Vec::with_capacity(2 * access_token.as_bytes().len());
-        // let mut read_buffer = RefReadBuffer::new(access_token.as_bytes());
-        //
-        // let ciphertext = {
-        //     let mut write_buffer = RefWriteBuffer::new(&mut buffer);
-        //     encryptor.encrypt(&mut read_buffer, &mut write_buffer, true)
-        // };
-        //
-        // let token = if let Ok(BufferResult::BufferUnderflow) = ciphertext {
-        //     Some(buffer)
-        // } else {
-        //     return Err(anyhow::anyhow!("Buffer is overflow").code(500));
-        // };
 
         let linked_account = LinkedAccount {
             id: user_data.id.to_string(),

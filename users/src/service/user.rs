@@ -7,7 +7,8 @@ use std::env::var;
 use actix_web::HttpResponse;
 
 extern crate crypto;
-use crypto::buffer::{ RefReadBuffer, RefWriteBuffer, BufferResult };
+use crypto::{ buffer, aes, blockmodes };
+use crypto::buffer::{ ReadBuffer, WriteBuffer, BufferResult };
 
 use common::{
     access_rules::{AccessRules, Edit, Read},
@@ -481,6 +482,10 @@ impl UserService {
                     account.is_public = is_public;
                 }
 
+                if let Some(token) = data.token {
+                    account.token = Some(token);
+                }
+
                 if let Some(idx) = linked_accounts
                     .iter()
                     .position(|acc| acc.id == account_id)
@@ -530,30 +535,43 @@ impl UserService {
             let key = var("GITHUB_TOKEN_CRYPTO_KEY").unwrap();
             let iv = var("GITHUB_TOKEN_CRYPTO_IV").unwrap();
 
-            let mut decryptor = crypto::aes::cbc_decryptor(
-                crypto::aes::KeySize::KeySize256,
+            let mut decryptor = aes::cbc_decryptor(
+                aes::KeySize::KeySize256,
                 key.as_bytes(),
                 iv.as_bytes(),
-                crypto::blockmodes::PkcsPadding,
+                blockmodes::PkcsPadding,
             );
 
-            let mut buffer = Vec::new();
-            let mut read_buffer = RefReadBuffer::new(&encrypted_token);
+            let mut decrypted_data = Vec::<u8>::new();
+            let mut read_buffer = buffer::RefReadBuffer::new(&encrypted_token);
+            let mut buffer = [0; 4096];
+            let mut write_buffer = buffer::RefWriteBuffer::new(&mut buffer);
 
-            if let Ok(BufferResult::BufferUnderflow) = decryptor.decrypt(
-                &mut read_buffer,
-                &mut RefWriteBuffer::new(&mut buffer),
-                true,
-            ) {
-                if let Ok(token) = String::from_utf8(buffer) {
-                    request.bearer_auth(token)
-                } else {
-                    request
+            loop {
+                let result = match decryptor.decrypt(
+                    &mut read_buffer,
+                    &mut write_buffer,
+                    true
+                ) {
+                    Ok(value) => value,
+                    _ => return Err(anyhow::anyhow!("Decryption error").code(500))
+                };
+
+
+                decrypted_data.extend(write_buffer
+                    .take_read_buffer()
+                    .take_remaining()
+                    .iter()
+                    .map(|&i| i)
+                );
+
+                match result {
+                    BufferResult::BufferUnderflow => break,
+                    BufferResult::BufferOverflow => {}
                 }
-            } else {
-                request
             }
 
+            request.bearer_auth(String::from_utf8_lossy(&decrypted_data))
         } else {
             request
         };
