@@ -11,6 +11,7 @@ use common::{
             LinkedService, GithubUserEmails,
             GetGithubAccessToken, GithubAccessResponse,
             GithubUserData, AddLinkedAccount,
+            UpdateLinkedAccount,
         },
     },
     auth::Auth,
@@ -28,6 +29,9 @@ use rand::{distributions::Alphanumeric, Rng};
 use reqwest::{Client, header};
 use serde::{Deserialize, Serialize};
 use std::env::var;
+
+extern crate crypto;
+use crypto::buffer::{ RefReadBuffer, RefWriteBuffer, BufferResult };
 
 use super::user::UserService;
 
@@ -289,7 +293,7 @@ impl AuthService {
             .get("https://api.github.com/user/emails")
             .header(header::ACCEPT, "application/json")
             .header("User-Agent", "auditdbio")
-            .bearer_auth(access_token)
+            .bearer_auth(access_token.clone())
             .send()
             .await?
             .text()
@@ -306,6 +310,30 @@ impl AuthService {
             return Err(anyhow::anyhow!("No email found").code(404));
         };
 
+        let key = var("GITHUB_TOKEN_CRYPTO_KEY").unwrap();
+        let iv = var("GITHUB_TOKEN_CRYPTO_IV").unwrap();
+
+        let mut encryptor = crypto::aes::cbc_encryptor(
+            crypto::aes::KeySize::KeySize256,
+            key.as_bytes(),
+            iv.as_bytes(),
+            crypto::blockmodes::PkcsPadding,
+        );
+
+        let mut buffer = Vec::new();
+        let mut read_buffer = RefReadBuffer::new(access_token.as_bytes());
+
+        let ciphertext = {
+            let mut write_buffer = RefWriteBuffer::new(&mut buffer);
+            encryptor.encrypt(&mut read_buffer, &mut write_buffer, true)
+        };
+
+        let token = if let Ok(BufferResult::BufferUnderflow) = ciphertext {
+            Some(buffer)
+        } else {
+            None
+        };
+
         let linked_account = LinkedAccount {
             id: user_data.id.to_string(),
             name: LinkedService::GitHub,
@@ -314,6 +342,7 @@ impl AuthService {
             avatar: user_data.avatar_url,
             is_public: false,
             username: user_data.login.clone(),
+            token,
         };
 
         let user = CreateUser {
@@ -358,6 +387,24 @@ impl AuthService {
                 ))
                 .auth(self.context.server_auth())
                 .json(&data)
+                .send()
+                .await
+                .unwrap();
+
+            let _ = self.context
+                .make_request()
+                .patch(format!(
+                    "{}://{}/api/user/{}/linked_account/{}",
+                    PROTOCOL.as_str(),
+                    USERS_SERVICE.as_str(),
+                    user.id,
+                    linked_account.id.clone(),
+                ))
+                .auth(self.context.server_auth())
+                .json(&UpdateLinkedAccount {
+                    is_public: None,
+                    token: linked_account.token
+                })
                 .send()
                 .await
                 .unwrap();

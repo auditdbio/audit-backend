@@ -16,6 +16,7 @@ pub struct LinkedAccount {
     pub is_public: bool,
     #[serde(default)]
     pub username: String,
+    pub token: Option<Vec<u8>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

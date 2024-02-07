@@ -19,6 +19,7 @@ pub struct AddLinkedAccount {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateLinkedAccount {
     pub is_public: Option<bool>,
+    pub token: Option<Vec<u8>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

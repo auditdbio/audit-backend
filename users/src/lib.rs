@@ -48,6 +48,7 @@ pub fn create_app(
         .service(add_linked_account)
         .service(patch_linked_account)
         .service(delete_linked_account)
-        .service(find_user_by_email);
+        .service(find_user_by_email)
+        .service(proxy_github_api);
     app
 }

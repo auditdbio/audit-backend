@@ -47,7 +47,7 @@ services:
       - %volume_namespace%-binaries:/data/binaries
     environment:
       VIRTUAL_HOST: "${VIRTUAL_HOST}"
-      VIRTUAL_PATH: ~^/api/(user|auth|my_user|waiting_list)
+      VIRTUAL_PATH: ~^/api/(user|auth|my_user|waiting_list|github)
       <<: *common-variables
     networks:
       - %network_namespace%-database

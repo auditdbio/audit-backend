@@ -4,6 +4,10 @@ use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use reqwest::{header, Client};
 use std::env::var;
+use actix_web::HttpResponse;
+
+extern crate crypto;
+use crypto::buffer::{ RefReadBuffer, RefWriteBuffer, BufferResult };
 
 use common::{
     access_rules::{AccessRules, Edit, Read},
@@ -21,6 +25,7 @@ use common::{
     context::GeneralContext,
     entities::user::{PublicUser, User, LinkedAccount},
     error::{self, AddCode},
+    services::{PROTOCOL, USERS_SERVICE},
 };
 use crate::service::auth::AuthService;
 
@@ -262,6 +267,24 @@ impl UserService {
                 linked_account.id.clone(),
                 &LinkedService::GitHub
             ).await?.is_some() {
+                let _ = self.context
+                    .make_request()
+                    .patch(format!(
+                        "{}://{}/api/user/{}/linked_account/{}",
+                        PROTOCOL.as_str(),
+                        USERS_SERVICE.as_str(),
+                        id,
+                        linked_account.id.clone(),
+                    ))
+                    .auth(self.context.server_auth())
+                    .json(&UpdateLinkedAccount {
+                        is_public: None,
+                        token: linked_account.token
+                    })
+                    .send()
+                    .await
+                    .unwrap();
+
                 return Err(anyhow::anyhow!("Account has already been added").code(404))
             }
 
@@ -314,7 +337,8 @@ impl UserService {
                 url: format!("https://twitter.com/{}", account_data.data.username),
                 avatar: account_data.data.profile_image_url.unwrap_or_default(),
                 is_public: false,
-                username: account_data.data.username
+                username: account_data.data.username,
+                token: None,
             };
 
             if Self::find_user_by_linked_account(
@@ -372,6 +396,7 @@ impl UserService {
                 avatar: account_data.picture.unwrap_or_default(),
                 is_public: false,
                 username: account_data.name,
+                token: None,
             };
 
             if Self::find_user_by_linked_account(
@@ -473,5 +498,72 @@ impl UserService {
         }
 
         Err(anyhow::anyhow!("No linked account found").code(404))
+    }
+
+    pub async fn proxy_github_api(&self, path: String) -> error::Result<HttpResponse> {
+        let auth = self.context.auth();
+        let id = auth.id().unwrap();
+        let client = Client::new();
+
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
+
+        let Some(user) = users.find("id", &Bson::ObjectId(id)).await? else {
+            return Err(anyhow::anyhow!("No user found").code(404));
+        };
+
+        let mut access_token: Option<Vec<u8>> = None;
+
+        if let Some(linked_accounts) = user.linked_accounts {
+            if let Some(github_account) = linked_accounts
+                .iter()
+                .find(|account| account.name == LinkedService::GitHub) {
+                access_token = github_account.token.clone();
+            }
+        }
+
+        let request = client
+            .get(format!("https://api.github.com/{}", path))
+            .header(header::ACCEPT, "application/json")
+            .header("User-Agent", "auditdbio");
+
+        let request = if let Some(encrypted_token) = access_token {
+            let key = var("GITHUB_TOKEN_CRYPTO_KEY").unwrap();
+            let iv = var("GITHUB_TOKEN_CRYPTO_IV").unwrap();
+
+            let mut decryptor = crypto::aes::cbc_decryptor(
+                crypto::aes::KeySize::KeySize256,
+                key.as_bytes(),
+                iv.as_bytes(),
+                crypto::blockmodes::PkcsPadding,
+            );
+
+            let mut buffer = Vec::new();
+            let mut read_buffer = RefReadBuffer::new(&encrypted_token);
+
+            if let Ok(BufferResult::BufferUnderflow) = decryptor.decrypt(
+                &mut read_buffer,
+                &mut RefWriteBuffer::new(&mut buffer),
+                true,
+            ) {
+                if let Ok(token) = String::from_utf8(buffer) {
+                    request.bearer_auth(token)
+                } else {
+                    request
+                }
+            } else {
+                request
+            }
+
+        } else {
+            request
+        };
+
+        let github_response = request
+            .send()
+            .await?
+            .text()
+            .await?;
+
+        Ok(HttpResponse::Ok().body(github_response))
     }
 }
