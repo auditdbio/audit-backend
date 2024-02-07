@@ -31,7 +31,8 @@ use serde::{Deserialize, Serialize};
 use std::env::var;
 
 extern crate crypto;
-use crypto::buffer::{ RefReadBuffer, RefWriteBuffer, BufferResult };
+use crypto::{ symmetriccipher, buffer, aes, blockmodes };
+use crypto::buffer::{ ReadBuffer, WriteBuffer, BufferResult };
 
 use super::user::UserService;
 
@@ -313,30 +314,54 @@ impl AuthService {
         let key = var("GITHUB_TOKEN_CRYPTO_KEY").unwrap();
         let iv = var("GITHUB_TOKEN_CRYPTO_IV").unwrap();
 
-        let mut encryptor = crypto::aes::cbc_encryptor(
-            crypto::aes::KeySize::KeySize256,
+        let mut encryptor = aes::cbc_encryptor(
+            aes::KeySize::KeySize256,
             key.as_bytes(),
             iv.as_bytes(),
-            crypto::blockmodes::PkcsPadding,
+            blockmodes::PkcsPadding,
         );
 
-        let mut buffer = Vec::with_capacity(2 * access_token.len());
-        let mut read_buffer = RefReadBuffer::new(access_token.as_bytes());
+        let mut encrypted_data = Vec::<u8>::new();
+        let mut read_buffer = buffer::RefReadBuffer::new(access_token.as_bytes());
+        let mut buffer = [0; 4096];
+        let mut write_buffer = buffer::RefWriteBuffer::new(&mut buffer);
 
-        if buffer.capacity() < access_token.len() {
-            return Err(anyhow::anyhow!("Buffer size is insufficient for encryption").code(500));
+        loop {
+            let result = match encryptor.encrypt(
+                &mut read_buffer,
+                &mut write_buffer,
+                true
+            ) {
+                Ok(value) => value,
+                _ => return Err(anyhow::anyhow!("Encryption error").code(500))
+            };
+
+            encrypted_data.extend(write_buffer
+                .take_read_buffer()
+                .take_remaining()
+                .iter()
+                .map(|&i| i)
+            );
+
+            match result {
+                BufferResult::BufferUnderflow => break,
+                BufferResult::BufferOverflow => {}
+            }
         }
 
-        let ciphertext = {
-            let mut write_buffer = RefWriteBuffer::new(&mut buffer);
-            encryptor.encrypt(&mut read_buffer, &mut write_buffer, true)
-        };
-
-        let token = if let Ok(BufferResult::BufferUnderflow) = ciphertext {
-            Some(buffer)
-        } else {
-            None
-        };
+        // let mut buffer = Vec::with_capacity(2 * access_token.as_bytes().len());
+        // let mut read_buffer = RefReadBuffer::new(access_token.as_bytes());
+        //
+        // let ciphertext = {
+        //     let mut write_buffer = RefWriteBuffer::new(&mut buffer);
+        //     encryptor.encrypt(&mut read_buffer, &mut write_buffer, true)
+        // };
+        //
+        // let token = if let Ok(BufferResult::BufferUnderflow) = ciphertext {
+        //     Some(buffer)
+        // } else {
+        //     return Err(anyhow::anyhow!("Buffer is overflow").code(500));
+        // };
 
         let linked_account = LinkedAccount {
             id: user_data.id.to_string(),
@@ -346,7 +371,7 @@ impl AuthService {
             avatar: user_data.avatar_url,
             is_public: false,
             username: user_data.login.clone(),
-            token,
+            token: Some(encrypted_data),
         };
 
         let user = CreateUser {
