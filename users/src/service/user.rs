@@ -582,16 +582,21 @@ impl UserService {
             request
         };
 
-
         let github_response = request
             .send()
-            .await?
-            .text()
             .await?;
 
-        Ok(HttpResponse::Ok()
-            .append_header(("Content-Type", "application/json"))
-            .body(github_response)
-        )
+        let mut response = HttpResponse::Ok();
+
+        for (name, value) in github_response.headers() {
+            response.append_header((name.clone(), value.clone()));
+        }
+
+        response.append_header(("Content-Type", "application/json"));
+
+        let body = github_response.text().await?;
+        let response = response.body(body);
+
+        Ok(response)
     }
 }
