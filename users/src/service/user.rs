@@ -3,7 +3,7 @@ use mongodb::bson::{oid::ObjectId, Bson};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use reqwest::{header, Client};
-use std::{env::var, collections::HashMap};
+use std::env::var;
 use actix_web::HttpResponse;
 
 extern crate crypto;
@@ -505,7 +505,7 @@ impl UserService {
         Err(anyhow::anyhow!("No linked account found").code(404))
     }
 
-    pub async fn proxy_github_api(&self, path: String, query: HashMap<String, String>) -> error::Result<HttpResponse> {
+    pub async fn proxy_github_api(&self, path: String, query: Vec<(String, String)>) -> error::Result<HttpResponse> {
         let auth = self.context.auth();
         let id = auth.id().unwrap();
         let client = Client::new();
