@@ -3,7 +3,7 @@ use mongodb::bson::{oid::ObjectId, Bson};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use reqwest::{header, Client};
-use std::env::var;
+use std::{env::var, collections::HashMap};
 use actix_web::HttpResponse;
 
 extern crate crypto;
@@ -505,7 +505,7 @@ impl UserService {
         Err(anyhow::anyhow!("No linked account found").code(404))
     }
 
-    pub async fn proxy_github_api(&self, path: String) -> error::Result<HttpResponse> {
+    pub async fn proxy_github_api(&self, path: String, query: HashMap<String, String>) -> error::Result<HttpResponse> {
         let auth = self.context.auth();
         let id = auth.id().unwrap();
         let client = Client::new();
@@ -576,12 +576,22 @@ impl UserService {
             request
         };
 
+        let request = if !query.is_empty() {
+            request.query(&query)
+        } else {
+            request
+        };
+
+
         let github_response = request
             .send()
             .await?
             .text()
             .await?;
 
-        Ok(HttpResponse::Ok().body(github_response))
+        Ok(HttpResponse::Ok()
+            .append_header(("Content-Type", "application/json"))
+            .body(github_response)
+        )
     }
 }

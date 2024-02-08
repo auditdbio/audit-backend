@@ -1,6 +1,7 @@
+use std::collections::HashMap;
 use actix_web::{
     delete, get, patch, post,
-    web::{Json, Path},
+    web::{Json, Path, Query},
     HttpResponse,
 };
 use common::{
@@ -106,7 +107,8 @@ pub async fn delete_user(
 #[get("/api/github/{path:.*}")]
 pub async fn proxy_github_api(
     context: GeneralContext,
-    path: Path<String>
+    path: Path<String>,
+    query: Query<HashMap<String, String>>,
 ) -> error::Result<HttpResponse> {
-    Ok(UserService::new(context).proxy_github_api(path.into_inner()).await?)
+    Ok(UserService::new(context).proxy_github_api(path.into_inner(), query.into_inner()).await?)
 }
