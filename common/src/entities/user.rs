@@ -19,6 +19,31 @@ pub struct LinkedAccount {
     pub token: Option<Vec<u8>>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PublicLinkedAccount {
+    pub id: String,
+    pub name: LinkedService,
+    pub username: String,
+    pub email: String,
+    pub url: String,
+    pub avatar: String,
+    pub is_public: bool,
+}
+
+impl From<LinkedAccount> for PublicLinkedAccount {
+    fn from(account: LinkedAccount) -> Self {
+        Self {
+            id: account.id,
+            name: account.name,
+            username: account.username,
+            email: account.email,
+            url: account.url,
+            avatar: account.avatar,
+            is_public: account.is_public,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct User<Id> {
     pub id: Id,
@@ -109,12 +134,16 @@ pub struct UserLogin {
     pub created_at: Option<i64>,
     pub is_new: bool,
     pub is_admin: bool,
-    pub linked_accounts: Option<Vec<LinkedAccount>>,
+    pub linked_accounts: Option<Vec<PublicLinkedAccount>>,
     pub is_passwordless: Option<bool>,
 }
 
 impl From<User<ObjectId>> for UserLogin {
     fn from(user: User<ObjectId>) -> Self {
+        let accounts = user.linked_accounts.map(|acc| {
+            acc.into_iter().map(PublicLinkedAccount::from).collect()
+        });
+
         Self {
             id: user.id.to_hex(),
             email: user.email,
@@ -124,7 +153,7 @@ impl From<User<ObjectId>> for UserLogin {
             created_at: user.created_at,
             is_new: user.is_new,
             is_admin: user.is_admin,
-            linked_accounts: user.linked_accounts,
+            linked_accounts: accounts,
             is_passwordless: user.is_passwordless,
         }
     }

@@ -5,7 +5,7 @@ use actix_web::{
 };
 use common::{
     context::GeneralContext,
-    entities::user::{PublicUser, LinkedAccount},
+    entities::user::{PublicUser, PublicLinkedAccount},
     error,
     api::linked_accounts::{AddLinkedAccount, UpdateLinkedAccount},
 };
@@ -51,7 +51,7 @@ pub async fn add_linked_account(
     context: GeneralContext,
     id: Path<String>,
     Json(data): Json<AddLinkedAccount>,
-) -> error::Result<Json<LinkedAccount>> {
+) -> error::Result<Json<PublicLinkedAccount>> {
     Ok(Json(
         UserService::new(context).create_linked_account(id.parse()?, data).await?
     ))
@@ -62,7 +62,7 @@ pub async fn patch_linked_account(
     context: GeneralContext,
     id: Path<(String, String)>,
     Json(data): Json<UpdateLinkedAccount>,
-) -> error::Result<Json<LinkedAccount>> {
+) -> error::Result<Json<PublicLinkedAccount>> {
     Ok(Json(
         UserService::new(context)
             .change_linked_account(id.0.parse()?, id.1.clone(), data)
@@ -74,7 +74,7 @@ pub async fn patch_linked_account(
 pub async fn delete_linked_account(
     context: GeneralContext,
     id: Path<(String, String)>,
-) -> error::Result<Json<LinkedAccount>> {
+) -> error::Result<Json<PublicLinkedAccount>> {
     Ok(Json(
         UserService::new(context)
             .delete_linked_account(id.0.parse()?, id.1.clone())

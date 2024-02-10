@@ -24,7 +24,7 @@ use common::{
     },
     auth::Auth,
     context::GeneralContext,
-    entities::user::{PublicUser, User, LinkedAccount},
+    entities::user::{PublicUser, User, LinkedAccount, PublicLinkedAccount},
     error::{self, AddCode},
     services::{PROTOCOL, USERS_SERVICE},
 };
@@ -247,7 +247,7 @@ impl UserService {
         &self,
         id: ObjectId,
         data: AddLinkedAccount,
-    ) -> error::Result<LinkedAccount> {
+    ) -> error::Result<PublicLinkedAccount> {
         let auth = self.context.auth();
         let client = Client::new();
         let protocol = var("PROTOCOL").unwrap();
@@ -291,7 +291,7 @@ impl UserService {
 
             Self::add_linked_account(&self, id, linked_account.clone(), auth).await?;
 
-            return Ok(linked_account)
+            return Ok(PublicLinkedAccount::from(linked_account))
         }
 
         if data.service == LinkedService::X {
@@ -352,7 +352,7 @@ impl UserService {
 
             Self::add_linked_account(&self, id, linked_account.clone(), auth).await?;
 
-            return Ok(linked_account)
+            return Ok(PublicLinkedAccount::from(linked_account))
         }
 
         if data.service == LinkedService::LinkedIn {
@@ -410,7 +410,7 @@ impl UserService {
 
             Self::add_linked_account(&self, id, linked_account.clone(), auth).await?;
 
-            return Ok(linked_account)
+            return Ok(PublicLinkedAccount::from(linked_account))
         }
 
         Err(anyhow::anyhow!("Error adding account").code(404))
@@ -420,7 +420,7 @@ impl UserService {
         &self,
         user_id: ObjectId,
         account_id: String,
-    ) -> error::Result<LinkedAccount> {
+    ) -> error::Result<PublicLinkedAccount> {
         let auth = self.context.auth();
 
         let users = self.context.try_get_repository::<User<ObjectId>>()?;
@@ -448,7 +448,7 @@ impl UserService {
             users.delete("id", &user_id).await?;
             users.insert(&user).await?;
 
-            return Ok(account);
+            return Ok(PublicLinkedAccount::from(account));
         }
 
         Err(anyhow::anyhow!("No linked account found").code(404))
@@ -459,7 +459,7 @@ impl UserService {
         user_id: ObjectId,
         account_id: String,
         data: UpdateLinkedAccount,
-    ) -> error::Result<LinkedAccount> {
+    ) -> error::Result<PublicLinkedAccount> {
         let auth = self.context.auth();
 
         let users = self.context.try_get_repository::<User<ObjectId>>()?;
@@ -498,14 +498,18 @@ impl UserService {
                 users.delete("id", &user_id).await?;
                 users.insert(&user).await?;
 
-                return Ok(account);
+                return Ok(PublicLinkedAccount::from(account));
             }
         }
 
         Err(anyhow::anyhow!("No linked account found").code(404))
     }
 
-    pub async fn proxy_github_api(&self, path: String, query: Vec<(String, String)>) -> error::Result<HttpResponse> {
+    pub async fn proxy_github_api(
+        &self,
+        path: String,
+        query: Vec<(String, String)>
+    ) -> error::Result<HttpResponse> {
         let auth = self.context.auth();
         let id = auth.id().unwrap();
         let client = Client::new();
