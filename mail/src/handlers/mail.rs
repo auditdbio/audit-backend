@@ -3,13 +3,13 @@ use actix_web::{
     web::{self},
     HttpResponse,
 };
-use common::{context::Context, entities::letter::CreateLetter, error};
+use common::{context::GeneralContext, entities::letter::CreateLetter, error};
 
 use crate::service::mail::{CreateFeedback, MailService};
 
-#[post("/api/mail")]
+#[post("/mail")]
 pub async fn send_mail(
-    context: Context,
+    context: GeneralContext,
     letter: web::Json<CreateLetter>,
 ) -> error::Result<HttpResponse> {
     MailService::new(context)
@@ -18,9 +18,9 @@ pub async fn send_mail(
     Ok(HttpResponse::Ok().finish())
 }
 
-#[post("/api/feedback")]
+#[post("/feedback")]
 pub async fn send_feedback(
-    context: Context,
+    context: GeneralContext,
     letter: web::Json<CreateFeedback>,
 ) -> error::Result<HttpResponse> {
     MailService::new(context)

@@ -5,6 +5,7 @@ const getHTML = (project) => {
   return `
     <html lang="en">
       <head>
+        <title>Report</title>
         <meta charset="utf-8" />
         ${style}
       </head>

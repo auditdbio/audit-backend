@@ -1,31 +1,55 @@
+use crate::repositories::chat::Chat;
 use actix_web::{
-    get, post,
+    get, patch, post,
     web::{Json, Path},
     HttpResponse,
 };
-use common::{api::chat::PublicMessage, context::Context, error};
+use common::{
+    api::chat::{CreateMessage, PublicMessage},
+    context::GeneralContext,
+    entities::role::Role,
+    error,
+};
 
-use crate::services::chat::{ChatService, Preview};
+use crate::services::chat::{ChatService, PublicChat};
 
-#[post("/api/chat/message")]
+#[post("/chat/message")]
 pub async fn send_message(
-    context: Context,
-    Json(message): Json<PublicMessage>,
-) -> error::Result<HttpResponse> {
-    ChatService::new(context).send_message(message).await?;
-    Ok(HttpResponse::Ok().finish())
+    context: GeneralContext,
+    Json(message): Json<CreateMessage>,
+) -> error::Result<Json<Chat>> {
+    Ok(Json(ChatService::new(context).send_message(message).await?))
 }
 
-#[get("/api/chat/preview")]
-pub async fn preview(context: Context) -> error::Result<Json<Preview>> {
-    Ok(Json(ChatService::new(context).preview().await?))
+#[get("/chat/preview/{role}")]
+pub async fn preview(
+    context: GeneralContext,
+    role: Path<Role>,
+) -> error::Result<Json<Vec<PublicChat>>> {
+    Ok(Json(
+        ChatService::new(context).preview(role.into_inner()).await?,
+    ))
 }
 
-#[get("api/chat/{id}")]
-pub async fn messages(context: Context, id: Path<String>) -> error::Result<Json<Vec<String>>> {
+#[get("/chat/{id}")]
+pub async fn messages(
+    context: GeneralContext,
+    id: Path<String>,
+) -> error::Result<Json<Vec<PublicMessage>>> {
     Ok(Json(
         ChatService::new(context)
             .messages(id.into_inner().parse()?)
             .await?,
     ))
+}
+
+#[patch("/chat/{id}/unread/{unread}")]
+pub async fn chat_unread(
+    context: GeneralContext,
+    params: Path<(String, i32)>,
+) -> error::Result<HttpResponse> {
+    ChatService::new(context)
+        .unread_messages(params.0.parse()?, params.1)
+        .await?;
+    Ok(HttpResponse::Ok().finish())
 }

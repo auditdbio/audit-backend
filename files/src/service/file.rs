@@ -4,7 +4,7 @@ use actix_files::NamedFile;
 use common::{
     access_rules::{AccessRules, Edit, Read},
     auth::Auth,
-    context::Context,
+    context::GeneralContext,
     error::{self, AddCode},
     repository::Entity,
 };
@@ -65,11 +65,11 @@ pub struct FileToken {
 }
 
 pub struct FileService {
-    pub context: Context,
+    pub context: GeneralContext,
 }
 
 impl FileService {
-    pub fn new(context: Context) -> Self {
+    pub fn new(context: GeneralContext) -> Self {
         Self { context }
     }
 
@@ -129,7 +129,7 @@ impl FileService {
             return Err(anyhow::anyhow!("File not found").code(404));
         };
 
-        if !Read.get_access(auth, &meta) {
+        if !Read.get_access(&auth, &meta) {
             return Err(anyhow::anyhow!("Access denied for this user").code(403));
         }
         let file = actix_files::NamedFile::open_async(format!("{}.{}", path, meta.extension))
@@ -148,7 +148,7 @@ impl FileService {
             return Err(anyhow::anyhow!("File not found").code(404));
         };
 
-        if !Edit.get_access(auth, &meta) {
+        if !Edit.get_access(&auth, &meta) {
             return Err(anyhow::anyhow!("Access denied for this user").code(403));
         }
 

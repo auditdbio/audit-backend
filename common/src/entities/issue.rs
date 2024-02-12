@@ -23,31 +23,31 @@ impl Status {
             (Status::Draft, Action::Fixed) => None,
             (Status::Draft, Action::NotFixed) => None,
             (Status::Draft, Action::Discard) => None,
+            (Status::Draft, Action::Verified) => None,
+            (Status::Draft, Action::ReOpen) => None,
             (Status::InProgress, Action::Begin) => None,
             (Status::InProgress, Action::Fixed) => Some(Status::Verification),
             (Status::InProgress, Action::NotFixed) => None,
             (Status::InProgress, Action::Discard) => Some(Status::NotFixed),
+            (Status::InProgress, Action::Verified) => None,
+            (Status::InProgress, Action::ReOpen) => None,
             (Status::Verification, Action::Begin) => None,
             (Status::Verification, Action::Fixed) => Some(Status::InProgress),
             (Status::Verification, Action::NotFixed) => Some(Status::InProgress),
             (Status::Verification, Action::Discard) => None,
+            (Status::Verification, Action::Verified) => Some(Status::Fixed),
+            (Status::Verification, Action::ReOpen) => None,
             (Status::NotFixed, Action::Begin) => None,
             (Status::NotFixed, Action::Fixed) => None,
             (Status::NotFixed, Action::NotFixed) => None,
             (Status::NotFixed, Action::Discard) => None,
+            (Status::NotFixed, Action::Verified) => None,
+            (Status::NotFixed, Action::ReOpen) => Some(Status::InProgress),
             (Status::Fixed, Action::Begin) => None,
             (Status::Fixed, Action::Fixed) => None,
             (Status::Fixed, Action::NotFixed) => None,
             (Status::Fixed, Action::Discard) => None,
-            (Status::Draft, Action::Verified) => None,
-            (Status::InProgress, Action::Verified) => None,
-            (Status::Verification, Action::Verified) => Some(Status::Fixed),
-            (Status::NotFixed, Action::Verified) => None,
             (Status::Fixed, Action::Verified) => Some(Status::Verification),
-            (Status::Draft, Action::ReOpen) => None,
-            (Status::InProgress, Action::ReOpen) => None,
-            (Status::Verification, Action::ReOpen) => None,
-            (Status::NotFixed, Action::ReOpen) => Some(Status::InProgress),
             (Status::Fixed, Action::ReOpen) => None,
         }
     }
@@ -84,6 +84,16 @@ impl Action {
 }
 
 use crate::default_timestamp;
+
+pub fn severity_to_integer(severity: &str) -> usize {
+    match severity {
+        "Critical" | "critical" => 0,
+        "Major" | "major" => 1,
+        "Medium" | "medium" => 2,
+        "Minor" | "minor" => 3,
+        _ => 4,
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Issue<Id> {

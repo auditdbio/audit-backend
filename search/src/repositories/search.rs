@@ -3,7 +3,7 @@ use std::sync::Arc;
 use common::{error, repository::mongo_repository::MongoRepository};
 use futures::StreamExt;
 use mongodb::{
-    bson::{doc, Bson, Document},
+    bson::{doc, oid::ObjectId, Bson, Document},
     options::{FindOptions, UpdateOptions},
     IndexModel,
 };
@@ -11,11 +11,12 @@ use mongodb::{
 use crate::service::search::{SearchQuery, SearchResult};
 
 #[derive(Clone)]
-pub struct SearchRepo(Arc<MongoRepository<Document>>);
+pub struct SearchRepo(Arc<(MongoRepository<Document>, MongoRepository<Document>)>);
 
 impl SearchRepo {
     pub async fn new(mongo_uri: String) -> Self {
         let repo = MongoRepository::new(&mongo_uri, "search", "queries").await;
+        let trash = MongoRepository::new(&mongo_uri, "search", "trash").await;
         repo.collection
             .create_index(
                 IndexModel::builder()
@@ -27,12 +28,13 @@ impl SearchRepo {
             )
             .await
             .unwrap();
-        Self(Arc::new(repo))
+        Self(Arc::new((repo, trash)))
     }
 
     pub async fn insert(&self, query: Vec<Document>) -> error::Result<()> {
         for doc in query.iter() {
             self.0
+                 .0
                 .collection
                 .update_one(
                     doc! {
@@ -49,14 +51,31 @@ impl SearchRepo {
         Ok(())
     }
 
-    pub async fn search(&self, mut query: SearchQuery) -> error::Result<SearchResult> {
-        let find_options = if let Some(sort_by) = query.sort_by {
-            let sort_order = query.sort_order.unwrap_or(1);
-            let mut sort = doc! {
-                sort_by.clone(): sort_order,
-            };
+    pub async fn search(&self, query: &SearchQuery) -> error::Result<SearchResult> {
+        let kind = query
+            .kind
+            .clone()
+            .unwrap_or(String::new())
+            .split(' ')
+            .filter_map(|s| {
+                if !s.is_empty() {
+                    Some(s.to_ascii_lowercase())
+                } else {
+                    None
+                } // insensitive
+            })
+            .collect::<Vec<_>>();
 
-            if &sort_by == "price" {
+        let find_options = if let Some(sort_by) = &query.sort_by {
+            let sort_order = query.sort_order.unwrap_or(1);
+            let mut sort = doc! {};
+
+            if kind.contains(&"auditor".to_string()) {
+                sort.insert("kind", 1);
+            }
+
+            sort.insert(sort_by.clone(), sort_order.clone());
+            if sort_by == "price" {
                 let sort_field = if sort_order == 1 {
                     "price_range.to"
                 } else {
@@ -65,6 +84,8 @@ impl SearchRepo {
                 .to_string();
                 sort.insert(sort_field, sort_order);
             }
+
+            sort.insert("_id", -1);
 
             let mut skip = (query.page - 1) * query.per_page;
             let mut limit = (query.per_page * query.pages.unwrap_or(1)) as i64;
@@ -85,21 +106,34 @@ impl SearchRepo {
             None
         };
 
-        query.query = query.query.to_ascii_lowercase();
+        let mut docs = vec![
+            doc! {
+                "deleted": Bson::Null,
+            },
+            doc! {
+                "$or": [
+                    {
+                        "private": false,
+                    },
+                    {
+                        "private": Bson::Null,
+                    }
+                ]
+            },
+        ];
 
-        let mut docs = Vec::new();
-
-        if let Some(kind) = query.kind.clone() {
+        if !kind.is_empty() {
             docs.push(doc! {
-                "kind": kind,
+                "kind": {
+                    "$in": kind.clone(),
+                },
             });
         }
 
         if !query.query.is_empty() {
-            let text = query.query;
             docs.push(doc! {
                 "$text": {
-                    "$search": text,
+                    "$search": &query.query,
                 },
             });
         }
@@ -124,7 +158,7 @@ impl SearchRepo {
             });
         }
 
-        if query.kind != Some("customer".to_string()) {
+        if !kind.contains(&"customer".to_string()) {
             let price_from = query.price_from.unwrap_or(0);
             let price_to = query.price_to.unwrap_or(i64::MAX);
             docs.push(doc! {
@@ -164,21 +198,11 @@ impl SearchRepo {
             });
         }
 
-        docs.push(doc! {
-            "$or": [
-                {
-                    "private": false,
-                },
-                {
-                    "private": Bson::Null,
-                }
-            ]
-        });
-
         log::info!("Search query: {:?}", docs);
 
         let result: Vec<Document> = self
             .0
+             .0
             .collection
             .find(doc! { "$and": docs.clone()}, find_options)
             .await
@@ -191,6 +215,7 @@ impl SearchRepo {
 
         let total_documents = self
             .0
+             .0
             .collection
             .count_documents(doc! { "$and": docs}, None)
             .await
@@ -200,5 +225,19 @@ impl SearchRepo {
             result,
             total_documents,
         })
+    }
+
+    pub async fn delete(&self, id: ObjectId) -> error::Result<()> {
+        let deleted = self
+            .0
+             .0
+            .collection
+            .find_one_and_delete(doc! {"id": id.to_hex()}, None)
+            .await?;
+
+        if let Some(deleted) = deleted {
+            self.0 .1.collection.insert_one(deleted, None).await?;
+        }
+        Ok(())
     }
 }

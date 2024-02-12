@@ -2,10 +2,11 @@ import React from 'react'
 import QRCode from 'qrcode.react'
 import HeroLogo from '../images/HeroLogo.js'
 import CornerLogo from '../images/CornerLogo.js'
+import { FRONTEND, PROTOCOL } from "../../constants/reportLink.js"
 
 const TitlePage = ({ project }) => {
   const titleSize = project?.project_name?.length <= 100 ? '60px' : '50px'
-  const link = project?.profile_link || 'https://auditdb.io/'
+  const link = project?.profile_link || `${PROTOCOL}://${FRONTEND}/disclaimer/`
 
   return (
     <div className="container">
@@ -24,7 +25,7 @@ const TitlePage = ({ project }) => {
               </div>
               <div>
                 <a className="auditor-info" href={link}>
-                  {project?.profile_link ? "Profile link" : "auditdb.io"}
+                  {project?.profile_link ? "Profile link" : FRONTEND}
                 </a>
               </div>
             </div>

@@ -2,15 +2,15 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    context::Context,
+    context::GeneralContext,
     default_timestamp,
     entities::{
         letter::CreateLetter,
-        notification::{CreateNotification, NotificationInner},
+        notification::{CreateNotification, NotificationInner, Substitution},
         user::PublicUser,
     },
     error,
-    services::{MAIL_SERVICE, NOTIFICATIONS_SERVICE, PROTOCOL, USERS_SERVICE},
+    services::{API_PREFIX, MAIL_SERVICE, NOTIFICATIONS_SERVICE, PROTOCOL, USERS_SERVICE},
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -26,13 +26,15 @@ pub struct NewNotification {
     pub alert: String,
     pub subject: String,
     pub message: String,
+    pub title: String,
+    pub substitutions: Vec<Substitution>,
     #[serde(default)]
     pub links: Vec<String>,
     pub role: String,
 }
 
 pub async fn send_notification(
-    context: &Context,
+    context: &GeneralContext,
     email: bool,
     notification: bool,
     new_notification: NewNotification,
@@ -45,11 +47,17 @@ pub async fn send_notification(
         mut message,
         links,
         role,
+        mut substitutions,
+        title,
+        ..
     } = new_notification;
     for (key, value) in variables {
         message = message.replace(&format!("{{{}}}", key), &value);
         subject = subject.replace(&format!("{{{}}}", key), &value);
         alert = alert.replace(&format!("{{{}}}", key), &value);
+        for sub in &mut substitutions {
+            sub.text = sub.text.replace(&format!("{{{}}}", key), &value);
+        }
     }
 
     let user_id = user_id.unwrap();
@@ -57,9 +65,10 @@ pub async fn send_notification(
         .make_request::<PublicUser>()
         .auth(context.server_auth())
         .get(format!(
-            "{}://{}/api/user/{}",
+            "{}://{}/{}/user/{}",
             PROTOCOL.as_str(),
             USERS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
             user_id,
         ))
         .send()
@@ -78,9 +87,10 @@ pub async fn send_notification(
             .make_request::<CreateLetter>()
             .auth(context.server_auth())
             .post(format!(
-                "{}://{}/api/mail",
+                "{}://{}/{}/mail",
                 PROTOCOL.as_str(),
                 MAIL_SERVICE.as_str(),
+                API_PREFIX.as_str(),
             ))
             .json(&create_letter)
             .send()
@@ -92,20 +102,23 @@ pub async fn send_notification(
             user_id,
             inner: NotificationInner {
                 message: alert,
+                substitutions,
                 is_read: false,
                 is_sound: true,
                 links,
                 timestamp: default_timestamp(),
                 role,
+                title: Some(title),
             },
         };
         context
             .make_request::<CreateNotification>()
             .auth(context.server_auth())
             .post(format!(
-                "{}://{}/api/send_notification",
+                "{}://{}/{}/send_notification",
                 PROTOCOL.as_str(),
                 NOTIFICATIONS_SERVICE.as_str(),
+                API_PREFIX.as_str(),
             ))
             .json(&create_notification)
             .send()

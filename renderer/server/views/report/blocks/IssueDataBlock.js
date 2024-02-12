@@ -13,16 +13,16 @@ const IssueDataBlock = ({ data, num, subsectionLevel }) => {
   return (
     <div className="report-block">
       <h2 className={subsectionLevel ? 'subsection-title' : 'report-block-title'}>
-        {num}. {data.title}
-        <TitleLabel show={data.include_in_toc} />
+        {num}. {data?.title}
+        <TitleLabel show={data?.include_in_toc} />
       </h2>
 
       <div className="issue-data page-break">
         <div className="issue-info-wrapper">
           <span className="issue-info-title">Severity:</span>
-          <SeverityChip severity={data.issue_data?.severity} />
+          <SeverityChip severity={data?.issue_data?.severity} />
         </div>
-        {data.issue_data?.category && (
+        {data?.issue_data?.category && (
           <div className="issue-info-wrapper">
             <span className="issue-info-title">Category:</span>
             <span>{data.issue_data.category}</span>
@@ -30,19 +30,19 @@ const IssueDataBlock = ({ data, num, subsectionLevel }) => {
         )}
         <div className="issue-info-wrapper">
           <span className="issue-info-title">Status:</span>
-          <span style={{ color: getStatusColor(data.issue_data?.status) }}>
-            {data.issue_data?.status?.replace(/(?<=[a-z])([A-Z])/g, ' $1')}
+          <span style={{ color: getStatusColor(data?.issue_data?.status) }}>
+            {data?.issue_data?.status?.replace(/(?<=[a-z])([A-Z])/g, ' $1')}
           </span>
         </div>
       </div>
 
       <div className="project-description">
-        <RenderMarkdown markdown={data.text} />
+        <RenderMarkdown markdown={data?.text} />
       </div>
 
-      {!!data.issue_data?.links?.length && (
+      {!!data?.issue_data?.links?.length && (
         <div className="scope issue-links">
-          {data.issue_data.links.map((link, idx) => (
+          {data?.issue_data?.links?.map((link, idx) => (
             <a href={link} key={idx} className="issue-link">
               {link}
             </a>
@@ -50,7 +50,7 @@ const IssueDataBlock = ({ data, num, subsectionLevel }) => {
         </div>
       )}
 
-      {data.feedback && (
+      {data?.feedback && (
         <div className="issue-feedback">
           <div className="issue-feedback-title">Feedback:</div>
           <RenderMarkdown markdown={data.feedback} />

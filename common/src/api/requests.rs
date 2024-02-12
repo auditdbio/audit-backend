@@ -2,7 +2,8 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    context::Context,
+    auth::Auth,
+    context::GeneralContext,
     entities::{
         audit_request::{AuditRequest, TimeRange},
         auditor::PublicAuditor,
@@ -11,7 +12,7 @@ use crate::{
         role::Role,
     },
     error,
-    services::{AUDITORS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL},
+    services::{API_PREFIX, AUDITORS_SERVICE, AUDITS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL},
 };
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
@@ -27,6 +28,7 @@ pub struct PublicRequest {
     pub project_name: String,
     pub avatar: String,
     pub project_scope: Vec<String>,
+    pub tags: Option<Vec<String>>,
     pub price: i64,
     pub auditor_contacts: Contacts,
     pub customer_contacts: Contacts,
@@ -35,19 +37,20 @@ pub struct PublicRequest {
 
 impl PublicRequest {
     pub async fn new(
-        context: &Context,
+        context: &GeneralContext,
         request: AuditRequest<ObjectId>,
     ) -> error::Result<PublicRequest> {
         let auth = context.auth();
         let project = if let Ok(project) = context
             .make_request::<PublicProject>()
             .get(format!(
-                "{}://{}/api/project/{}",
+                "{}://{}/{}/project/{}",
                 PROTOCOL.as_str(),
                 CUSTOMERS_SERVICE.as_str(),
+                API_PREFIX.as_str(),
                 request.project_id
             ))
-            .auth(auth.clone())
+            .auth(auth)
             .send()
             .await?
             .json::<PublicProject>()
@@ -58,9 +61,10 @@ impl PublicRequest {
             context
                 .make_request::<()>()
                 .post(format!(
-                    "{}://{}/api/project/auditor/{}/{}",
+                    "{}://{}/{}/project/auditor/{}/{}",
                     PROTOCOL.as_str(),
                     CUSTOMERS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
                     request.project_id,
                     request.auditor_id
                 ))
@@ -71,32 +75,36 @@ impl PublicRequest {
             context
                 .make_request::<PublicProject>()
                 .get(format!(
-                    "{}://{}/api/project/{}",
+                    "{}://{}/{}/project/{}",
                     PROTOCOL.as_str(),
                     CUSTOMERS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
                     request.project_id
                 ))
-                .auth(auth.clone())
+                .auth(auth)
                 .send()
                 .await?
                 .json::<PublicProject>()
-                .await?
+                .await
+                .map_err(|_| anyhow::anyhow!("Project {} not found", request.project_id))?
         };
 
         let auditor = context
             .make_request::<PublicAuditor>()
             .auth(context.server_auth())
             .get(format!(
-                "{}://{}/api/auditor/{}",
+                "{}://{}/{}/auditor/{}",
                 PROTOCOL.as_str(),
                 AUDITORS_SERVICE.as_str(),
+                API_PREFIX.as_str(),
                 request.auditor_id
             ))
-            .auth(auth.clone())
+            .auth(auth)
             .send()
             .await?
             .json::<PublicAuditor>()
-            .await?;
+            .await
+            .map_err(|_| anyhow::anyhow!("Auditor {} not found", request.auditor_id))?;
 
         Ok(PublicRequest {
             id: request.id.to_hex(),
@@ -110,10 +118,79 @@ impl PublicRequest {
             project_name: project.name,
             avatar: auditor.avatar,
             project_scope: project.scope,
+            tags: Some(project.tags),
             price: request.price,
             auditor_contacts: auditor.contacts,
             customer_contacts: project.creator_contacts,
             last_changer: request.last_changer,
         })
     }
+}
+
+pub async fn get_audit_requests(
+    context: &GeneralContext,
+    auth: Auth,
+) -> error::Result<Vec<PublicRequest>> {
+    Ok(context
+        .make_request::<Vec<PublicRequest>>()
+        .get(format!(
+            "{}://{}/{}/my_audit_request/auditor",
+            PROTOCOL.as_str(),
+            AUDITS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
+        ))
+        .auth(auth)
+        .send()
+        .await?
+        .json::<Vec<PublicRequest>>()
+        .await?)
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateRequest {
+    pub customer_id: String,
+    pub auditor_id: String,
+    pub project_id: String,
+
+    pub price: i64,
+    pub description: String,
+    pub time: TimeRange,
+}
+
+pub async fn create_request(
+    context: &GeneralContext,
+    auth: Auth,
+    data: CreateRequest,
+) -> error::Result<()> {
+    context
+        .make_request::<CreateRequest>()
+        .post(format!(
+            "{}://{}/{}/audit_request",
+            PROTOCOL.as_str(),
+            AUDITORS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
+        ))
+        .auth(auth)
+        .json(&data)
+        .send()
+        .await?;
+
+    Ok(())
+}
+
+pub async fn delete(context: &GeneralContext, auth: Auth, id: ObjectId) -> error::Result<()> {
+    context
+        .make_request::<()>()
+        .delete(format!(
+            "{}://{}/{}/audit_request/{}",
+            PROTOCOL.as_str(),
+            AUDITORS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
+            id.to_hex()
+        ))
+        .auth(auth)
+        .send()
+        .await?;
+
+    Ok(())
 }

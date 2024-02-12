@@ -1,8 +1,17 @@
-use std::{collections::HashMap, str::FromStr};
+use std::{
+    collections::{HashMap, HashSet},
+    str::FromStr,
+};
 
 use actix_web::web;
 use chrono::Utc;
-use common::{auth::Auth, context::Context, error, repository::Repository};
+use common::{
+    auth::Auth,
+    context::GeneralContext,
+    error::{self, AddCode},
+    repository::Repository,
+};
+
 
 use mongodb::bson::{oid::ObjectId, Bson, Document};
 use reqwest::Client;
@@ -12,8 +21,7 @@ use crate::repositories::{search::SearchRepo, since::SinceRepo};
 
 pub(super) async fn get_data(client: &Client, url: &str, since: i64) -> Option<Vec<Document>> {
     let request = client.get(format!("{url}/{since}"));
-    let Ok(res) = request.send()
-        .await else {
+    let Ok(res) = request.send().await else {
         log::error!("Error while sending request");
         return None;
     };
@@ -44,7 +52,7 @@ pub async fn fetch_data(
 
     for since in data.dict.iter_mut() {
         let timestamp = Utc::now().timestamp_micros();
-        let Some(docs) = get_data(&client, since.0 ,*since.1).await else {
+        let Some(docs) = get_data(&client, since.0, *since.1).await else {
             log::info!("No data for {}", since.0);
             continue;
         };
@@ -91,11 +99,11 @@ pub struct SearchInsertRequest {
 
 pub struct SearchService {
     pub repo: web::Data<SearchRepo>,
-    pub context: Context,
+    pub context: GeneralContext,
 }
 
 impl SearchService {
-    pub fn new(repo: web::Data<SearchRepo>, context: Context) -> Self {
+    pub fn new(repo: web::Data<SearchRepo>, context: GeneralContext) -> Self {
         Self { repo, context }
     }
 
@@ -104,12 +112,16 @@ impl SearchService {
         Ok(())
     }
 
-    pub async fn search(&self, query: SearchQuery) -> error::Result<SearchResult> {
-        let mut auth = self.context.server_auth();
-        if &Auth::None != self.context.auth() {
-            auth = auth.authorized();
-        }
+    fn normalize(mut query: SearchQuery) -> SearchQuery {
+        query.query = query.query.to_ascii_lowercase();
+        query
+    }
 
+    pub async fn get_entries(
+        &self,
+        query: &SearchQuery,
+        auth: Auth,
+    ) -> error::Result<(Vec<Document>, u64)> {
         let SearchResult {
             total_documents,
             result,
@@ -133,35 +145,68 @@ impl SearchService {
             let docs = self
                 .context
                 .make_request()
-                .auth(auth.clone())
+                .auth(auth)
                 .post(service)
                 .json(&ids)
                 .send()
                 .await?;
 
             let docs = docs.json::<Vec<Document>>().await?;
+
+            let responce_ids: HashSet<ObjectId> = docs
+                .iter()
+                .map(|doc| {
+                    let id = doc
+                        .get_str("id")
+                        .or_else(|_| doc.get_str("_id"))
+                        .or_else(|_| doc.get_str("user_id"))
+                        .unwrap();
+                    ObjectId::from_str(id).unwrap()
+                })
+                .collect();
+
+            for id in ids {
+                if !responce_ids.contains(&id) {
+                    self.repo.delete(id).await?;
+                }
+            }
+
             responces.extend_from_slice(&docs);
         }
 
-        let mut results = vec![Document::new(); result.len()];
+        Ok((responces, total_documents))
+    }
 
-        for doc in responces.iter() {
-            let id = ObjectId::from_str(
-                doc.get_str("id")
-                    .unwrap_or_else(|_| doc.get_str("user_id").unwrap()),
-            )
-            .unwrap();
-            let index = indexes.get(&id).unwrap();
-            results[*index] = doc.clone();
+    pub async fn search(&self, query: SearchQuery) -> error::Result<SearchResult> {
+        let mut auth = self.context.server_auth();
+        if Auth::None != self.context.auth() {
+            auth = auth.authorized();
         }
 
-        log::info!("Responces: {:?}", results);
+        let query = Self::normalize(query);
 
-        let result = results.into_iter().filter(|doc| !doc.is_empty()).collect();
+        let (mut result, mut total_documents) = self.get_entries(&query, auth).await?;
+        while result.len() < query.per_page as usize
+            && (query.page - 1) * query.per_page + (result.len() as u64) < total_documents
+        {
+            (result, total_documents) = self.get_entries(&query, auth).await?;
+        }
+
+        result.truncate(query.per_page as usize);
 
         Ok(SearchResult {
             result,
             total_documents,
         })
+    }
+
+    pub async fn delete(&self, id: ObjectId) -> error::Result<()> {
+        if !matches!(self.context.auth(), Auth::Service(_, _)) {
+            return Err(
+                anyhow::anyhow!("You are not authorized to delete this document").code(401),
+            );
+        }
+        self.repo.delete(id).await?;
+        Ok(())
     }
 }

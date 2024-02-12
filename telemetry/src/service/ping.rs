@@ -1,12 +1,15 @@
 use std::collections::HashMap;
 
 use common::{
-    context::Context,
+    api::events::{post_event, EventPayload, PublicEvent},
+    context::GeneralContext,
+    error,
     services::{
         AUDITORS_SERVICE, AUDITS_SERVICE, CUSTOMERS_SERVICE, FILES_SERVICE, MAIL_SERVICE,
         NOTIFICATIONS_SERVICE, PROTOCOL, SEARCH_SERVICE, USERS_SERVICE,
     },
 };
+use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -33,7 +36,7 @@ impl Service {
     }
 }
 
-pub async fn status(context: Context, services: &Vec<Service>) -> Status {
+pub async fn status(context: GeneralContext, services: &Vec<Service>) -> Status {
     let mut result = HashMap::new();
     for service in services {
         let response = context
@@ -65,4 +68,10 @@ pub fn services() -> Vec<Service> {
         Service::new("search", SEARCH_SERVICE.as_str()),
         Service::new("users", USERS_SERVICE.as_str()),
     ]
+}
+
+pub async fn update(context: &GeneralContext) -> error::Result<()> {
+    let event = PublicEvent::new(ObjectId::new(), EventPayload::VersionUpdate);
+    post_event(context, event, context.server_auth()).await?;
+    Ok(())
 }

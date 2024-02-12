@@ -1,13 +1,18 @@
 use chrono::Utc;
+use common::api::seartch::delete_from_search;
+use common::entities::customer::PublicCustomer;
+use common::services::API_PREFIX;
 use common::{
     access_rules::{AccessRules, Edit, Read},
-    context::Context,
+    api::seartch::PaginationParams,
+    context::GeneralContext,
     entities::{
         contacts::Contacts,
         customer::Customer,
         project::{Project, PublicProject, PublishOptions},
     },
     error::{self, AddCode},
+    services::{CUSTOMERS_SERVICE, PROTOCOL},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -34,12 +39,19 @@ pub struct ProjectChange {
     pub price: Option<i64>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MyProjectsResult {
+    pub result: Vec<Project<String>>,
+    #[serde(rename = "totalDocuments")]
+    pub total_documents: u64,
+}
+
 pub struct ProjectService {
-    context: Context,
+    context: GeneralContext,
 }
 
 impl ProjectService {
-    pub fn new(context: Context) -> Self {
+    pub fn new(context: GeneralContext) -> Self {
         Self { context }
     }
 
@@ -51,7 +63,7 @@ impl ProjectService {
         let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
 
         let customer = customers
-            .find("user_id", &Bson::ObjectId(*auth.id().unwrap()))
+            .find("user_id", &Bson::ObjectId(auth.id().unwrap()))
             .await?
             .unwrap();
 
@@ -68,7 +80,7 @@ impl ProjectService {
 
         let project = Project {
             id: ObjectId::new(),
-            customer_id: *auth.id().ok_or(anyhow::anyhow!("No customer id found"))?,
+            customer_id: auth.id().ok_or(anyhow::anyhow!("No customer id found"))?,
             name: project.name,
             description: project.description,
             scope: project.scope,
@@ -78,6 +90,7 @@ impl ProjectService {
             creator_contacts,
             price: project.price,
             last_modified: Utc::now().timestamp_micros(),
+            created_at: Some(Utc::now().timestamp_micros()),
             auditors: Vec::new(),
         };
 
@@ -91,26 +104,61 @@ impl ProjectService {
 
         let projects = self.context.try_get_repository::<Project<ObjectId>>()?;
 
-        let Some(project) = projects.find("id",&Bson::ObjectId(id)).await? else {
-            return Ok(None)
+        let Some(mut project) = projects.find("id", &Bson::ObjectId(id)).await? else {
+            return Ok(None);
         };
 
-        if !Read.get_access(auth, &project) {
+        if !Read.get_access(&auth, &project) {
             return Err(anyhow::anyhow!("User is not available to read this project").code(403));
         }
+
+        let customer = self
+            .context
+            .make_request::<PublicCustomer>()
+            .get(format!(
+                "{}://{}/{}/customer/{}",
+                PROTOCOL.as_str(),
+                CUSTOMERS_SERVICE.as_str(),
+                API_PREFIX.as_str(),
+                project.customer_id
+            ))
+            .auth(self.context.server_auth())
+            .send()
+            .await?
+            .json::<PublicCustomer>()
+            .await?;
+
+        project.creator_contacts = customer.contacts;
 
         Ok(Some(auth.public_project(project)))
     }
 
-    pub async fn my_projects(&self) -> error::Result<Vec<Project<String>>> {
+    pub async fn my_projects(
+        &self,
+        pagination: PaginationParams,
+    ) -> error::Result<Vec<Project<String>>> {
+        let page = pagination.page.unwrap_or(0);
+        let per_page = pagination.per_page.unwrap_or(0);
+        let limit = pagination.per_page.unwrap_or(1000);
+        let skip = (page - 1) * per_page;
+
         let auth = self.context.auth();
 
         let projects = self.context.try_get_repository::<Project<ObjectId>>()?;
 
-        let projects = projects
-            .find_many("customer_id", &Bson::ObjectId(*auth.id().unwrap()))
+        let (projects, _total_documents) = projects
+            .find_many_limit(
+                "customer_id",
+                &Bson::ObjectId(auth.id().unwrap()),
+                skip,
+                limit,
+            )
             .await?;
 
+        // Ok(MyProjectsResult {
+        //     result: projects.into_iter().map(Project::stringify).collect(),
+        //     total_documents,
+        // })
         Ok(projects.into_iter().map(Project::stringify).collect())
     }
 
@@ -127,7 +175,7 @@ impl ProjectService {
             return Err(anyhow::anyhow!("No project found").code(404));
         };
 
-        if !Edit.get_access(auth, &project) {
+        if !Edit.get_access(&auth, &project) {
             return Err(anyhow::anyhow!("User is not available to change this project").code(403));
         }
 
@@ -176,10 +224,12 @@ impl ProjectService {
             return Err(anyhow::anyhow!("No project found").code(404));
         };
 
-        if !Edit.get_access(auth, &project) {
+        if !Edit.get_access(&auth, &project) {
             projects.insert(&project).await?;
             return Err(anyhow::anyhow!("User is not available to delete this project").code(403));
         }
+
+        delete_from_search(&self.context, id).await?;
 
         Ok(auth.public_project(project))
     }
@@ -196,7 +246,7 @@ impl ProjectService {
             return Err(anyhow::anyhow!("No project found").code(404));
         };
 
-        if !Edit.get_access(auth, &project) {
+        if !Edit.get_access(&auth, &project) {
             return Err(anyhow::anyhow!("User is not available to change this project").code(403));
         }
 
@@ -220,7 +270,7 @@ impl ProjectService {
             return Err(anyhow::anyhow!("No project found").code(404));
         };
 
-        if !Edit.get_access(auth, &project) {
+        if !Edit.get_access(&auth, &project) {
             return Err(anyhow::anyhow!("User is not available to change this project").code(403));
         }
 

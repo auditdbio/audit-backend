@@ -1,6 +1,6 @@
 use actix_web::rt::{spawn, time};
-use common::auth::Auth;
-use common::context::ServiceState;
+use common::auth::{Auth, Service};
+use common::context::effectfull_context::ServiceState;
 use common::repository::mongo_repository::MongoRepository;
 use common::repository::Repository;
 use common::services::{AUDITORS_SERVICE, CUSTOMERS_SERVICE};
@@ -19,6 +19,8 @@ use actix_web::HttpServer;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    dotenv::dotenv().ok();
+
     env_logger::init();
 
     let mongo_uri = env::var("MONGOURI").unwrap();
@@ -26,14 +28,17 @@ async fn main() -> std::io::Result<()> {
 
     let since_repo = SinceRepo::new(MongoRepository::new(&mongo_uri, "search", "meta").await);
 
-    if since_repo
+    if let Some(since) = since_repo
         .find("name", &Bson::String("since".to_string()))
         .await
         .unwrap()
-        .is_none()
     {
+        if since.dict.len() < Since::default().dict.len() {
+            since_repo.insert(&Since::default()).await.unwrap();
+        }
+    } else {
         since_repo.insert(&Since::default()).await.unwrap();
-    }
+    };
 
     let timeout = env::var("TIMEOUT")
         .unwrap_or("7200".to_string())
@@ -41,7 +46,7 @@ async fn main() -> std::io::Result<()> {
         .unwrap();
 
     let search_repo_clone = search_repo.clone();
-    let auth = Auth::Service("search".to_string(), false);
+    let auth = Auth::Service(Service::Search, false);
     spawn(async move {
         let mut interval = time::interval(Duration::from_secs(timeout));
         loop {
@@ -55,7 +60,7 @@ async fn main() -> std::io::Result<()> {
         }
     });
 
-    let state = Arc::new(ServiceState::new("search".to_string()));
+    let state = Arc::new(ServiceState::new(Service::Search));
 
     log::info!(
         "{} {} {:?}",

@@ -10,7 +10,7 @@ use actix_web_actors::ws::{self, WsResponseBuilder};
 use common::{
     api::events::PublicEvent,
     auth::Auth,
-    context::Context,
+    context::GeneralContext,
     error::{self, AddCode},
 };
 use mongodb::bson::oid::ObjectId;
@@ -58,21 +58,18 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Session {
             }
             Ok(ws::Message::Text(text)) => {
                 let token = text.to_string();
-                let Ok(Some(auth)) = Auth::from_token(&token) else {
-                    log::warn!("unsuccessful auth");
-                    return;
-                };
-
-                log::info!("successful auth");
-
-                if auth.id().unwrap() != &self.user_id {
-                    log::warn!("unsuccessful auth");
-                    return;
-                }
-
                 if !self.auth {
-                    log::info!("auth is true");
+                    let Ok(Some(auth)) = Auth::from_token(&token) else {
+                        log::warn!("unsuccessful auth");
+                        return;
+                    };
 
+                    log::info!("successful auth");
+
+                    if auth.id().unwrap() != self.user_id {
+                        log::warn!("unsuccessful auth");
+                        return;
+                    }
                     self.auth = true;
                 }
             }
@@ -135,8 +132,8 @@ pub async fn start_session(
         hb: Instant::now(),
     };
 
-    let Ok((addr, resp)) = WsResponseBuilder::new(session, &req, stream).start_with_addr() else{
-        return Err(anyhow::anyhow!("Failed to start websocket").code(500))
+    let Ok((addr, resp)) = WsResponseBuilder::new(session, &req, stream).start_with_addr() else {
+        return Err(anyhow::anyhow!("Failed to start websocket").code(500));
     };
 
     let mut lock = manager.lock().await;
@@ -154,20 +151,26 @@ pub async fn start_session(
 }
 
 pub async fn make_event(
-    _context: Context,
+    _context: GeneralContext,
     event: PublicEvent,
     manager: Arc<Mutex<SessionManager>>,
 ) -> error::Result<()> {
     // TODO: make auth
     let lock = manager.lock().await;
-    if let Some(user) = lock.users.get(&event.user_id) {
+
+    if event.payload.for_all() {
+        for user in lock.users.values() {
+            for (_, addr) in user.sessions.iter() {
+                addr.do_send(Event {
+                    inner: event.clone(),
+                });
+            }
+        }
+    } else if let Some(user) = lock.users.get(&event.user_id) {
         let event = Event { inner: event };
         for (_, addr) in user.sessions.iter() {
             addr.do_send(event.clone());
         }
-        log::warn!("current user manager state {:?}", user);
-    } else {
-        log::warn!("No user sessions found for user {}", event.user_id);
     }
 
     Ok(())

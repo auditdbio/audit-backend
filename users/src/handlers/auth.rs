@@ -3,23 +3,59 @@ use actix_web::{
     web::{self, Json},
     HttpRequest, HttpResponse,
 };
-use common::{context::Context, entities::user::User, error};
-
-use crate::service::{
-    auth::{AuthService, ChangePasswordData, Login, Token, TokenResponce},
-    user::CreateUser,
+use common::{
+    api::user::{CreateUser, GithubAuth},
+    context::GeneralContext,
+    entities::user::{LinkedAccount, User},
+    error,
 };
+use serde::{Deserialize, Serialize};
 
-#[post("/api/auth/login")]
-pub async fn login(context: Context, login: Json<Login>) -> error::Result<Json<Token>> {
+use crate::service::auth::{AuthService, ChangePasswordData, Login, Token, TokenResponce};
+
+#[post("/auth/login")]
+pub async fn login(context: GeneralContext, login: Json<Login>) -> error::Result<Json<Token>> {
     Ok(Json(AuthService::new(context).login(&login).await?))
 }
 
-#[post("/api/user")]
+#[post("/auth/github")]
+pub async fn github_auth(
+    context: GeneralContext,
+    Json(data): Json<GithubAuth>,
+) -> error::Result<Json<Token>> {
+    Ok(Json(AuthService::new(context).github_auth(data).await?))
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CreateUserResponce {
+    id: String,
+    name: String,
+    current_role: String,
+    email: String,
+    is_new: bool,
+    linked_accounts: Option<Vec<LinkedAccount>>,
+    is_passwordless: Option<bool>,
+}
+
+impl From<User<String>> for CreateUserResponce {
+    fn from(user: User<String>) -> Self {
+        Self {
+            id: user.id,
+            name: user.name,
+            current_role: user.current_role,
+            email: user.email,
+            is_new: user.is_new,
+            linked_accounts: user.linked_accounts,
+            is_passwordless: user.is_passwordless,
+        }
+    }
+}
+
+#[post("/user")]
 pub async fn create_user(
-    context: Context,
+    context: GeneralContext,
     Json(user): web::Json<CreateUser>,
-) -> error::Result<Json<User<String>>> {
+) -> error::Result<Json<CreateUserResponce>> {
     #[allow(unused_mut)]
     let mut use_email = true;
 
@@ -32,12 +68,16 @@ pub async fn create_user(
     Ok(Json(
         AuthService::new(context)
             .authentication(user, use_email)
-            .await?,
+            .await?
+            .into(),
     ))
 }
 
-#[get("/api/auth/verify/{code}")]
-pub async fn verify_link(context: Context, code: web::Path<String>) -> error::Result<HttpResponse> {
+#[get("/auth/verify/{code}")]
+pub async fn verify_link(
+    context: GeneralContext,
+    code: web::Path<String>,
+) -> error::Result<HttpResponse> {
     let service = AuthService::new(context);
     let result = service.verify_link(code.into_inner()).await?;
 
@@ -50,9 +90,9 @@ pub async fn verify_link(context: Context, code: web::Path<String>) -> error::Re
         .finish())
 }
 
-#[get("/api/auth/forgot_password/{email}")]
+#[get("/auth/forgot_password/{email}")]
 pub async fn forgot_password(
-    context: Context,
+    context: GeneralContext,
     email: web::Path<String>,
 ) -> error::Result<HttpResponse> {
     AuthService::new(context)
@@ -61,9 +101,9 @@ pub async fn forgot_password(
     Ok(HttpResponse::Ok().finish())
 }
 
-#[post("/api/auth/reset_password")]
+#[post("/auth/reset_password")]
 pub async fn reset_password(
-    context: Context,
+    context: GeneralContext,
     Json(code): web::Json<ChangePasswordData>,
 ) -> error::Result<HttpResponse> {
     AuthService::new(context).reset_password(code).await?;
@@ -71,9 +111,9 @@ pub async fn reset_password(
     Ok(HttpResponse::Ok().finish())
 }
 
-#[get("/api/auth/restore_token")]
+#[get("/auth/restore_token")]
 pub async fn restore_token(
-    context: Context,
+    context: GeneralContext,
     req: HttpRequest,
 ) -> error::Result<Json<TokenResponce>> {
     Ok(Json(AuthService::new(context).restore(req).await?))

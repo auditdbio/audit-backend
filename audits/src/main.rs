@@ -5,7 +5,8 @@ use actix_web::HttpServer;
 use audits::create_app;
 
 use audits::migrations::up_migrations;
-use common::context::ServiceState;
+use common::auth::Service;
+use common::context::effectfull_context::ServiceState;
 use common::entities::audit::Audit;
 use common::entities::audit_request::AuditRequest;
 use common::repository::mongo_repository::MongoRepository;
@@ -14,6 +15,8 @@ use mongodb::bson::oid::ObjectId;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    dotenv::dotenv().ok();
+
     env_logger::init();
 
     let mongo_uri = env::var("MONGOURI").unwrap();
@@ -28,7 +31,7 @@ async fn main() -> std::io::Result<()> {
     let audit_request_repo: MongoRepository<AuditRequest<ObjectId>> =
         MongoRepository::new(&mongo_uri, "audits", "requests").await;
 
-    let mut state = ServiceState::new("audit".to_string());
+    let mut state = ServiceState::new(Service::Audits);
     state.insert(Arc::new(audit_repo));
     state.insert(Arc::new(audit_request_repo));
     let state = Arc::new(state);

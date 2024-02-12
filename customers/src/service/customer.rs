@@ -1,16 +1,17 @@
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
-    context::Context,
+    api::seartch::delete_from_search,
+    context::GeneralContext,
     entities::{
-        auditor::PublicAuditor,
+        auditor::{ExtendedAuditor, PublicAuditor},
         contacts::Contacts,
         customer::{Customer, PublicCustomer},
         project::{Project, PublicProject},
         user::PublicUser,
     },
     error::{self, AddCode},
-    services::{PROTOCOL, USERS_SERVICE},
+    services::{API_PREFIX, AUDITORS_SERVICE, PROTOCOL, USERS_SERVICE},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -38,11 +39,11 @@ pub struct CustomerChange {
 }
 
 pub struct CustomerService {
-    context: Context,
+    context: GeneralContext,
 }
 
 impl CustomerService {
-    pub fn new(context: Context) -> Self {
+    pub fn new(context: GeneralContext) -> Self {
         Self { context }
     }
 
@@ -52,7 +53,7 @@ impl CustomerService {
         let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
 
         let customer = Customer {
-            user_id: *auth.id().ok_or(anyhow::anyhow!("No user id found"))?,
+            user_id: auth.id().ok_or(anyhow::anyhow!("No user id found"))?,
             avatar: customer.avatar.unwrap_or_default(),
             first_name: customer.first_name,
             last_name: customer.last_name,
@@ -61,6 +62,7 @@ impl CustomerService {
             contacts: customer.contacts,
             tags: customer.tags.unwrap_or_default(),
             last_modified: Utc::now().timestamp_micros(),
+            created_at: Some(Utc::now().timestamp_micros()),
         };
 
         customers.insert(&customer).await?;
@@ -77,7 +79,7 @@ impl CustomerService {
             return Ok(None);
         };
 
-        if !Read.get_access(auth, &customer) {
+        if !Read.get_access(&auth, &customer) {
             return Err(
                 anyhow::anyhow!("User is not available to get data from this customer").code(403),
             );
@@ -92,7 +94,7 @@ impl CustomerService {
         let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
 
         let customer = customers
-            .find("user_id", &Bson::ObjectId(*auth.id().unwrap()))
+            .find("user_id", &Bson::ObjectId(auth.id().unwrap()))
             .await?
             .map(Customer::stringify);
 
@@ -100,11 +102,12 @@ impl CustomerService {
             let user = self
                 .context
                 .make_request::<PublicUser>()
-                .auth(auth.clone())
+                .auth(auth)
                 .get(format!(
-                    "{}://{}/api/user/{}",
+                    "{}://{}/{}/user/{}",
                     PROTOCOL.as_str(),
                     USERS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
                     auth.id().unwrap()
                 ))
                 .send()
@@ -119,16 +122,17 @@ impl CustomerService {
             let has_auditor = self
                 .context
                 .make_request::<PublicAuditor>()
-                .auth(auth.clone())
+                .auth(auth)
                 .get(format!(
-                    "{}://{}/api/auditor/{}",
+                    "{}://{}/{}/auditor/{}",
                     PROTOCOL.as_str(),
-                    USERS_SERVICE.as_str(),
+                    AUDITORS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
                     auth.id().unwrap()
                 ))
                 .send()
                 .await?
-                .json::<PublicAuditor>()
+                .json::<ExtendedAuditor>()
                 .await
                 .is_ok();
 
@@ -165,7 +169,7 @@ impl CustomerService {
 
     pub async fn change(&self, change: CustomerChange) -> error::Result<Customer<String>> {
         let auth = self.context.auth();
-        let id = *auth.id().unwrap();
+        let id = auth.id().unwrap();
 
         let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
 
@@ -173,7 +177,7 @@ impl CustomerService {
             return Err(anyhow::anyhow!("No customer found").code(404));
         };
 
-        if !Edit.get_access(auth, &customer) {
+        if !Edit.get_access(&auth, &customer) {
             return Err(anyhow::anyhow!("User is not available to change this customer").code(403));
         }
 
@@ -235,10 +239,12 @@ impl CustomerService {
             return Err(anyhow::anyhow!("No customer found").code(404));
         };
 
-        if !Edit.get_access(auth, &customer) {
+        if !Edit.get_access(&auth, &customer) {
             customers.insert(&customer).await?;
             return Err(anyhow::anyhow!("User is not available to delete this customer").code(403));
         }
+
+        delete_from_search(&self.context, id).await?;
 
         Ok(auth.public_customer(customer))
     }
@@ -254,7 +260,7 @@ impl CustomerService {
 
         let projects = projects
             .into_iter()
-            .filter(|project| Read.get_access(auth, project))
+            .filter(|project| Read.get_access(&auth, project))
             .map(|project| auth.public_project(project))
             .collect();
 

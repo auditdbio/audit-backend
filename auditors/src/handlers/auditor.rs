@@ -5,7 +5,7 @@ use actix_web::{
 };
 
 use common::{
-    context::Context,
+    context::GeneralContext,
     entities::auditor::{Auditor, PublicAuditor},
     error,
 };
@@ -14,26 +14,30 @@ use serde_json::json;
 
 use crate::service::auditor::{AuditorChange, AuditorService, CreateAuditor};
 
-#[post("/api/auditor")]
+#[post("/auditor")]
 pub async fn post_auditor(
-    context: Context,
+    context: GeneralContext,
     Json(data): web::Json<CreateAuditor>,
 ) -> error::Result<Json<Auditor<String>>> {
     Ok(Json(AuditorService::new(context).create(data).await?))
 }
 
-#[get("/api/auditor/{id}")]
-pub async fn get_auditor(context: Context, id: web::Path<String>) -> error::Result<HttpResponse> {
-    let res = AuditorService::new(context).find(id.parse()?).await?;
-    if let Some(res) = res {
+#[get("/auditor/{id}")]
+pub async fn get_auditor(
+    context: GeneralContext,
+    id: web::Path<String>,
+) -> error::Result<HttpResponse> {
+    let service = AuditorService::new(context);
+    let id = id.parse()?;
+    if let Some(res) = service.find(id).await? {
         Ok(HttpResponse::Ok().json(res))
     } else {
         Ok(HttpResponse::Ok().json(json! {{}}))
     }
 }
 
-#[get("/api/my_auditor")]
-pub async fn get_my_auditor(context: Context) -> error::Result<HttpResponse> {
+#[get("/my_auditor")]
+pub async fn get_my_auditor(context: GeneralContext) -> error::Result<HttpResponse> {
     let res = AuditorService::new(context).my_auditor().await?;
     if let Some(res) = res {
         Ok(HttpResponse::Ok().json(res))
@@ -42,17 +46,17 @@ pub async fn get_my_auditor(context: Context) -> error::Result<HttpResponse> {
     }
 }
 
-#[patch("/api/my_auditor")]
+#[patch("/my_auditor")]
 pub async fn patch_auditor(
-    context: Context,
+    context: GeneralContext,
     Json(data): Json<AuditorChange>,
 ) -> error::Result<Json<Auditor<String>>> {
     Ok(Json(AuditorService::new(context).change(data).await?))
 }
 
-#[delete("/api/auditor/{id}")]
+#[delete("/auditor/{id}")]
 pub async fn delete_auditor(
-    context: Context,
+    context: GeneralContext,
     id: web::Path<String>,
 ) -> error::Result<Json<PublicAuditor>> {
     Ok(Json(

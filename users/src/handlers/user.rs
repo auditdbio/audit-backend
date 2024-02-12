@@ -3,13 +3,26 @@ use actix_web::{
     web::{Json, Path},
     HttpResponse,
 };
-use common::{context::Context, entities::user::PublicUser, error};
+use common::{context::GeneralContext, entities::user::PublicUser, error};
 use serde_json::json;
 
 use crate::service::user::{UserChange, UserService};
 
-#[get("/api/user/{id}")]
-pub async fn find_user(context: Context, id: Path<String>) -> error::Result<HttpResponse> {
+#[get("/user_by_email/{id}")]
+pub async fn find_user_by_email(
+    context: GeneralContext,
+    id: Path<String>,
+) -> error::Result<HttpResponse> {
+    let user = UserService::new(context).find_by_email(id.parse()?).await?;
+    if let Some(user) = user {
+        Ok(HttpResponse::Ok().json(user))
+    } else {
+        Ok(HttpResponse::Ok().json(json! {{}}))
+    }
+}
+
+#[get("/user/{id}")]
+pub async fn find_user(context: GeneralContext, id: Path<String>) -> error::Result<HttpResponse> {
     let user = UserService::new(context).find(id.parse()?).await?;
     if let Some(user) = user {
         Ok(HttpResponse::Ok().json(user))
@@ -18,8 +31,8 @@ pub async fn find_user(context: Context, id: Path<String>) -> error::Result<Http
     }
 }
 
-#[get("/api/user/my_user")]
-pub async fn my_user(context: Context) -> error::Result<HttpResponse> {
+#[get("/user/my_user")]
+pub async fn my_user(context: GeneralContext) -> error::Result<HttpResponse> {
     let user = UserService::new(context).my_user().await?;
     if let Some(user) = user {
         Ok(HttpResponse::Ok().json(user))
@@ -28,9 +41,9 @@ pub async fn my_user(context: Context) -> error::Result<HttpResponse> {
     }
 }
 
-#[patch("/api/user/{id}")]
+#[patch("/user/{id}")]
 pub async fn change_user(
-    context: Context,
+    context: GeneralContext,
     id: Path<String>,
     user: Json<UserChange>,
 ) -> error::Result<Json<PublicUser>> {
@@ -41,7 +54,10 @@ pub async fn change_user(
     ))
 }
 
-#[delete("/api/user/{id}")]
-pub async fn delete_user(context: Context, id: Path<String>) -> error::Result<Json<PublicUser>> {
+#[delete("/user/{id}")]
+pub async fn delete_user(
+    context: GeneralContext,
+    id: Path<String>,
+) -> error::Result<Json<PublicUser>> {
     Ok(Json(UserService::new(context).delete(id.parse()?).await?))
 }

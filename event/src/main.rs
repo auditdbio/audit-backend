@@ -1,15 +1,18 @@
 use std::sync::Arc;
 
 use actix_web::HttpServer;
-use common::context::ServiceState;
+use common::auth::Service;
+use common::context::effectfull_context::ServiceState;
 use event::{create_app, service::event::SessionManager};
 use tokio::sync::Mutex;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    dotenv::dotenv().ok();
+
     env_logger::init();
 
-    let state = ServiceState::new("events".to_string());
+    let state = ServiceState::new(Service::Event);
 
     let state = Arc::new(state);
 

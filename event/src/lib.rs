@@ -6,7 +6,7 @@ use actix_web::{
     dev::{ServiceFactory, ServiceRequest, ServiceResponse},
     middleware, web, App,
 };
-use common::context::ServiceState;
+use common::{context::effectfull_context::ServiceState, services::API_PREFIX};
 use service::event::SessionManager;
 use tokio::sync::Mutex;
 
@@ -33,8 +33,11 @@ pub fn create_app(
         .wrap(middleware::Logger::default())
         .app_data(web::Data::from(manager))
         .app_data(web::Data::new(state))
-        .service(handlers::event::events)
-        .service(handlers::event::make_event)
-        .service(handlers::ping);
+        .service(
+            web::scope(&API_PREFIX)
+                .service(handlers::event::events)
+                .service(handlers::event::make_event)
+                .service(handlers::ping),
+        );
     app
 }

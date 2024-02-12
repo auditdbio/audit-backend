@@ -26,9 +26,10 @@ async function getPageForStrings(pdfBuffer, titlesArray) {
             const text = strings.join('').replace(/ /g, '')
 
             let headingCoordsIdx = 0
-            titlesArray.forEach((title) => {
+            titlesArray?.forEach((title) => {
               if (foundHeadings.includes(title)) return
               if (text.includes(title.replace(/^ *(\d\.)* /g, '').replace(/ /g, '') + '|||')) {
+                if (!pageHeadingsYCoords[headingCoordsIdx]) return
                 foundHeadings.push(title)
                 tableOfContents.push({
                   title,

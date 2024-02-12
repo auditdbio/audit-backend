@@ -1,16 +1,13 @@
-use std::collections::{
-    hash_map::Entry::{Occupied, Vacant},
-    HashMap,
-};
-
 use common::{
     api::{
         audits::{AuditChange, PublicAudit},
         issue::PublicIssue,
+        report::PublicReport,
     },
-    context::Context,
-    entities::{issue::Status, user::PublicUser},
-    services::{FILES_SERVICE, FRONTEND, PROTOCOL, RENDERER_SERVICE, USERS_SERVICE},
+    auth::{Auth, Service},
+    context::GeneralContext,
+    entities::issue::Status,
+    services::{API_PREFIX, FILES_SERVICE, FRONTEND, PROTOCOL, RENDERER_SERVICE, USERS_SERVICE},
 };
 use reqwest::multipart::{Form, Part};
 use serde::{Deserialize, Serialize};
@@ -46,11 +43,6 @@ pub struct RendererInput {
     pub report_data: Vec<Section>,
 }
 
-#[derive(Debug, Clone, Serialize)]
-pub struct PublicReport {
-    path: String,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct IssuesCount<T> {
     critical: T,
@@ -81,36 +73,32 @@ impl IssueCollector {
         self
     }
     pub fn into_issues(self) -> Vec<Section> {
-        vec![
-            Section {
-                typ: "plain_text".to_string(),
-                title: "Critical".to_string(),
-                subsections: Some(self.issues.critical),
-                include_in_toc: true,
-                ..Default::default()
-            },
-            Section {
-                typ: "plain_text".to_string(),
-                title: "Major".to_string(),
-                subsections: Some(self.issues.major),
-                include_in_toc: true,
-                ..Default::default()
-            },
-            Section {
-                typ: "plain_text".to_string(),
-                title: "Medium".to_string(),
-                subsections: Some(self.issues.medium),
-                include_in_toc: true,
-                ..Default::default()
-            },
-            Section {
-                typ: "plain_text".to_string(),
-                title: "Minor".to_string(),
-                subsections: Some(self.issues.minor),
-                include_in_toc: true,
-                ..Default::default()
-            },
-        ]
+        let sections = vec![
+            ("Critical", &self.issues.critical),
+            ("Major", &self.issues.major),
+            ("Medium", &self.issues.medium),
+            ("Minor", &self.issues.minor),
+        ];
+
+        sections
+            .into_iter()
+            .map(|(title, subsections)| {
+                let mut section = Section {
+                    typ: "plain_text".to_string(),
+                    title: title.to_string(),
+                    subsections: Some(subsections.clone()),
+                    include_in_toc: true,
+                    ..Default::default()
+                };
+
+                if subsections.is_empty() {
+                    section.text = format!("No {} issues found.", title.to_lowercase());
+                    section.subsections = None;
+                }
+
+                section
+            })
+            .collect()
     }
 }
 
@@ -165,7 +153,6 @@ fn generate_issue_section(issue: &PublicIssue) -> Option<Section> {
         description,
         feedback,
         severity,
-        links,
         ..
     } = issue;
 
@@ -280,35 +267,24 @@ fn generate_data(audit: &PublicAudit) -> Vec<Section> {
     generate_audit_sections(audit, issues)
 }
 
-pub async fn create_report(context: Context, audit_id: String) -> anyhow::Result<PublicReport> {
+pub async fn create_report(
+    context: GeneralContext,
+    audit_id: String,
+) -> anyhow::Result<PublicReport> {
     let audit = context
         .make_request::<PublicAudit>()
-        .auth(context.auth().clone())
+        .auth(context.auth())
         .get(format!(
-            "{}://{}/api/audit/{}",
+            "{}://{}/{}/audit/{}",
             PROTOCOL.as_str(),
             USERS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
             audit_id
         ))
         .send()
         .await
         .unwrap()
         .json::<PublicAudit>()
-        .await?;
-
-    let user = context
-        .make_request()
-        .get(format!(
-            "{}://{}/api/user/{}",
-            PROTOCOL.as_str(),
-            USERS_SERVICE.as_str(),
-            audit.auditor_id
-        ))
-        .json(&audit.auditor_id)
-        .send()
-        .await
-        .unwrap()
-        .json::<PublicUser>()
         .await?;
 
     let report_data = generate_data(&audit);
@@ -328,8 +304,10 @@ pub async fn create_report(context: Context, audit_id: String) -> anyhow::Result
     let report = context
         .make_request()
         .post(format!(
-            "http://{}/api/generate-report",
-            RENDERER_SERVICE.as_str()
+            "{}://{}/{}/generate-report",
+            PROTOCOL.as_str(),
+            RENDERER_SERVICE.as_str(),
+            API_PREFIX.as_str(),
         ))
         .json(&input)
         .send()
@@ -340,43 +318,48 @@ pub async fn create_report(context: Context, audit_id: String) -> anyhow::Result
 
     let path = audit.id.clone() + ".pdf";
 
-    let client = &context.0.client;
+    let client = &context.client();
     let form = Form::new()
         .part("file", Part::bytes(report.to_vec()))
         .part("path", Part::text(path.clone()))
         .part("original_name", Part::text("report.pdf"))
         .part("private", Part::text("true"))
-        .part("customerId", Part::text(audit.customer_id))
-        .part("auditorId", Part::text(audit.auditor_id));
+        .part("customerId", Part::text(audit.auditor_id))
+        .part("auditorId", Part::text(audit.customer_id));
 
     let _ = client
         .post(format!(
-            "{}://{}/api/file",
+            "{}://{}/{}/file",
             PROTOCOL.as_str(),
-            FILES_SERVICE.as_str()
+            FILES_SERVICE.as_str(),
+            API_PREFIX.as_str(),
         ))
         .multipart(form)
         .send()
         .await?;
 
-    let audit_change = AuditChange {
-        report: Some(path.clone()),
-        ..AuditChange::default()
-    };
+    if let Auth::Service(Service::Audits, _) = context.auth() {
+    } else {
+        let audit_change = AuditChange {
+            report: Some(path.clone()),
+            ..AuditChange::default()
+        };
 
-    let _ = context
-        .make_request()
-        .patch(format!(
-            "{}://{}/api/audit/{}",
-            PROTOCOL.as_str(),
-            USERS_SERVICE.as_str(),
-            audit.id
-        ))
-        .auth(context.auth().clone())
-        .json(&audit_change)
-        .send()
-        .await
-        .unwrap();
+        let _ = context
+            .make_request()
+            .patch(format!(
+                "{}://{}/{}/audit/{}",
+                PROTOCOL.as_str(),
+                USERS_SERVICE.as_str(),
+                API_PREFIX.as_str(),
+                audit.id
+            ))
+            .auth(context.auth())
+            .json(&audit_change)
+            .send()
+            .await
+            .unwrap();
+    }
 
     Ok(PublicReport { path })
 }

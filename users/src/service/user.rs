@@ -1,8 +1,10 @@
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
-    context::Context,
-    entities::user::{PublicUser, User},
+    api::badge::merge,
+    auth::Auth,
+    context::GeneralContext,
+    entities::user::{PublicUser, User, LinkedAccount},
     error::{self, AddCode},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
@@ -13,17 +15,7 @@ use serde::{Deserialize, Serialize};
 use super::auth::ChangePassword;
 
 pub struct UserService {
-    pub context: Context,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CreateUser {
-    pub email: String,
-    pub password: String,
-    pub name: String,
-    pub current_role: String,
-    pub use_email: Option<bool>,
-    pub admin_creation_password: Option<String>,
+    pub context: GeneralContext,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -37,13 +29,21 @@ pub struct UserChange {
 }
 
 impl UserService {
-    pub fn new(context: Context) -> Self {
+    pub fn new(context: GeneralContext) -> Self {
         Self { context }
     }
 
-    pub async fn create(&self, user: User<String>) -> error::Result<PublicUser> {
+    pub async fn create(
+        &self,
+        user: User<ObjectId>,
+        merge_secret: Option<String>,
+    ) -> error::Result<PublicUser> {
         let users = self.context.try_get_repository::<User<ObjectId>>()?;
-        let user = user.parse();
+
+        // run merge here
+        if let Some(secret) = merge_secret {
+            merge(&self.context, Auth::User(user.id), secret).await?;
+        }
 
         users.insert(&user).await?;
 
@@ -59,11 +59,70 @@ impl UserService {
             return Ok(None);
         };
 
-        if !Read.get_access(auth, &user) {
+        if !Read.get_access(&auth, &user) {
             return Err(anyhow::anyhow!("User is not available to read this user").code(403));
         }
 
         Ok(Some(user.into()))
+    }
+
+    pub async fn find_by_email(&self, email: String) -> error::Result<Option<User<ObjectId>>> {
+        let auth = self.context.auth();
+
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
+
+        let Some(user) = users.find("email", &email.into()).await? else {
+            return Ok(None);
+        };
+
+        if !Read.get_access(&auth, &user) {
+            return Err(anyhow::anyhow!("User is not available to read this user").code(403));
+        }
+
+        Ok(Some(user))
+    }
+
+    pub async fn find_linked_account(&self, id: i32, name: &str) -> error::Result<Option<User<ObjectId>>> {
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
+
+        let users = users
+            .find_many("linked_accounts.id", &Bson::Int32(id))
+            .await?;
+
+        let user = users.iter().cloned().find(|user| {
+            if let Some(accounts) = &user.linked_accounts {
+                accounts.iter().any(|account| {
+                    account.id == id && account.name == name
+                })
+            } else { false }
+        });
+
+        Ok(user)
+    }
+
+    pub async fn add_linked_account(
+        &self,
+        id: ObjectId,
+        account: LinkedAccount
+    ) -> error::Result<Option<User<ObjectId>>> {
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
+
+        let Some(mut user) = users.find("id", &Bson::ObjectId(id)).await? else {
+            return Err(anyhow::anyhow!("No user found").code(404));
+        };
+
+        if let Some(ref mut linked_accounts) = user.linked_accounts {
+            linked_accounts.push(account);
+        } else {
+            user.linked_accounts = Some(vec![account]);
+        }
+
+        user.last_modified = Utc::now().timestamp_micros();
+
+        users.delete("id", &id).await?;
+        users.insert(&user).await?;
+
+        Ok(Some(user))
     }
 
     pub async fn my_user(&self) -> error::Result<Option<User<String>>> {
@@ -71,7 +130,10 @@ impl UserService {
 
         let users = self.context.try_get_repository::<User<ObjectId>>()?;
 
-        let Some(user) = users.find("id", &Bson::ObjectId(*auth.id().unwrap())).await? else {
+        let Some(user) = users
+            .find("id", &Bson::ObjectId(auth.id().unwrap()))
+            .await?
+        else {
             return Ok(None);
         };
 
@@ -87,7 +149,7 @@ impl UserService {
             return Err(anyhow::anyhow!("No user found").code(404));
         };
 
-        if !Edit.get_access(auth, &user) {
+        if !Edit.get_access(&auth, &user) {
             return Err(anyhow::anyhow!("User is not available to change this user").code(403));
         }
 
@@ -114,6 +176,7 @@ impl UserService {
             let password = sha256::digest(password);
             user.password = password;
             user.salt = salt;
+            user.is_passwordless = Some(false);
         }
 
         if let Some(name) = change.name {
@@ -145,7 +208,7 @@ impl UserService {
             return Err(anyhow::anyhow!("No user found").code(404));
         };
 
-        if !Edit.get_access(auth, &user) {
+        if !Edit.get_access(&auth, &user) {
             users.insert(&user).await?;
             return Err(anyhow::anyhow!("User is not available to delete this user").code(403));
         }

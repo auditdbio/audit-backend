@@ -3,12 +3,12 @@ use actix_web::{
     web::{self, Json},
     HttpRequest, HttpResponse,
 };
-use common::{api::events::PublicEvent, context::Context, error};
+use common::{api::events::PublicEvent, context::GeneralContext, error};
 use tokio::sync::Mutex;
 
 use crate::service::event::SessionManager;
 
-#[get("/api/notifications/{user_id}")]
+#[get("/notifications/{user_id}")]
 pub async fn events(
     req: HttpRequest,
     stream: web::Payload,
@@ -24,9 +24,9 @@ pub async fn events(
     .await
 }
 
-#[post("/api/event")]
+#[post("/event")]
 pub async fn make_event(
-    context: Context,
+    context: GeneralContext,
     manager: web::Data<Mutex<SessionManager>>,
     Json(event): web::Json<PublicEvent>,
 ) -> error::Result<HttpResponse> {

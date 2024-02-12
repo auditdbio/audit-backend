@@ -1,31 +1,33 @@
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
-    context::Context,
+    api::seartch::delete_from_search,
+    context::GeneralContext,
     entities::{
         audit_request::PriceRange,
-        auditor::{Auditor, PublicAuditor},
+        auditor::{Auditor, ExtendedAuditor, PublicAuditor},
+        badge::Badge,
         contacts::Contacts,
         customer::PublicCustomer,
         user::PublicUser,
     },
     error::{self, AddCode},
-    services::{PROTOCOL, USERS_SERVICE},
+    services::{API_PREFIX, PROTOCOL, USERS_SERVICE},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateAuditor {
-    avatar: Option<String>,
-    first_name: String,
-    last_name: String,
-    about: Option<String>,
-    company: Option<String>,
-    contacts: Contacts,
-    free_at: Option<String>,
-    price_range: Option<PriceRange>,
-    tags: Option<Vec<String>>,
+    pub avatar: Option<String>,
+    pub first_name: String,
+    pub last_name: String,
+    pub about: Option<String>,
+    pub company: Option<String>,
+    pub contacts: Contacts,
+    pub free_at: Option<String>,
+    pub price_range: Option<PriceRange>,
+    pub tags: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -42,11 +44,11 @@ pub struct AuditorChange {
 }
 
 pub struct AuditorService {
-    context: Context,
+    context: GeneralContext,
 }
 
 impl AuditorService {
-    pub fn new(context: Context) -> Self {
+    pub fn new(context: GeneralContext) -> Self {
         Self { context }
     }
 
@@ -56,7 +58,7 @@ impl AuditorService {
         let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
 
         let auditor = Auditor {
-            user_id: *auth.id().ok_or(anyhow::anyhow!("No user id found"))?,
+            user_id: auth.id().ok_or(anyhow::anyhow!("No user id found"))?,
             avatar: auditor.avatar.unwrap_or_default(),
             first_name: auditor.first_name,
             last_name: auditor.last_name,
@@ -65,6 +67,7 @@ impl AuditorService {
             contacts: auditor.contacts,
             tags: auditor.tags.unwrap_or_default(),
             last_modified: Utc::now().timestamp_micros(),
+            created_at: Some(Utc::now().timestamp_micros()),
             free_at: auditor.free_at.unwrap_or_default(),
             price_range: auditor.price_range.unwrap_or_default(),
         };
@@ -74,20 +77,26 @@ impl AuditorService {
         Ok(auditor.stringify())
     }
 
-    pub async fn find(&self, id: ObjectId) -> error::Result<Option<PublicAuditor>> {
+    pub async fn find(&self, id: ObjectId) -> error::Result<Option<ExtendedAuditor>> {
         let auth = self.context.auth();
 
         let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
 
         let Some(auditor) = auditors.find("user_id", &Bson::ObjectId(id)).await? else {
-            return Ok(None);
+            let badges = self.context.try_get_repository::<Badge<ObjectId>>()?;
+
+            let Some(badge) = badges.find("user_id", &Bson::ObjectId(id)).await? else {
+                return Ok(None);
+            };
+
+            return Ok(Some(ExtendedAuditor::Badge(auth.public_badge(badge))));
         };
 
-        if !Read.get_access(auth, &auditor) {
+        if !Read.get_access(&auth, &auditor) {
             return Err(anyhow::anyhow!("User is not available to change this auditor").code(400));
         }
 
-        Ok(Some(auth.public_auditor(auditor)))
+        Ok(Some(ExtendedAuditor::Auditor(auth.public_auditor(auditor))))
     }
 
     pub async fn my_auditor(&self) -> error::Result<Option<Auditor<String>>> {
@@ -96,7 +105,7 @@ impl AuditorService {
         let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
 
         let auditor = auditors
-            .find("user_id", &Bson::ObjectId(*auth.id().unwrap()))
+            .find("user_id", &Bson::ObjectId(auth.id().unwrap()))
             .await?
             .map(Auditor::stringify);
 
@@ -104,11 +113,12 @@ impl AuditorService {
             let user = self
                 .context
                 .make_request::<PublicUser>()
-                .auth(auth.clone())
+                .auth(auth)
                 .get(format!(
-                    "{}://{}/api/user/{}",
+                    "{}://{}/{}/user/{}",
                     PROTOCOL.as_str(),
                     USERS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
                     auth.id().unwrap()
                 ))
                 .send()
@@ -123,11 +133,12 @@ impl AuditorService {
             let has_customer = self
                 .context
                 .make_request::<PublicCustomer>()
-                .auth(auth.clone())
+                .auth(auth)
                 .get(format!(
-                    "{}://{}/api/customer/{}",
+                    "{}://{}/{}/customer/{}",
                     PROTOCOL.as_str(),
                     USERS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
                     auth.id().unwrap()
                 ))
                 .send()
@@ -171,7 +182,7 @@ impl AuditorService {
 
     pub async fn change(&self, change: AuditorChange) -> error::Result<Auditor<String>> {
         let auth = self.context.auth();
-        let id = *auth.id().unwrap();
+        let id = auth.id().unwrap();
 
         let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
 
@@ -179,7 +190,7 @@ impl AuditorService {
             return Err(anyhow::anyhow!("No auditor found").code(400));
         };
 
-        if !Edit.get_access(auth, &auditor) {
+        if !Edit.get_access(&auth, &auditor) {
             return Err(anyhow::anyhow!("User is not available to change this auditor").code(400));
         }
 
@@ -236,10 +247,11 @@ impl AuditorService {
             return Err(anyhow::anyhow!("No auditor found").code(400));
         };
 
-        if !Edit.get_access(auth, &auditor) {
+        if !Edit.get_access(&auth, &auditor) {
             auditors.insert(&auditor).await?;
             return Err(anyhow::anyhow!("User is not available to delete this auditor").code(400));
         }
+        delete_from_search(&self.context, id).await?;
 
         Ok(auth.public_auditor(auditor))
     }

@@ -6,7 +6,7 @@ use actix_web::{
     dev::{ServiceFactory, ServiceRequest, ServiceResponse},
     middleware, web, App,
 };
-use common::context::ServiceState;
+use common::{context::effectfull_context::ServiceState, services::API_PREFIX};
 use handlers::{
     indexer::ping,
     notifications::{read_notification, send_notification, unread_notifications},
@@ -38,9 +38,12 @@ pub fn create_app(
         .wrap(middleware::Logger::default())
         .app_data(web::Data::new(state))
         .app_data(web::Data::from(repo))
-        .service(send_notification)
-        .service(read_notification)
-        .service(unread_notifications)
-        .service(ping);
+        .service(
+            web::scope(&API_PREFIX)
+                .service(send_notification)
+                .service(read_notification)
+                .service(unread_notifications)
+                .service(ping),
+        );
     app
 }

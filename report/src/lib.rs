@@ -5,10 +5,11 @@ use actix_web::{
     body::MessageBody,
     dev::{ServiceFactory, ServiceRequest, ServiceResponse},
     middleware,
-    web::Data,
+    web::{self, Data},
     App,
 };
-use common::context::ServiceState;
+use common::context::effectfull_context::ServiceState;
+use common::services::API_PREFIX;
 
 pub mod handlers;
 pub mod service;
@@ -31,6 +32,6 @@ pub fn create_app(
         .wrap(cors)
         .wrap(middleware::Logger::default())
         .app_data(Data::new(state))
-        .service(handlers::report::create_report);
+        .service(web::scope(&API_PREFIX).service(handlers::report::create_report));
     app
 }

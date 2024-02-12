@@ -2,32 +2,30 @@ use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
     api::{
+        auditor::request_auditor,
+        badge::BadgePayload,
+        codes::post_code,
         events::{EventPayload, PublicEvent},
+        mail::send_mail,
+        requests::CreateRequest,
+        seartch::PaginationParams,
         send_notification, NewNotification,
     },
-    context::Context,
+    context::GeneralContext,
     entities::{
         audit_request::{AuditRequest, PriceRange, TimeRange},
+        auditor::ExtendedAuditor,
+        letter::CreateLetter,
         project::get_project,
         role::Role,
     },
     error::{self, AddCode},
-    services::{CUSTOMERS_SERVICE, EVENTS_SERVICE, FRONTEND, PROTOCOL},
+    services::{API_PREFIX, CUSTOMERS_SERVICE, EVENTS_SERVICE, FRONTEND, PROTOCOL},
 };
 
+pub use common::api::requests::PublicRequest;
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CreateRequest {
-    customer_id: String,
-    auditor_id: String,
-    project_id: String,
-
-    price: i64,
-    description: String,
-    time: TimeRange,
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RequestChange {
@@ -38,15 +36,20 @@ pub struct RequestChange {
     price: Option<i64>,
 }
 
-pub use common::api::requests::PublicRequest;
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MyAuditRequestResult {
+    pub result: Vec<PublicRequest>,
+    #[serde(rename = "totalDocuments")]
+    pub total_documents: u64,
+}
 
 pub struct RequestService {
-    context: Context,
+    context: GeneralContext,
 }
 
 impl RequestService {
     #[must_use]
-    pub const fn new(context: Context) -> Self {
+    pub const fn new(context: GeneralContext) -> Self {
         Self { context }
     }
 
@@ -58,7 +61,9 @@ impl RequestService {
             .try_get_repository::<AuditRequest<ObjectId>>()?;
 
         let Some(user_id) = auth.id() else {
-            return Err(anyhow::anyhow!("Audit can be created only by authenticated user").code(400));
+            return Err(
+                anyhow::anyhow!("Audit can be created only by authenticated user").code(400),
+            );
         };
 
         let customer_id = request.customer_id.parse()?;
@@ -68,9 +73,9 @@ impl RequestService {
             return Err(anyhow::anyhow!("You can't create audit with yourself").code(400));
         }
 
-        let last_changer = if user_id == &customer_id {
+        let last_changer = if user_id == customer_id {
             Role::Customer
-        } else if user_id == &auditor_id {
+        } else if user_id == auditor_id {
             Role::Auditor
         } else {
             return Err(
@@ -118,7 +123,11 @@ impl RequestService {
             let variables: Vec<(String, String)> =
                 vec![("project".to_owned(), project.name.clone())];
 
-            send_notification(&self.context, true, true, new_notification, variables).await?;
+            if let Err(err) =
+                send_notification(&self.context, true, true, new_notification, variables).await
+            {
+                log::warn!("Failed to send notification: {}", err); // TODO: this always fails for badges, do something with it
+            }
         } else {
             let mut new_notification: NewNotification =
                 serde_json::from_str(include_str!("../../templates/new_audit_offer.txt"))?;
@@ -138,7 +147,7 @@ impl RequestService {
         if last_changer == Role::Customer {
             self.context
                 .make_request::<()>()
-                .auth(auth.clone())
+                .auth(auth)
                 .post(format!(
                     "{}://{}/project/auditor/{}/{}",
                     PROTOCOL.as_str(),
@@ -150,9 +159,55 @@ impl RequestService {
                 .await?;
         }
 
+        if let ExtendedAuditor::Badge(badge) = request_auditor(
+            &self.context,
+            request.auditor_id,
+            self.context.server_auth(),
+        )
+        .await?
+        {
+            let payload = BadgePayload {
+                badge_id: badge.user_id.parse()?,
+                email: badge.contacts.email.clone().unwrap(),
+            };
+
+            let code = post_code(&self.context, serde_json::to_string(&payload)?).await?;
+
+            // delete link
+            let delete_link = format!(
+                "{}://{}/delete/{}/{}",
+                PROTOCOL.as_str(),
+                FRONTEND.as_str(),
+                badge.user_id,
+                code
+            );
+            // merge link
+            let merge_link = format!(
+                "{}://{}/invite-user/{}/{}",
+                PROTOCOL.as_str(),
+                FRONTEND.as_str(),
+                badge.user_id,
+                code
+            );
+
+            let message = include_str!("../../templates/badge_link.txt")
+                .replace("{merge_link}", &merge_link)
+                .replace("{delete_link}", &delete_link);
+
+            // send email
+            let letter = CreateLetter {
+                recipient_id: None,
+                recipient_name: None,
+                email: badge.contacts.email.unwrap(),
+                message: message.clone(),
+                subject: "AuditDB Audit Request".to_string(),
+            };
+            send_mail(&self.context, letter).await?;
+        }
+
         requests.insert(&request).await?;
 
-        let event_reciver = if auth.id().unwrap() == &customer_id {
+        let event_reciver = if auth.id().unwrap() == customer_id {
             auditor_id
         } else {
             customer_id
@@ -168,9 +223,10 @@ impl RequestService {
         self.context
             .make_request()
             .post(format!(
-                "{}://{}/api/event",
+                "{}://{}/{}/event",
                 PROTOCOL.as_str(),
-                EVENTS_SERVICE.as_str()
+                EVENTS_SERVICE.as_str(),
+                API_PREFIX.as_str(),
             ))
             .auth(self.context.server_auth())
             .json(&event)
@@ -191,7 +247,7 @@ impl RequestService {
             return Ok(None);
         };
 
-        if !Read.get_access(auth, &request) {
+        if !Read.get_access(&auth, &request) {
             return Err(anyhow::anyhow!("User is not available to change this customer").code(400));
         }
 
@@ -200,7 +256,16 @@ impl RequestService {
         Ok(Some(public_request))
     }
 
-    pub async fn my_request(&self, role: Role) -> error::Result<Vec<PublicRequest>> {
+    pub async fn my_request(
+        &self,
+        role: Role,
+        pagination: PaginationParams,
+    ) -> error::Result<Vec<PublicRequest>> {
+        let page = pagination.page.unwrap_or(0);
+        let per_page = pagination.per_page.unwrap_or(0);
+        let limit = pagination.per_page.unwrap_or(1000);
+        let skip = (page - 1) * per_page;
+
         let auth = self.context.auth();
 
         let requests = self
@@ -208,7 +273,9 @@ impl RequestService {
             .try_get_repository::<AuditRequest<ObjectId>>()?;
 
         let Some(user_id) = auth.id() else {
-            return Err(anyhow::anyhow!("Audit can be created only by authenticated user").code(400));
+            return Err(
+                anyhow::anyhow!("Audit can be created only by authenticated user").code(400),
+            );
         };
 
         let id = match role {
@@ -216,7 +283,9 @@ impl RequestService {
             Role::Customer => "customer_id",
         };
 
-        let result = requests.find_many(id, &Bson::ObjectId(*user_id)).await?;
+        let (result, _total_documents) = requests
+            .find_many_limit(id, &Bson::ObjectId(user_id), skip, limit)
+            .await?;
 
         let mut public_requests = Vec::new();
 
@@ -226,6 +295,10 @@ impl RequestService {
             public_requests.push(public_request);
         }
 
+        // Ok(MyAuditRequestResult {
+        //     result: public_requests,
+        //     total_documents,
+        // })
         Ok(public_requests)
     }
 
@@ -244,7 +317,7 @@ impl RequestService {
             return Err(anyhow::anyhow!("No customer found").code(404));
         };
 
-        if !Edit.get_access(auth, &request) {
+        if !Edit.get_access(&auth, &request) {
             return Err(anyhow::anyhow!("User is not available to change this customer").code(400));
         }
 
@@ -260,9 +333,9 @@ impl RequestService {
             request.price = price;
         }
 
-        let role = if auth.id() == Some(&request.customer_id) {
+        let role = if auth.id() == Some(request.customer_id) {
             Role::Customer
-        } else if auth.id() == Some(&request.auditor_id) {
+        } else if auth.id() == Some(request.auditor_id) {
             Role::Auditor
         } else {
             return Err(anyhow::anyhow!("User is not available to change this customer").code(400));
@@ -291,14 +364,14 @@ impl RequestService {
             return Err(anyhow::anyhow!("No customer found").code(404));
         };
 
-        if !Edit.get_access(auth, &request) {
+        if !Edit.get_access(&auth, &request) {
             requests.insert(&request).await?;
             return Err(anyhow::anyhow!("User is not available to delete this customer").code(400));
         }
 
-        let current_role = if auth.id() == Some(&request.customer_id) {
+        let current_role = if auth.id() == Some(request.customer_id) {
             Role::Customer
-        } else if auth.id() == Some(&request.auditor_id) {
+        } else if auth.id() == Some(request.auditor_id) {
             Role::Auditor
         } else {
             return Err(anyhow::anyhow!("User is not available to change this customer").code(400));
@@ -309,7 +382,7 @@ impl RequestService {
         if current_role == Role::Customer {
             self.context
                 .make_request::<()>()
-                .auth(auth.clone())
+                .auth(auth)
                 .post(format!(
                     "{}://{}/project/auditor/{}/{}",
                     PROTOCOL.as_str(),
@@ -335,9 +408,10 @@ impl RequestService {
         self.context
             .make_request()
             .post(format!(
-                "{}://{}/api/event",
+                "{}://{}/{}/event",
                 PROTOCOL.as_str(),
-                EVENTS_SERVICE.as_str()
+                EVENTS_SERVICE.as_str(),
+                API_PREFIX.as_str(),
             ))
             .auth(self.context.server_auth())
             .json(&event)
@@ -345,5 +419,29 @@ impl RequestService {
             .await?;
 
         Ok(public_request)
+    }
+
+    pub async fn find_all(
+        &self,
+        role: Role,
+        user_id: ObjectId,
+    ) -> error::Result<Vec<AuditRequest<String>>> {
+        let requests = self
+            .context
+            .try_get_repository::<AuditRequest<ObjectId>>()?;
+
+        let id = match role {
+            Role::Auditor => "auditor_id",
+            Role::Customer => "customer_id",
+        };
+
+        let result = requests
+            .find_many(id, &Bson::ObjectId(user_id))
+            .await?
+            .into_iter()
+            .map(|r| r.stringify())
+            .collect();
+
+        Ok(result)
     }
 }

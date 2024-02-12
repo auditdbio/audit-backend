@@ -1,0 +1,13 @@
+Hi,
+Greetings from AuditDB, the premier social network dedicated to blockchain auditors like you!
+We are thrilled to inform you that we have added the information about you to our database using contacts and information sourced from open platforms. Our mission at AuditDB is to empower auditors with tools and resources that enhance your professional journey. Here are some of the benefits of joining our community:
+New Client Outreach: Increase your visibility and attract potential clients.
+Comfortable Audit Constructor: Streamline your audit processes with our user-friendly tools.
+Professional Community: Connect, share, and grow with a network of esteemed blockchain auditors.
+To fully leverage these benefits, we encourage you to transform your basic entry into a comprehensive professional page. Dive deeper into the community, share insights, and solidify your presence! Click <a href="{merge_link}">here</a> to upgrade to a personal page. 
+However, we respect your privacy. If, for any reason, you wish not to be part of our database, please let us know, and we will promptly remove your information. Click <a href="{delete_link}">here</a> to remove the information. 
+Also, you are free to ignore this page.
+Your feedback and decision are paramount to us. Kindly let us know your preference at your earliest convenience.
+Thank you for being an integral part of the blockchain revolution. We look forward to welcoming you to our growing AuditDB family!
+Stay decentralized,
+AuditDB team

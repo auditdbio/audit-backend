@@ -1,8 +1,16 @@
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
+use crate::{
+    auth::Auth,
+    context::GeneralContext,
+    error,
+    services::{API_PREFIX, EVENTS_SERVICE, PROTOCOL},
+};
+
 use super::{
-    audits::PublicAudit, chat::PublicMessage, requests::PublicRequest, PublicNotification,
+    audits::PublicAudit, chat::PublicMessage, issue::PublicIssue, requests::PublicRequest,
+    PublicNotification,
 };
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
@@ -14,6 +22,8 @@ pub enum EventPayload {
     NewAudit(PublicAudit),
     AuditUpdate(PublicAudit),
     ChatMessage(PublicMessage),
+    IssueUpdate { issue: PublicIssue, audit: String },
+    VersionUpdate,
 }
 
 impl EventPayload {
@@ -26,7 +36,13 @@ impl EventPayload {
             EventPayload::ChatMessage(_) => "ChatMessage".to_owned(),
             EventPayload::RequestAccept(_) => "RequestAccept".to_owned(),
             EventPayload::RequestDecline(_) => "RequestDecline".to_owned(),
+            EventPayload::IssueUpdate { issue: _, audit: _ } => "IssueUpdated".to_owned(),
+            EventPayload::VersionUpdate => "VersionUpdate".to_owned(),
         }
+    }
+
+    pub fn for_all(&self) -> bool {
+        matches!(self, EventPayload::VersionUpdate)
     }
 }
 
@@ -46,4 +62,24 @@ impl PublicEvent {
             payload,
         }
     }
+}
+
+pub async fn post_event(
+    context: &GeneralContext,
+    event: PublicEvent,
+    auth: Auth,
+) -> error::Result<()> {
+    context
+        .make_request()
+        .post(format!(
+            "{}://{}/{}/event",
+            PROTOCOL.as_str(),
+            EVENTS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
+        ))
+        .auth(auth)
+        .json(&event)
+        .send()
+        .await?;
+    Ok(())
 }

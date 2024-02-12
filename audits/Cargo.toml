@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 actix-web = "4.2.1"
 actix-cors = "0.6.4"
-serde = "1.0.152"
+serde = "1"
 derive_more = "0.99.17"
 env_logger = "0.10.0"
 log = "0.4.17"
@@ -22,6 +22,9 @@ anyhow = "1"
 async-trait = "0.1"
 common = {path = "../common"}
 mongodb-migrator = "0.1"
+dotenv = "0.15.0"
+rand = "0.8"
+
 
 
 [dependencies.mongodb]

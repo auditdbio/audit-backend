@@ -2,7 +2,7 @@ You've decided to join auditdb.io? Awesome! We're stoked to have you onboard!
 
 By clicking on this link, you'll validate your email address and be able to access all the amazing features of our platform. If you did not sign up for our service, please disregard this email.
 
-{link}
+Click <a href="{link}">here</a> to validate email.
 
 If you encounter any challenges with the confirmation link or have any questions about our network, please don't hesitate to reach out to our team. We're always on standby to assist you in any way possible.
 Be sure to join our thriving community of tech virtuosos:

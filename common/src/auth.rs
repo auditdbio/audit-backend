@@ -11,6 +11,7 @@ use crate::{
     constants::DURATION,
     entities::{
         auditor::{Auditor, PublicAuditor},
+        badge::{Badge, PublicBadge},
         contacts::Contacts,
         customer::{Customer, PublicCustomer},
         issue::{Event, Issue},
@@ -21,7 +22,6 @@ use crate::{
 
 pub static ENCODING_KEY: Lazy<EncodingKey> = Lazy::new(|| {
     let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
-
     EncodingKey::from_secret(secret.as_bytes())
 });
 
@@ -30,16 +30,33 @@ pub static DECODING_KEY: Lazy<DecodingKey> = Lazy::new(|| {
     DecodingKey::from_secret(secret.as_bytes())
 });
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum Service {
+    Auditors,
+    Audits,
+    Customers,
+    Common,
+    Files,
+    Users,
+    Search,
+    Mail,
+    Notification,
+    Telemetry,
+    Event,
+    Report,
+    Chat,
+}
+
+#[derive(Debug, Clone, PartialEq, Copy)]
 pub enum Auth {
-    Service(String, bool),
+    Service(Service, bool),
     Admin(ObjectId),
     User(ObjectId),
     None,
 }
 
 impl Auth {
-    pub fn id(&self) -> Option<&ObjectId> {
+    pub fn id(self) -> Option<ObjectId> {
         match self {
             Auth::Admin(id) => Some(id),
             Auth::User(id) => Some(id),
@@ -57,7 +74,7 @@ impl Auth {
     pub fn full_access(&self) -> bool {
         match self {
             Auth::Admin(_) => true,
-            Auth::Service(name, _) => name != "search",
+            Auth::Service(name, _) => name != &Service::Search,
             _ => false,
         }
     }
@@ -73,7 +90,7 @@ impl Auth {
             contacts = customer.contacts;
         }
 
-        if &Auth::None == self || &Auth::Service("search".to_string(), false) == self {
+        if &Auth::None == self || &Auth::Service(Service::Search, false) == self {
             contacts.telegram = None;
             contacts.email = None;
         }
@@ -87,6 +104,7 @@ impl Auth {
             company: customer.company,
             contacts,
             tags: customer.tags,
+            kind: "customer".to_string(),
         }
     }
 
@@ -101,7 +119,7 @@ impl Auth {
             contacts = auditor.contacts;
         }
 
-        if &Auth::None == self || &Auth::Service("search".to_string(), false) == self {
+        if &Auth::None == self || &Auth::Service(Service::Search, false) == self {
             contacts.telegram = None;
             contacts.email = None;
         }
@@ -117,6 +135,38 @@ impl Auth {
             free_at: auditor.free_at,
             price_range: auditor.price_range,
             tags: auditor.tags,
+            kind: "auditor".to_string(),
+        }
+    }
+
+    pub fn public_badge(&self, auditor: Badge<ObjectId>) -> PublicBadge {
+        let mut contacts = Contacts {
+            telegram: None,
+            email: None,
+            public_contacts: false,
+        };
+
+        if auditor.contacts.public_contacts || self.full_access() {
+            contacts = auditor.contacts;
+        }
+
+        if &Auth::None == self || &Auth::Service(Service::Search, false) == self {
+            contacts.telegram = None;
+            contacts.email = None;
+        }
+
+        PublicBadge {
+            user_id: auditor.user_id.to_hex(),
+            avatar: auditor.avatar,
+            first_name: auditor.first_name,
+            last_name: auditor.last_name,
+            about: auditor.about,
+            company: auditor.company,
+            contacts,
+            free_at: auditor.free_at,
+            price_range: auditor.price_range,
+            tags: auditor.tags,
+            kind: "badge".to_string(),
         }
     }
 
@@ -131,7 +181,7 @@ impl Auth {
             contacts = project.creator_contacts;
         }
 
-        if &Auth::None == self || &Auth::Service("search".to_string(), false) == self {
+        if &Auth::None == self || &Auth::Service(Service::Search, false) == self {
             contacts.telegram = None;
             contacts.email = None;
         }
@@ -147,6 +197,8 @@ impl Auth {
             status: project.status,
             creator_contacts: contacts,
             price: project.price,
+            kind: "project".to_string(),
+            created_at: Some(Utc::now().timestamp_micros()),
         }
     }
 
@@ -181,7 +233,7 @@ enum Role {
 struct Claims {
     role: Role,
     user_id: Option<String>,
-    service_name: Option<String>,
+    service_name: Option<Service>,
     user_authorized: Option<bool>,
     exp: i64,
 }

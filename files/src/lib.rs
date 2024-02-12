@@ -6,7 +6,7 @@ use actix_web::{
     dev::{ServiceFactory, ServiceRequest, ServiceResponse},
     middleware, web, App,
 };
-use common::context::ServiceState;
+use common::{context::effectfull_context::ServiceState, services::API_PREFIX};
 pub use handlers::*;
 use handlers::{
     file::{create_file, delete_file, find_file},
@@ -34,10 +34,13 @@ pub fn create_app(
         .wrap(cors)
         .wrap(middleware::Logger::default())
         .app_data(web::Data::new(state))
-        .service(create_file)
-        .service(find_file)
-        .service(delete_file)
-        .service(ping);
+        .service(
+            web::scope(&API_PREFIX)
+                .service(create_file)
+                .service(find_file)
+                .service(delete_file)
+                .service(ping),
+        );
 
     app
 }

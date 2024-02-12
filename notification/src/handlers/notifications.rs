@@ -4,7 +4,7 @@ use actix_web::{
     HttpResponse,
 };
 
-use common::{context::Context, entities::notification::CreateNotification, error};
+use common::{context::GeneralContext, entities::notification::CreateNotification, error};
 use mongodb::bson::doc;
 
 use crate::{
@@ -12,9 +12,9 @@ use crate::{
     service::notifications::{get_unread_notifications, read, PublicNotification},
 };
 
-#[post("/api/send_notification")]
+#[post("/send_notification")]
 pub async fn send_notification(
-    context: Context,
+    context: GeneralContext,
     Json(new_notification): web::Json<CreateNotification>,
     notifs: web::Data<NotificationsRepository>,
 ) -> error::Result<HttpResponse> {
@@ -23,9 +23,9 @@ pub async fn send_notification(
     Ok(HttpResponse::Ok().finish())
 }
 
-#[patch("/api/read_notification/{id}")]
+#[patch("/read_notification/{id}")]
 pub async fn read_notification(
-    context: Context,
+    context: GeneralContext,
     notifs: web::Data<NotificationsRepository>,
     id: web::Path<String>,
 ) -> error::Result<HttpResponse> {
@@ -34,9 +34,9 @@ pub async fn read_notification(
     Ok(HttpResponse::Ok().json(doc! {"id": id}))
 }
 
-#[get("/api/unread_notifications")]
+#[get("/unread_notifications")]
 pub async fn unread_notifications(
-    context: Context,
+    context: GeneralContext,
     notifs: web::Data<NotificationsRepository>,
 ) -> error::Result<Json<Vec<PublicNotification>>> {
     Ok(Json(get_unread_notifications(context, &notifs).await?))
