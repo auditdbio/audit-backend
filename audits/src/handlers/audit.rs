@@ -1,152 +1,173 @@
 use actix_web::{
-    delete, get,
-    web::{self},
-    HttpRequest, HttpResponse,
+    delete, get, patch, post,
+    web::{self, Json, Query},
+    HttpResponse,
 };
-use awc::Client;
+
 use common::{
-    auth_session::get_auth_session,
-    entities::{audit_request::AuditRequest, project::Project, view::View},
-};
-use mongodb::bson::oid::ObjectId;
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
-
-use crate::{
-    contants::CUSTOMERS_SERVICE,
-    error::Result,
-    repositories::{
-        audit::AuditRepo, audit_request::AuditRequestRepo, closed_audits::ClosedAuditRepo,
+    api::{
+        audits::{AuditChange, CreateIssue, NoCustomerAuditRequest, PublicAudit},
+        seartch::PaginationParams,
     },
+    context::GeneralContext,
+    entities::{issue::ChangeIssue, role::Role},
+    error,
 };
 
-#[utoipa::path(
-    request_body(
-        content = AuditRequest
-    ),
-    responses(
-        (status = 200, body = Audit)
-    )
-)]
-#[get("/api/audit")]
+use serde_json::json;
+
+use crate::service::{
+    audit::{AuditService},
+    audit_request::PublicRequest,
+};
+
+#[post("/audit")]
 pub async fn post_audit(
-    req: HttpRequest,
-    request: web::Path<AuditRequest>,
-    repo: web::Data<AuditRepo>,
-) -> Result<HttpResponse> {
-    todo!()
+    context: GeneralContext,
+    Json(data): web::Json<PublicRequest>,
+) -> error::Result<Json<PublicAudit>> {
+    Ok(Json(AuditService::new(context).create(data).await?))
 }
 
-#[utoipa::path(
-    responses(
-        (status = 200, body = Audit)
-    )
-)]
-#[get("/api/audit/{id}")]
-pub async fn get_audits(
-    req: HttpRequest,
-    id: web::Path<ObjectId>,
-    repo: web::Data<AuditRepo>,
-) -> Result<HttpResponse> {
-    let _session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
-
-    let audits = repo.find(&id).await?;
-
-    Ok(HttpResponse::Ok().json(audits))
+#[post("/no_customer_audit")]
+pub async fn post_no_customer_audit(
+    context: GeneralContext,
+    Json(data): Json<NoCustomerAuditRequest>,
+) -> error::Result<Json<PublicAudit>> {
+    Ok(Json(
+        AuditService::new(context).create_no_customer(data).await?,
+    ))
 }
 
-#[utoipa::path(
-    responses(
-        (status = 200, body = Audit)
-    )
-)]
-#[delete("/api/audit/{id}")]
+#[get("/audit/{id}")]
+pub async fn get_audit(
+    context: GeneralContext,
+    id: web::Path<String>,
+) -> error::Result<HttpResponse> {
+    let res = AuditService::new(context).find(id.parse()?).await?;
+    if let Some(res) = res {
+        Ok(HttpResponse::Ok().json(res))
+    } else {
+        Ok(HttpResponse::Ok().json(json! {{}}))
+    }
+}
+
+#[get("/my_audit/{role}")]
+pub async fn get_my_audit(
+    context: GeneralContext,
+    role: web::Path<Role>,
+    pagination: Query<PaginationParams>,
+) -> error::Result<Json<Vec<PublicAudit>>> {
+    Ok(Json(
+        AuditService::new(context)
+            .my_audit(role.into_inner(), pagination.into_inner())
+            .await?,
+    ))
+}
+
+#[patch("/audit/{id}")]
+pub async fn patch_audit(
+    context: GeneralContext,
+    id: web::Path<String>,
+    Json(data): Json<AuditChange>,
+) -> error::Result<Json<PublicAudit>> {
+    Ok(Json(
+        AuditService::new(context).change(id.parse()?, data).await?,
+    ))
+}
+
+#[delete("/audit/{id}")]
 pub async fn delete_audit(
-    req: HttpRequest,
-    id: web::Path<ObjectId>,
-    repo: web::Data<AuditRepo>,
-    closed_repo: web::Data<ClosedAuditRepo>,
-) -> Result<HttpResponse> {
-    let _session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
-
-    let Some(audit) = repo.delete(&id).await? else {
-        return Ok(HttpResponse::BadRequest().finish());
-    };
-
-    closed_repo.create(&audit).await?;
-
-    Ok(HttpResponse::Ok().json(audit))
+    context: GeneralContext,
+    id: web::Path<String>,
+) -> error::Result<Json<PublicAudit>> {
+    Ok(Json(AuditService::new(context).delete(id.parse()?).await?))
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct GetViewsResponse {
-    pub views: Vec<View>,
+#[post("/audit/{id}/issue")]
+pub async fn post_audit_issue(
+    context: GeneralContext,
+    id: web::Path<String>,
+    Json(data): Json<CreateIssue>,
+) -> error::Result<HttpResponse> {
+    let result = AuditService::new(context)
+        .create_issue(id.parse()?, data)
+        .await?;
+    Ok(HttpResponse::Ok().json(result))
 }
 
-async fn get_project(client: &Client, project_id: &ObjectId) -> Result<Project> {
-    let mut res = client
-        .get(format!(
-            "http://{}/api/project/{}",
-            CUSTOMERS_SERVICE, project_id
-        ))
-        .send()
-        .await
-        .unwrap();
-
-    let body = res.json::<Project>().await.unwrap();
-    Ok(body)
+#[patch("/audit/{id}/issue/{issue_id}")]
+pub async fn patch_audit_issue(
+    context: GeneralContext,
+    id: web::Path<(String, usize)>,
+    Json(data): Json<ChangeIssue>,
+) -> error::Result<HttpResponse> {
+    let result = AuditService::new(context)
+        .change_issue(id.0.parse()?, id.1, data)
+        .await?;
+    Ok(HttpResponse::Ok().json(result))
 }
 
-#[utoipa::path(
-    responses(
-        (status = 200, body = GetViewsResponse)
-    )
-)]
-#[get("/api/audit/views")]
-pub async fn get_views(
-    req: HttpRequest,
-    request_repo: web::Data<AuditRequestRepo>,
-    audits_repo: web::Data<AuditRepo>,
-) -> Result<HttpResponse> {
-    let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
+#[get("/audit/{id}/issue")]
+pub async fn get_audit_issue(
+    context: GeneralContext,
+    id: web::Path<String>,
+) -> error::Result<HttpResponse> {
+    let result = AuditService::new(context).get_issues(id.parse()?).await?;
+    Ok(HttpResponse::Ok().json(result))
+}
 
-    let mut views = Vec::new();
-    let mut client = awc::Client::default();
+#[get("/audit/{id}/issue/{issue_id}")]
+pub async fn get_audit_issue_by_id(
+    context: GeneralContext,
+    id: web::Path<(String, usize)>,
+) -> error::Result<HttpResponse> {
+    let result = AuditService::new(context)
+        .get_issue_by_id(id.0.parse()?, id.1)
+        .await?;
+    Ok(HttpResponse::Ok().json(result))
+}
 
-    client.headers().unwrap().insert(
-        "Authorization".parse().unwrap(),
-        req.headers().get("Authorization").unwrap().clone(),
-    );
+#[delete("/audit/{id}/issue/{issue_id}")]
+pub async fn delete_audit_issue(
+    context: GeneralContext,
+    id: web::Path<(String, usize)>,
+) -> error::Result<HttpResponse> {
+    let result = AuditService::new(context)
+        .delete_issue(id.0.parse()?, id.1)
+        .await?;
+    Ok(HttpResponse::Ok().json(result))
+}
 
-    let requests_as_customer = request_repo.find_by_customer(&session.user_id()).await?;
-    for request in requests_as_customer {
-        let project = get_project(&client, &request.project_id).await?;
+#[patch("/audit/{id}/disclose_all")]
+pub async fn patch_audit_disclose_all(
+    context: GeneralContext,
+    id: web::Path<String>,
+) -> error::Result<HttpResponse> {
+    let result = AuditService::new(context).disclose_all(id.parse()?).await?;
+    Ok(HttpResponse::Ok().json(result))
+}
 
-        views.push(request.to_view(project.name));
-    }
+#[patch("/audit/{id}/{issue_id}/read/{read}")]
+pub async fn patch_audit_issue_read(
+    context: GeneralContext,
+    id: web::Path<(String, usize, u64)>,
+) -> error::Result<HttpResponse> {
+    AuditService::new(context)
+        .read_events(id.0.parse()?, id.1, id.2)
+        .await?;
+    Ok(HttpResponse::Ok().finish())
+}
 
-    let requests_as_auditor = request_repo.find_by_auditor(&session.user_id()).await?;
-    for request in requests_as_auditor {
-        let project = get_project(&client, &request.project_id).await?;
-
-        views.push(request.to_view(project.name));
-    }
-
-    let audits_as_auditor = audits_repo.find_by_auditor(&session.user_id()).await?;
-    for audit in audits_as_auditor {
-        let project = get_project(&client, &audit.project_id).await?;
-
-        views.push(audit.to_view(project.name));
-    }
-
-    let audits_as_customer = audits_repo.find_by_customer(&session.user_id()).await?;
-    for audit in audits_as_customer {
-        let project = get_project(&client, &audit.project_id).await?;
-
-        views.push(audit.to_view(project.name));
-    }
-
-    views.sort_by(|a, b| b.last_modified.cmp(&a.last_modified));
-
-    Ok(HttpResponse::Ok().json(views))
+#[get("/public_audits/{id}/{role}")]
+pub async fn get_public_audits(
+    context: GeneralContext,
+    path: web::Path<(String, String)>,
+) -> error::Result<Json<Vec<PublicAudit>>> {
+    let (id, role) = path.into_inner();
+    Ok(Json(
+        AuditService::new(context)
+            .find_public(id.parse()?, role)
+            .await?,
+    ))
 }

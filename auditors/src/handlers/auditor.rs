@@ -1,166 +1,65 @@
-use std::collections::HashMap;
-
 use actix_web::{
     delete, get, patch, post,
     web::{self, Json},
-    HttpRequest, HttpResponse,
-};
-use common::auth_session::get_auth_session;
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
-
-use crate::{
-    error::Result,
-    repositories::auditor::{AuditorModel, AuditorRepository},
+    HttpResponse,
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct PostAuditorRequest {
-    first_name: String,
-    last_name: String,
-    about: String,
-    tags: Vec<String>,
-    contacts: HashMap<String, String>,
-}
+use common::{
+    context::GeneralContext,
+    entities::auditor::{Auditor, PublicAuditor},
+    error,
+};
 
-#[utoipa::path(
-    request_body(
-        content = PostAuditorRequest
-    ),
-    responses(
-        (status = 200, body = Auditor)
-    )
-)]
-#[post("/api/auditors")]
+use serde_json::json;
+
+use crate::service::auditor::{AuditorChange, AuditorService, CreateAuditor};
+
+#[post("/auditor")]
 pub async fn post_auditor(
-    req: HttpRequest,
-    Json(data): web::Json<PostAuditorRequest>,
-    repo: web::Data<AuditorRepository>,
-) -> Result<HttpResponse> {
-    let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
-
-    let auditor = AuditorModel {
-        user_id: session.user_id(),
-        first_name: data.first_name,
-        last_name: data.last_name,
-        about: data.about,
-        contacts: data.contacts,
-        tags: data.tags,
-    };
-
-    if !repo.create(&auditor).await? {
-        return Ok(HttpResponse::BadRequest().finish());
-    }
-    Ok(HttpResponse::Ok().json(auditor))
+    context: GeneralContext,
+    Json(data): web::Json<CreateAuditor>,
+) -> error::Result<Json<Auditor<String>>> {
+    Ok(Json(AuditorService::new(context).create(data).await?))
 }
 
-#[utoipa::path(
-    responses(
-        (status = 200, body = Auditor)
-    )
-)]
-#[get("/api/auditors")]
+#[get("/auditor/{id}")]
 pub async fn get_auditor(
-    req: HttpRequest,
-    repo: web::Data<AuditorRepository>,
-) -> Result<HttpResponse> {
-    let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
-
-    let Some(auditor) = repo.find(&session.user_id()).await? else {
-        return Ok(HttpResponse::BadRequest().finish());
-    };
-
-    Ok(HttpResponse::Ok().json(auditor))
+    context: GeneralContext,
+    id: web::Path<String>,
+) -> error::Result<HttpResponse> {
+    let service = AuditorService::new(context);
+    let id = id.parse()?;
+    if let Some(res) = service.find(id).await? {
+        Ok(HttpResponse::Ok().json(res))
+    } else {
+        Ok(HttpResponse::Ok().json(json! {{}}))
+    }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct PatchAuditorRequest {
-    first_name: Option<String>,
-    last_name: Option<String>,
-    about: Option<String>,
-    tags: Option<Vec<String>>,
-    contacts: Option<HashMap<String, String>>,
+#[get("/my_auditor")]
+pub async fn get_my_auditor(context: GeneralContext) -> error::Result<HttpResponse> {
+    let res = AuditorService::new(context).my_auditor().await?;
+    if let Some(res) = res {
+        Ok(HttpResponse::Ok().json(res))
+    } else {
+        Ok(HttpResponse::Ok().json(json! {{}}))
+    }
 }
 
-#[utoipa::path(
-    request_body(
-        content = PatchCustomerRequest
-    ),
-    responses(
-        (status = 200, body = Auditor)
-    )
-)]
-#[patch("/api/auditors")]
+#[patch("/my_auditor")]
 pub async fn patch_auditor(
-    req: HttpRequest,
-    web::Json(data): web::Json<PatchAuditorRequest>,
-    repo: web::Data<AuditorRepository>,
-) -> Result<HttpResponse> {
-    let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
-
-    let Some(mut auditor ) = repo.find(&session.user_id()).await? else {
-        return Ok(HttpResponse::BadRequest().body("Error: no auditor instance for this user"));
-    };
-
-    if let Some(first_name) = data.first_name {
-        auditor.first_name = first_name;
-    }
-
-    if let Some(last_name) = data.last_name {
-        auditor.last_name = last_name;
-    }
-
-    if let Some(about) = data.about {
-        auditor.about = about;
-    }
-
-    if let Some(tags) = data.tags {
-        auditor.tags = tags;
-    }
-
-    if let Some(contacts) = data.contacts {
-        auditor.contacts = contacts;
-    }
-
-    Ok(HttpResponse::Ok().json(auditor))
+    context: GeneralContext,
+    Json(data): Json<AuditorChange>,
+) -> error::Result<Json<Auditor<String>>> {
+    Ok(Json(AuditorService::new(context).change(data).await?))
 }
 
-#[utoipa::path(
-    responses(
-        (status = 200, body = Auditor)
-    )
-)]
-#[delete("/api/auditors")]
+#[delete("/auditor/{id}")]
 pub async fn delete_auditor(
-    req: HttpRequest,
-    repo: web::Data<AuditorRepository>,
-) -> Result<HttpResponse> {
-    let session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
-
-    let Some(auditor) = repo.delete(session.user_id()).await? else {
-        return Ok(HttpResponse::BadRequest().finish());
-    };
-    Ok(HttpResponse::Ok().json(auditor))
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct AllAuditorsRequest {
-    tags: Vec<String>,
-}
-
-#[utoipa::path(
-    request_body(
-        content = AllAuditorsRequest
-    ),
-    responses(
-        (status = 200, body = Vec<Auditor>)
-    )
-)]
-#[get("/api/auditors/all")]
-pub async fn get_auditors(
-    Json(data): web::Json<AllAuditorsRequest>,
-    repo: web::Data<AuditorRepository>,
-) -> Result<HttpResponse> {
-    let auditors = repo.request_with_tags(data.tags).await?;
-    Ok(HttpResponse::Ok().json(auditors))
+    context: GeneralContext,
+    id: web::Path<String>,
+) -> error::Result<Json<PublicAuditor>> {
+    Ok(Json(
+        AuditorService::new(context).delete(id.parse()?).await?,
+    ))
 }

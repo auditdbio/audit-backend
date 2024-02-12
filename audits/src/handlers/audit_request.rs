@@ -1,139 +1,89 @@
-use std::collections::HashMap;
-
 use actix_web::{
-    delete, patch, post,
-    web::{self, Json},
-    HttpRequest, HttpResponse,
+    delete, get, patch, post,
+    web::{self, Json, Query},
+    HttpResponse,
 };
-use chrono::Utc;
+
 use common::{
-    auth_session::get_auth_session,
+    api::{
+        requests::{CreateRequest, PublicRequest},
+        seartch::PaginationParams,
+    },
+    context::GeneralContext,
     entities::{audit_request::AuditRequest, role::Role},
+    error,
 };
-use mongodb::bson::oid::ObjectId;
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
-use crate::error::Result;
-use crate::{handlers::parse_id, repositories::audit_request::AuditRequestRepo};
+use serde_json::json;
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct PostAuditRequestRequest {
-    pub opener: Role,
-    pub auditor_id: String,
-    pub customer_id: String,
-    pub project_id: String,
-    pub auditor_contacts: HashMap<String, String>,
-    pub customer_contacts: HashMap<String, String>,
-    pub comment: Option<String>,
-    pub price: Option<String>,
-}
+use crate::service::audit_request::{RequestChange, RequestService};
 
-#[utoipa::path(
-    request_body(
-        content = PostAuditRequestRequest
-    ),
-    responses(
-        (status = 200, body = Auditor)
-    )
-)]
-#[post("/api/requests")]
+#[post("/audit_request")]
 pub async fn post_audit_request(
-    req: HttpRequest,
-    Json(data): web::Json<PostAuditRequestRequest>,
-    repo: web::Data<AuditRequestRepo>,
-) -> Result<HttpResponse> {
-    let _session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
-
-    let audit_request = AuditRequest {
-        id: ObjectId::new(),
-        auditor_id: parse_id(&data.auditor_id)?,
-        customer_id: parse_id(&data.customer_id)?,
-        project_id: parse_id(&data.project_id)?,
-        auditor_contacts: data.auditor_contacts,
-        customer_contacts: data.customer_contacts,
-        comment: data.comment,
-        last_modified: Utc::now().naive_utc(),
-        price: data.price,
-    };
-
-    repo.create(&audit_request).await?;
-
-    Ok(HttpResponse::Ok().finish())
+    context: GeneralContext,
+    Json(data): web::Json<CreateRequest>,
+) -> error::Result<Json<PublicRequest>> {
+    Ok(Json(RequestService::new(context).create(data).await?))
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct GetAuditRequestsResponse {
-    pub audits: Vec<AuditRequest>,
+#[get("/audit_request/{id}")]
+pub async fn get_audit_request(
+    context: GeneralContext,
+    id: web::Path<String>,
+) -> error::Result<HttpResponse> {
+    let res = RequestService::new(context).find(id.parse()?).await?;
+    if let Some(res) = res {
+        Ok(HttpResponse::Ok().json(res))
+    } else {
+        Ok(HttpResponse::Ok().json(json! {{}}))
+    }
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct PatchAuditRequestRequest {
-    pub id: ObjectId,
-    pub auditor_contacts: Option<HashMap<String, String>>,
-    pub customer_contacts: Option<HashMap<String, String>>,
-    pub comment: Option<String>,
-    pub price: Option<String>,
+#[get("/my_audit_request/{role}")]
+pub async fn get_my_audit_request(
+    context: GeneralContext,
+    role: web::Path<Role>,
+    pagination: Query<PaginationParams>,
+) -> error::Result<Json<Vec<PublicRequest>>> {
+    Ok(Json(
+        RequestService::new(context)
+            .my_request(role.into_inner(), pagination.into_inner())
+            .await?,
+    ))
 }
 
-#[utoipa::path(
-    request_body(
-        content = PatchAuditRequestRequest
-    ),
-    responses(
-        (status = 200, body = Auditor)
-    )
-)]
-#[patch("/api/requests")]
+#[patch("/audit_request/{id}")]
 pub async fn patch_audit_request(
-    req: HttpRequest,
-    Json(data): web::Json<PatchAuditRequestRequest>,
-    repo: web::Data<AuditRequestRepo>,
-) -> Result<HttpResponse> {
-    let _session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
-
-    let Some(mut audit_request) = repo.delete(&data.id).await? else {
-        return Ok(HttpResponse::BadRequest().finish());
-    };
-
-    if let Some(auditor_contacts) = data.auditor_contacts {
-        audit_request.auditor_contacts = auditor_contacts;
-    }
-
-    if let Some(customer_contacts) = data.customer_contacts {
-        audit_request.customer_contacts = customer_contacts;
-    }
-
-    if let Some(comment) = data.comment {
-        audit_request.comment = Some(comment);
-    }
-
-    if let Some(price) = data.price {
-        audit_request.price = Some(price);
-    }
-
-    audit_request.last_modified = Utc::now().naive_utc();
-
-    repo.create(&audit_request).await?;
-
-    Ok(HttpResponse::Ok().json(audit_request))
+    context: GeneralContext,
+    id: web::Path<String>,
+    Json(data): Json<RequestChange>,
+) -> error::Result<Json<PublicRequest>> {
+    Ok(Json(
+        RequestService::new(context)
+            .change(id.parse()?, data)
+            .await?,
+    ))
 }
 
-#[utoipa::path(
-    responses(
-        (status = 200, body = Auditor)
-    )
-)]
-#[delete("/api/requests/{id}")]
+#[delete("/audit_request/{id}")]
 pub async fn delete_audit_request(
-    req: HttpRequest,
-    id: web::Path<ObjectId>,
-    repo: web::Data<AuditRequestRepo>,
-) -> Result<HttpResponse> {
-    let _session = get_auth_session(&req).await.unwrap(); // TODO: remove unwrap
+    context: GeneralContext,
+    id: web::Path<String>,
+) -> error::Result<Json<PublicRequest>> {
+    Ok(Json(
+        RequestService::new(context).delete(id.parse()?).await?,
+    ))
+}
 
-    let Some(request) = repo.delete(&id).await? else {
-        return Ok(HttpResponse::BadRequest().finish());
-    };
-    Ok(HttpResponse::Ok().json(request))
+#[get("/audit_request/all/{role}/{id}")]
+pub async fn find_all_audit_request(
+    context: GeneralContext,
+    path: web::Path<(Role, String)>,
+) -> error::Result<Json<Vec<AuditRequest<String>>>> {
+    let (role, id) = path.into_inner();
+    Ok(Json(
+        RequestService::new(context)
+            .find_all(role, id.parse()?)
+            .await?,
+    ))
 }

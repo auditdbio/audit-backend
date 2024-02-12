@@ -1,42 +1,36 @@
-mod error;
-pub mod handlers;
-mod repositories;
+use std::{env, sync::Arc};
 
-use std::env;
-
-use actix_web::{middleware, web, App, HttpServer};
-use handlers::{
-    customers::{delete_customer, get_customer, patch_customer, post_customer},
-    projects::{delete_project, get_project, patch_project, post_project},
+use actix_web::HttpServer;
+use common::{
+    context::effectfull_context::ServiceState,
+    entities::{customer::Customer, project::Project},
+    repository::mongo_repository::MongoRepository,
 };
-use repositories::{customer::CustomerRepository, project::ProjectRepository};
+
+use common::auth::Service;
+use customers::create_app;
+use mongodb::bson::oid::ObjectId;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    #[cfg(test)]
+    dotenv::dotenv().ok();
+
     let mongo_uri = env::var("MONGOURI").unwrap();
 
-    #[cfg(not(test))]
-    let mongo_uri = env::var("MONGOURI_TEST").unwrap();
     env_logger::init();
 
-    let customer_repo = CustomerRepository::new(mongo_uri.clone()).await;
-    let project_repo = ProjectRepository::new(mongo_uri.clone()).await;
-    HttpServer::new(move || {
-        App::new()
-            .wrap(middleware::Logger::default())
-            .app_data(web::Data::new(customer_repo.clone()))
-            .app_data(web::Data::new(project_repo.clone()))
-            .service(post_customer)
-            .service(get_customer)
-            .service(patch_customer)
-            .service(delete_customer)
-            .service(post_project)
-            .service(get_project)
-            .service(patch_project)
-            .service(delete_project)
-    })
-    .bind(("0.0.0.0", 3002))?
-    .run()
-    .await
+    let customer_repo: MongoRepository<Customer<ObjectId>> =
+        MongoRepository::new(&mongo_uri, "customers", "customers").await;
+    let project_repo: MongoRepository<Project<ObjectId>> =
+        MongoRepository::new(&mongo_uri, "customers", "projects").await;
+
+    let mut state = ServiceState::new(Service::Customers);
+    state.insert(Arc::new(customer_repo));
+    state.insert(Arc::new(project_repo));
+    let state = Arc::new(state);
+
+    HttpServer::new(move || create_app(state.clone()))
+        .bind(("0.0.0.0", 3002))?
+        .run()
+        .await
 }

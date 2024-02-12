@@ -1,0 +1,2 @@
+Good afternoon
+Your code for registration: {code}

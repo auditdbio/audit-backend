@@ -1,32 +1,43 @@
-pub mod contants;
-pub mod error;
-pub mod handlers;
-pub mod repositories;
-pub mod ruleset;
-
 use std::env;
+use std::sync::Arc;
 
-use actix_web::{middleware, web, App, HttpServer};
-use repositories::{audit::AuditRepo, audit_request::AuditRequestRepo};
+use actix_web::HttpServer;
+use audits::create_app;
+
+use audits::migrations::up_migrations;
+use common::auth::Service;
+use common::context::effectfull_context::ServiceState;
+use common::entities::audit::Audit;
+use common::entities::audit_request::AuditRequest;
+use common::repository::mongo_repository::MongoRepository;
+use common::verification::verify;
+use mongodb::bson::oid::ObjectId;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    #[cfg(test)]
-    let mongo_uri = env::var("MONGOURI").unwrap();
+    dotenv::dotenv().ok();
 
-    #[cfg(not(test))]
-    let mongo_uri = env::var("MONGOURI_TEST").unwrap();
     env_logger::init();
 
-    let user_repo = AuditRepo::new(mongo_uri.clone()).await;
-    let token_repo = AuditRequestRepo::new(mongo_uri.clone()).await;
-    HttpServer::new(move || {
-        App::new()
-            .wrap(middleware::Logger::default())
-            .app_data(web::Data::new(user_repo.clone()))
-            .app_data(web::Data::new(token_repo.clone()))
-    })
-    .bind(("0.0.0.0", 3003))?
-    .run()
-    .await
+    let mongo_uri = env::var("MONGOURI").unwrap();
+
+    up_migrations(mongo_uri.as_str()).await.unwrap();
+    verify::<Audit<ObjectId>>(mongo_uri.as_str(), "audits", "audits", true)
+        .await
+        .unwrap();
+
+    let audit_repo: MongoRepository<Audit<ObjectId>> =
+        MongoRepository::new(&mongo_uri, "audits", "audits").await;
+    let audit_request_repo: MongoRepository<AuditRequest<ObjectId>> =
+        MongoRepository::new(&mongo_uri, "audits", "requests").await;
+
+    let mut state = ServiceState::new(Service::Audits);
+    state.insert(Arc::new(audit_repo));
+    state.insert(Arc::new(audit_request_repo));
+    let state = Arc::new(state);
+
+    HttpServer::new(move || create_app(state.clone()))
+        .bind(("0.0.0.0", 3003))?
+        .run()
+        .await
 }

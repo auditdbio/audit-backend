@@ -1,39 +1,54 @@
-mod constants;
-mod error;
-mod handlers;
-mod repositories;
-mod ruleset;
-mod utils;
+pub mod handlers;
+pub mod service;
 
-use std::env;
+use std::sync::Arc;
 
+use actix_cors::Cors;
+use actix_web::body::MessageBody;
+use actix_web::dev::ServiceFactory;
+use actix_web::dev::ServiceRequest;
+use actix_web::dev::ServiceResponse;
+use actix_web::middleware;
 use actix_web::web;
-pub use utils::prelude;
+use actix_web::App;
 
+use common::context::effectfull_context::ServiceState;
+use common::services::API_PREFIX;
 pub use handlers::auth::*;
 pub use handlers::user::*;
 
-use crate::repositories::token::TokenRepository;
-use crate::repositories::user::UserRepository;
+pub fn create_app(
+    state: Arc<ServiceState>,
+) -> App<
+    impl ServiceFactory<
+        ServiceRequest,
+        Response = ServiceResponse<impl MessageBody>,
+        Config = (),
+        InitError = (),
+        Error = actix_web::Error,
+    >,
+> {
+    let cors = Cors::permissive();
 
-pub async fn configure_service(cfg: &mut web::ServiceConfig) {
-    #[cfg(test)]
-    let mongo_uri = env::var("MONGOURI").unwrap();
-
-    #[cfg(not(test))]
-    let mongo_uri = env::var("MONGOURI_TEST").unwrap();
-
-    let user_repo = UserRepository::new(mongo_uri.clone()).await;
-    let token_repo = TokenRepository::new(mongo_uri.clone()).await;
-
-    cfg.app_data(web::Data::new(user_repo.clone()))
-        .app_data(web::Data::new(token_repo.clone()))
-        .service(post_user)
-        .service(patch_user)
-        .service(delete_user)
-        .service(get_users)
-        .service(get_user)
-        .service(login)
-        .service(restore)
-        .service(verify);
+    #[allow(clippy::let_and_return)]
+    let app = App::new()
+        .wrap(cors)
+        .wrap(middleware::Logger::default())
+        .app_data(web::Data::new(state))
+        .service(
+            web::scope(&API_PREFIX)
+                .service(change_user)
+                .service(delete_user)
+                .service(find_user)
+                .service(login)
+                .service(my_user)
+                .service(verify_link)
+                .service(create_user)
+                .service(forgot_password)
+                .service(reset_password)
+                .service(restore_token)
+                .service(github_auth)
+                .service(find_user_by_email),
+        );
+    app
 }

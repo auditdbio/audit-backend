@@ -5,6 +5,14 @@ members = [
     "audits",
     "customers",
     "common",
-    "swagger",
-    "users"
+    "files",
+    "users",
+    "search",
+    "mail",
+    "notification",
+    "telemetry",
+    "event",
+    "report",
+    "chat",
+    "cloc",
 ]

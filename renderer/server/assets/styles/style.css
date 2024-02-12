@@ -1,0 +1,268 @@
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: "Montserrat", sans-serif;
+  color: #333;
+}
+
+blockquote {
+  margin: 16px 0;
+  padding: 5px 8px 5px 30px;
+  color: #333;
+  border-left: 10px solid #d6dbdf;
+  background: none repeat scroll 0 0 rgba(102,128,153,.05);
+}
+
+h1,h2,h3,h4,h5,h6 {
+  page-break-after: avoid;
+}
+
+pre {
+  padding: 20px;
+  background: #f5f2f0;
+  line-height: 22px;
+  page-break-inside: avoid;
+  white-space: pre-wrap !important;
+}
+
+pre div {
+  padding: 0 !important;
+  background: #f5f2f0 !important;
+}
+
+pre code {
+  white-space: pre-wrap !important;
+}
+
+table {
+  border: 1px solid #f6f6f6;
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+thead {
+  background: #f5f7fa;
+}
+
+th {
+  border: 1px solid #efefef;
+  text-align: center;
+  padding: 10px 6px;
+}
+
+td {
+  border: 1px solid #efefef;
+  padding: 10px 15px;
+  min-width: 60px;
+}
+
+.title-search-label {
+  font-size: 1px;
+  color: white;
+}
+
+.page-break {
+  page-break-before: avoid;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 -15px;
+}
+
+.col-6 {
+  width: 50%;
+  padding: 0 15px;
+}
+
+.col-12 {
+  width: 100%;
+  padding: 0 15px;
+}
+
+.mt-60 {
+  margin-top: 60px;
+}
+
+.cover-page-corner-logo {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.hero {
+  padding: 200px 50px 50px;
+  margin-bottom: 30px;
+  height: 450mm;
+}
+
+.hero-image-block {
+  text-align: center;
+}
+
+.hero-text-block {
+  padding-top: 100px;
+}
+
+.hero-text {
+  margin: 50px auto 0;
+  font-weight: 600;
+  font-size: 50px;
+  color: #434242;
+  max-width: 480px;
+}
+
+.auditor-info-block {
+  max-width: 480px;
+  margin: 120px auto 0;
+}
+
+.auditor-info {
+  font-weight: 500;
+  font-size: 30px;
+  color: #434242;
+  margin-bottom: 15px;
+  word-break: break-word;
+}
+
+.auditor-info-heading {
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+.QR-wrapper {
+  display: inline-block;
+  background: white;
+  padding: 10px;
+  margin-bottom: 20px;
+}
+
+.report-block {
+  margin-bottom: 100px;
+}
+
+.report-block-title {
+  font-family: "Arial", "Helvetica", sans-serif;
+  orphans: 2;
+  page-break-after: avoid;
+  font-weight: 600;
+  font-size: 45px;
+  color: black;
+  margin-bottom: 20px;
+  border-bottom: 1px solid lightgrey;
+  page-break-inside: avoid;
+  word-break: break-word;
+}
+
+.subsection-title {
+  font-family: "Arial", "Helvetica", sans-serif;
+  orphans: 3;
+  font-weight: 600;
+  font-size: 40px;
+  color: #434242;
+  margin-bottom: 15px;
+  page-break-inside: avoid;
+  word-break: break-word;
+}
+
+.report-plain-text {
+  padding: 0 20px;
+  widows: 2;
+}
+
+.project-name {
+  text-align: center;
+  font-weight: 600;
+  color: #434242;
+  margin: 200px 0 20px;
+  word-break: break-word;
+}
+
+.project-description {
+  padding: 0 20px;
+  margin-bottom: 30px;
+  widows: 2;
+}
+
+.project-description img {
+  max-width: 1100px;
+}
+
+.issue-data {
+  font-size: 20px;
+  margin-bottom: 10px;
+  page-break-inside: avoid;
+}
+
+.issue-feedback {
+  background: #fcefdc;
+  border-radius: 10px;
+  padding: 10px 20px;
+  margin-bottom: 30px;
+  page-break-inside: avoid;
+}
+
+.issue-feedback pre {
+  background: transparent;
+  padding: 10px;
+}
+
+.issue-feedback-title {
+  font-weight: 500;
+  font-size: 25px;
+  font-style: italic;
+  color: black;
+  margin-bottom: 10px;
+}
+
+.scope {
+  display: flex;
+  flex-direction: column;
+  widows: 2;
+}
+
+.issue-links {
+  padding: 0 20px;
+  margin-bottom: 30px;
+  page-break-inside: avoid;
+}
+
+.issue-info-wrapper {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+.issue-info-title {
+  font-weight: 600;
+  margin-right: 10px;
+  width: 102px;
+}
+
+.severity-chip {
+  color: white;
+  font-weight: 500;
+  border-radius: 16px;
+  background: #434242;
+  padding: 2px 12px;
+}
+
+.statistics-table th, .statistics-table td {
+  width: 100px;
+  text-align: center;
+}
+
+.statistics-table .table-heading {
+  width: initial;
+  font-weight: 600;
+  background: #f5f7fa;
+}

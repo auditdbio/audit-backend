@@ -1,104 +1,147 @@
-use std::collections::HashMap;
+use std::hash::Hash;
 
-use chrono::NaiveDateTime;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use utoipa::{
-    openapi::{ObjectBuilder, Schema, SchemaType},
-    ToSchema,
+
+use crate::{
+    api::report::PublicReport,
+    context::GeneralContext,
+    repository::Entity,
+    services::{API_PREFIX, PROTOCOL, REPORT_SERVICE},
 };
 
-use super::view::{Source, View};
+use super::{audit_request::TimeRange, issue::Issue};
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Message {
-    text: String,
-    sender: ObjectId,
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum PublicAuditStatus {
+    #[serde(rename = "Waiting for audit", alias = "WaitingForAudit")]
+    WaitingForAudit,
+    #[serde(rename = "In progress", alias = "InProgress")]
+    InProgress,
+    #[serde(rename = "Issues workflow", alias = "IssuesWorkflow")]
+    IssuesWorkflow,
+    #[serde(rename = "Ready for resolve", alias = "Resolved")]
+    ReadyForResolve,
+    #[serde(rename = "Resolved", alias = "Resolved")]
+    Resolved,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Issue {
-    messages: Vec<Message>,
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum AuditStatus {
+    Waiting,
+    Started,
+    Resolved,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub enum Visibility {
-    Public,
-    Private,
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct Audit<Id: Eq + Hash> {
+    #[serde(rename = "_id")]
+    pub id: Id,
+    pub customer_id: Id,
+    pub auditor_id: Id,
+    pub project_id: Id,
+    #[serde(default)]
+    pub public: bool,
+
+    #[serde(default)]
+    pub project_name: String,
+    pub description: String,
+    pub status: AuditStatus,
+    pub scope: Vec<String>,
+    #[serde(default)]
+    pub tags: Vec<String>,
+    pub price: i64,
+
+    pub last_modified: i64,
+    pub report: Option<String>,
+    pub report_name: Option<String>,
+    pub time: TimeRange,
+
+    #[serde(default)]
+    pub issues: Vec<Issue<Id>>,
+
+    #[serde(default)]
+    pub no_customer: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Audit {
-    pub id: ObjectId,
-    pub customer_id: ObjectId,
-    pub auditor_id: ObjectId,
-    pub project_id: ObjectId,
-    pub status: String,
-    pub last_modified: NaiveDateTime,
-    pub auditor_contacts: HashMap<String, String>,
-    pub customer_contacts: HashMap<String, String>,
-    pub price: String,
-    pub comment: String,
-    pub visibility: Visibility,
-}
-
-impl Audit {
-    pub fn to_view(self, name: String) -> View {
-        View {
-            id: self.id,
-            name,
-            description: self.comment,
+impl Audit<String> {
+    pub fn parse(self) -> Audit<ObjectId> {
+        Audit {
+            id: self.id.parse().unwrap(),
+            customer_id: self.customer_id.parse().unwrap(),
+            auditor_id: self.auditor_id.parse().unwrap(),
+            project_id: self.project_id.parse().unwrap(),
+            project_name: self.project_name,
+            description: self.description,
+            status: self.status,
+            scope: self.scope,
+            tags: self.tags,
+            price: self.price,
             last_modified: self.last_modified,
-            source: Source::Audit,
+            report: self.report,
+            report_name: self.report_name,
+            time: self.time,
+            issues: Issue::parse_map(self.issues),
+            public: self.public,
+            no_customer: self.no_customer,
         }
     }
 }
 
-impl ToSchema for Audit {
-    fn schema() -> Schema {
-        ObjectBuilder::new()
-            .property("id", ObjectBuilder::new().schema_type(SchemaType::String))
-            .required("id")
-            .property(
-                "customer_id",
-                ObjectBuilder::new().schema_type(SchemaType::String),
-            )
-            .required("customer_id")
-            .property(
-                "auditor_id",
-                ObjectBuilder::new().schema_type(SchemaType::String),
-            )
-            .required("auditor_id")
-            .property(
-                "project_id",
-                ObjectBuilder::new().schema_type(SchemaType::String),
-            )
-            .required("project_id")
-            .property(
-                "terms",
-                ObjectBuilder::new().schema_type(SchemaType::String),
-            )
-            .required("terms")
-            .property(
-                "status",
-                ObjectBuilder::new().schema_type(SchemaType::Object),
-            )
-            .required("status")
-            .property(
-                "last_modified",
-                ObjectBuilder::new().schema_type(SchemaType::String),
-            )
-            .required("last_modified")
-            .property(
-                "issues",
-                ObjectBuilder::new().schema_type(SchemaType::Array),
-            )
-            .required("issues")
-            .property(
-                "visibility",
-                ObjectBuilder::new().schema_type(SchemaType::Array),
-            )
-            .required("visibility")
-            .into()
+impl Audit<ObjectId> {
+    pub fn stringify(self) -> Audit<String> {
+        Audit {
+            id: self.id.to_hex(),
+            customer_id: self.customer_id.to_hex(),
+            auditor_id: self.auditor_id.to_hex(),
+            project_id: self.project_id.to_hex(),
+            project_name: self.project_name,
+            description: self.description,
+            status: self.status,
+            scope: self.scope,
+            tags: self.tags,
+            price: self.price,
+            last_modified: self.last_modified,
+            report: self.report,
+            report_name: self.report_name,
+            time: self.time,
+            issues: Issue::to_string_map(self.issues),
+            public: self.public,
+            no_customer: self.no_customer,
+        }
+    }
+
+    pub async fn resolve(&mut self, context: &GeneralContext) {
+        if self.report.is_none() {
+            let public_report = context
+                .make_request::<()>()
+                .post(format!(
+                    "{}://{}/{}/report/{}",
+                    PROTOCOL.as_str(),
+                    REPORT_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
+                    self.id
+                ))
+                .auth(context.server_auth())
+                .send()
+                .await
+                .unwrap()
+                .json::<PublicReport>()
+                .await;
+
+            if let Err(err) = public_report {
+                println!("Error in audit::resolve: {}", err);
+                return;
+            }
+            let public_report = public_report.unwrap();
+            self.report = Some(public_report.path.clone());
+            self.report_name = Some(public_report.path);
+        }
+    }
+}
+
+impl Entity for Audit<ObjectId> {
+    fn id(&self) -> ObjectId {
+        self.id
     }
 }

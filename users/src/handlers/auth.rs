@@ -1,163 +1,120 @@
-use std::result;
-
 use actix_web::{
     get, post,
     web::{self, Json},
     HttpRequest, HttpResponse,
 };
-use chrono::Utc;
-use common::ruleset::Ruleset;
 use common::{
-    auth_session::{jwt_from_header, AuthSession},
-    entities::user::User,
+    api::user::{CreateUser, GithubAuth},
+    context::GeneralContext,
+    entities::user::{LinkedAccount, User},
+    error,
 };
-use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
-use uuid::Uuid;
 
-use crate::{
-    constants::MAX_DURATION,
-    error::{Error, OuterError, Result},
-    repositories::{
-        token::{TokenModel, TokenRepository},
-        user::UserRepository,
-    },
-    ruleset::Login,
-    utils::jwt::{self, create},
-};
+use crate::service::auth::{AuthService, ChangePasswordData, Login, Token, TokenResponce};
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct LoginRequest {
+#[post("/auth/login")]
+pub async fn login(context: GeneralContext, login: Json<Login>) -> error::Result<Json<Token>> {
+    Ok(Json(AuthService::new(context).login(&login).await?))
+}
+
+#[post("/auth/github")]
+pub async fn github_auth(
+    context: GeneralContext,
+    Json(data): Json<GithubAuth>,
+) -> error::Result<Json<Token>> {
+    Ok(Json(AuthService::new(context).github_auth(data).await?))
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CreateUserResponce {
+    id: String,
+    name: String,
+    current_role: String,
     email: String,
-    pub password: String,
+    is_new: bool,
+    linked_accounts: Option<Vec<LinkedAccount>>,
+    is_passwordless: Option<bool>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct LoginResponse {
-    token: String,
-    user: User,
+impl From<User<String>> for CreateUserResponce {
+    fn from(user: User<String>) -> Self {
+        Self {
+            id: user.id,
+            name: user.name,
+            current_role: user.current_role,
+            email: user.email,
+            is_new: user.is_new,
+            linked_accounts: user.linked_accounts,
+            is_passwordless: user.is_passwordless,
+        }
+    }
 }
 
-#[utoipa::path(
-    request_body(
-        content = LoginRequest
-    ),
-    responses(
-        (status = 200, description = "Authorizes the user and return his token", body = LoginResponse)
-    )
-)]
-#[post("/api/auth/login")]
-pub async fn login(
-    Json(data): web::Json<LoginRequest>,
-    users_repo: web::Data<UserRepository>,
-    tokens_repo: web::Data<TokenRepository>,
-) -> Result<web::Json<LoginResponse>> {
-    let Some(user) = users_repo.find_by_email(&data.email).await? else {
-        return Err(Error::Outer(OuterError::UserNotFound));
-    };
+#[post("/user")]
+pub async fn create_user(
+    context: GeneralContext,
+    Json(user): web::Json<CreateUser>,
+) -> error::Result<Json<CreateUserResponce>> {
+    #[allow(unused_mut)]
+    let mut use_email = true;
 
-    if Login::request_access(&data, &user) {
-        return Err(Error::Outer(OuterError::PasswordsDoesntMatch));
+    #[cfg(feature = "test_server")]
+    if user.use_email == Some(false) {
+        use_email = false;
+        log::info!("this registration is not using email verification")
     }
 
-    let token = TokenModel {
-        created: Utc::now().naive_utc(),
-        token: uuid::Uuid::new_v4().to_string(),
-        user_id: user.id,
-    };
-
-    tokens_repo.create(&token).await?;
-
-    let session = AuthSession {
-        user_id: user.id.to_hex(),
-        token: token.token,
-    };
-
-    let response = LoginResponse {
-        token: jwt::create(session)?,
-        user,
-    };
-
-    Ok(web::Json(response))
+    Ok(Json(
+        AuthService::new(context)
+            .authentication(user, use_email)
+            .await?
+            .into(),
+    ))
 }
 
-pub(super) async fn verify_token(
-    req: &HttpRequest,
-    repo: &web::Data<TokenRepository>,
-) -> Result<result::Result<(TokenModel, AuthSession), String>> {
-    let Some(jwt) = jwt_from_header(&req) else {
-        return Ok(Err("Error: Failed to parse header".to_string()));
-    };
+#[get("/auth/verify/{code}")]
+pub async fn verify_link(
+    context: GeneralContext,
+    code: web::Path<String>,
+) -> error::Result<HttpResponse> {
+    let service = AuthService::new(context);
+    let result = service.verify_link(code.into_inner()).await?;
 
-    let Some(session) = jwt::verify(&jwt)? else {
-        return Ok(Err("Error: Json web token has invalid signature".to_string()));
-    };
-    let Some(token) = repo.find(&session.token).await? else {
-        return Ok(Err("Error: Invalid token".to_string()))
-    };
-
-    let token_duration = Utc::now().naive_utc() - token.created;
-
-    if token_duration > *MAX_DURATION {
-        return Ok(Err("Error: Token expired".to_string()));
+    if !result {
+        return Ok(HttpResponse::NotFound().finish());
     }
 
-    return Ok(Ok((token, session)));
+    Ok(HttpResponse::Found()
+        .append_header(("Location", "/sign-in"))
+        .finish())
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct RestoreResponse {
-    token: String,
+#[get("/auth/forgot_password/{email}")]
+pub async fn forgot_password(
+    context: GeneralContext,
+    email: web::Path<String>,
+) -> error::Result<HttpResponse> {
+    AuthService::new(context)
+        .forgot_password(email.into_inner())
+        .await?;
+    Ok(HttpResponse::Ok().finish())
 }
 
-#[utoipa::path(
-    security(
-        ("BearerAuth" = []),
-    ),
-    responses(
-        (status = 200, description = "New authorization token, but old became expired", body = RestoreResponse)
-    )
-)]
-#[post("/api/auth/restore")]
-pub async fn restore(
+#[post("/auth/reset_password")]
+pub async fn reset_password(
+    context: GeneralContext,
+    Json(code): web::Json<ChangePasswordData>,
+) -> error::Result<HttpResponse> {
+    AuthService::new(context).reset_password(code).await?;
+
+    Ok(HttpResponse::Ok().finish())
+}
+
+#[get("/auth/restore_token")]
+pub async fn restore_token(
+    context: GeneralContext,
     req: HttpRequest,
-    repo: web::Data<TokenRepository>,
-) -> Result<web::Json<RestoreResponse>> {
-    let Ok((mut token, session)) = verify_token(&req, &repo).await? else {
-        return Err(Error::Outer(OuterError::UserNotFound));
-    };
-
-    repo.delete(&token.token).await?.unwrap();
-
-    token.token = Uuid::new_v4().to_string();
-    token.created = Utc::now().naive_utc();
-
-    repo.create(&token).await?;
-
-    let session = AuthSession {
-        user_id: session.user_id,
-        token: token.token,
-    };
-
-    let response = RestoreResponse {
-        token: create(session)?,
-    };
-
-    Ok(web::Json(response))
-}
-
-#[utoipa::path(
-    responses(
-        (status = 200, description = "Get authenticated user's data", body = Option<AuthSession>)
-    )
-)]
-#[get("/api/auth/verify")]
-pub async fn verify(req: HttpRequest, repo: web::Data<TokenRepository>) -> Result<HttpResponse> {
-    let res = verify_token(&req, &repo)
-        .await?
-        .ok()
-        .map(|(_, session)| session);
-
-    Ok(HttpResponse::Ok().json(res))
+) -> error::Result<Json<TokenResponce>> {
+    Ok(Json(AuthService::new(context).restore(req).await?))
 }

@@ -1,85 +1,72 @@
-use std::collections::HashMap;
-
-use chrono::NaiveDateTime;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use utoipa::{
-    openapi::{ObjectBuilder, Schema, SchemaType},
-    ToSchema,
-};
+use utoipa::ToSchema;
 
-use super::view::{Source, View};
+use crate::repository::Entity;
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AuditRequest {
-    pub id: ObjectId,
-    pub auditor_id: ObjectId,
-    pub customer_id: ObjectId,
-    pub project_id: ObjectId,
-    pub auditor_contacts: HashMap<String, String>,
-    pub customer_contacts: HashMap<String, String>,
-    pub comment: Option<String>,
-    pub price: Option<String>,
-    pub last_modified: NaiveDateTime,
+use super::role::Role;
+
+#[derive(Debug, Serialize, Deserialize, ToSchema, PartialEq, Clone, Default)]
+pub struct PriceRange {
+    pub from: i64,
+    pub to: i64,
 }
 
-impl AuditRequest {
-    pub fn to_view(self, name: String) -> View {
-        View {
-            id: self.id,
-            name,
-            description: self.comment.unwrap_or("".to_string()),
+#[derive(Debug, Serialize, Deserialize, ToSchema, PartialEq, Clone)]
+pub struct TimeRange {
+    pub from: i64,
+    pub to: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, ToSchema)]
+pub struct AuditRequest<Id> {
+    pub id: Id,
+    pub auditor_id: Id,
+    pub customer_id: Id,
+    pub project_id: Id,
+
+    pub description: String,
+
+    pub price: i64,
+    pub last_modified: i64,
+    pub last_changer: Role,
+    pub time: TimeRange,
+}
+
+impl AuditRequest<String> {
+    pub fn parse(self) -> AuditRequest<ObjectId> {
+        AuditRequest {
+            id: self.id.parse().unwrap(),
+            auditor_id: self.auditor_id.parse().unwrap(),
+            customer_id: self.customer_id.parse().unwrap(),
+            project_id: self.project_id.parse().unwrap(),
+            description: self.description,
+            price: self.price,
             last_modified: self.last_modified,
-            source: Source::Request,
+            last_changer: self.last_changer,
+            time: self.time,
         }
     }
 }
 
-impl ToSchema for AuditRequest {
-    fn schema() -> Schema {
-        ObjectBuilder::new()
-            .property("id", ObjectBuilder::new().schema_type(SchemaType::String))
-            .required("id")
-            .property(
-                "auditor_id",
-                ObjectBuilder::new().schema_type(SchemaType::String),
-            )
-            .required("auditor_id")
-            .property(
-                "customer_id",
-                ObjectBuilder::new().schema_type(SchemaType::String),
-            )
-            .required("customer_id")
-            .property(
-                "project_id",
-                ObjectBuilder::new().schema_type(SchemaType::String),
-            )
-            .required("project_id")
-            .property(
-                "auditor_contacts",
-                ObjectBuilder::new().schema_type(SchemaType::Object),
-            )
-            .required("auditor_contacts")
-            .property(
-                "customer_contacts",
-                ObjectBuilder::new().schema_type(SchemaType::Object),
-            )
-            .required("customer_contacts")
-            .property(
-                "comment",
-                ObjectBuilder::new().schema_type(SchemaType::String),
-            )
-            .required("comment")
-            .property(
-                "price",
-                ObjectBuilder::new().schema_type(SchemaType::String),
-            )
-            .required("price")
-            .property(
-                "last_modified",
-                ObjectBuilder::new().schema_type(SchemaType::String),
-            )
-            .required("last_modified")
-            .into()
+impl AuditRequest<ObjectId> {
+    pub fn stringify(self) -> AuditRequest<String> {
+        AuditRequest {
+            id: self.id.to_hex(),
+            auditor_id: self.auditor_id.to_hex(),
+            customer_id: self.customer_id.to_hex(),
+            project_id: self.project_id.to_hex(),
+            description: self.description,
+            price: self.price,
+            last_modified: self.last_modified,
+            last_changer: self.last_changer,
+            time: self.time,
+        }
+    }
+}
+
+impl Entity for AuditRequest<ObjectId> {
+    fn id(&self) -> ObjectId {
+        self.id
     }
 }

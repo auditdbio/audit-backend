@@ -1,0 +1,8 @@
+{
+    "alert": "New issue comment {}",
+    "subject": "AuditDB: New Comment on Audit Issue",
+    "message": "Heads up, there's a ripple in the code-space! A new comment has surfaced on the issue in {audit}.\n We need your expert eyes to decode and decipher. Hop into the matrix and share your findings on auditdb.io",
+    "role": "Auditor",
+    "title": "Issue comment",
+    "substitutions": [{"text": "{audit}", "styles": ["bold"]}]
+}

@@ -1,48 +1,42 @@
 extern crate lazy_static;
 
-pub mod constants;
-mod error;
-mod handlers;
-mod repositories;
-mod ruleset;
-mod utils;
+use common::context::effectfull_context::ServiceState;
+use common::entities::user::User;
+use common::repository::mongo_repository::MongoRepository;
+use mongodb::bson::oid::ObjectId;
+use users::service::auth::{Code, Link};
+use users::service::waiting_list::WaitingListElement;
+use users::*;
 
 use std::env;
+use std::sync::Arc;
 
-use actix_web::{middleware, web, App, HttpServer};
-use handlers::{
-    auth::{login, restore, verify},
-    user::{delete_user, get_user, get_users, patch_user, post_user},
-};
-use repositories::{token::TokenRepository, user::UserRepository};
-pub use utils::prelude;
+use actix_web::HttpServer;
+use common::auth::Service;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    #[cfg(test)]
-    let mongo_uri = env::var("MONGOURI").unwrap();
-    #[cfg(not(test))]
-    let mongo_uri = env::var("MONGOURI_TEST").unwrap();
+    dotenv::dotenv().ok();
 
     env_logger::init();
 
-    let user_repo = UserRepository::new(mongo_uri.clone()).await;
-    let token_repo = TokenRepository::new(mongo_uri.clone()).await;
-    HttpServer::new(move || {
-        App::new()
-            .wrap(middleware::Logger::default())
-            .app_data(web::Data::new(user_repo.clone()))
-            .app_data(web::Data::new(token_repo.clone()))
-            .service(post_user)
-            .service(patch_user)
-            .service(delete_user)
-            .service(get_users)
-            .service(get_user)
-            .service(login)
-            .service(restore)
-            .service(verify)
-    })
-    .bind(("0.0.0.0", 3001))?
-    .run()
-    .await
+    let mongo_uri = env::var("MONGOURI").unwrap();
+
+    let user_repo = MongoRepository::new(&mongo_uri, "users", "users").await;
+    let link_repo = MongoRepository::new(&mongo_uri, "users", "links").await;
+    let waiting_list_repo = MongoRepository::new(&mongo_uri, "users", "waiting_list").await;
+    let code_repo = MongoRepository::new(&mongo_uri, "users", "codes").await;
+
+    let mut state = ServiceState::new(Service::Users);
+    state.insert::<User<ObjectId>>(Arc::new(user_repo));
+    state.insert::<Link>(Arc::new(link_repo));
+    state.insert::<WaitingListElement>(Arc::new(waiting_list_repo));
+    state.insert::<Code>(Arc::new(code_repo));
+
+    let state = Arc::new(state);
+
+    HttpServer::new(move || create_app(state.clone()))
+        .bind(("0.0.0.0", 3001))?
+        .run()
+        .await
 }
