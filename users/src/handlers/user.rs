@@ -7,7 +7,7 @@ use common::{
     context::GeneralContext,
     entities::user::{PublicUser, PublicLinkedAccount},
     error,
-    api::linked_accounts::{AddLinkedAccount, UpdateLinkedAccount},
+    api::linked_accounts::{AddLinkedAccount, UpdateLinkedAccount, AddWallet},
 };
 use serde_json::json;
 
@@ -79,6 +79,17 @@ pub async fn delete_linked_account(
         UserService::new(context)
             .delete_linked_account(id.0.parse()?, id.1.clone())
             .await?
+    ))
+}
+
+#[post("/api/user/{id}/wallet")]
+pub async fn add_wallet(
+    context: GeneralContext,
+    id: Path<String>,
+    Json(data): Json<AddWallet>,
+) -> error::Result<Json<PublicLinkedAccount>> {
+    Ok(Json(
+        UserService::new(context).add_wallet(id.parse()?, data).await?
     ))
 }
 

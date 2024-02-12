@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use reqwest::{header, Client};
 use std::env::var;
 use actix_web::HttpResponse;
+use web3::signing::{keccak256, recover};
 
 extern crate crypto;
 use crypto::{ buffer, aes, blockmodes };
@@ -20,6 +21,7 @@ use common::{
             XUserResponse, GetLinkedInAccessToken,
             LinkedInAccessResponse, LinkedInUserResponse,
             GetGithubAccessToken, UpdateLinkedAccount,
+            AddWallet,
         },
     },
     auth::Auth,
@@ -503,6 +505,54 @@ impl UserService {
         }
 
         Err(anyhow::anyhow!("No linked account found").code(404))
+    }
+
+    pub async fn add_wallet(
+        &self,
+        user_id: ObjectId,
+        data: AddWallet,
+    ) -> error::Result<PublicLinkedAccount> {
+        let auth = self.context.auth();
+
+        let message = keccak256(
+            format!(
+                "{}{}{}",
+                "\x19Ethereum Signed Message:\n",
+                data.message.len(),
+                data.message,
+            ).as_bytes(),
+        );
+        let signature = hex::decode(data.signature).unwrap();
+        let recovery_id = signature[64] as i32 - 27;
+        let pubkey = recover(&message, &signature[..64], recovery_id)?;
+        let pubkey = format!("{:02X?}", pubkey);
+
+        if data.address == pubkey {
+            let linked_account = LinkedAccount {
+                id: data.address.clone(),
+                name: LinkedService::WalletConnect,
+                email: "".to_string(),
+                url: "".to_string(),
+                avatar: "".to_string(),
+                is_public: false,
+                username: data.address,
+                token: None
+            };
+
+            if Self::find_user_by_linked_account(
+                &self,
+                linked_account.id.clone(),
+                &LinkedService::WalletConnect,
+            ).await?.is_some() {
+                return Err(anyhow::anyhow!("Account has already been added").code(404))
+            }
+
+            Self::add_linked_account(&self, user_id, linked_account.clone(), auth).await?;
+
+            return Ok(PublicLinkedAccount::from(linked_account))
+        }
+
+        Err(anyhow::anyhow!("Error adding account wallet").code(404))
     }
 
     pub async fn proxy_github_api(

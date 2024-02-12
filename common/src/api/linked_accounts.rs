@@ -4,9 +4,9 @@ use serde::{Deserialize, Serialize};
 pub enum LinkedService {
     GitHub,
     Gitcoin,
-    Facebook,
     X,
     LinkedIn,
+    WalletConnect,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -104,4 +104,11 @@ pub struct LinkedInUserResponse {
     pub given_name: String,
     pub email: Option<String>,
     pub picture: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AddWallet {
+    pub address: String,
+    pub message: String,
+    pub signature: String,
 }
