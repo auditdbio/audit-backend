@@ -522,9 +522,18 @@ impl UserService {
                 data.message,
             ).as_bytes(),
         );
-        let signature = hex::decode(data.signature).unwrap();
-        let recovery_id = signature[64] as i32 - 27;
-        let pubkey = recover(&message, &signature[..64], recovery_id)?;
+        let signature = match hex::decode(data.signature) {
+            Ok(sig) => sig,
+            Err(e) => return Err(anyhow::anyhow!("Error decoding signature: {:?}", e).code(502)),
+        };
+        let recovery_id = match signature.get(64) {
+            Some(byte) => byte.clone() as i32 - 27,
+            None => return Err(anyhow::anyhow!("Invalid signature format").code(502)),
+        };
+        let pubkey = match recover(&message, &signature[..64], recovery_id) {
+            Ok(pubkey) => pubkey,
+            Err(e) => return Err(anyhow::anyhow!("Error recovering public key: {:?}", e).code(502)),
+        };
         let pubkey = format!("{:02X?}", pubkey);
 
         if data.address == pubkey {
