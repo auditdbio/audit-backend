@@ -522,7 +522,7 @@ impl UserService {
                 data.message,
             ).as_bytes(),
         );
-        let signature = match hex::decode(data.signature) {
+        let signature = match hex::decode(&data.signature[2..]) {
             Ok(sig) => sig,
             Err(e) => return Err(anyhow::anyhow!("Error decoding signature: {:?}", e).code(502)),
         };
