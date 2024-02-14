@@ -431,41 +431,35 @@ impl AuthService {
             .find_by_email(github_user.email.clone())
             .await?;
 
-        if let Some(mut user) = existing_email_user {
-            let _ = user_service
+        if let Some(user) = existing_email_user {
+            if let Some(mut user) = user_service
                 .add_linked_account(user.id, linked_account, self.context.server_auth())
-                .await?;
+                .await?
+            {
+                user.current_role = data.clone().current_role;
+                let _ = self.context
+                    .make_request()
+                    .patch(format!(
+                        "{}://{}/api/user/{}",
+                        PROTOCOL.as_str(),
+                        USERS_SERVICE.as_str(),
+                        user.id
+                    ))
+                    .auth(self.context.server_auth())
+                    .json(&data)
+                    .send()
+                    .await
+                    .unwrap();
 
-            user.current_role = data.clone().current_role;
-            let _ = self.context
-                .make_request()
-                .patch(format!(
-                    "{}://{}/api/user/{}",
-                    PROTOCOL.as_str(),
-                    USERS_SERVICE.as_str(),
-                    user.id
-                ))
-                .auth(self.context.server_auth())
-                .json(&data)
-                .send()
-                .await
-                .unwrap();
-
-            return create_auth_token(&user);
+                return create_auth_token(&user);
+            }
         }
 
         let verify_email = false;
-        self.authentication(github_user.clone(), verify_email)
+        let user = self.authentication(github_user.clone(), verify_email)
             .await?;
 
-        if let Some(user) = user_service
-            .find_by_email(github_user.email.clone())
-            .await?
-        {
-            return create_auth_token(&user);
-        }
-
-        Err(anyhow::anyhow!("Login failed").code(404))
+        create_auth_token(&user.parse())
     }
 
     pub async fn verify_link(&self, code: String) -> error::Result<bool> {

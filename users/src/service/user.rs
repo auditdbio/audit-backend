@@ -26,7 +26,7 @@ use common::{
     },
     auth::Auth,
     context::GeneralContext,
-    entities::user::{PublicUser, User, LinkedAccount, PublicLinkedAccount},
+    entities::user::{PublicUser, User, LinkedAccount, PublicLinkedAccount, UserLogin},
     error::{self, AddCode},
     services::{PROTOCOL, USERS_SERVICE},
 };
@@ -102,7 +102,7 @@ impl UserService {
         Ok(Some(user))
     }
 
-    pub async fn my_user(&self) -> error::Result<Option<User<String>>> {
+    pub async fn my_user(&self) -> error::Result<Option<UserLogin>> {
         let auth = self.context.auth();
 
         let users = self.context.try_get_repository::<User<ObjectId>>()?;
@@ -114,7 +114,7 @@ impl UserService {
             return Ok(None);
         };
 
-        Ok(Some(user.stringify()))
+        Ok(Some(UserLogin::from(user)))
     }
 
     pub async fn change(&self, id: ObjectId, change: UserChange) -> error::Result<PublicUser> {
