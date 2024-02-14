@@ -26,7 +26,7 @@ pub async fn find_user_by_email(
     }
 }
 
-#[get("/api/user/my_user")]
+#[get("/api/my_user")]
 pub async fn my_user(context: GeneralContext) -> error::Result<HttpResponse> {
     let user = UserService::new(context).my_user().await?;
     if let Some(user) = user {
