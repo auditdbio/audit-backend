@@ -536,7 +536,7 @@ impl UserService {
         };
         let pubkey = format!("{:02X?}", pubkey);
 
-        if data.address == pubkey {
+        if data.address.to_lowercase() == pubkey.to_lowercase() {
             let linked_account = LinkedAccount {
                 id: data.address.clone(),
                 name: LinkedService::WalletConnect,
