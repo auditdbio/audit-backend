@@ -155,13 +155,25 @@ impl ChatService {
                 }
 
                 let (name, avatar) = if id.role == Role::Auditor {
-                    let auditor = request_auditor(&self.context, id.id, auth.clone()).await?;
+                    let auditor = match request_auditor(&self.context, id.id, auth.clone()).await {
+                        Ok(auditor) => auditor,
+                        _ => continue
+                    };
+                    if auditor.is_empty() {
+                        continue;
+                    }
                     (
                         auditor.first_name().clone() + " " + auditor.last_name(),
                         auditor.avatar().to_string(),
                     )
                 } else {
-                    let customer = request_customer(&self.context, id.id, auth.clone()).await?;
+                    let customer = match request_customer(&self.context, id.id, auth.clone()).await {
+                        Ok(customer) => customer,
+                        _ => continue
+                    };
+                    if customer.user_id.is_empty() {
+                        continue;
+                    }
                     (
                         customer.first_name + " " + &customer.last_name,
                         customer.avatar,

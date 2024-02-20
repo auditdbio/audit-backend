@@ -125,6 +125,13 @@ impl ExtendedAuditor {
             ExtendedAuditor::Badge(badge) => &badge.contacts,
         }
     }
+
+    pub fn is_empty(&self) -> bool {
+        match self {
+            ExtendedAuditor::Auditor(auditor) => auditor.first_name.is_empty(),
+            ExtendedAuditor::Badge(badge) => badge.first_name.is_empty(),
+        }
+    }
 }
 
 impl From<Auditor<ObjectId>> for Option<Document> {

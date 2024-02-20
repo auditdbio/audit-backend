@@ -4,7 +4,7 @@ use crate::{
     auth::Auth,
     context::GeneralContext,
     entities::customer::PublicCustomer,
-    error,
+    error::{self, AddCode},
     services::{API_PREFIX, CUSTOMERS_SERVICE, PROTOCOL},
 };
 
@@ -13,7 +13,7 @@ pub async fn request_customer(
     id: ObjectId,
     auth: Auth,
 ) -> error::Result<PublicCustomer> {
-    Ok(context
+    let response = context
         .make_request::<PublicCustomer>()
         .get(format!(
             "{}://{}/{}/customer/{}",
@@ -24,7 +24,17 @@ pub async fn request_customer(
         ))
         .auth(auth)
         .send()
-        .await?
-        .json::<PublicCustomer>()
-        .await?)
+        .await?;
+
+    if response.status().is_success() {
+        let customer: PublicCustomer = response.json().await?;
+
+        if customer.user_id.is_empty() {
+            return Err(anyhow::anyhow!("No customer found").code(400))
+        }
+
+        Ok(customer)
+    } else {
+        Err(anyhow::anyhow!("No customer found").code(400))
+    }
 }
