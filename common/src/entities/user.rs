@@ -111,15 +111,25 @@ pub struct PublicUser {
     pub email: String,
     pub name: String,
     pub current_role: String,
+    pub linked_accounts: Option<Vec<PublicLinkedAccount>>,
 }
 
 impl From<User<ObjectId>> for PublicUser {
     fn from(user: User<ObjectId>) -> Self {
+        let linked_accounts = user.linked_accounts.map(|acc| {
+            acc
+                .into_iter()
+                .map(PublicLinkedAccount::from)
+                .filter(|acc| acc.is_public)
+                .collect()
+        });
+
         Self {
             id: user.id.to_hex(),
             email: user.email,
             name: user.name,
             current_role: user.current_role,
+            linked_accounts,
         }
     }
 }
