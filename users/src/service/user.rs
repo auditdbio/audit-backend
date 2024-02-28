@@ -26,6 +26,7 @@ pub struct UserChange {
     name: Option<String>,
     current_role: Option<String>,
     is_new: Option<bool>,
+    link_id: Option<String>,
 }
 
 impl UserService {

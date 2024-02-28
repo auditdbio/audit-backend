@@ -8,7 +8,7 @@ use common::{
         codes::post_code,
         user::{
             CreateUser, GetGithubAccessToken, GithubAccessResponse, GithubAuth, GithubUserData,
-            GithubUserEmails,
+            GithubUserEmails, UserName
         },
     },
     auth::Auth,
@@ -25,8 +25,7 @@ use mongodb::bson::{oid::ObjectId, Bson};
 use rand::{distributions::Alphanumeric, Rng};
 use reqwest::{header, Client};
 use serde::{Deserialize, Serialize};
-
-use std::env::var;
+use std::{env::var, str::FromStr};
 
 use super::user::UserService;
 
@@ -141,6 +140,14 @@ impl AuthService {
         mut user: CreateUser,
         mut verify_email: bool,
     ) -> error::Result<User<String>> {
+        // let regex = Regex::new(r#"[^A-Za-z0-9_-]"#).unwrap();
+        // if regex.is_match(&user.name) {
+        //     return Err(
+        //         anyhow::anyhow!("Username may only contain alphanumeric characters, hyphens or underscore")
+        //             .code(400)
+        //     );
+        // }
+
         if let Some(secret) = &user.secret {
             log::info!("Secret: {}", secret);
             let payload: BadgePayload = serde_json::from_str(
@@ -197,7 +204,7 @@ impl AuthService {
                 message,
                 subject: "Registration at auditdb.io".to_string(),
                 recipient_id: None,
-                recipient_name: Some(user.name.clone()),
+                recipient_name: Some(user.name.to_string()),
             };
 
             self.context
@@ -222,10 +229,16 @@ impl AuthService {
 
         user.password.push_str(&salt);
         let password = sha256::digest(user.password);
+        let id = ObjectId::new();
+        let link_id = format!(
+            "{}_{}",
+            user.name.to_string(),
+            id.to_hex().chars().rev().take(6).collect::<String>(),
+        );
 
         let new_user = User {
-            id: ObjectId::new(),
-            name: user.name,
+            id,
+            name: user.name.to_string(),
             email: user.email,
             salt,
             password,
@@ -236,6 +249,7 @@ impl AuthService {
             is_admin,
             linked_accounts: user.linked_accounts,
             is_passwordless: user.is_passwordless,
+            link_id,
         };
 
         let link = Link {
@@ -318,7 +332,7 @@ impl AuthService {
         let user = CreateUser {
             email,
             password: "".to_string(),
-            name: user_data.login,
+            name: UserName::from_str(&user_data.login)?,
             current_role,
             use_email: None,
             admin_creation_password: None,

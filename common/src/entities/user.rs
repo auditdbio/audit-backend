@@ -26,6 +26,8 @@ pub struct User<Id> {
     pub is_admin: bool,
     pub linked_accounts: Option<Vec<LinkedAccount>>,
     pub is_passwordless: Option<bool>,
+    #[serde(default)]
+    pub link_id: String,
 }
 
 impl User<String> {
@@ -43,6 +45,7 @@ impl User<String> {
             is_admin: self.is_admin,
             linked_accounts: self.linked_accounts,
             is_passwordless: self.is_passwordless,
+            link_id: self.link_id,
         }
     }
 }
@@ -62,6 +65,7 @@ impl User<ObjectId> {
             is_admin: self.is_admin,
             linked_accounts: self.linked_accounts,
             is_passwordless: self.is_passwordless,
+            link_id: self.link_id,
         }
     }
 }
