@@ -17,7 +17,8 @@ class APIConfig:
         self.post_prefixes = post_prefixes
 
 
-def get_services(config, api_prefix, proxy_network, expose, open_database):        
+def get_services(config, api_prefix, proxy_network, expose, open_database):
+    open_database = "ports" if open_database else "expose" 
     default_service_settings = {
         'depends_on': ["binaries"],
         'volumes': [("binaries", "/data/binaries")],

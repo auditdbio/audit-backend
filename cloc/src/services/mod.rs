@@ -49,7 +49,14 @@ impl ClocService {
             .context
             .get_repository_manual::<Arc<FileRepo>>()
             .unwrap();
-        let scope = Scope::new(request.links);
+        let scope = Scope::new(
+            request
+                .links
+                .into_iter()
+                .enumerate()
+                .map(|(i, link)| (format!("file_name{}", i), link))
+                .collect(),
+        );
         let id = repo.download(user, scope.clone()).await?;
 
         repo.count(id, scope).await

@@ -6,7 +6,7 @@ use crate::services::ClocService;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClocRequest {
-    pub links: Vec<(String, String)>,
+    pub links: Vec<String>,
 }
 
 #[post("/cloc/count")]
