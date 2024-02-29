@@ -4,7 +4,7 @@ use crate::{
     auth::Auth,
     context::GeneralContext,
     entities::auditor::{ExtendedAuditor, PublicAuditor},
-    error,
+    error::{self, AddCode},
     services::{API_PREFIX, AUDITORS_SERVICE, PROTOCOL},
 };
 
@@ -13,7 +13,7 @@ pub async fn request_auditor(
     id: ObjectId,
     auth: Auth,
 ) -> error::Result<ExtendedAuditor> {
-    Ok(context
+    let response = context
         .make_request::<PublicAuditor>()
         .get(format!(
             "{}://{}/{}/auditor/{}",
@@ -24,7 +24,17 @@ pub async fn request_auditor(
         ))
         .auth(auth)
         .send()
-        .await?
-        .json::<ExtendedAuditor>()
-        .await?)
+        .await?;
+
+    if response.status().is_success() {
+        let auditor: ExtendedAuditor = response.json().await?;
+
+        if auditor.is_empty() {
+            return Err(anyhow::anyhow!("No auditor found").code(400))
+        }
+
+        Ok(auditor)
+    } else {
+        Err(anyhow::anyhow!("No auditor found").code(400))
+    }
 }
