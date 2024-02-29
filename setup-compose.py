@@ -100,8 +100,9 @@ class Service:
        
 
         port_template = ""
-        optional_duplicate = ":" + self.port_config.port if self.port_config.expose == "ports" else ""
-        port_template = f"    {self.port_config.expose}:\n      - {self.port_config.port}{optional_duplicate}\n"
+        if self.port_config is not None:
+            optional_duplicate = ":" + self.port_config.port if self.port_config.expose == "ports" else ""
+            port_template = f"    {self.port_config.expose}:\n      - {self.port_config.port}{optional_duplicate}\n"
         
         virtual_path_template = ""
         if self.api_config is not None:
