@@ -76,6 +76,7 @@ class Service:
     
     def __str__(self) -> str:
         folder = self.service_name if self.service_name != "binaries" else ""
+        folder = folder if folder != "database" else "mongo"
 
         depend_on_template = "\n    depends_on:\n" if len(self.depends_on) > 0 else ""
         for container_name in self.depends_on:
