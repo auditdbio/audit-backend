@@ -100,21 +100,18 @@ class Service:
        
 
         port_template = ""
+        optional_duplicate = ":" + self.port_config.port if self.port_config.expose == "ports" else ""
+        port_template = f"    {self.port_config.expose}:\n      - {self.port_config.port}{optional_duplicate}\n"
+        
+        virtual_path_template = ""
         if self.api_config is not None:
             post_prefixes = "("
-            print(self.service_name)
             for (i, post_prefix) in enumerate(self.api_config.post_prefixes):
                 if i > 0:
                     post_prefixes += f"|{post_prefix}"
                     continue
                 post_prefixes += post_prefix
             post_prefixes += ")"
-
-            optional_duplicate = ":" + self.port_config.port if self.port_config.expose == "ports" else ""
-            port_template = f"    {self.port_config.expose}:\n      - {self.port_config.port}{optional_duplicate}\n"
-        
-        virtual_path_template = ""
-        if self.api_config is not None:
             virtual_path_template = f"\n      VIRTUAL_PATH: ~^/{self.api_config.api_prefix}/{post_prefixes}"
 
         return f"""  {self.config['container_namespace']}-{self.service_name}:{depend_on_template}
