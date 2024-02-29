@@ -217,7 +217,7 @@ impl UserService {
             }
 
             if let Some(user_by_id) = users
-                .find("link_id", &Bson::ObjectId(link_id.to_string().parse()?))
+                .find("id", &Bson::ObjectId(link_id.to_string().parse()?))
                 .await? {
                 if user_by_id.id.to_hex() != link_id.to_string() {
                     return Err(anyhow::anyhow!("This link id is already taken").code(400));

@@ -48,7 +48,8 @@ pub fn create_app(
                 .service(reset_password)
                 .service(restore_token)
                 .service(github_auth)
-                .service(find_user_by_email),
+                .service(find_user_by_email)
+                .service(find_by_link_id),
         );
     app
 }
