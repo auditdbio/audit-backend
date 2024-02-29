@@ -1,21 +1,19 @@
+pub mod file_repo;
+
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use common::{
     error,
     repository::{mongo_repository::MongoRepository, Entity, Repository},
 };
-use mongodb::{
-    bson::{doc, oid::ObjectId},
-};
+use mongodb::bson::{doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};
 use tokio::process::Command;
-
-use crate::handlers::cloc::ClocRequest;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GitState {
     branch: String,
-    commit: Option<String>,
+    commit: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -32,6 +30,13 @@ impl Entity for GitRepoEntity {
     fn id(&self) -> ObjectId {
         todo!()
     }
+}
+
+pub struct ClocRequest {
+    author: String,
+    repo: String,
+    branch: Option<String>,
+    commit: String,
 }
 
 impl GitRepoEntity {
@@ -57,6 +62,13 @@ pub struct ClocRepo {
 }
 
 impl ClocRepo {
+    pub fn new(git_repo: MongoRepository<GitRepoEntity>, path: PathBuf) -> Self {
+        Self {
+            git_repo: Arc::new(git_repo),
+            path,
+        }
+    }
+
     async fn update_repo(
         &self,
         original: Option<GitRepoEntity>,
@@ -64,6 +76,23 @@ impl ClocRepo {
     ) -> error::Result<GitRepoEntity> {
         let Some(original) = original else {
             // fetch
+            Command::new("mkdir")
+                .arg("-p")
+                .arg(format!("{}/{}", &update.author, &update.repo))
+                .current_dir(&self.path)
+                .output()
+                .await?;
+
+            Command::new("git")
+                .arg("clone")
+                .arg(format!(
+                    "https://github.com/{}/{}.git",
+                    update.author, update.repo
+                )) // https://github.com/auditdbio/audit-backend.git
+                .arg(&update.branch[0])
+                .current_dir(&self.path.join(&update.author).join(&update.repo))
+                .output()
+                .await?;
             return Ok(update);
         };
 
@@ -78,9 +107,19 @@ impl ClocRepo {
             let fetched = original.branch.iter().find(|b| b == &branch).is_some();
             if !fetched {
                 // fetch
+                // git checkout
+                Command::new("git")
+                    .arg("checkout")
+                    .arg("-b")
+                    .arg(branch)
+                    .output()
+                    .await?;
+
+                // git pull
+                Command::new("git").arg("pull").output().await?;
             }
         }
-        todo!()
+        Ok(original)
     }
 
     pub async fn fetch_repo(&self, git_repo: GitRepoEntity) -> error::Result<PathBuf> {

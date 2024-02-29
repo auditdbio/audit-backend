@@ -1,10 +1,9 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
-use crate::repositories::{ClocRepo, GitRepoEntity};
+use crate::repositories::file_repo::{FileRepo, Scope};
 use common::{context::GeneralContext, error};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tokio::process::Command;
 
 use crate::handlers::cloc::ClocRequest;
 
@@ -44,16 +43,15 @@ impl ClocService {
         Self { context }
     }
 
-    pub async fn count(&self, request: ClocRequest) -> error::Result<ClocCount> {
-        let git_repo = GitRepoEntity::new(&request);
-        let repo = self.context.get_repository_manual::<ClocRepo>().unwrap();
-        let path = repo.fetch_repo(git_repo).await?;
-        let result = Command::new("cloc")
-            .arg(path)
-            .arg("--json")
-            .output()
-            .await?;
-        let res: Value = serde_json::from_slice(&result.stdout)?;
-        Ok(ClocCount::parse(res)?)
+    pub async fn count(&self, request: ClocRequest) -> error::Result<String> {
+        let user = self.context.auth().id().unwrap();
+        let repo = self
+            .context
+            .get_repository_manual::<Arc<FileRepo>>()
+            .unwrap();
+        let scope = Scope::new(request.links);
+        let id = repo.download(user, scope.clone()).await?;
+
+        repo.count(id, scope).await
     }
 }
