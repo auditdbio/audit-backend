@@ -17,12 +17,12 @@ pub struct UserName(String);
 impl FromStr for UserName {
     type Err = ServiceError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let regex = Regex::new(r#"[^A-Za-z0-9_-]"#).unwrap();
+        let regex = Regex::new(r"^[A-Za-z0-9_-]+$").unwrap();
 
         if regex.is_match(s) {
-            Err(anyhow::anyhow!("Username may only contain alphanumeric characters, hyphens, or underscores").code(400))
-        } else {
             Ok(UserName(s.to_string()))
+        } else {
+            Err(anyhow::anyhow!("Username may only contain alphanumeric characters, hyphens, or underscores").code(400))
         }
     }
 }
