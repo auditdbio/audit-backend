@@ -36,8 +36,8 @@ def get_services(config, api_prefix, proxy_network, expose, open_database):
         Service(config, "notification", PortConfig(expose, "3008"), APIConfig(api_prefix, ["send_notification", "read_notification", "unread_notifications"]), ["binaries"], [], [proxy_network, "database"], proxy_network),
         Service(config, "telemetry", PortConfig(expose, "3009"), APIConfig(api_prefix, ["telemetry", "notused1"]), **default_service_settings),
         Service(config, "chat", PortConfig(expose, "3012"), APIConfig(api_prefix, ["chat", "notused1"]), **default_service_settings),
-        Service(config, "renderer", PortConfig(expose, "3015"), APIConfig(api_prefix, ["generate-report", "notused1"]), [], [], [proxy_network, "renderer"], proxy_network),
-        Service(config, "report", PortConfig(expose, "3011"), APIConfig(api_prefix, ["report", "notused2"]), ["binaries", "renderer"], [("binaries", "/data/binaries")], [proxy_network, "renderer"], proxy_network),
+        Service(config, "renderer", PortConfig(expose, "3015"), APIConfig(api_prefix, ["generate-report", "notused1"]), [], [], [proxy_network, "report"], proxy_network),
+        Service(config, "report", PortConfig(expose, "3011"), APIConfig(api_prefix, ["report", "notused2"]), ["binaries", "renderer"], [("binaries", "/data/binaries")], [proxy_network, "report"], proxy_network),
         Service(config, "cloc", PortConfig(expose, "3013"), APIConfig(api_prefix, ["cloc", "notused1"]), ["binaries"], [("binaries", "/data/binaries"), ("repo", "/repositories")], [proxy_network, "database"], proxy_network),
         Service(config, "event", PortConfig(expose, "3010"), APIConfig(api_prefix, ["notification", "event"]), **default_service_settings),
         Service(config, "database", PortConfig(open_database, "27017"), None, [], [("database", "/data/db"), ("backup", "/mongo_backup")], [proxy_network, "database"], proxy_network)
