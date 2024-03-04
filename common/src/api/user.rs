@@ -1,43 +1,19 @@
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
-use regex::Regex;
 
 use crate::{
     auth::Auth,
     context::GeneralContext,
     entities::user::{LinkedAccount, PublicUser, User},
-    error::{self, ServiceError, AddCode},
+    error,
     services::{API_PREFIX, PROTOCOL, USERS_SERVICE},
 };
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct UserName(String);
-
-impl FromStr for UserName {
-    type Err = ServiceError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let regex = Regex::new(r"^[A-Za-z0-9_-]+$").unwrap();
-
-        if regex.is_match(s) {
-            Ok(UserName(s.to_string()))
-        } else {
-            Err(anyhow::anyhow!("Username may only contain alphanumeric characters, hyphens, or underscores").code(400))
-        }
-    }
-}
-
-impl UserName {
-    pub fn to_string(&self) -> String {
-        self.0.clone()
-    }
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CreateUser {
     pub email: String,
     pub password: String,
-    pub name: UserName,
+    pub name: String,
     pub current_role: String,
     pub use_email: Option<bool>,
     pub admin_creation_password: Option<String>,

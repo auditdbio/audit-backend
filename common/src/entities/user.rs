@@ -82,6 +82,7 @@ pub struct PublicUser {
     pub email: String,
     pub name: String,
     pub current_role: String,
+    pub link_id: String,
 }
 
 impl From<User<ObjectId>> for PublicUser {
@@ -91,6 +92,7 @@ impl From<User<ObjectId>> for PublicUser {
             email: user.email,
             name: user.name,
             current_role: user.current_role,
+            link_id: user.link_id,
         }
     }
 }
@@ -107,6 +109,7 @@ pub struct UserLogin {
     pub is_admin: bool,
     pub linked_accounts: Option<Vec<LinkedAccount>>,
     pub is_passwordless: Option<bool>,
+    pub link_id: String,
 }
 
 impl From<User<ObjectId>> for UserLogin {
@@ -122,6 +125,7 @@ impl From<User<ObjectId>> for UserLogin {
             is_admin: user.is_admin,
             linked_accounts: user.linked_accounts,
             is_passwordless: user.is_passwordless,
+            link_id: user.link_id,
         }
     }
 }

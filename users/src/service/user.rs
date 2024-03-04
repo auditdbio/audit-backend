@@ -11,7 +11,6 @@ use mongodb::bson::{oid::ObjectId, Bson};
 
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
-use common::api::user::UserName;
 
 use super::auth::ChangePassword;
 
@@ -24,10 +23,10 @@ pub struct UserChange {
     email: Option<String>,
     password: Option<String>,
     current_password: Option<String>,
-    name: Option<UserName>,
+    name: Option<String>,
     current_role: Option<String>,
     is_new: Option<bool>,
-    link_id: Option<UserName>,
+    link_id: Option<String>,
 }
 
 impl UserService {
@@ -210,21 +209,21 @@ impl UserService {
 
         if let Some(link_id) = change.link_id {
             if users
-                .find("link_id", &Bson::String(link_id.to_string()))
+                .find("link_id", &Bson::String(link_id.clone()))
                 .await?
                 .is_some() {
                 return Err(anyhow::anyhow!("This link id is already taken").code(400));
             }
 
             if let Some(user_by_id) = users
-                .find("id", &Bson::ObjectId(link_id.to_string().parse()?))
+                .find("id", &Bson::ObjectId(link_id.parse()?))
                 .await? {
-                if user_by_id.id.to_hex() != link_id.to_string() {
+                if user_by_id.id.to_hex() != link_id {
                     return Err(anyhow::anyhow!("This link id is already taken").code(400));
                 }
             }
 
-            user.link_id = link_id.to_string();
+            user.link_id = link_id;
         }
 
         user.last_modified = Utc::now().timestamp_micros();
