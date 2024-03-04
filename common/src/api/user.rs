@@ -1,4 +1,5 @@
 use mongodb::bson::oid::ObjectId;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -80,6 +81,27 @@ pub async fn get_by_id(
         .await?)
 }
 
+pub async fn get_by_link_id(
+    context: &GeneralContext,
+    auth: Auth,
+    link_id: String,
+) -> error::Result<PublicUser> {
+    Ok(context
+        .make_request::<PublicUser>()
+        .get(format!(
+            "{}://{}/{}/user_by_link_id/{}",
+            PROTOCOL.as_str(),
+            USERS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
+            link_id,
+        ))
+        .auth(auth)
+        .send()
+        .await?
+        .json::<PublicUser>()
+        .await?)
+}
+
 pub async fn get_by_email(
     context: &GeneralContext,
     email: String,
@@ -99,4 +121,9 @@ pub async fn get_by_email(
         .json::<User<ObjectId>>()
         .await
         .ok())
+}
+
+pub fn validate_name(name: &str) -> bool {
+    let regex = Regex::new(r"^[A-Za-z0-9_-]+$").unwrap();
+    regex.is_match(name)
 }

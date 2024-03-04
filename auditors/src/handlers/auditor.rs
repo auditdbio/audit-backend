@@ -36,6 +36,21 @@ pub async fn get_auditor(
     }
 }
 
+#[get("/auditor_by_link_id/{link_id}")]
+pub async fn find_by_link_id(
+    context: GeneralContext,
+    link_id: web::Path<String>,
+) -> error::Result<HttpResponse> {
+    let res = AuditorService::new(context)
+        .find_by_link_id(link_id.parse()?)
+        .await?;
+    if let Some(res) = res {
+        Ok(HttpResponse::Ok().json(res))
+    } else {
+        Ok(HttpResponse::Ok().json(json! {{}}))
+    }
+}
+
 #[get("/my_auditor")]
 pub async fn get_my_auditor(context: GeneralContext) -> error::Result<HttpResponse> {
     let res = AuditorService::new(context).my_auditor().await?;

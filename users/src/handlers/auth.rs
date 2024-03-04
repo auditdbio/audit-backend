@@ -35,6 +35,7 @@ pub struct CreateUserResponce {
     is_new: bool,
     linked_accounts: Option<Vec<LinkedAccount>>,
     is_passwordless: Option<bool>,
+    link_id: String,
 }
 
 impl From<User<String>> for CreateUserResponce {
@@ -47,6 +48,7 @@ impl From<User<String>> for CreateUserResponce {
             is_new: user.is_new,
             linked_accounts: user.linked_accounts,
             is_passwordless: user.is_passwordless,
+            link_id: user.link_id,
         }
     }
 }

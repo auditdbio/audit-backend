@@ -59,7 +59,8 @@ pub fn create_app(
                 .service(ping)
                 .service(get_customer_projects)
                 .service(add_auditor)
-                .service(delete_auditor),
+                .service(delete_auditor)
+                .service(find_by_link_id),
         );
     app
 }

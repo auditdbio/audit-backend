@@ -50,7 +50,8 @@ pub fn create_app(
                 .service(post_badge)
                 .service(merge)
                 .service(delete)
-                .service(find_badge),
+                .service(find_badge)
+                .service(find_by_link_id),
         );
     app
 }

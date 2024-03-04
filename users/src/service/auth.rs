@@ -7,8 +7,8 @@ use common::{
         badge::{get_badge, BadgePayload},
         codes::post_code,
         user::{
-            CreateUser, GetGithubAccessToken, GithubAccessResponse, GithubAuth, GithubUserData,
-            GithubUserEmails
+            validate_name, CreateUser, GetGithubAccessToken, GithubAccessResponse,
+            GithubAuth, GithubUserData, GithubUserEmails,
         },
     },
     auth::Auth,
@@ -26,7 +26,6 @@ use rand::{distributions::Alphanumeric, Rng};
 use reqwest::{header, Client};
 use serde::{Deserialize, Serialize};
 use std::env::var;
-use regex::Regex;
 
 use super::user::UserService;
 
@@ -141,8 +140,7 @@ impl AuthService {
         mut user: CreateUser,
         mut verify_email: bool,
     ) -> error::Result<User<String>> {
-        let regex = Regex::new(r"^[A-Za-z0-9_-]+$").unwrap();
-        if !regex.is_match(&user.name) {
+        if !validate_name(&user.name) {
             return Err(
                 anyhow::anyhow!("Username may only contain alphanumeric characters, hyphens or underscore")
                     .code(400)
@@ -234,7 +232,7 @@ impl AuthService {
         let link_id = format!(
             "{}_{}",
             user.name,
-            id.to_hex().chars().rev().take(6).collect::<String>(),
+            id.to_hex().chars().rev().take(8).collect::<String>(),
         );
 
         let new_user = User {

@@ -1,7 +1,7 @@
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
-    api::seartch::delete_from_search,
+    api::{seartch::delete_from_search, user::get_by_link_id},
     context::GeneralContext,
     entities::{
         auditor::{ExtendedAuditor, PublicAuditor},
@@ -86,6 +86,13 @@ impl CustomerService {
         }
 
         Ok(Some(auth.public_customer(customer)))
+    }
+
+    pub async fn find_by_link_id(&self, link_id: String) -> error::Result<Option<PublicCustomer>> {
+        let auth = self.context.auth();
+        let user = get_by_link_id(&self.context, auth, link_id).await?;
+
+        self.find(user.id.parse()?).await
     }
 
     pub async fn my_customer(&self) -> error::Result<Option<Customer<String>>> {

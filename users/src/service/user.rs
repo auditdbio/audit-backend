@@ -1,7 +1,7 @@
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
-    api::badge::merge,
+    api::{badge::merge, user::validate_name},
     auth::Auth,
     context::GeneralContext,
     entities::user::{PublicUser, User, LinkedAccount},
@@ -208,6 +208,13 @@ impl UserService {
         }
 
         if let Some(link_id) = change.link_id {
+            if !validate_name(&link_id) {
+                return Err(
+                    anyhow::anyhow!("Username may only contain alphanumeric characters, hyphens or underscore")
+                        .code(400)
+                );
+            }
+
             if users
                 .find("link_id", &Bson::String(link_id.clone()))
                 .await?
