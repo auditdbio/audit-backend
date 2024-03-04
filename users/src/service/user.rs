@@ -222,11 +222,13 @@ impl UserService {
                 return Err(anyhow::anyhow!("This link id is already taken").code(400));
             }
 
-            if let Some(user_by_id) = users
-                .find("id", &Bson::ObjectId(link_id.parse()?))
-                .await? {
-                if user_by_id.id != id {
-                    return Err(anyhow::anyhow!("This link id is already taken").code(400));
+            if let Ok(parsed_id) = link_id.parse::<ObjectId>() {
+                if let Some(user_by_id) = users
+                    .find("id", &Bson::ObjectId(parsed_id))
+                    .await? {
+                    if user_by_id.id != id {
+                        return Err(anyhow::anyhow!("This link id is already taken").code(400));
+                    }
                 }
             }
 
