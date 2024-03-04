@@ -41,7 +41,7 @@ def get_services(config, api_prefix, proxy_network, expose, open_database):
         Service(config, "report", PortConfig(expose, "3011"), APIConfig(api_prefix, ["report", "notused2"]), ["binaries", "renderer"], [("binaries", "/data/binaries")], [proxy_network, "report"], proxy_network),
         Service(config, "cloc", PortConfig(expose, "3013"), APIConfig(api_prefix, ["cloc", "notused1"]), ["binaries"], [("binaries", "/data/binaries"), ("repo", "/repositories")], [proxy_network, "database"], proxy_network),
         Service(config, "event", PortConfig(expose, "3010"), APIConfig(api_prefix, ["notification", "event"]), **default_service_settings),
-        Service(config, "database", PortConfig(open_database, "27017"), None, [], [("database", "/data/db"), ("backup", "/mongo_backup")], [proxy_network, "database"], proxy_network)
+        Service(config, "database", PortConfig(open_database, "27017"), None, [], [("database", "/data/db"), ("backup", "/mongo_backup")], [proxy_network, "database"], proxy_network, [("MONGO_INITDB_ROOT_USERNAME", "\"${MONGO_LOGIN}\""), ("MONGO_INITDB_ROOT_PASSWORD", "\"${MONGO_PASSWORD}\"")])
     ]
 
 
@@ -59,13 +59,14 @@ class Service:
     depends_on: List[str]
     volumes: List[tuple[str, str]]
     networks: List[str]
-    
+    variables: List[tuple[str, str]]
 
 
     def __init__(self, config, service_name: str, 
                  port_config: Optional[PortConfig], api_config: Optional[APIConfig], 
                  depends_on: List[str], 
-                 volumes: List[tuple[str, str]], networks: List[str], proxy_network: str) -> None:
+                 volumes: List[tuple[str, str]], networks: List[str], proxy_network: str,
+                 variables: List[tuple[str, str]] = []) -> None:
         self.config = config
         self.service_name = service_name
         self.port_config = port_config
@@ -74,6 +75,7 @@ class Service:
         self.volumes = volumes
         self.networks = networks
         self.proxy_network = proxy_network
+        self.variables = variables
     
     def __str__(self) -> str:
         folder = self.service_name if self.service_name != "binaries" else ""
@@ -89,7 +91,7 @@ class Service:
             volumes_template += f"      - {self.config['volume_namespace']}-{volume_name}:{volume_path}\n"
         volumes_template = volumes_template[:-1]
         
-        networks_template = "networks:\n" if len(self.networks) > 0 else ""
+        networks_template = "    networks:\n" if len(self.networks) > 0 else ""
         for network in self.networks:
             if network != self.proxy_network:
                 networks_template += f"      - {self.config['network_namespace']}-{network}\n"
@@ -115,13 +117,17 @@ class Service:
             post_prefixes += ")"
             virtual_path_template = f"\n      VIRTUAL_PATH: ~^/{self.api_config.api_prefix}/{post_prefixes}"
 
+        variables = ""
+        for (name, value) in self.variables:
+            variables += f"      {name}: {value}\n"
+
         return f"""  {self.config['container_namespace']}-{self.service_name}:{depend_on_template}
     build: ./{folder}
 {port_template}    {volumes_template}
     environment:
       VIRTUAL_HOST: "${{VIRTUAL_HOST}}"{virtual_path_template}
       <<: *common-variables
-    {networks_template}
+{variables}{networks_template}
 """
         
 
@@ -152,6 +158,12 @@ x-common-variables: &common-variables
   FEEDBACK_EMAIL: "${{FEEDBACK_EMAIL}}"
   GITHUB_CLIENT_SECRET: "${{GITHUB_CLIENT_SECRET}}"
   GITHUB_CLIENT_ID: "${{GITHUB_CLIENT_ID}}"
+  GITHUB_TOKEN_CRYPTO_KEY: "${{GITHUB_TOKEN_CRYPTO_KEY}}"
+  GITHUB_TOKEN_CRYPTO_IV: "${{GITHUB_TOKEN_CRYPTO_IV}}"
+  X_CLIENT_SECRET: "${{X_CLIENT_SECRET}}"
+  X_CLIENT_ID: "${{X_CLIENT_ID}}"
+  LINKEDIN_CLIENT_SECRET: "${{LINKEDIN_CLIENT_SECRET}}"
+  LINKEDIN_CLIENT_ID: "${{LINKEDIN_CLIENT_ID}}"
   RUST_LOG: actix=info,reqwest=info,search=info,common=info,audits=trace
   TIMEOUT: "60"
 
