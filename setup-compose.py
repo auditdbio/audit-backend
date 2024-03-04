@@ -34,7 +34,7 @@ def get_services(config, api_prefix, proxy_network, expose, open_database):
         Service(config, "files", PortConfig(expose, "3005"), APIConfig(api_prefix, ["file", "notused1"]), ["binaries"], [("binaries", "/data/binaries"), ("files", "/auditdb-files")], [proxy_network, "database"], proxy_network),
         Service(config, "search", PortConfig(expose, "3006"), APIConfig(api_prefix, ["search", "notused1"]), **default_service_settings),
         Service(config, "mail", PortConfig(expose, "3007"), APIConfig(api_prefix, ["mail", "feedback", "code"]), **default_service_settings),
-        Service(config, "notification", PortConfig(expose, "3008"), APIConfig(api_prefix, ["send_notification", "read_notification", "unread_notifications"]), ["binaries"], [], [proxy_network, "database"], proxy_network),
+        Service(config, "notification", PortConfig(expose, "3008"), APIConfig(api_prefix, ["send_notification", "read_notification", "unread_notifications"]), ["binaries"], [("binaries", "/data/binaries")], [proxy_network, "database"], proxy_network),
         Service(config, "telemetry", PortConfig(expose, "3009"), APIConfig(api_prefix, ["telemetry", "notused1"]), **default_service_settings),
         Service(config, "chat", PortConfig(expose, "3012"), APIConfig(api_prefix, ["chat", "notused1"]), **default_service_settings),
         Service(config, "renderer", PortConfig(expose, "3015"), APIConfig(api_prefix, ["generate-report", "notused1"]), [], [], [proxy_network, "report"], proxy_network),
