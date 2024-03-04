@@ -89,7 +89,7 @@ impl CustomerService {
     }
 
     pub async fn find_by_link_id(&self, link_id: String) -> error::Result<Option<PublicCustomer>> {
-        let auth = self.context.auth();
+        let auth = self.context.server_auth();
         let user = get_by_link_id(&self.context, auth, link_id).await?;
 
         self.find(user.id.parse()?).await
