@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use chrono::Utc;
+use rand::Rng;
 
 use common::api::audits::NoCustomerAuditRequest;
 use common::entities::audit_request::TimeRange;
-use common::entities::project::{PublicProject, PublishOptions};
+
 use common::{
     access_rules::{AccessRules, Edit, Read},
     api::{
@@ -193,7 +194,7 @@ impl AuditService {
 
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
-        let (audits, total_documents) = match role {
+        let (audits, _total_documents) = match role {
             Role::Auditor => {
                 audits
                     .find_many_limit(
@@ -339,7 +340,7 @@ impl AuditService {
         };
 
         let issue: Issue<ObjectId> = Issue {
-            id: audit.issues.len(),
+            id: rand::thread_rng().gen_range(10000..=99999) + audit.issues.len(),
             name: issue.name,
             description: issue.description,
             status: issue.status,
@@ -423,9 +424,9 @@ impl AuditService {
             .iter()
             .find(|issue| issue.id == issue_id)
             .cloned()
-        else {
-            return Err(anyhow::anyhow!("No issue found").code(404));
-        };
+            else {
+                return Err(anyhow::anyhow!("No issue found").code(404));
+            };
 
         if let Some(name) = change.name {
             issue.name = name;
@@ -723,7 +724,11 @@ impl AuditService {
         let audit = self.get_audit(audit_id).await?;
 
         if let Some(audit) = audit {
-            let issue = audit.issues.get(issue_id).cloned();
+            let issue = audit
+                .issues
+                .iter()
+                .find(|issue| issue.id == issue_id)
+                .cloned();
 
             if let Some(issue) = issue {
                 return Ok(auth.public_issue(issue));
@@ -747,7 +752,7 @@ impl AuditService {
             return Err(anyhow::anyhow!("User is not available to delete this issue").code(403));
         }
 
-        let Some(mut issue) = audit
+        let Some(issue) = audit
             .issues
             .iter()
             .find(|issue| issue.id == issue_id)
@@ -777,7 +782,10 @@ impl AuditService {
         let audit = self.get_audit(audit_id).await?;
 
         if let Some(mut audit) = audit {
-            let issue = audit.issues.get_mut(issue_id);
+            let issue = audit
+                .issues
+                .iter_mut()
+                .find(|issue| issue.id == issue_id);
 
             if let Some(issue) = issue {
                 issue.read.insert(auth.id().unwrap().to_hex(), read);

@@ -6,7 +6,7 @@ use actix_web::{
 
 use common::{
     api::{
-        audits::{AuditChange, CreateIssue, PublicAudit, NoCustomerAuditRequest},
+        audits::{AuditChange, CreateIssue, NoCustomerAuditRequest, PublicAudit},
         seartch::PaginationParams,
     },
     context::GeneralContext,
@@ -17,11 +17,11 @@ use common::{
 use serde_json::json;
 
 use crate::service::{
-    audit::{AuditService, MyAuditResult},
-    audit_request::PublicRequest
+    audit::{AuditService},
+    audit_request::PublicRequest,
 };
 
-#[post("/api/audit")]
+#[post("/audit")]
 pub async fn post_audit(
     context: GeneralContext,
     Json(data): web::Json<PublicRequest>,
@@ -29,15 +29,17 @@ pub async fn post_audit(
     Ok(Json(AuditService::new(context).create(data).await?))
 }
 
-#[post("/api/no_customer_audit")]
+#[post("/no_customer_audit")]
 pub async fn post_no_customer_audit(
     context: GeneralContext,
-    Json(data): Json<NoCustomerAuditRequest>
+    Json(data): Json<NoCustomerAuditRequest>,
 ) -> error::Result<Json<PublicAudit>> {
-    Ok(Json(AuditService::new(context).create_no_customer(data).await?))
+    Ok(Json(
+        AuditService::new(context).create_no_customer(data).await?,
+    ))
 }
 
-#[get("/api/audit/{id}")]
+#[get("/audit/{id}")]
 pub async fn get_audit(
     context: GeneralContext,
     id: web::Path<String>,
@@ -50,7 +52,7 @@ pub async fn get_audit(
     }
 }
 
-#[get("/api/my_audit/{role}")]
+#[get("/my_audit/{role}")]
 pub async fn get_my_audit(
     context: GeneralContext,
     role: web::Path<Role>,
@@ -63,7 +65,7 @@ pub async fn get_my_audit(
     ))
 }
 
-#[patch("/api/audit/{id}")]
+#[patch("/audit/{id}")]
 pub async fn patch_audit(
     context: GeneralContext,
     id: web::Path<String>,
@@ -74,7 +76,7 @@ pub async fn patch_audit(
     ))
 }
 
-#[delete("/api/audit/{id}")]
+#[delete("/audit/{id}")]
 pub async fn delete_audit(
     context: GeneralContext,
     id: web::Path<String>,
@@ -82,7 +84,7 @@ pub async fn delete_audit(
     Ok(Json(AuditService::new(context).delete(id.parse()?).await?))
 }
 
-#[post("/api/audit/{id}/issue")]
+#[post("/audit/{id}/issue")]
 pub async fn post_audit_issue(
     context: GeneralContext,
     id: web::Path<String>,
@@ -94,7 +96,7 @@ pub async fn post_audit_issue(
     Ok(HttpResponse::Ok().json(result))
 }
 
-#[patch("/api/audit/{id}/issue/{issue_id}")]
+#[patch("/audit/{id}/issue/{issue_id}")]
 pub async fn patch_audit_issue(
     context: GeneralContext,
     id: web::Path<(String, usize)>,
@@ -106,7 +108,7 @@ pub async fn patch_audit_issue(
     Ok(HttpResponse::Ok().json(result))
 }
 
-#[get("/api/audit/{id}/issue")]
+#[get("/audit/{id}/issue")]
 pub async fn get_audit_issue(
     context: GeneralContext,
     id: web::Path<String>,
@@ -115,7 +117,7 @@ pub async fn get_audit_issue(
     Ok(HttpResponse::Ok().json(result))
 }
 
-#[get("/api/audit/{id}/issue/{issue_id}")]
+#[get("/audit/{id}/issue/{issue_id}")]
 pub async fn get_audit_issue_by_id(
     context: GeneralContext,
     id: web::Path<(String, usize)>,
@@ -126,16 +128,18 @@ pub async fn get_audit_issue_by_id(
     Ok(HttpResponse::Ok().json(result))
 }
 
-#[delete("/api/audit/{id}/issue/{issue_id}")]
+#[delete("/audit/{id}/issue/{issue_id}")]
 pub async fn delete_audit_issue(
     context: GeneralContext,
     id: web::Path<(String, usize)>,
 ) -> error::Result<HttpResponse> {
-    let result = AuditService::new(context).delete_issue(id.0.parse()?, id.1).await?;
+    let result = AuditService::new(context)
+        .delete_issue(id.0.parse()?, id.1)
+        .await?;
     Ok(HttpResponse::Ok().json(result))
 }
 
-#[patch("/api/audit/{id}/disclose_all")]
+#[patch("/audit/{id}/disclose_all")]
 pub async fn patch_audit_disclose_all(
     context: GeneralContext,
     id: web::Path<String>,
@@ -144,7 +148,7 @@ pub async fn patch_audit_disclose_all(
     Ok(HttpResponse::Ok().json(result))
 }
 
-#[patch("/api/audit/{id}/{issue_id}/read/{read}")]
+#[patch("/audit/{id}/{issue_id}/read/{read}")]
 pub async fn patch_audit_issue_read(
     context: GeneralContext,
     id: web::Path<(String, usize, u64)>,
@@ -155,7 +159,7 @@ pub async fn patch_audit_issue_read(
     Ok(HttpResponse::Ok().finish())
 }
 
-#[get("/api/public_audits/{id}/{role}")]
+#[get("/public_audits/{id}/{role}")]
 pub async fn get_public_audits(
     context: GeneralContext,
     path: web::Path<(String, String)>,

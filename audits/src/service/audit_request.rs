@@ -8,8 +8,8 @@ use common::{
         events::{EventPayload, PublicEvent},
         mail::send_mail,
         requests::CreateRequest,
-        send_notification, NewNotification,
         seartch::PaginationParams,
+        send_notification, NewNotification,
     },
     context::GeneralContext,
     entities::{
@@ -20,12 +20,12 @@ use common::{
         role::Role,
     },
     error::{self, AddCode},
-    services::{CUSTOMERS_SERVICE, EVENTS_SERVICE, FRONTEND, PROTOCOL},
+    services::{API_PREFIX, CUSTOMERS_SERVICE, EVENTS_SERVICE, FRONTEND, PROTOCOL},
 };
 
+pub use common::api::requests::PublicRequest;
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
-pub use common::api::requests::PublicRequest;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RequestChange {
@@ -223,9 +223,10 @@ impl RequestService {
         self.context
             .make_request()
             .post(format!(
-                "{}://{}/api/event",
+                "{}://{}/{}/event",
                 PROTOCOL.as_str(),
-                EVENTS_SERVICE.as_str()
+                EVENTS_SERVICE.as_str(),
+                API_PREFIX.as_str(),
             ))
             .auth(self.context.server_auth())
             .json(&event)
@@ -258,7 +259,7 @@ impl RequestService {
     pub async fn my_request(
         &self,
         role: Role,
-        pagination: PaginationParams
+        pagination: PaginationParams,
     ) -> error::Result<Vec<PublicRequest>> {
         let page = pagination.page.unwrap_or(0);
         let per_page = pagination.per_page.unwrap_or(0);
@@ -282,7 +283,7 @@ impl RequestService {
             Role::Customer => "customer_id",
         };
 
-        let (result, total_documents) = requests
+        let (result, _total_documents) = requests
             .find_many_limit(id, &Bson::ObjectId(user_id), skip, limit)
             .await?;
 
@@ -407,9 +408,10 @@ impl RequestService {
         self.context
             .make_request()
             .post(format!(
-                "{}://{}/api/event",
+                "{}://{}/{}/event",
                 PROTOCOL.as_str(),
-                EVENTS_SERVICE.as_str()
+                EVENTS_SERVICE.as_str(),
+                API_PREFIX.as_str(),
             ))
             .auth(self.context.server_auth())
             .json(&event)

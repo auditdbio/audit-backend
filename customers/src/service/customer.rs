@@ -11,7 +11,7 @@ use common::{
         user::PublicUser,
     },
     error::{self, AddCode},
-    services::{AUDITORS_SERVICE, PROTOCOL, USERS_SERVICE},
+    services::{API_PREFIX, AUDITORS_SERVICE, PROTOCOL, USERS_SERVICE},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -104,9 +104,10 @@ impl CustomerService {
                 .make_request::<PublicUser>()
                 .auth(auth)
                 .get(format!(
-                    "{}://{}/api/user/{}",
+                    "{}://{}/{}/user/{}",
                     PROTOCOL.as_str(),
                     USERS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
                     auth.id().unwrap()
                 ))
                 .send()
@@ -123,9 +124,10 @@ impl CustomerService {
                 .make_request::<PublicAuditor>()
                 .auth(auth)
                 .get(format!(
-                    "{}://{}/api/auditor/{}",
+                    "{}://{}/{}/auditor/{}",
                     PROTOCOL.as_str(),
                     AUDITORS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
                     auth.id().unwrap()
                 ))
                 .send()

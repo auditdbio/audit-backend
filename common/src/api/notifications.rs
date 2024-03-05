@@ -10,7 +10,7 @@ use crate::{
         user::PublicUser,
     },
     error,
-    services::{MAIL_SERVICE, NOTIFICATIONS_SERVICE, PROTOCOL, USERS_SERVICE},
+    services::{API_PREFIX, MAIL_SERVICE, NOTIFICATIONS_SERVICE, PROTOCOL, USERS_SERVICE},
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -65,9 +65,10 @@ pub async fn send_notification(
         .make_request::<PublicUser>()
         .auth(context.server_auth())
         .get(format!(
-            "{}://{}/api/user/{}",
+            "{}://{}/{}/user/{}",
             PROTOCOL.as_str(),
             USERS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
             user_id,
         ))
         .send()
@@ -86,9 +87,10 @@ pub async fn send_notification(
             .make_request::<CreateLetter>()
             .auth(context.server_auth())
             .post(format!(
-                "{}://{}/api/mail",
+                "{}://{}/{}/mail",
                 PROTOCOL.as_str(),
                 MAIL_SERVICE.as_str(),
+                API_PREFIX.as_str(),
             ))
             .json(&create_letter)
             .send()
@@ -113,9 +115,10 @@ pub async fn send_notification(
             .make_request::<CreateNotification>()
             .auth(context.server_auth())
             .post(format!(
-                "{}://{}/api/send_notification",
+                "{}://{}/{}/send_notification",
                 PROTOCOL.as_str(),
                 NOTIFICATIONS_SERVICE.as_str(),
+                API_PREFIX.as_str(),
             ))
             .json(&create_notification)
             .send()

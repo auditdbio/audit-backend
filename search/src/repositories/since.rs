@@ -5,7 +5,7 @@ use std::sync::Arc;
 use common::error;
 use common::repository::mongo_repository::MongoRepository;
 use common::repository::Entity;
-use common::services::{AUDITORS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL};
+use common::services::{API_PREFIX, AUDITORS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL};
 use mongodb::bson::oid::ObjectId;
 use mongodb::bson::{doc, Bson, Document};
 use serde::{Deserialize, Serialize};
@@ -32,33 +32,37 @@ impl Default for Since {
                 let mut map = HashMap::new();
                 map.insert(
                     format!(
-                        "{}://{}/api/project/data",
+                        "{}://{}/{}/project/data",
                         PROTOCOL.as_str(),
-                        CUSTOMERS_SERVICE.as_str()
+                        CUSTOMERS_SERVICE.as_str(),
+                        API_PREFIX.as_str(),
                     ),
                     0,
                 );
                 map.insert(
                     format!(
-                        "{}://{}/api/badge/data",
+                        "{}://{}/{}/badge/data",
                         PROTOCOL.as_str(),
-                        AUDITORS_SERVICE.as_str()
+                        AUDITORS_SERVICE.as_str(),
+                        API_PREFIX.as_str(),
                     ),
                     0,
                 );
                 map.insert(
                     format!(
-                        "{}://{}/api/auditor/data",
+                        "{}://{}/{}/auditor/data",
                         PROTOCOL.as_str(),
-                        AUDITORS_SERVICE.as_str()
+                        AUDITORS_SERVICE.as_str(),
+                        API_PREFIX.as_str(),
                     ),
                     0,
                 );
                 map.insert(
                     format!(
-                        "{}://{}/api/customer/data",
+                        "{}://{}/{}/customer/data",
                         PROTOCOL.as_str(),
-                        CUSTOMERS_SERVICE.as_str()
+                        CUSTOMERS_SERVICE.as_str(),
+                        API_PREFIX.as_str(),
                     ),
                     0,
                 );

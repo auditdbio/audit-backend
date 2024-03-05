@@ -81,7 +81,7 @@ impl GeneralContext {
             GeneralContext::Effectfull(context) => {
                 context.0.repositories.get::<RepositoryObject<T>>().cloned()
             }
-            GeneralContext::Test(context) => {
+            GeneralContext::Test(_context) => {
                 panic!("This api will be depricated and should not be used for test context")
             }
         }
@@ -90,7 +90,7 @@ impl GeneralContext {
     pub fn get_repository_manual<T: 'static + Clone>(&self) -> Option<T> {
         match self {
             GeneralContext::Effectfull(context) => context.0.repositories.get::<T>().cloned(),
-            GeneralContext::Test(context) => {
+            GeneralContext::Test(_context) => {
                 panic!("This api will be depricated and should not be used for test context")
             }
         }
@@ -110,7 +110,7 @@ impl GeneralContext {
                     )
                     .code(500),
                 ),
-            GeneralContext::Test(context) => {
+            GeneralContext::Test(_context) => {
                 panic!("This api will be depricated and should not be used for test context")
             }
         }
@@ -128,7 +128,7 @@ impl GeneralContext {
             GeneralContext::Effectfull(context) => {
                 ServiceRequest::<T>::new(&context.0.client, context.0.service_auth)
             }
-            GeneralContext::Test(context) => {
+            GeneralContext::Test(_context) => {
                 panic!("This api will be depricated and should not be used for test context")
             }
         }
@@ -137,7 +137,7 @@ impl GeneralContext {
     pub fn client(&self) -> &reqwest::Client {
         match self {
             GeneralContext::Effectfull(context) => &context.0.client,
-            GeneralContext::Test(context) => {
+            GeneralContext::Test(_context) => {
                 panic!("This api will be depricated and should not be used for test context")
             }
         }

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     context::GeneralContext,
     error,
-    services::{PROTOCOL, SEARCH_SERVICE},
+    services::{API_PREFIX, PROTOCOL, SEARCH_SERVICE},
 };
 
 pub async fn delete_from_search(context: &GeneralContext, id: ObjectId) -> error::Result<()> {
@@ -12,9 +12,10 @@ pub async fn delete_from_search(context: &GeneralContext, id: ObjectId) -> error
         .make_request::<()>()
         .auth(context.server_auth())
         .delete(format!(
-            "{}://{}/api/search/{}",
+            "{}://{}/{}/search/{}",
             PROTOCOL.as_str(),
             SEARCH_SERVICE.as_str(),
+            API_PREFIX.as_str(),
             id,
         ))
         .send()

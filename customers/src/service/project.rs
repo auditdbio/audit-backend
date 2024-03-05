@@ -1,15 +1,16 @@
 use chrono::Utc;
 use common::api::seartch::delete_from_search;
 use common::entities::customer::PublicCustomer;
+use common::services::API_PREFIX;
 use common::{
     access_rules::{AccessRules, Edit, Read},
+    api::seartch::PaginationParams,
     context::GeneralContext,
     entities::{
         contacts::Contacts,
         customer::Customer,
         project::{Project, PublicProject, PublishOptions},
     },
-    api::seartch::PaginationParams,
     error::{self, AddCode},
     services::{CUSTOMERS_SERVICE, PROTOCOL},
 };
@@ -115,9 +116,10 @@ impl ProjectService {
             .context
             .make_request::<PublicCustomer>()
             .get(format!(
-                "{}://{}/api/customer/{}",
+                "{}://{}/{}/customer/{}",
                 PROTOCOL.as_str(),
                 CUSTOMERS_SERVICE.as_str(),
+                API_PREFIX.as_str(),
                 project.customer_id
             ))
             .auth(self.context.server_auth())
@@ -131,7 +133,10 @@ impl ProjectService {
         Ok(Some(auth.public_project(project)))
     }
 
-    pub async fn my_projects(&self, pagination: PaginationParams) -> error::Result<Vec<Project<String>>> {
+    pub async fn my_projects(
+        &self,
+        pagination: PaginationParams,
+    ) -> error::Result<Vec<Project<String>>> {
         let page = pagination.page.unwrap_or(0);
         let per_page = pagination.per_page.unwrap_or(0);
         let limit = pagination.per_page.unwrap_or(1000);
@@ -141,8 +146,13 @@ impl ProjectService {
 
         let projects = self.context.try_get_repository::<Project<ObjectId>>()?;
 
-        let (projects, total_documents) = projects
-            .find_many_limit("customer_id", &Bson::ObjectId(auth.id().unwrap()), skip, limit)
+        let (projects, _total_documents) = projects
+            .find_many_limit(
+                "customer_id",
+                &Bson::ObjectId(auth.id().unwrap()),
+                skip,
+                limit,
+            )
             .await?;
 
         // Ok(MyProjectsResult {

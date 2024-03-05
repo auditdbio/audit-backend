@@ -13,6 +13,7 @@ use actix_web::web;
 use actix_web::App;
 
 use common::context::effectfull_context::ServiceState;
+use common::services::API_PREFIX;
 use handlers::indexer::get_customer_data;
 use handlers::indexer::get_project_data;
 use handlers::indexer::ping;
@@ -39,23 +40,26 @@ pub fn create_app(
         .wrap(cors)
         .wrap(middleware::Logger::default())
         .app_data(web::Data::new(context))
-        .service(post_customer)
-        .service(get_customer)
-        .service(patch_customer)
-        .service(delete_customer)
-        .service(post_project)
-        .service(get_project)
-        .service(patch_project)
-        .service(delete_project)
-        .service(provide_customer_data)
-        .service(provide_project_data)
-        .service(my_customer)
-        .service(my_project)
-        .service(get_customer_data)
-        .service(get_project_data)
-        .service(ping)
-        .service(get_customer_projects)
-        .service(add_auditor)
-        .service(delete_auditor);
+        .service(
+            web::scope(&API_PREFIX)
+                .service(post_customer)
+                .service(get_customer)
+                .service(patch_customer)
+                .service(delete_customer)
+                .service(post_project)
+                .service(get_project)
+                .service(patch_project)
+                .service(delete_project)
+                .service(provide_customer_data)
+                .service(provide_project_data)
+                .service(my_customer)
+                .service(my_project)
+                .service(get_customer_data)
+                .service(get_project_data)
+                .service(ping)
+                .service(get_customer_projects)
+                .service(add_auditor)
+                .service(delete_auditor),
+        );
     app
 }

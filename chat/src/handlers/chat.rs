@@ -1,8 +1,8 @@
 use crate::repositories::chat::Chat;
 use actix_web::{
-    get, post, patch,
+    get, patch, post,
     web::{Json, Path},
-    HttpResponse
+    HttpResponse,
 };
 use common::{
     api::chat::{CreateMessage, PublicMessage},
@@ -13,7 +13,7 @@ use common::{
 
 use crate::services::chat::{ChatService, PublicChat};
 
-#[post("/api/chat/message")]
+#[post("/chat/message")]
 pub async fn send_message(
     context: GeneralContext,
     Json(message): Json<CreateMessage>,
@@ -21,7 +21,7 @@ pub async fn send_message(
     Ok(Json(ChatService::new(context).send_message(message).await?))
 }
 
-#[get("/api/chat/preview/{role}")]
+#[get("/chat/preview/{role}")]
 pub async fn preview(
     context: GeneralContext,
     role: Path<Role>,
@@ -31,7 +31,7 @@ pub async fn preview(
     ))
 }
 
-#[get("/api/chat/{id}")]
+#[get("/chat/{id}")]
 pub async fn messages(
     context: GeneralContext,
     id: Path<String>,
@@ -43,11 +43,13 @@ pub async fn messages(
     ))
 }
 
-#[patch("/api/chat/{id}/unread/{unread}")]
+#[patch("/chat/{id}/unread/{unread}")]
 pub async fn chat_unread(
     context: GeneralContext,
     params: Path<(String, i32)>,
 ) -> error::Result<HttpResponse> {
-    ChatService::new(context).unread_messages(params.0.parse()?, params.1).await?;
+    ChatService::new(context)
+        .unread_messages(params.0.parse()?, params.1)
+        .await?;
     Ok(HttpResponse::Ok().finish())
 }

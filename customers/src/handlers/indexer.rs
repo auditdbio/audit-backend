@@ -12,7 +12,7 @@ use mongodb::bson::{oid::ObjectId, Document};
 
 use crate::service::indexer::IndexerService;
 
-#[get("/api/customer/data/{since}")]
+#[get("/customer/data/{since}")]
 pub async fn provide_customer_data(
     context: GeneralContext,
     since: web::Path<i64>,
@@ -24,7 +24,7 @@ pub async fn provide_customer_data(
     ))
 }
 
-#[get("/api/project/data/{since}")]
+#[get("/project/data/{since}")]
 pub async fn provide_project_data(
     context: GeneralContext,
     since: web::Path<i64>,
@@ -36,7 +36,7 @@ pub async fn provide_project_data(
     ))
 }
 
-#[post("/api/customer/data")]
+#[post("/customer/data")]
 pub async fn get_customer_data(
     context: GeneralContext,
     Json(ids): web::Json<Vec<ObjectId>>,
@@ -46,7 +46,7 @@ pub async fn get_customer_data(
     ))
 }
 
-#[post("/api/project/data")]
+#[post("/project/data")]
 pub async fn get_project_data(
     context: GeneralContext,
     Json(ids): web::Json<Vec<ObjectId>>,
@@ -54,7 +54,7 @@ pub async fn get_project_data(
     Ok(Json(IndexerService::new(context).find_projects(ids).await?))
 }
 
-#[get("/api/customers/ping")]
+#[get("/customers/ping")]
 pub async fn ping() -> HttpResponse {
     HttpResponse::Ok().finish()
 }

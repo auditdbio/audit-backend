@@ -7,7 +7,7 @@ use common::{
     },
     error::{self, AddCode},
     repository::Entity,
-    services::{PROTOCOL, USERS_SERVICE},
+    services::{API_PREFIX, PROTOCOL, USERS_SERVICE},
 };
 use lettre::{
     message::{header, MultiPart, SinglePart},
@@ -95,22 +95,18 @@ impl MailService {
                 MultiPart::related().singlepart(
                     SinglePart::builder()
                         .header(header::ContentType::TEXT_HTML)
-                        .body(String::from(
-                            letter.message
-                        )),
+                        .body(String::from(letter.message)),
                 ),
             );
 
+        /*
+        Message::builder()
+        .from(sender_email.parse().unwrap())
+        .to(email)
+        .subject(letter.subject)
+        .body(letter.message) */
 
-            /*
-            Message::builder()
-            .from(sender_email.parse().unwrap())
-            .to(email)
-            .subject(letter.subject)
-            .body(letter.message) */
-
-        let Ok(email) = mail
-        else {
+        let Ok(email) = mail else {
             return Err(anyhow::anyhow!("Error building email").code(500));
         };
         let mailer = SmtpTransport::relay("smtp.gmail.com")
@@ -171,9 +167,10 @@ impl MailService {
                 .make_request::<PublicUser>()
                 .auth(auth)
                 .get(format!(
-                    "{}://{}/api/user/{}",
+                    "{}://{}/{}/user/{}",
                     PROTOCOL.as_str(),
                     USERS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
                     recipient_id
                 ))
                 .send()

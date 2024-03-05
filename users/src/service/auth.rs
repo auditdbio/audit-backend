@@ -4,7 +4,7 @@ use common::{
     access_rules::AccessRules,
     api::{
         self,
-        badge::{BadgePayload, get_badge},
+        badge::{get_badge, BadgePayload},
         codes::post_code,
         user::CreateUser,
         linked_accounts::{
@@ -22,12 +22,13 @@ use common::{
     },
     error::{self, AddCode},
     repository::Entity,
-    services::{FRONTEND, MAIL_SERVICE, PROTOCOL, USERS_SERVICE},
+    services::{API_PREFIX, FRONTEND, MAIL_SERVICE, PROTOCOL, USERS_SERVICE},
 };
-use mongodb::bson::{Bson, oid::ObjectId};
+use mongodb::bson::{oid::ObjectId, Bson};
 use rand::{distributions::Alphanumeric, Rng};
-use reqwest::{Client, header};
+use reqwest::{header, Client};
 use serde::{Deserialize, Serialize};
+
 use std::env::var;
 
 extern crate crypto;
@@ -189,9 +190,10 @@ impl AuthService {
                 .replace(
                     "{link}",
                     format!(
-                        "{}://{}/api/auth/verify/{}",
+                        "{}://{}/{}/auth/verify/{}",
                         PROTOCOL.as_str(),
                         USERS_SERVICE.as_str(),
+                        API_PREFIX.as_str(),
                         code
                     )
                     .as_str(),
@@ -209,9 +211,10 @@ impl AuthService {
                 .make_request()
                 .auth(self.context.server_auth())
                 .post(format!(
-                    "{}://{}/api/mail",
+                    "{}://{}/{}/mail",
                     PROTOCOL.as_str(),
-                    MAIL_SERVICE.as_str()
+                    MAIL_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
                 ))
                 .json(&letter)
                 .send()
@@ -392,12 +395,14 @@ impl AuthService {
             .await?
         {
             user.current_role = data.clone().current_role;
-            let _ = self.context
+            let _ = self
+                .context
                 .make_request()
                 .patch(format!(
-                    "{}://{}/api/user/{}",
+                    "{}://{}/{}/user/{}",
                     PROTOCOL.as_str(),
                     USERS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
                     user.id
                 ))
                 .auth(self.context.server_auth())
@@ -409,9 +414,10 @@ impl AuthService {
             let _ = self.context
                 .make_request()
                 .patch(format!(
-                    "{}://{}/api/user/{}/linked_account/{}",
+                    "{}://{}/{}/user/{}/linked_account/{}",
                     PROTOCOL.as_str(),
                     USERS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
                     user.id,
                     linked_account.id.clone(),
                 ))
@@ -437,12 +443,14 @@ impl AuthService {
                 .await?
             {
                 user.current_role = data.clone().current_role;
-                let _ = self.context
+                let _ = self
+                    .context
                     .make_request()
                     .patch(format!(
-                        "{}://{}/api/user/{}",
+                        "{}://{}/{}/user/{}",
                         PROTOCOL.as_str(),
                         USERS_SERVICE.as_str(),
+                        API_PREFIX.as_str(),
                         user.id
                     ))
                     .auth(self.context.server_auth())
@@ -544,9 +552,10 @@ impl AuthService {
             .make_request()
             .auth(self.context.server_auth())
             .post(format!(
-                "{}://{}/api/mail",
+                "{}://{}/{}/mail",
                 PROTOCOL.as_str(),
-                MAIL_SERVICE.as_str()
+                MAIL_SERVICE.as_str(),
+                API_PREFIX.as_str(),
             ))
             .json(&letter)
             .send()

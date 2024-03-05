@@ -5,9 +5,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     api::report::PublicReport,
-    context::{self, context_trait::Context, GeneralContext},
+    context::GeneralContext,
     repository::Entity,
-    services::{PROTOCOL, REPORT_SERVICE},
+    services::{API_PREFIX, PROTOCOL, REPORT_SERVICE},
 };
 
 use super::{audit_request::TimeRange, issue::Issue};
@@ -116,9 +116,10 @@ impl Audit<ObjectId> {
             let public_report = context
                 .make_request::<()>()
                 .post(format!(
-                    "{}://{}/api/report/{}",
+                    "{}://{}/{}/report/{}",
                     PROTOCOL.as_str(),
                     REPORT_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
                     self.id
                 ))
                 .auth(context.server_auth())

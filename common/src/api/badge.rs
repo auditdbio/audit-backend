@@ -6,7 +6,7 @@ use crate::{
     context::GeneralContext,
     entities::badge::PublicBadge,
     error,
-    services::{AUDITORS_SERVICE, PROTOCOL},
+    services::{API_PREFIX, AUDITORS_SERVICE, PROTOCOL},
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -19,9 +19,10 @@ pub async fn merge(context: &GeneralContext, auth: Auth, secret: String) -> erro
     context
         .make_request::<()>()
         .patch(format!(
-            "{}://{}/api/badge/merge/{}",
+            "{}://{}/{}/badge/merge/{}",
             PROTOCOL.as_str(),
             AUDITORS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
             secret
         ))
         .auth(auth)
@@ -38,9 +39,10 @@ pub async fn get_badge(
     Ok(context
         .make_request::<()>()
         .get(format!(
-            "{}://{}/api/badge/{}",
+            "{}://{}/{}/badge/{}",
             PROTOCOL.as_str(),
             AUDITORS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
             email
         ))
         .send()

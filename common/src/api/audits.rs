@@ -1,7 +1,7 @@
-use std::collections::HashMap;
 use chrono::Utc;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use crate::{
     context::GeneralContext,
@@ -10,11 +10,11 @@ use crate::{
         audit_request::TimeRange,
         auditor::{ExtendedAuditor, PublicAuditor},
         contacts::Contacts,
-        issue::{Status, Issue},
+        issue::{Issue, Status},
         project::PublicProject,
     },
     error,
-    services::{AUDITORS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL},
+    services::{API_PREFIX, AUDITORS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL},
 };
 
 use super::issue::PublicIssue;
@@ -123,9 +123,10 @@ impl PublicAudit {
         let auditor = context
             .make_request::<PublicAuditor>()
             .get(format!(
-                "{}://{}/api/auditor/{}",
+                "{}://{}/{}/auditor/{}",
                 PROTOCOL.as_str(),
                 AUDITORS_SERVICE.as_str(),
+                API_PREFIX.as_str(),
                 audit.auditor_id
             ))
             .auth(context.server_auth())
@@ -140,9 +141,10 @@ impl PublicAudit {
                 context
                     .make_request::<PublicProject>()
                     .get(format!(
-                        "{}://{}/api/project/{}",
+                        "{}://{}/{}/project/{}",
                         PROTOCOL.as_str(),
                         CUSTOMERS_SERVICE.as_str(),
+                        API_PREFIX.as_str(),
                         audit.project_id
                     ))
                     .auth(context.server_auth())

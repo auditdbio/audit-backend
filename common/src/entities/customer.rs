@@ -4,7 +4,7 @@ use utoipa::ToSchema;
 
 use crate::{
     repository::Entity,
-    services::{CUSTOMERS_SERVICE, PROTOCOL},
+    services::{API_PREFIX, CUSTOMERS_SERVICE, PROTOCOL},
 };
 
 use super::contacts::Contacts;
@@ -74,9 +74,10 @@ impl From<Customer<ObjectId>> for Option<Document> {
         document.insert(
             "request_url",
             format!(
-                "{}://{}/api/customer/data",
+                "{}://{}/{}/customer/data",
                 PROTOCOL.as_str(),
-                CUSTOMERS_SERVICE.as_str()
+                CUSTOMERS_SERVICE.as_str(),
+                API_PREFIX.as_str(),
             ),
         );
         document.insert(

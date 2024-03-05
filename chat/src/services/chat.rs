@@ -11,7 +11,7 @@ use common::{
     context::GeneralContext,
     entities::role::Role,
     error,
-    services::{EVENTS_SERVICE, PROTOCOL},
+    services::{API_PREFIX, EVENTS_SERVICE, PROTOCOL},
 };
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -30,7 +30,7 @@ pub struct PublicChat {
     pub last_modified: i64,
     pub last_message: PublicMessage,
     pub avatar: Option<String>,
-    pub unread: Vec<PublicReadId>
+    pub unread: Vec<PublicReadId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -119,9 +119,10 @@ impl ChatService {
             self.context
                 .make_request()
                 .post(format!(
-                    "{}://{}/api/event",
+                    "{}://{}/{}/event",
                     PROTOCOL.as_str(),
-                    EVENTS_SERVICE.as_str()
+                    EVENTS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
                 ))
                 .json(&event)
                 .send()
@@ -154,13 +155,25 @@ impl ChatService {
                 }
 
                 let (name, avatar) = if id.role == Role::Auditor {
-                    let auditor = request_auditor(&self.context, id.id, auth.clone()).await?;
+                    let auditor = match request_auditor(&self.context, id.id, auth.clone()).await {
+                        Ok(auditor) => auditor,
+                        _ => continue
+                    };
+                    if auditor.is_empty() {
+                        continue;
+                    }
                     (
                         auditor.first_name().clone() + " " + auditor.last_name(),
                         auditor.avatar().to_string(),
                     )
                 } else {
-                    let customer = request_customer(&self.context, id.id, auth.clone()).await?;
+                    let customer = match request_customer(&self.context, id.id, auth.clone()).await {
+                        Ok(customer) => customer,
+                        _ => continue
+                    };
+                    if customer.user_id.is_empty() {
+                        continue;
+                    }
                     (
                         customer.first_name + " " + &customer.last_name,
                         customer.avatar,

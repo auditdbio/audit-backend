@@ -12,7 +12,7 @@ use common::{
         user::PublicUser,
     },
     error::{self, AddCode},
-    services::{PROTOCOL, USERS_SERVICE},
+    services::{API_PREFIX, PROTOCOL, USERS_SERVICE},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -115,9 +115,10 @@ impl AuditorService {
                 .make_request::<PublicUser>()
                 .auth(auth)
                 .get(format!(
-                    "{}://{}/api/user/{}",
+                    "{}://{}/{}/user/{}",
                     PROTOCOL.as_str(),
                     USERS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
                     auth.id().unwrap()
                 ))
                 .send()
@@ -134,9 +135,10 @@ impl AuditorService {
                 .make_request::<PublicCustomer>()
                 .auth(auth)
                 .get(format!(
-                    "{}://{}/api/customer/{}",
+                    "{}://{}/{}/customer/{}",
                     PROTOCOL.as_str(),
                     USERS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
                     auth.id().unwrap()
                 ))
                 .send()

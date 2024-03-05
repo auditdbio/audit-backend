@@ -12,7 +12,7 @@ use crate::{
         role::Role,
     },
     error,
-    services::{AUDITORS_SERVICE, AUDITS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL},
+    services::{API_PREFIX, AUDITORS_SERVICE, AUDITS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL},
 };
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
@@ -44,9 +44,10 @@ impl PublicRequest {
         let project = if let Ok(project) = context
             .make_request::<PublicProject>()
             .get(format!(
-                "{}://{}/api/project/{}",
+                "{}://{}/{}/project/{}",
                 PROTOCOL.as_str(),
                 CUSTOMERS_SERVICE.as_str(),
+                API_PREFIX.as_str(),
                 request.project_id
             ))
             .auth(auth)
@@ -60,9 +61,10 @@ impl PublicRequest {
             context
                 .make_request::<()>()
                 .post(format!(
-                    "{}://{}/api/project/auditor/{}/{}",
+                    "{}://{}/{}/project/auditor/{}/{}",
                     PROTOCOL.as_str(),
                     CUSTOMERS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
                     request.project_id,
                     request.auditor_id
                 ))
@@ -73,9 +75,10 @@ impl PublicRequest {
             context
                 .make_request::<PublicProject>()
                 .get(format!(
-                    "{}://{}/api/project/{}",
+                    "{}://{}/{}/project/{}",
                     PROTOCOL.as_str(),
                     CUSTOMERS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
                     request.project_id
                 ))
                 .auth(auth)
@@ -90,9 +93,10 @@ impl PublicRequest {
             .make_request::<PublicAuditor>()
             .auth(context.server_auth())
             .get(format!(
-                "{}://{}/api/auditor/{}",
+                "{}://{}/{}/auditor/{}",
                 PROTOCOL.as_str(),
                 AUDITORS_SERVICE.as_str(),
+                API_PREFIX.as_str(),
                 request.auditor_id
             ))
             .auth(auth)
@@ -130,9 +134,10 @@ pub async fn get_audit_requests(
     Ok(context
         .make_request::<Vec<PublicRequest>>()
         .get(format!(
-            "{}://{}/api/my_audit_request/auditor",
+            "{}://{}/{}/my_audit_request/auditor",
             PROTOCOL.as_str(),
-            AUDITS_SERVICE.as_str()
+            AUDITS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
         ))
         .auth(auth)
         .send()
@@ -160,9 +165,10 @@ pub async fn create_request(
     context
         .make_request::<CreateRequest>()
         .post(format!(
-            "{}://{}/api/audit_request",
+            "{}://{}/{}/audit_request",
             PROTOCOL.as_str(),
-            AUDITORS_SERVICE.as_str()
+            AUDITORS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
         ))
         .auth(auth)
         .json(&data)
@@ -176,9 +182,10 @@ pub async fn delete(context: &GeneralContext, auth: Auth, id: ObjectId) -> error
     context
         .make_request::<()>()
         .delete(format!(
-            "{}://{}/api/audit_request/{}",
+            "{}://{}/{}/audit_request/{}",
             PROTOCOL.as_str(),
             AUDITORS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
             id.to_hex()
         ))
         .auth(auth)

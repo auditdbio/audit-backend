@@ -2,7 +2,7 @@ use crate::{
     context::GeneralContext,
     entities::letter::CreateLetter,
     error,
-    services::{MAIL_SERVICE, PROTOCOL},
+    services::{API_PREFIX, MAIL_SERVICE, PROTOCOL},
 };
 
 pub async fn send_mail(context: &GeneralContext, create_letter: CreateLetter) -> error::Result<()> {
@@ -10,9 +10,10 @@ pub async fn send_mail(context: &GeneralContext, create_letter: CreateLetter) ->
         .make_request::<CreateLetter>()
         .auth(context.server_auth())
         .post(format!(
-            "{}://{}/api/mail",
+            "{}://{}/{}/mail",
             PROTOCOL.as_str(),
             MAIL_SERVICE.as_str(),
+            API_PREFIX.as_str(),
         ))
         .json(&create_letter)
         .send()

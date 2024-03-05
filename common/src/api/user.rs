@@ -6,7 +6,7 @@ use crate::{
     context::GeneralContext,
     entities::user::{LinkedAccount, PublicUser, User},
     error,
-    services::{PROTOCOL, USERS_SERVICE},
+    services::{API_PREFIX, PROTOCOL, USERS_SERVICE},
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -30,9 +30,10 @@ pub async fn get_by_id(
     Ok(context
         .make_request::<PublicUser>()
         .get(format!(
-            "{}://{}/api/user/{}",
+            "{}://{}/{}/user/{}",
             PROTOCOL.as_str(),
             USERS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
             id
         ))
         .auth(auth)
@@ -49,9 +50,10 @@ pub async fn get_by_email(
     Ok(context
         .make_request::<User<ObjectId>>()
         .get(format!(
-            "{}://{}/api/user_by_email/{}",
+            "{}://{}/{}/user_by_email/{}",
             PROTOCOL.as_str(),
             USERS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
             email
         ))
         .auth(context.server_auth())

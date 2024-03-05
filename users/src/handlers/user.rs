@@ -13,7 +13,7 @@ use serde_json::json;
 
 use crate::service::user::{UserChange, UserService};
 
-#[get("/api/user_by_email/{id}")]
+#[get("/user_by_email/{id}")]
 pub async fn find_user_by_email(
     context: GeneralContext,
     id: Path<String>,
@@ -26,17 +26,7 @@ pub async fn find_user_by_email(
     }
 }
 
-#[get("/api/my_user")]
-pub async fn my_user(context: GeneralContext) -> error::Result<HttpResponse> {
-    let user = UserService::new(context).my_user().await?;
-    if let Some(user) = user {
-        Ok(HttpResponse::Ok().json(user))
-    } else {
-        Ok(HttpResponse::Ok().json(json! {{}}))
-    }
-}
-
-#[get("/api/user/{id}")]
+#[get("/user/{id}")]
 pub async fn find_user(context: GeneralContext, id: Path<String>) -> error::Result<HttpResponse> {
     let user = UserService::new(context).find(id.parse()?).await?;
     if let Some(user) = user {
@@ -46,54 +36,17 @@ pub async fn find_user(context: GeneralContext, id: Path<String>) -> error::Resu
     }
 }
 
-#[post("/api/user/{id}/linked_account")]
-pub async fn add_linked_account(
-    context: GeneralContext,
-    id: Path<String>,
-    Json(data): Json<AddLinkedAccount>,
-) -> error::Result<Json<PublicLinkedAccount>> {
-    Ok(Json(
-        UserService::new(context).create_linked_account(id.parse()?, data).await?
-    ))
+#[get("/my_user")]
+pub async fn my_user(context: GeneralContext) -> error::Result<HttpResponse> {
+    let user = UserService::new(context).my_user().await?;
+    if let Some(user) = user {
+        Ok(HttpResponse::Ok().json(user))
+    } else {
+        Ok(HttpResponse::Ok().json(json! {{}}))
+    }
 }
 
-#[patch("/api/user/{id}/linked_account/{account_id}")]
-pub async fn patch_linked_account(
-    context: GeneralContext,
-    id: Path<(String, String)>,
-    Json(data): Json<UpdateLinkedAccount>,
-) -> error::Result<Json<PublicLinkedAccount>> {
-    Ok(Json(
-        UserService::new(context)
-            .change_linked_account(id.0.parse()?, id.1.clone(), data)
-            .await?
-    ))
-}
-
-#[delete("/api/user/{id}/linked_account/{account_id}")]
-pub async fn delete_linked_account(
-    context: GeneralContext,
-    id: Path<(String, String)>,
-) -> error::Result<Json<PublicLinkedAccount>> {
-    Ok(Json(
-        UserService::new(context)
-            .delete_linked_account(id.0.parse()?, id.1.clone())
-            .await?
-    ))
-}
-
-#[post("/api/user/{id}/wallet")]
-pub async fn add_wallet(
-    context: GeneralContext,
-    id: Path<String>,
-    Json(data): Json<AddWallet>,
-) -> error::Result<Json<PublicLinkedAccount>> {
-    Ok(Json(
-        UserService::new(context).add_wallet(id.parse()?, data).await?
-    ))
-}
-
-#[patch("/api/user/{id}")]
+#[patch("/user/{id}")]
 pub async fn change_user(
     context: GeneralContext,
     id: Path<String>,
@@ -106,7 +59,7 @@ pub async fn change_user(
     ))
 }
 
-#[delete("/api/user/{id}")]
+#[delete("/user/{id}")]
 pub async fn delete_user(
     context: GeneralContext,
     id: Path<String>,
@@ -114,7 +67,54 @@ pub async fn delete_user(
     Ok(Json(UserService::new(context).delete(id.parse()?).await?))
 }
 
-#[get("/api/github/{path:.*}")]
+#[post("/user/{id}/linked_account")]
+pub async fn add_linked_account(
+    context: GeneralContext,
+    id: Path<String>,
+    Json(data): Json<AddLinkedAccount>,
+) -> error::Result<Json<PublicLinkedAccount>> {
+    Ok(Json(
+        UserService::new(context).create_linked_account(id.parse()?, data).await?
+    ))
+}
+
+#[patch("/user/{id}/linked_account/{account_id}")]
+pub async fn patch_linked_account(
+    context: GeneralContext,
+    id: Path<(String, String)>,
+    Json(data): Json<UpdateLinkedAccount>,
+) -> error::Result<Json<PublicLinkedAccount>> {
+    Ok(Json(
+        UserService::new(context)
+            .change_linked_account(id.0.parse()?, id.1.clone(), data)
+            .await?
+    ))
+}
+
+#[delete("/user/{id}/linked_account/{account_id}")]
+pub async fn delete_linked_account(
+    context: GeneralContext,
+    id: Path<(String, String)>,
+) -> error::Result<Json<PublicLinkedAccount>> {
+    Ok(Json(
+        UserService::new(context)
+            .delete_linked_account(id.0.parse()?, id.1.clone())
+            .await?
+    ))
+}
+
+#[post("/user/{id}/wallet")]
+pub async fn add_wallet(
+    context: GeneralContext,
+    id: Path<String>,
+    Json(data): Json<AddWallet>,
+) -> error::Result<Json<PublicLinkedAccount>> {
+    Ok(Json(
+        UserService::new(context).add_wallet(id.parse()?, data).await?
+    ))
+}
+
+#[get("/github/{path:.*}")]
 pub async fn proxy_github_api(
     context: GeneralContext,
     path: Path<String>,

@@ -6,7 +6,7 @@ use crate::{
     context::context_trait::GeneralContext,
     error,
     repository::Entity,
-    services::{CUSTOMERS_SERVICE, PROTOCOL},
+    services::{API_PREFIX, CUSTOMERS_SERVICE, PROTOCOL},
 };
 
 use super::contacts::Contacts;
@@ -116,9 +116,10 @@ impl From<Project<ObjectId>> for Option<Document> {
         document.insert(
             "request_url",
             format!(
-                "{}://{}/api/project/data",
+                "{}://{}/{}/project/data",
                 PROTOCOL.as_str(),
-                CUSTOMERS_SERVICE.as_str()
+                CUSTOMERS_SERVICE.as_str(),
+                API_PREFIX.as_str(),
             ),
         );
         document.insert("kind", "project");
@@ -132,9 +133,10 @@ pub async fn get_project(context: &GeneralContext, id: ObjectId) -> error::Resul
         .make_request::<PublicProject>()
         .auth(context.server_auth()) // TODO: think about private projects here
         .get(format!(
-            "{}://{}/api/project/{}",
+            "{}://{}/{}/project/{}",
             PROTOCOL.as_str(),
             CUSTOMERS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
             id,
         ))
         .send()

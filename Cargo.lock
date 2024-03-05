@@ -485,6 +485,7 @@ dependencies = [
  "log",
  "mongodb",
  "mongodb-migrator",
+ "rand 0.8.5",
  "serde",
  "serde_json",
  "utoipa",
@@ -776,6 +777,31 @@ dependencies = [
  "time 0.1.45",
  "wasm-bindgen",
  "winapi",
+]
+
+[[package]]
+name = "cloc"
+version = "0.1.0"
+dependencies = [
+ "actix-cors",
+ "actix-web",
+ "anyhow",
+ "async-trait",
+ "awc",
+ "chrono",
+ "common",
+ "derive_more",
+ "dotenv",
+ "env_logger",
+ "futures",
+ "log",
+ "mongodb",
+ "mongodb-migrator",
+ "serde",
+ "serde_json",
+ "tokio",
+ "utoipa",
+ "utoipa-swagger-ui",
 ]
 
 [[package]]

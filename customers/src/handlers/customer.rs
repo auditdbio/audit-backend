@@ -17,7 +17,7 @@ use serde_json::json;
 
 use crate::service::customer::{CreateCustomer, CustomerChange, CustomerService};
 
-#[post("/api/customer")]
+#[post("/customer")]
 pub async fn post_customer(
     context: GeneralContext,
     Json(data): web::Json<CreateCustomer>,
@@ -25,7 +25,7 @@ pub async fn post_customer(
     Ok(Json(CustomerService::new(context).create(data).await?))
 }
 
-#[get("/api/customer/{id}")]
+#[get("/customer/{id}")]
 pub async fn get_customer(
     context: GeneralContext,
     id: web::Path<String>,
@@ -38,7 +38,7 @@ pub async fn get_customer(
     }
 }
 
-#[get("/api/my_customer")]
+#[get("/my_customer")]
 pub async fn my_customer(context: GeneralContext) -> error::Result<HttpResponse> {
     let res = CustomerService::new(context).my_customer().await?;
     if let Some(res) = res {
@@ -48,7 +48,7 @@ pub async fn my_customer(context: GeneralContext) -> error::Result<HttpResponse>
     }
 }
 
-#[patch("/api/my_customer")]
+#[patch("/my_customer")]
 pub async fn patch_customer(
     context: GeneralContext,
     Json(data): Json<CustomerChange>,
@@ -56,7 +56,7 @@ pub async fn patch_customer(
     Ok(Json(CustomerService::new(context).change(data).await?))
 }
 
-#[delete("/api/customer/{id}")]
+#[delete("/customer/{id}")]
 pub async fn delete_customer(
     context: GeneralContext,
     id: web::Path<String>,
@@ -66,7 +66,7 @@ pub async fn delete_customer(
     ))
 }
 
-#[get("/api/customer/{id}/project")]
+#[get("/customer/{id}/project")]
 pub async fn get_customer_projects(
     context: GeneralContext,
     id: web::Path<String>,

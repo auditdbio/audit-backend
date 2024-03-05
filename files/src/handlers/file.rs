@@ -7,7 +7,7 @@ use mongodb::bson::oid::ObjectId;
 
 use crate::service::file::FileService;
 
-#[post("/api/file")]
+#[post("/file")]
 pub async fn create_file(
     context: GeneralContext,
     mut payload: Multipart,
@@ -97,7 +97,7 @@ pub async fn create_file(
     Ok(HttpResponse::Ok().finish())
 }
 
-#[get("/api/file/{filename:.*}")]
+#[get("/file/{filename:.*}")]
 pub async fn find_file(
     context: GeneralContext,
     filename: Path<String>,
@@ -107,7 +107,7 @@ pub async fn find_file(
         .await
 }
 
-#[delete("/api/file/{filename:.*}")]
+#[delete("/file/{filename:.*}")]
 pub async fn delete_file(
     context: GeneralContext,
     filename: Path<String>,

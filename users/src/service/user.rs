@@ -28,7 +28,7 @@ use common::{
     context::GeneralContext,
     entities::user::{PublicUser, User, LinkedAccount, PublicLinkedAccount, UserLogin},
     error::{self, AddCode},
-    services::{PROTOCOL, USERS_SERVICE},
+    services::{PROTOCOL, USERS_SERVICE, API_PREFIX},
 };
 use crate::service::auth::AuthService;
 
@@ -273,9 +273,10 @@ impl UserService {
                 let _ = self.context
                     .make_request()
                     .patch(format!(
-                        "{}://{}/api/user/{}/linked_account/{}",
+                        "{}://{}/{}/user/{}/linked_account/{}",
                         PROTOCOL.as_str(),
                         USERS_SERVICE.as_str(),
+                        API_PREFIX.as_str(),
                         id,
                         linked_account.id.clone(),
                     ))
