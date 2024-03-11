@@ -173,6 +173,21 @@ impl ChatRepository {
         Ok((groups, chats))
     }
 
+    pub async fn find_by_members(&self, members: Vec<ChatId>) -> error::Result<Option<PrivateChat>> {
+        let values: Vec<Bson> = members
+            .into_iter()
+            .map(|chat_id| Bson::Document(to_document(&chat_id).unwrap()))
+            .collect();
+
+        let document = Bson::Document(doc! {"$all": Bson::Array(values)});
+
+        let chat = self
+            .private_chats
+            .find("members", &document)
+            .await?;
+        Ok(chat)
+    }
+
     pub async fn create_private(
         &self,
         message: Message,
@@ -231,6 +246,19 @@ impl ChatRepository {
             self.private_chats.delete("_id", &group).await?;
             self.private_chats.insert(&chat).await?;
         }
+
+        Ok(())
+    }
+
+    pub async fn delete_message(&self, chat_id: ObjectId, message_id: ObjectId) -> error::Result<()> {
+        self.messages
+            .collection
+            .update_one(
+                doc! {"_id": chat_id},
+                doc! {"$pull": {"messages": {"id": message_id}}},
+                None,
+            )
+            .await?;
 
         Ok(())
     }

@@ -75,34 +75,51 @@ impl ChatService {
             .get_repository_manual::<Arc<ChatRepository>>()
             .unwrap();
 
+        let from = ChatId {
+            id: auth.id().unwrap(),
+            role: message.role,
+        };
+
         let message = if let Some(chat) = message.chat {
             Message {
                 id: ObjectId::new(),
-                from: ChatId {
-                    id: auth.id().unwrap(),
-                    role: message.role,
-                },
+                from,
                 chat: chat.parse()?,
                 time: Utc::now().timestamp_micros(),
                 text: message.text,
                 kind: message.kind,
             }
         } else {
-            let stored_message = Message {
-                id: ObjectId::new(),
-                from: ChatId {
-                    id: auth.id().unwrap(),
-                    role: message.role,
-                },
-                chat: ObjectId::new(),
-                time: Utc::now().timestamp_micros(),
-                text: message.text,
-                kind: message.kind,
-            };
-
-            repo.create_private(stored_message.clone(), message.to.unwrap().parse()?)
+            let existing_chat = repo
+                .find_by_members(vec![
+                    from.clone(),
+                    message.to.clone().unwrap().parse()?
+                ])
                 .await?;
-            stored_message
+
+            if let Some(existing_private) = existing_chat {
+                Message {
+                    id: ObjectId::new(),
+                    from,
+                    chat: existing_private.id,
+                    time: Utc::now().timestamp_micros(),
+                    text: message.text,
+                    kind: message.kind,
+                }
+            } else {
+                let stored_message = Message {
+                    id: ObjectId::new(),
+                    from,
+                    chat: ObjectId::new(),
+                    time: Utc::now().timestamp_micros(),
+                    text: message.text,
+                    kind: message.kind,
+                };
+
+                repo.create_private(stored_message.clone(), message.to.unwrap().parse()?)
+                    .await?;
+                stored_message
+            }
         };
 
         let chat = repo.message(message.clone()).await?;
@@ -233,6 +250,20 @@ impl ChatService {
             .unwrap();
 
         repo.unread(group, user_id, Some(unread)).await?;
+        Ok(())
+    }
+
+    pub async fn delete_message(&self, chat_id: ObjectId, message_id: ObjectId) -> error::Result<()> {
+        // let auth = self.context.auth();
+        // let id = auth.id().unwrap();
+
+        let repo = self
+            .context
+            .get_repository_manual::<Arc<ChatRepository>>()
+            .unwrap();
+
+        repo.delete_message(chat_id, message_id).await?;
+
         Ok(())
     }
 }

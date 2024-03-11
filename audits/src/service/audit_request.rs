@@ -5,6 +5,7 @@ use common::{
         auditor::request_auditor,
         badge::BadgePayload,
         codes::post_code,
+        chat::{AuditMessage, CreateMessage, MessageKind, PublicChatId, create_message},
         events::{EventPayload, PublicEvent},
         mail::send_mail,
         requests::CreateRequest,
@@ -207,16 +208,36 @@ impl RequestService {
 
         requests.insert(&request).await?;
 
-        let event_reciver = if auth.id().unwrap() == customer_id {
-            auditor_id
+        let (event_receiver, receiver_role) = if last_changer == Role::Customer {
+            (auditor_id, Role::Auditor)
         } else {
-            customer_id
+            (customer_id, Role::Customer)
         };
 
         let public_request = PublicRequest::new(&self.context, request).await?;
 
+        let message_text = AuditMessage {
+            id: public_request.id.clone(),
+            project_name: public_request.project_name.clone(),
+            price: public_request.price.clone(),
+            status: None,
+        };
+
+        let message = CreateMessage {
+            chat: None,
+            to: Some(PublicChatId {
+                role: receiver_role,
+                id: event_receiver.to_hex(),
+            }),
+            role: last_changer,
+            text: serde_json::to_string(&message_text)?,
+            kind: Some(MessageKind::Audit),
+        };
+
+        create_message(message, auth)?;
+
         let event = PublicEvent::new(
-            event_reciver,
+            event_receiver,
             EventPayload::NewRequest(public_request.clone()),
         );
 

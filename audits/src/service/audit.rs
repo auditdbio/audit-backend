@@ -10,6 +10,7 @@ use common::{
     access_rules::{AccessRules, Edit, Read},
     api::{
         audits::{AuditAction, AuditChange, CreateIssue, PublicAudit},
+        chat::{create_message, AuditMessage, CreateMessage, MessageKind, PublicChatId},
         events::{post_event, EventPayload, PublicEvent},
         issue::PublicIssue,
         send_notification, NewNotification,
@@ -49,6 +50,7 @@ impl AuditService {
         let auth = self.context.auth();
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
+        let user_id = auth.id().unwrap();
         let auditor_id = request.auditor_id.parse()?;
         let customer_id = request.customer_id.parse()?;
 
@@ -88,18 +90,43 @@ impl AuditService {
 
         let public_audit = PublicAudit::new(&self.context, audit).await?;
 
-        let event_reciver = if auth.id().unwrap() == customer_id {
-            auditor_id
+        let (event_receiver, receiver_role) = if user_id == customer_id {
+            (auditor_id, Role::Auditor)
         } else {
-            customer_id
+            (customer_id, Role::Customer)
+        };
+        let last_changer = if user_id == customer_id {
+            Role::Customer
+        } else {
+            Role::Auditor
         };
 
-        let event = PublicEvent::new(event_reciver, EventPayload::NewAudit(public_audit.clone()));
+        let message_text = AuditMessage {
+            id: public_audit.id.clone(),
+            project_name: public_audit.project_name.clone(),
+            price: public_audit.price.clone(),
+            status: Some(AuditStatus::Started),
+        };
+
+        let message = CreateMessage {
+            chat: None,
+            to: Some(PublicChatId {
+                role: receiver_role,
+                id: event_receiver.to_hex(),
+            }),
+            role: last_changer,
+            text: serde_json::to_string(&message_text)?,
+            kind: Some(MessageKind::Audit),
+        };
+
+        create_message(message, auth)?;
+
+        let event = PublicEvent::new(event_receiver, EventPayload::NewAudit(public_audit.clone()));
 
         post_event(&self.context, event, self.context.server_auth()).await?;
 
         let event = PublicEvent::new(
-            event_reciver,
+            event_receiver,
             EventPayload::RequestAccept(request.id.clone()),
         );
 

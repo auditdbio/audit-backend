@@ -1,6 +1,6 @@
 use crate::repositories::chat::Chat;
 use actix_web::{
-    get, patch, post,
+    get, patch, post, delete,
     web::{Json, Path},
     HttpResponse,
 };
@@ -50,6 +50,17 @@ pub async fn chat_unread(
 ) -> error::Result<HttpResponse> {
     ChatService::new(context)
         .unread_messages(params.0.parse()?, params.1)
+        .await?;
+    Ok(HttpResponse::Ok().finish())
+}
+
+#[delete("/chat/{chat_id}/message/{message_id}")]
+pub async fn delete_message(
+    context: GeneralContext,
+    params: Path<(String, String)>,
+) -> error::Result<HttpResponse> {
+    ChatService::new(context)
+        .delete_message(params.0.parse()?, params.1.parse()?)
         .await?;
     Ok(HttpResponse::Ok().finish())
 }
