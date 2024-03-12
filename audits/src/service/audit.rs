@@ -90,22 +90,22 @@ impl AuditService {
 
         let public_audit = PublicAudit::new(&self.context, audit).await?;
 
-        let (event_receiver, receiver_role) = if user_id == customer_id {
-            (auditor_id, Role::Auditor)
+        let (event_receiver, receiver_role, last_changer) = if user_id == customer_id {
+            (auditor_id, Role::Auditor, Role::Customer)
         } else {
-            (customer_id, Role::Customer)
-        };
-        let last_changer = if user_id == customer_id {
-            Role::Customer
-        } else {
-            Role::Auditor
+            (customer_id, Role::Customer, Role::Auditor)
         };
 
         let message_text = AuditMessage {
             id: public_audit.id.clone(),
+            customer_id: public_audit.customer_id.clone(),
+            auditor_id: public_audit.auditor_id.clone(),
             project_name: public_audit.project_name.clone(),
             price: public_audit.price.clone(),
             status: Some(AuditStatus::Started),
+            last_changer: last_changer.clone(),
+            report: None,
+            report_name: None,
         };
 
         let message = CreateMessage {
@@ -319,20 +319,49 @@ impl AuditService {
         audits.delete("_id", &id).await?;
         audits.insert(&audit).await?;
 
-        let event_reciver = if auth.id().unwrap() == audit.customer_id {
-            audit.auditor_id
+        let (
+            event_receiver,
+            receiver_role,
+            last_changer_role,
+        ) = if auth.id().unwrap() == audit.customer_id {
+            (audit.auditor_id, Role::Auditor, Role::Customer)
         } else {
-            audit.customer_id
+            (audit.customer_id, Role::Customer, Role::Auditor)
         };
 
-        let public_audit = PublicAudit::new(&self.context, audit).await?;
+        let public_audit = PublicAudit::new(&self.context, audit.clone()).await?;
 
         let event = PublicEvent::new(
-            event_reciver,
+            event_receiver,
             EventPayload::AuditUpdate(public_audit.clone()),
         );
 
         post_event(&self.context, event, self.context.server_auth()).await?;
+
+        let message_text = AuditMessage {
+            id: public_audit.id.clone(),
+            customer_id: public_audit.customer_id.clone(),
+            auditor_id: public_audit.auditor_id.clone(),
+            project_name: public_audit.project_name.clone(),
+            price: public_audit.price.clone(),
+            status: Some(audit.status),
+            last_changer: last_changer_role,
+            report: public_audit.report.clone(),
+            report_name: public_audit.report_name.clone(),
+        };
+
+        let message = CreateMessage {
+            chat: None,
+            to: Some(PublicChatId {
+                role: receiver_role,
+                id: event_receiver.to_hex(),
+            }),
+            role: last_changer_role,
+            text: serde_json::to_string(&message_text)?,
+            kind: Some(MessageKind::Audit),
+        };
+
+        create_message(message, auth)?;
 
         Ok(public_audit)
     }
@@ -351,7 +380,38 @@ impl AuditService {
             return Err(anyhow::anyhow!("User is not available to delete this audit").code(403));
         }
 
-        let public_audit = PublicAudit::new(&self.context, audit).await?;
+        let public_audit = PublicAudit::new(&self.context, audit.clone()).await?;
+
+        let (receiver_id, receiver_role, current_role) = if auth.id().unwrap() == audit.customer_id {
+            (audit.auditor_id, Role::Auditor, Role::Customer)
+        } else {
+            (audit.customer_id, Role::Customer, Role::Auditor)
+        };
+
+        let message_text = AuditMessage {
+            id: public_audit.id.clone(),
+            customer_id: public_audit.customer_id.clone(),
+            auditor_id: public_audit.auditor_id.clone(),
+            project_name: public_audit.project_name.clone(),
+            price: public_audit.price.clone(),
+            status: None,
+            last_changer: current_role,
+            report: public_audit.report.clone(),
+            report_name: public_audit.report_name.clone(),
+        };
+
+        let message = CreateMessage {
+            chat: None,
+            to: Some(PublicChatId {
+                role: receiver_role,
+                id: receiver_id.to_hex(),
+            }),
+            role: current_role,
+            text: serde_json::to_string(&message_text)?,
+            kind: Some(MessageKind::Audit),
+        };
+
+        create_message(message, auth)?;
 
         Ok(public_audit)
     }

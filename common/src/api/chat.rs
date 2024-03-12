@@ -32,6 +32,7 @@ pub enum MessageKind {
     Image,
     File,
     Audit,
+    AuditIssue,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -71,9 +72,14 @@ pub struct PublicMessage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuditMessage {
     pub id: String,
+    pub customer_id: String,
+    pub auditor_id: String,
     pub project_name: String,
     pub price: i64,
     pub status: Option<AuditStatus>,
+    pub last_changer: Role,
+    pub report: Option<String>,
+    pub report_name: Option<String>,
 }
 
 pub fn create_message(message: CreateMessage, auth: Auth) -> error::Result<String> {

@@ -14,6 +14,7 @@ use common::{
     },
     context::GeneralContext,
     entities::{
+        audit::AuditStatus,
         audit_request::{AuditRequest, PriceRange, TimeRange},
         auditor::ExtendedAuditor,
         letter::CreateLetter,
@@ -218,9 +219,14 @@ impl RequestService {
 
         let message_text = AuditMessage {
             id: public_request.id.clone(),
+            customer_id: public_request.customer_id.clone(),
+            auditor_id: public_request.auditor_id.clone(),
             project_name: public_request.project_name.clone(),
             price: public_request.price.clone(),
-            status: None,
+            status: Some(AuditStatus::Waiting),
+            last_changer,
+            report: None,
+            report_name: None,
         };
 
         let message = CreateMessage {
@@ -354,7 +360,7 @@ impl RequestService {
             request.price = price;
         }
 
-        let role = if auth.id() == Some(request.customer_id) {
+        let last_changer_role = if auth.id() == Some(request.customer_id) {
             Role::Customer
         } else if auth.id() == Some(request.auditor_id) {
             Role::Auditor
@@ -362,7 +368,13 @@ impl RequestService {
             return Err(anyhow::anyhow!("User is not available to change this customer").code(400));
         };
 
-        request.last_changer = role;
+        let (receiver_id, receiver_role) = if last_changer_role == Role::Customer {
+            (request.auditor_id, Role::Auditor)
+        } else {
+            (request.customer_id, Role::Customer)
+        };
+
+        request.last_changer = last_changer_role;
 
         request.last_modified = Utc::now().timestamp_micros();
 
@@ -370,6 +382,31 @@ impl RequestService {
         requests.insert(&request).await?;
 
         let public_request = PublicRequest::new(&self.context, request).await?;
+
+        let message_text = AuditMessage {
+            id: public_request.id.clone(),
+            customer_id: public_request.customer_id.clone(),
+            auditor_id: public_request.auditor_id.clone(),
+            project_name: public_request.project_name.clone(),
+            price: public_request.price.clone(),
+            status: Some(AuditStatus::Waiting),
+            last_changer: public_request.last_changer.clone(),
+            report: None,
+            report_name: None,
+        };
+
+        let message = CreateMessage {
+            chat: None,
+            to: Some(PublicChatId {
+                role: receiver_role,
+                id: receiver_id.to_hex(),
+            }),
+            role: last_changer_role,
+            text: serde_json::to_string(&message_text)?,
+            kind: Some(MessageKind::Audit),
+        };
+
+        create_message(message, auth)?;
 
         Ok(public_request)
     }
@@ -415,14 +452,14 @@ impl RequestService {
                 .await?;
         }
 
-        let event_reciver = if current_role == Role::Customer {
-            public_request.auditor_id.parse()?
+        let (event_receiver, receiver_role) = if current_role == Role::Customer {
+            (public_request.auditor_id.parse::<ObjectId>()?, Role::Auditor)
         } else {
-            public_request.customer_id.parse()?
+            (public_request.customer_id.parse::<ObjectId>()?, Role::Customer)
         };
 
         let event = PublicEvent::new(
-            event_reciver,
+            event_receiver,
             EventPayload::RequestDecline(public_request.id.clone()),
         );
 
@@ -438,6 +475,31 @@ impl RequestService {
             .json(&event)
             .send()
             .await?;
+
+        let message_text = AuditMessage {
+            id: public_request.id.clone(),
+            customer_id: public_request.customer_id.clone(),
+            auditor_id: public_request.auditor_id.clone(),
+            project_name: public_request.project_name.clone(),
+            price: public_request.price.clone(),
+            status: None,
+            last_changer: current_role,
+            report: None,
+            report_name: None,
+        };
+
+        let message = CreateMessage {
+            chat: None,
+            to: Some(PublicChatId {
+                role: receiver_role,
+                id: event_receiver.to_hex(),
+            }),
+            role: current_role,
+            text: serde_json::to_string(&message_text)?,
+            kind: Some(MessageKind::Audit),
+        };
+
+        create_message(message, auth)?;
 
         Ok(public_request)
     }
