@@ -10,7 +10,7 @@ use common::{
     access_rules::{AccessRules, Edit, Read},
     api::{
         audits::{AuditAction, AuditChange, CreateIssue, PublicAudit},
-        chat::{create_message, AuditMessage, AuditMessageStatus, CreateMessage, MessageKind, PublicChatId},
+        chat::{send_message, create_audit_message, AuditMessageStatus, CreateAuditMessage},
         events::{post_event, EventPayload, PublicEvent},
         issue::PublicIssue,
         send_notification, NewNotification,
@@ -96,31 +96,15 @@ impl AuditService {
             (customer_id, Role::Customer, Role::Auditor)
         };
 
-        let message_text = AuditMessage {
-            id: public_audit.id.clone(),
-            customer_id: public_audit.customer_id.clone(),
-            auditor_id: public_audit.auditor_id.clone(),
-            project_name: public_audit.project_name.clone(),
-            price: public_audit.price.clone(),
-            status: Some(audit.status.into()),
-            last_changer: last_changer.clone(),
-            time: public_audit.time.clone(),
-            report: None,
-            report_name: None,
-        };
+        let message = create_audit_message(
+            CreateAuditMessage::Audit(public_audit.clone()),
+            Some(audit.status.into()),
+            event_receiver,
+            receiver_role,
+            last_changer
+        );
 
-        let message = CreateMessage {
-            chat: None,
-            to: Some(PublicChatId {
-                role: receiver_role,
-                id: event_receiver.to_hex(),
-            }),
-            role: last_changer,
-            text: serde_json::to_string(&message_text)?,
-            kind: Some(MessageKind::Audit),
-        };
-
-        create_message(message, auth)?;
+        send_message(message, auth)?;
 
         let event = PublicEvent::new(event_receiver, EventPayload::NewAudit(public_audit.clone()));
 
@@ -343,31 +327,15 @@ impl AuditService {
             return Ok(public_audit)
         }
 
-        let message_text = AuditMessage {
-            id: public_audit.id.clone(),
-            customer_id: public_audit.customer_id.clone(),
-            auditor_id: public_audit.auditor_id.clone(),
-            project_name: public_audit.project_name.clone(),
-            price: public_audit.price.clone(),
-            status: Some(audit.status.into()),
-            last_changer: last_changer_role,
-            time: public_audit.time.clone(),
-            report: public_audit.report.clone(),
-            report_name: public_audit.report_name.clone(),
-        };
+        let message = create_audit_message(
+            CreateAuditMessage::Audit(public_audit.clone()),
+            Some(audit.status.into()),
+            event_receiver,
+            receiver_role,
+            last_changer_role
+        );
 
-        let message = CreateMessage {
-            chat: None,
-            to: Some(PublicChatId {
-                role: receiver_role,
-                id: event_receiver.to_hex(),
-            }),
-            role: last_changer_role,
-            text: serde_json::to_string(&message_text)?,
-            kind: Some(MessageKind::Audit),
-        };
-
-        create_message(message, auth)?;
+        send_message(message, auth)?;
 
         Ok(public_audit)
     }
@@ -394,31 +362,15 @@ impl AuditService {
             (audit.customer_id, Role::Customer, Role::Auditor)
         };
 
-        let message_text = AuditMessage {
-            id: public_audit.id.clone(),
-            customer_id: public_audit.customer_id.clone(),
-            auditor_id: public_audit.auditor_id.clone(),
-            project_name: public_audit.project_name.clone(),
-            price: public_audit.price.clone(),
-            status: Some(AuditMessageStatus::Declined),
-            last_changer: current_role,
-            time: public_audit.time.clone(),
-            report: public_audit.report.clone(),
-            report_name: public_audit.report_name.clone(),
-        };
+        let message = create_audit_message(
+            CreateAuditMessage::Audit(public_audit.clone()),
+            Some(AuditMessageStatus::Declined),
+            receiver_id,
+            receiver_role,
+            current_role
+        );
 
-        let message = CreateMessage {
-            chat: None,
-            to: Some(PublicChatId {
-                role: receiver_role,
-                id: receiver_id.to_hex(),
-            }),
-            role: current_role,
-            text: serde_json::to_string(&message_text)?,
-            kind: Some(MessageKind::Audit),
-        };
-
-        create_message(message, auth)?;
+        send_message(message, auth)?;
 
         Ok(public_audit)
     }
