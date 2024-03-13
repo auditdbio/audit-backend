@@ -10,6 +10,7 @@ use crate::{
     error::{self, AddCode},
     services::{API_PREFIX, CHAT_SERVICE, PROTOCOL},
 };
+use crate::entities::audit_request::TimeRange;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct ChatId {
@@ -78,6 +79,7 @@ pub struct AuditMessage {
     pub price: i64,
     pub status: Option<AuditStatus>,
     pub last_changer: Role,
+    pub time: TimeRange,
     pub report: Option<String>,
     pub report_name: Option<String>,
 }

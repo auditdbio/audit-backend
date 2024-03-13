@@ -296,7 +296,7 @@ pub async fn create_report(
             FRONTEND.as_str(),
             audit.auditor_id
         ),
-        project_name: audit.project_name,
+        project_name: audit.project_name.clone(),
         scope: audit.scope,
         report_data,
     };
@@ -342,6 +342,7 @@ pub async fn create_report(
     } else {
         let audit_change = AuditChange {
             report: Some(path.clone()),
+            report_name: Some(format!("{} report.pdf", audit.project_name)),
             ..AuditChange::default()
         };
 

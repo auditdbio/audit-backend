@@ -225,6 +225,7 @@ impl RequestService {
             price: public_request.price.clone(),
             status: Some(AuditStatus::Waiting),
             last_changer,
+            time: public_request.time.clone(),
             report: None,
             report_name: None,
         };
@@ -391,6 +392,7 @@ impl RequestService {
             price: public_request.price.clone(),
             status: Some(AuditStatus::Waiting),
             last_changer: public_request.last_changer.clone(),
+            time: public_request.time.clone(),
             report: None,
             report_name: None,
         };
@@ -484,6 +486,7 @@ impl RequestService {
             price: public_request.price.clone(),
             status: None,
             last_changer: current_role,
+            time: public_request.time.clone(),
             report: None,
             report_name: None,
         };

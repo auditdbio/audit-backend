@@ -104,6 +104,7 @@ impl AuditService {
             price: public_audit.price.clone(),
             status: Some(AuditStatus::Started),
             last_changer: last_changer.clone(),
+            time: public_audit.time.clone(),
             report: None,
             report_name: None,
         };
@@ -346,6 +347,7 @@ impl AuditService {
             price: public_audit.price.clone(),
             status: Some(audit.status),
             last_changer: last_changer_role,
+            time: public_audit.time.clone(),
             report: public_audit.report.clone(),
             report_name: public_audit.report_name.clone(),
         };
@@ -396,6 +398,7 @@ impl AuditService {
             price: public_audit.price.clone(),
             status: None,
             last_changer: current_role,
+            time: public_audit.time.clone(),
             report: public_audit.report.clone(),
             report_name: public_audit.report_name.clone(),
         };
