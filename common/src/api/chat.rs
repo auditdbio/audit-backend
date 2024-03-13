@@ -70,6 +70,25 @@ pub struct PublicMessage {
     pub kind: Option<MessageKind>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum AuditMessageStatus {
+    Request,
+    Waiting,
+    Started,
+    Resolved,
+    Declined,
+}
+
+impl From<AuditStatus> for AuditMessageStatus {
+    fn from(status: AuditStatus) -> Self {
+        match status {
+            AuditStatus::Waiting => AuditMessageStatus::Waiting,
+            AuditStatus::Started => AuditMessageStatus::Started,
+            AuditStatus::Resolved => AuditMessageStatus::Resolved,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuditMessage {
     pub id: String,
@@ -77,7 +96,7 @@ pub struct AuditMessage {
     pub auditor_id: String,
     pub project_name: String,
     pub price: i64,
-    pub status: Option<AuditStatus>,
+    pub status: Option<AuditMessageStatus>,
     pub last_changer: Role,
     pub time: TimeRange,
     pub report: Option<String>,

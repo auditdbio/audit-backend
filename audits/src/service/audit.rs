@@ -10,7 +10,7 @@ use common::{
     access_rules::{AccessRules, Edit, Read},
     api::{
         audits::{AuditAction, AuditChange, CreateIssue, PublicAudit},
-        chat::{create_message, AuditMessage, CreateMessage, MessageKind, PublicChatId},
+        chat::{create_message, AuditMessage, AuditMessageStatus, CreateMessage, MessageKind, PublicChatId},
         events::{post_event, EventPayload, PublicEvent},
         issue::PublicIssue,
         send_notification, NewNotification,
@@ -88,7 +88,7 @@ impl AuditService {
 
         requests.delete("id", &request.id.parse()?).await?;
 
-        let public_audit = PublicAudit::new(&self.context, audit).await?;
+        let public_audit = PublicAudit::new(&self.context, audit.clone()).await?;
 
         let (event_receiver, receiver_role, last_changer) = if user_id == customer_id {
             (auditor_id, Role::Auditor, Role::Customer)
@@ -102,7 +102,7 @@ impl AuditService {
             auditor_id: public_audit.auditor_id.clone(),
             project_name: public_audit.project_name.clone(),
             price: public_audit.price.clone(),
-            status: Some(AuditStatus::Started),
+            status: Some(audit.status.into()),
             last_changer: last_changer.clone(),
             time: public_audit.time.clone(),
             report: None,
@@ -291,8 +291,8 @@ impl AuditService {
             }
         }
 
-        if let Some(report) = change.report {
-            audit.report = Some(report);
+        if let Some(ref report) = change.report {
+            audit.report = Some(report.clone());
         }
 
         if let Some(report_name) = change.report_name {
@@ -339,13 +339,17 @@ impl AuditService {
 
         post_event(&self.context, event, self.context.server_auth()).await?;
 
+        if change.report.is_some() && audit.status != AuditStatus::Resolved {
+            return Ok(public_audit)
+        }
+
         let message_text = AuditMessage {
             id: public_audit.id.clone(),
             customer_id: public_audit.customer_id.clone(),
             auditor_id: public_audit.auditor_id.clone(),
             project_name: public_audit.project_name.clone(),
             price: public_audit.price.clone(),
-            status: Some(audit.status),
+            status: Some(audit.status.into()),
             last_changer: last_changer_role,
             time: public_audit.time.clone(),
             report: public_audit.report.clone(),
@@ -396,7 +400,7 @@ impl AuditService {
             auditor_id: public_audit.auditor_id.clone(),
             project_name: public_audit.project_name.clone(),
             price: public_audit.price.clone(),
-            status: None,
+            status: Some(AuditMessageStatus::Declined),
             last_changer: current_role,
             time: public_audit.time.clone(),
             report: public_audit.report.clone(),
