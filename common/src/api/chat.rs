@@ -3,17 +3,19 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     auth::Auth,
+    api::{
+        audits::PublicAudit,
+        requests::PublicRequest,
+    },
     entities::{
         audit::AuditStatus,
+        audit_request::TimeRange,
         contacts::Contacts,
         role::Role,
     },
     error::{self, AddCode},
     services::{API_PREFIX, CHAT_SERVICE, PROTOCOL},
 };
-use crate::api::audits::PublicAudit;
-use crate::api::requests::PublicRequest;
-use crate::entities::audit_request::TimeRange;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct ChatId {
@@ -113,6 +115,12 @@ pub struct AuditMessage {
     pub time: TimeRange,
     pub report: Option<String>,
     pub report_name: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuditMessageId {
+    pub chat_id: String,
+    pub message_id: String,
 }
 
 pub fn send_message(message: CreateMessage, auth: Auth) -> error::Result<String> {

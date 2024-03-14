@@ -89,6 +89,22 @@ impl Entity for PrivateChat {
     }
 }
 
+impl PrivateChat {
+    pub fn publish(self) -> PublicChat {
+        PublicChat {
+            id: self.id.to_hex(),
+            name: "Private chat".to_string(),
+            members: vec![self.members[0].publish(), self.members[1].publish()],
+            last_message: self.last_message.publish(),
+            last_modified: self.last_modified,
+            avatar: None,
+            unread: self.unread.map_or_else(Vec::new, |unread| {
+                unread.iter().map(|read_id| read_id.clone().publish()).collect()
+            }),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub enum Chat {
     Private(PrivateChat),
@@ -107,6 +123,13 @@ impl Chat {
         match self {
             Chat::Private(private) => private.id,
             Chat::Group(group) => group.id,
+        }
+    }
+
+    pub fn publish(&self) -> PublicChat {
+        match self {
+            Chat::Private(private) => private.clone().publish(),
+            Chat::Group(group) => group.clone().publish(),
         }
     }
 }

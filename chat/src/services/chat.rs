@@ -16,7 +16,7 @@ use common::{
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-use crate::repositories::chat::{Chat, ChatRepository, Group, PublicReadId, ReadId};
+use crate::repositories::chat::{ChatRepository, Group, PublicReadId, ReadId};
 
 pub struct ChatService {
     context: GeneralContext,
@@ -66,7 +66,7 @@ impl ChatService {
         Self { context }
     }
 
-    pub async fn send_message(&self, message: CreateMessage) -> error::Result<Chat> {
+    pub async fn send_message(&self, message: CreateMessage) -> error::Result<PublicChat> {
         // TODO: check permissions
         let auth = self.context.auth();
 
@@ -145,7 +145,7 @@ impl ChatService {
                 .send()
                 .await?;
         }
-        Ok(chat)
+        Ok(chat.publish())
     }
 
     pub async fn preview(&self, role: Role) -> error::Result<Vec<PublicChat>> {

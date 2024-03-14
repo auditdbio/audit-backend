@@ -1,4 +1,3 @@
-use crate::repositories::chat::Chat;
 use actix_web::{
     get, patch, post, delete,
     web::{Json, Path},
@@ -17,7 +16,7 @@ use crate::services::chat::{ChatService, PublicChat};
 pub async fn send_message(
     context: GeneralContext,
     Json(message): Json<CreateMessage>,
-) -> error::Result<Json<Chat>> {
+) -> error::Result<Json<PublicChat>> {
     Ok(Json(ChatService::new(context).send_message(message).await?))
 }
 
