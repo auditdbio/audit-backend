@@ -1,12 +1,13 @@
-use crate::services::chat::{Message, PublicChat};
 use chrono::Utc;
-use common::api::chat::ChatId;
-
-use common::repository::{Entity, Repository};
-use common::{error, repository::mongo_repository::MongoRepository};
-use mongodb::bson::Bson;
-use mongodb::bson::{doc, oid::ObjectId, to_document};
+use mongodb::bson::{doc, Bson, oid::ObjectId, to_document};
 use serde::{Deserialize, Serialize};
+
+use crate::services::chat::{Message};
+use common::{
+    api::chat::{ChatId, PublicChat, PublicReadId},
+    error,
+    repository::{Entity, Repository, mongo_repository::MongoRepository}
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Group {
@@ -50,12 +51,6 @@ impl Entity for Messages {
     fn id(&self) -> ObjectId {
         self.id
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PublicReadId {
-    pub id: String,
-    pub unread: i32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

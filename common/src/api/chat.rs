@@ -66,6 +66,12 @@ impl PublicChatId {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PublicReadId {
+    pub id: String,
+    pub unread: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PublicMessage {
     pub id: String,
     pub from: PublicChatId,
@@ -73,6 +79,17 @@ pub struct PublicMessage {
     pub time: i64,
     pub text: String,
     pub kind: Option<MessageKind>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PublicChat {
+    pub id: String,
+    pub name: String,
+    pub members: Vec<PublicChatId>,
+    pub last_modified: i64,
+    pub last_message: PublicMessage,
+    pub avatar: Option<String>,
+    pub unread: Vec<PublicReadId>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -117,13 +134,13 @@ pub struct AuditMessage {
     pub report_name: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AuditMessageId {
     pub chat_id: String,
     pub message_id: String,
 }
 
-pub fn send_message(message: CreateMessage, auth: Auth) -> error::Result<String> {
+pub fn send_message(message: CreateMessage, auth: Auth) -> error::Result<PublicChat> {
     let res = ureq::post(&format!(
         "{}://{}/{}/chat/message",
         PROTOCOL.as_str(),
@@ -134,10 +151,25 @@ pub fn send_message(message: CreateMessage, auth: Auth) -> error::Result<String>
     .send_json(message)?;
 
     if res.status() >= 200 && res.status() < 300 {
-        Ok(res.into_string()?)
+        Ok(res.into_json::<PublicChat>()?)
     } else {
         Err(anyhow::anyhow!("Error sending message").code(400))
     }
+}
+
+pub fn delete_message(chat_id: String, message_id: String, auth: Auth) -> error::Result<()> {
+    let _ = ureq::delete(&format!(
+        "{}://{}/{}/chat/{}/message/{}",
+        PROTOCOL.as_str(),
+        CHAT_SERVICE.as_str(),
+        API_PREFIX.as_str(),
+        chat_id,
+        message_id,
+    ))
+    .set("Authorization", &format!("Bearer {}", auth.to_token()?))
+    .call()?;
+
+    Ok(())
 }
 
 pub enum CreateAuditMessage {

@@ -4,13 +4,13 @@ use actix_web::{
     HttpResponse,
 };
 use common::{
-    api::chat::{CreateMessage, PublicMessage},
+    api::chat::{CreateMessage, PublicMessage, PublicChat},
     context::GeneralContext,
     entities::role::Role,
     error,
 };
 
-use crate::services::chat::{ChatService, PublicChat};
+use crate::services::chat::{ChatService};
 
 #[post("/chat/message")]
 pub async fn send_message(

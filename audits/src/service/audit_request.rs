@@ -5,7 +5,11 @@ use common::{
         auditor::request_auditor,
         badge::BadgePayload,
         codes::post_code,
-        chat::{create_audit_message, send_message, AuditMessageStatus},
+        chat::{
+            create_audit_message, send_message,
+            delete_message, AuditMessageStatus,
+            CreateAuditMessage, AuditMessageId
+        },
         events::{EventPayload, PublicEvent},
         mail::send_mail,
         requests::CreateRequest,
@@ -27,7 +31,6 @@ use common::{
 pub use common::api::requests::PublicRequest;
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
-use common::api::chat::CreateAuditMessage;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RequestChange {
@@ -95,6 +98,7 @@ impl RequestService {
             price: request.price,
             last_modified: Utc::now().timestamp_micros(),
             last_changer,
+            chat_id: None,
         };
 
         let old_version_of_this_request = requests
@@ -112,6 +116,7 @@ impl RequestService {
                 .delete("id", &old_version_of_this_request.id)
                 .await?;
             request.id = old_version_of_this_request.id;
+            request.chat_id = old_version_of_this_request.chat_id;
         } else if last_changer == Role::Customer {
             let mut new_notification: NewNotification =
                 serde_json::from_str(include_str!("../../templates/new_audit_request.txt"))?;
@@ -207,7 +212,7 @@ impl RequestService {
             send_mail(&self.context, letter).await?;
         }
 
-        requests.insert(&request).await?;
+
 
         let (event_receiver, receiver_role) = if last_changer == Role::Customer {
             (auditor_id, Role::Auditor)
@@ -215,7 +220,11 @@ impl RequestService {
             (customer_id, Role::Customer)
         };
 
-        let public_request = PublicRequest::new(&self.context, request).await?;
+        let public_request = PublicRequest::new(&self.context, request.clone()).await?;
+
+        if let Some(chat_id) = request.chat_id {
+            delete_message(chat_id.chat_id, chat_id.message_id, auth.clone())?
+        }
 
         let message = create_audit_message(
             CreateAuditMessage::Request(public_request.clone()),
@@ -225,7 +234,14 @@ impl RequestService {
             last_changer
         );
 
-        send_message(message, auth)?;
+        let chat = send_message(message, auth)?;
+
+        request.chat_id = Some(AuditMessageId {
+            chat_id: chat.id,
+            message_id: chat.last_message.id,
+        });
+
+        requests.insert(&request).await?;
 
         let event = PublicEvent::new(
             event_receiver,
@@ -363,10 +379,11 @@ impl RequestService {
 
         request.last_modified = Utc::now().timestamp_micros();
 
-        requests.delete("id", &id).await?;
-        requests.insert(&request).await?;
+        let public_request = PublicRequest::new(&self.context, request.clone()).await?;
 
-        let public_request = PublicRequest::new(&self.context, request).await?;
+        if let Some(chat_id) = request.chat_id {
+            delete_message(chat_id.chat_id, chat_id.message_id, auth.clone())?
+        }
 
         let message = create_audit_message(
             CreateAuditMessage::Request(public_request.clone()),
@@ -376,7 +393,15 @@ impl RequestService {
             last_changer_role,
         );
 
-        send_message(message, auth)?;
+        let chat = send_message(message, auth)?;
+
+        request.chat_id = Some(AuditMessageId {
+            chat_id: chat.id,
+            message_id: chat.last_message.id,
+        });
+
+        requests.delete("id", &id).await?;
+        requests.insert(&request).await?;
 
         Ok(public_request)
     }
@@ -445,6 +470,10 @@ impl RequestService {
             .json(&event)
             .send()
             .await?;
+
+        if let Some(chat_id) = request.chat_id {
+            delete_message(chat_id.chat_id, chat_id.message_id, auth.clone())?
+        }
 
         let message = create_audit_message(
             CreateAuditMessage::Request(public_request.clone()),

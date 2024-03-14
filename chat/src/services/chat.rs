@@ -4,7 +4,7 @@ use chrono::Utc;
 use common::{
     api::{
         auditor::request_auditor,
-        chat::{ChatId, CreateMessage, MessageKind, PublicChatId, PublicMessage},
+        chat::{ChatId, CreateMessage, MessageKind, PublicReadId, PublicMessage, PublicChat},
         customer::request_customer,
         events::{EventPayload, PublicEvent},
     },
@@ -16,21 +16,10 @@ use common::{
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-use crate::repositories::chat::{ChatRepository, Group, PublicReadId, ReadId};
+use crate::repositories::chat::{ChatRepository, Group, ReadId};
 
 pub struct ChatService {
     context: GeneralContext,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PublicChat {
-    pub id: String,
-    pub name: String,
-    pub members: Vec<PublicChatId>,
-    pub last_modified: i64,
-    pub last_message: PublicMessage,
-    pub avatar: Option<String>,
-    pub unread: Vec<PublicReadId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
