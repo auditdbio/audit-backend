@@ -148,6 +148,24 @@ impl ChatRepository {
         }
     }
 
+    pub async fn find(&self, chat_id: ObjectId) -> error::Result<Chat> {
+        Ok(
+            if let Some(chat) = self
+                .private_chats
+                .find("_id", &Bson::ObjectId(chat_id))
+                .await? {
+                Chat::Private(chat)
+            } else if let Some(group) = self
+                .groups
+                .find("_id", &Bson::ObjectId(chat_id))
+                .await? {
+                Chat::Group(group)
+            } else {
+                unreachable!()
+            }
+        )
+    }
+
     pub async fn message(&self, message: Message) -> error::Result<Chat> {
         self.messages
             .collection

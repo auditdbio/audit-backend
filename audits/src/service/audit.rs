@@ -335,6 +335,8 @@ impl AuditService {
         post_event(&self.context, event, self.context.server_auth()).await?;
 
         if change.report.is_some() && audit.status != AuditStatus::Resolved {
+            audits.delete("_id", &id).await?;
+            audits.insert(&audit).await?;
             return Ok(public_audit)
         }
 

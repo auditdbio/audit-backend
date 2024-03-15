@@ -10,7 +10,7 @@ use common::{
     },
     context::GeneralContext,
     entities::role::Role,
-    error,
+    error::{self, AddCode},
     services::{API_PREFIX, EVENTS_SERVICE, PROTOCOL},
 };
 use mongodb::bson::oid::ObjectId;
@@ -243,13 +243,37 @@ impl ChatService {
     }
 
     pub async fn delete_message(&self, chat_id: ObjectId, message_id: ObjectId) -> error::Result<()> {
-        // let auth = self.context.auth();
-        // let id = auth.id().unwrap();
+        let auth = self.context.auth();
+        let id = auth.id().unwrap();
 
         let repo = self
             .context
             .get_repository_manual::<Arc<ChatRepository>>()
             .unwrap();
+
+        let chat = repo.find(chat_id).await?;
+        let chat_members = chat.members();
+
+        if !chat_members.iter().any(|member| member.id == id) {
+            return Err(anyhow::anyhow!("User is not available to delete this message").code(403));
+        }
+
+        let payload = EventPayload::ChatDeleteMessage(message_id.to_hex());
+
+        for member in chat_members {
+            let event = PublicEvent::new(member.id, payload.clone());
+            self.context
+                .make_request()
+                .post(format!(
+                    "{}://{}/{}/event",
+                    PROTOCOL.as_str(),
+                    EVENTS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
+                ))
+                .json(&event)
+                .send()
+                .await?;
+        }
 
         repo.delete_message(chat_id, message_id).await?;
 
