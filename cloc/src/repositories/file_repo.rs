@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, process::Output};
 
 use common::{
     error,
@@ -54,6 +54,11 @@ pub fn log_error<T>(result: Result<T, std::io::Error>) -> T {
     }
 }
 
+pub async fn run_command(command: &mut Command) -> Output {
+    log::info!("Command: {:?}", command);
+    log_error(command.output().await)
+}
+
 impl FileRepo {
     pub fn new(meta_repo: MongoRepository<MetaEntry>, path: PathBuf) -> Self {
         Self { meta_repo, path }
@@ -70,26 +75,24 @@ impl FileRepo {
         // save scope and author in meta
         self.meta_repo.insert(&entry).await?;
         // make directory
-        log_error(
+        run_command(
             Command::new("mkdir")
                 .arg(&id.to_hex())
-                .current_dir(&self.path)
-                .output()
-                .await,
-        );
+                .current_dir(&self.path),
+        )
+        .await;
         let path = append_to_path(self.path.clone(), &id.to_hex());
 
         // download files
         for (file_name, file_link) in entry.links {
-            log_error(
+            run_command(
                 Command::new("wget")
                     .arg("-O")
                     .arg(file_name)
                     .arg(file_link)
-                    .current_dir(&path)
-                    .output()
-                    .await,
-            );
+                    .current_dir(&path),
+            )
+            .await;
         }
         Ok(ObjectId::new())
     }
@@ -104,7 +107,7 @@ impl FileRepo {
             command.arg(file);
         }
 
-        let output = String::from_utf8(log_error(command.output().await).stdout)?;
+        let output = String::from_utf8(run_command(&mut command).await.stdout)?;
         Ok(output)
     }
 }
