@@ -19,7 +19,7 @@ async fn main() -> std::io::Result<()> {
     let mongo_repo = MongoRepository::new(&mongo_uri, "cloc", "files").await;
     state.insert_manual(Arc::new(FileRepo::new(
         mongo_repo,
-        "./repositories".parse().unwrap(),
+        "/repositories".parse().unwrap(),
     )));
     let state = Arc::new(state);
 
