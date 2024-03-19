@@ -94,7 +94,7 @@ impl FileRepo {
             )
             .await;
         }
-        Ok(ObjectId::new())
+        Ok(id)
     }
 
     pub async fn count(&self, id: ObjectId, files: Scope) -> error::Result<String> {
