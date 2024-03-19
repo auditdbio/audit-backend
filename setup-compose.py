@@ -173,14 +173,16 @@ services:
 
 volumes:
   {config['volume_namespace']}-backup:
-  {config['volume_namespace']}-database:
+  {config['volume_namespace']}:
   {config['volume_namespace']}-files:
   {config['volume_namespace']}-binaries:
   {config['volume_namespace']}-repo:
 networks:
   {config['network_namespace']}-report:
   {config['network_namespace']}-database:
-  {config['proxy_network']}:"""
+  {config['proxy_network']}:
+    external:
+      true"""
 
 
 def create_docker_build(is_test_server):
