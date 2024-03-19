@@ -59,6 +59,6 @@ impl ClocService {
         );
         let id = repo.download(user, scope.clone()).await?;
 
-        repo.count(id, scope).await
+        repo.count(user, scope).await
     }
 }
