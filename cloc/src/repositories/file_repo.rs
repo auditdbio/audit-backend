@@ -55,7 +55,7 @@ pub fn log_error<T>(result: Result<T, std::io::Error>) -> T {
 }
 
 pub async fn run_command(command: &mut Command) -> Output {
-    log::info!("Command: {:?}", command);
+    log::error!("Command: {:?}", command);
     log_error(command.output().await)
 }
 
