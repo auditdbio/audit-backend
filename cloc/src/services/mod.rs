@@ -49,7 +49,21 @@ impl ClocService {
             .context
             .get_repository_manual::<Arc<FileRepo>>()
             .unwrap();
-        let scope = Scope::new(request.links);
+        let mut scope = Scope::new(request.links);
+
+        let prefixes = vec![
+            ("https://github.com", " https://raw.githubusercontent.com"),
+            ("http://github.com", " http://raw.githubusercontent.com"),
+        ];
+
+        for link in &mut scope.links {
+            for (prefix, sub) in &prefixes {
+                if link.starts_with(prefix) {
+                    *link = link.replacen(prefix, &sub, 1);
+                }
+            }
+        }
+
         let id = repo.download(user, scope.clone()).await?;
 
         repo.count(id).await

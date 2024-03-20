@@ -29,7 +29,7 @@ pub struct FileRepo {
 
 #[derive(Debug, Clone)]
 pub struct Scope {
-    links: Vec<String>,
+    pub links: Vec<String>,
 }
 
 impl Scope {
@@ -84,7 +84,7 @@ impl FileRepo {
         let path = append_to_path(self.path.clone(), &id.to_hex());
 
         // download files
-        for (file_link) in entry.links {
+        for file_link in entry.links {
             run_command(Command::new("wget").arg(file_link).current_dir(&path)).await;
         }
         Ok(id)
