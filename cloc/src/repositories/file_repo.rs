@@ -1,4 +1,4 @@
-use std::{path::PathBuf, process::Output};
+use std::{fs, path::PathBuf, process::Output};
 
 use common::{
     error,
@@ -13,7 +13,7 @@ pub struct MetaEntry {
     #[serde(rename = "_id")]
     id: ObjectId,
     user: ObjectId,
-    links: Vec<(String, String)>,
+    links: Vec<String>,
 }
 
 impl Entity for MetaEntry {
@@ -29,11 +29,11 @@ pub struct FileRepo {
 
 #[derive(Debug, Clone)]
 pub struct Scope {
-    links: Vec<(String, String)>,
+    links: Vec<String>,
 }
 
 impl Scope {
-    pub fn new(links: Vec<(String, String)>) -> Self {
+    pub fn new(links: Vec<String>) -> Self {
         Self { links }
     }
 }
@@ -84,27 +84,25 @@ impl FileRepo {
         let path = append_to_path(self.path.clone(), &id.to_hex());
 
         // download files
-        for (file_name, file_link) in entry.links {
-            run_command(
-                Command::new("wget")
-                    .arg("-O")
-                    .arg(file_name)
-                    .arg(file_link)
-                    .current_dir(&path),
-            )
-            .await;
+        for (file_link) in entry.links {
+            run_command(Command::new("wget").arg(file_link).current_dir(&path)).await;
         }
         Ok(id)
     }
 
-    pub async fn count(&self, id: ObjectId, files: Scope) -> error::Result<String> {
+    pub async fn count(&self, id: ObjectId) -> error::Result<String> {
         let path = append_to_path(self.path.clone(), &id.to_hex());
 
         let mut command = Command::new("cloc");
-        command.arg("--json").current_dir(path);
+        command.arg("--json").current_dir(path.clone());
 
-        for (file, _) in files.links {
-            command.arg(file);
+        // get all files in directory
+        for entry in fs::read_dir(path)? {
+            let entry = entry?;
+            let path = entry.path();
+            if !path.is_dir() {
+                command.arg(path.file_name().unwrap());
+            }
         }
 
         let output = String::from_utf8(run_command(&mut command).await.stdout)?;
