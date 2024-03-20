@@ -1,12 +1,13 @@
-use crate::services::chat::{Message, PublicChat};
 use chrono::Utc;
-use common::api::chat::ChatId;
-
-use common::repository::{Entity, Repository};
-use common::{error, repository::mongo_repository::MongoRepository};
-use mongodb::bson::Bson;
-use mongodb::bson::{doc, oid::ObjectId, to_document};
+use mongodb::bson::{doc, Bson, oid::ObjectId, to_document};
 use serde::{Deserialize, Serialize};
+
+use crate::services::chat::{Message};
+use common::{
+    api::chat::{ChatId, PublicChat, PublicReadId},
+    error,
+    repository::{Entity, Repository, mongo_repository::MongoRepository}
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Group {
@@ -53,12 +54,6 @@ impl Entity for Messages {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PublicReadId {
-    pub id: String,
-    pub unread: i32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReadId {
     pub id: ObjectId,
     pub unread: i32,
@@ -89,6 +84,22 @@ impl Entity for PrivateChat {
     }
 }
 
+impl PrivateChat {
+    pub fn publish(self) -> PublicChat {
+        PublicChat {
+            id: self.id.to_hex(),
+            name: "Private chat".to_string(),
+            members: vec![self.members[0].publish(), self.members[1].publish()],
+            last_message: self.last_message.publish(),
+            last_modified: self.last_modified,
+            avatar: None,
+            unread: self.unread.map_or_else(Vec::new, |unread| {
+                unread.iter().map(|read_id| read_id.clone().publish()).collect()
+            }),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub enum Chat {
     Private(PrivateChat),
@@ -107,6 +118,13 @@ impl Chat {
         match self {
             Chat::Private(private) => private.id,
             Chat::Group(group) => group.id,
+        }
+    }
+
+    pub fn publish(&self) -> PublicChat {
+        match self {
+            Chat::Private(private) => private.clone().publish(),
+            Chat::Group(group) => group.clone().publish(),
         }
     }
 }
@@ -128,6 +146,24 @@ impl ChatRepository {
             groups,
             private_chats,
         }
+    }
+
+    pub async fn find(&self, chat_id: ObjectId) -> error::Result<Chat> {
+        Ok(
+            if let Some(chat) = self
+                .private_chats
+                .find("_id", &Bson::ObjectId(chat_id))
+                .await? {
+                Chat::Private(chat)
+            } else if let Some(group) = self
+                .groups
+                .find("_id", &Bson::ObjectId(chat_id))
+                .await? {
+                Chat::Group(group)
+            } else {
+                unreachable!()
+            }
+        )
     }
 
     pub async fn message(&self, message: Message) -> error::Result<Chat> {
@@ -171,6 +207,21 @@ impl ChatRepository {
             .find_many("members", &Bson::Document(document))
             .await?;
         Ok((groups, chats))
+    }
+
+    pub async fn find_by_members(&self, members: Vec<ChatId>) -> error::Result<Option<PrivateChat>> {
+        let values: Vec<Bson> = members
+            .into_iter()
+            .map(|chat_id| Bson::Document(to_document(&chat_id).unwrap()))
+            .collect();
+
+        let document = Bson::Document(doc! {"$all": Bson::Array(values)});
+
+        let chat = self
+            .private_chats
+            .find("members", &document)
+            .await?;
+        Ok(chat)
     }
 
     pub async fn create_private(
@@ -231,6 +282,19 @@ impl ChatRepository {
             self.private_chats.delete("_id", &group).await?;
             self.private_chats.insert(&chat).await?;
         }
+
+        Ok(())
+    }
+
+    pub async fn delete_message(&self, chat_id: ObjectId, message_id: ObjectId) -> error::Result<()> {
+        self.messages
+            .collection
+            .update_one(
+                doc! {"_id": chat_id},
+                doc! {"$pull": {"messages": {"id": message_id}}},
+                None,
+            )
+            .await?;
 
         Ok(())
     }

@@ -2,14 +2,17 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use chrono::Utc;
 use rand::Rng;
-
-use common::api::audits::NoCustomerAuditRequest;
-use common::entities::audit_request::TimeRange;
+use mongodb::bson::{oid::ObjectId, Bson};
 
 use common::{
     access_rules::{AccessRules, Edit, Read},
     api::{
-        audits::{AuditAction, AuditChange, CreateIssue, PublicAudit},
+        audits::{AuditAction, AuditChange, CreateIssue, PublicAudit, NoCustomerAuditRequest},
+        chat::{
+            send_message, create_audit_message,
+            delete_message, AuditMessageStatus,
+            CreateAuditMessage, AuditMessageId
+        },
         events::{post_event, EventPayload, PublicEvent},
         issue::PublicIssue,
         send_notification, NewNotification,
@@ -18,14 +21,13 @@ use common::{
     context::GeneralContext,
     entities::{
         audit::{Audit, AuditStatus},
-        audit_request::AuditRequest,
+        audit_request::{AuditRequest, TimeRange},
         issue::{severity_to_integer, ChangeIssue, Event, EventKind, Issue, Status, Action},
         project::get_project,
         role::Role,
     },
     error::{self, AddCode},
 };
-use mongodb::bson::{oid::ObjectId, Bson};
 
 use super::audit_request::PublicRequest;
 
@@ -49,6 +51,7 @@ impl AuditService {
         let auth = self.context.auth();
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
+        let user_id = auth.id().unwrap();
         let auditor_id = request.auditor_id.parse()?;
         let customer_id = request.customer_id.parse()?;
 
@@ -58,7 +61,7 @@ impl AuditService {
             Vec::new()
         };
 
-        let audit = Audit {
+        let mut audit = Audit {
             id: request.id.parse()?,
             customer_id,
             auditor_id,
@@ -76,30 +79,52 @@ impl AuditService {
             issues: Vec::new(),
             public: false,
             no_customer: false,
+            chat_id: None,
         };
-
-        audits.insert(&audit).await?;
 
         let requests = self
             .context
             .try_get_repository::<AuditRequest<ObjectId>>()?;
 
-        requests.delete("id", &request.id.parse()?).await?;
+        if let Some(request) = requests
+            .delete("id", &request.id.parse()?)
+            .await? {
+            if let Some(chat_id) = request.chat_id {
+                delete_message(chat_id.chat_id, chat_id.message_id, auth.clone())?
+            }
+        }
 
-        let public_audit = PublicAudit::new(&self.context, audit).await?;
+        let public_audit = PublicAudit::new(&self.context, audit.clone()).await?;
 
-        let event_reciver = if auth.id().unwrap() == customer_id {
-            auditor_id
+        let (event_receiver, receiver_role, last_changer) = if user_id == customer_id {
+            (auditor_id, Role::Auditor, Role::Customer)
         } else {
-            customer_id
+            (customer_id, Role::Customer, Role::Auditor)
         };
 
-        let event = PublicEvent::new(event_reciver, EventPayload::NewAudit(public_audit.clone()));
+        let message = create_audit_message(
+            CreateAuditMessage::Audit(public_audit.clone()),
+            Some(audit.status.clone().into()),
+            event_receiver,
+            receiver_role,
+            last_changer
+        );
+
+        let chat = send_message(message, auth)?;
+
+        audit.chat_id = Some(AuditMessageId {
+            chat_id: chat.id,
+            message_id: chat.last_message.id,
+        });
+
+        audits.insert(&audit).await?;
+
+        let event = PublicEvent::new(event_receiver, EventPayload::NewAudit(public_audit.clone()));
 
         post_event(&self.context, event, self.context.server_auth()).await?;
 
         let event = PublicEvent::new(
-            event_reciver,
+            event_receiver,
             EventPayload::RequestAccept(request.id.clone()),
         );
 
@@ -141,6 +166,7 @@ impl AuditService {
             public: false,
             no_customer: true,
             issues: CreateIssue::to_issue_map(request.issues),
+            chat_id: None,
         };
 
         if !Edit.get_access(&auth, &audit) {
@@ -263,8 +289,8 @@ impl AuditService {
             }
         }
 
-        if let Some(report) = change.report {
-            audit.report = Some(report);
+        if let Some(ref report) = change.report {
+            audit.report = Some(report.clone());
         }
 
         if let Some(report_name) = change.report_name {
@@ -289,23 +315,52 @@ impl AuditService {
 
         audit.last_modified = Utc::now().timestamp_micros();
 
-        audits.delete("_id", &id).await?;
-        audits.insert(&audit).await?;
-
-        let event_reciver = if auth.id().unwrap() == audit.customer_id {
-            audit.auditor_id
+        let (
+            event_receiver,
+            receiver_role,
+            last_changer_role,
+        ) = if auth.id().unwrap() == audit.customer_id {
+            (audit.auditor_id, Role::Auditor, Role::Customer)
         } else {
-            audit.customer_id
+            (audit.customer_id, Role::Customer, Role::Auditor)
         };
 
-        let public_audit = PublicAudit::new(&self.context, audit).await?;
+        let public_audit = PublicAudit::new(&self.context, audit.clone()).await?;
 
         let event = PublicEvent::new(
-            event_reciver,
+            event_receiver,
             EventPayload::AuditUpdate(public_audit.clone()),
         );
 
         post_event(&self.context, event, self.context.server_auth()).await?;
+
+        if change.report.is_some() && audit.status != AuditStatus::Resolved {
+            audits.delete("_id", &id).await?;
+            audits.insert(&audit).await?;
+            return Ok(public_audit)
+        }
+
+        if let Some(chat_id) = audit.chat_id {
+            delete_message(chat_id.chat_id, chat_id.message_id, auth.clone())?
+        }
+
+        let message = create_audit_message(
+            CreateAuditMessage::Audit(public_audit.clone()),
+            Some(audit.status.clone().into()),
+            event_receiver,
+            receiver_role,
+            last_changer_role
+        );
+
+        let chat = send_message(message, auth)?;
+
+        audit.chat_id = Some(AuditMessageId {
+            chat_id: chat.id,
+            message_id: chat.last_message.id,
+        });
+
+        audits.delete("_id", &id).await?;
+        audits.insert(&audit).await?;
 
         Ok(public_audit)
     }
@@ -324,7 +379,27 @@ impl AuditService {
             return Err(anyhow::anyhow!("User is not available to delete this audit").code(403));
         }
 
-        let public_audit = PublicAudit::new(&self.context, audit).await?;
+        let public_audit = PublicAudit::new(&self.context, audit.clone()).await?;
+
+        let (receiver_id, receiver_role, current_role) = if auth.id().unwrap() == audit.customer_id {
+            (audit.auditor_id, Role::Auditor, Role::Customer)
+        } else {
+            (audit.customer_id, Role::Customer, Role::Auditor)
+        };
+
+        if let Some(chat_id) = audit.chat_id {
+            delete_message(chat_id.chat_id, chat_id.message_id, auth.clone())?
+        }
+
+        let message = create_audit_message(
+            CreateAuditMessage::Audit(public_audit.clone()),
+            Some(AuditMessageStatus::Declined),
+            receiver_id,
+            receiver_role,
+            current_role
+        );
+
+        send_message(message, auth)?;
 
         Ok(public_audit)
     }
