@@ -34,6 +34,13 @@ impl ClocCount {
     }
 }
 
+fn process_link(link: &mut String) {
+    if link.starts_with("https://github.com") || link.starts_with("http://github.com") {
+        *link = link.replacen("github.com", "raw.githubusercontent.com", 1);
+        *link = link.replacen("blob/", "", 1);
+    }
+}
+
 pub struct ClocService {
     context: GeneralContext,
 }
@@ -50,18 +57,11 @@ impl ClocService {
             .get_repository_manual::<Arc<FileRepo>>()
             .unwrap();
         let mut scope = Scope::new(request.links);
-
-        let prefixes = vec![
-            ("https://github.com", " https://raw.githubusercontent.com"),
-            ("http://github.com", " http://raw.githubusercontent.com"),
-        ];
+        // https://raw.githubusercontent.com/auditdbio/audit-web/942b43136ace347e69ecbd64fdda819f85775117/src/components/Chat/ImageMessage.jsx
+        // https://               github.com/auditdbio/audit-web/blob/942b43136ace347e69ecbd64fdda819f85775117/src/components/Chat/ImageMessage.jsx
 
         for link in &mut scope.links {
-            for (prefix, sub) in &prefixes {
-                if link.starts_with(prefix) {
-                    *link = link.replacen(prefix, &sub, 1);
-                }
-            }
+            process_link(link);
         }
 
         let id = repo.download(user, scope.clone()).await?;
