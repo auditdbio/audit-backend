@@ -95,6 +95,7 @@ pub struct PublicChat {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum AuditMessageStatus {
     Request,
+    #[serde(rename = "Waiting for audit", alias = "Waiting")]
     Waiting,
     Started,
     Resolved,
