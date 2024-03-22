@@ -229,11 +229,18 @@ impl AuthService {
         user.password.push_str(&salt);
         let password = sha256::digest(user.password);
         let id = ObjectId::new();
-        let link_id = format!(
-            "{}_{}",
-            user.name,
-            id.to_hex().chars().rev().take(8).collect::<String>(),
-        );
+        let mut link_id = user.name.clone();
+
+        if users
+            .find("link_id", &Bson::String(user.name.clone()))
+            .await?
+            .is_some() {
+            link_id = format!(
+                "{}_{}",
+                user.name,
+                id.to_hex().chars().rev().take(8).collect::<String>(),
+            );
+        };
 
         let new_user = User {
             id,
