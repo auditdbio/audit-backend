@@ -1,12 +1,15 @@
 use std::sync::Arc;
 
 use actix_cors::Cors;
+use actix_web::body::MessageBody;
 use actix_web::{
-    body::MessageBody,
     dev::{ServiceFactory, ServiceRequest, ServiceResponse},
-    middleware, web, App,
+    App,
 };
-use common::{context::effectfull_context::ServiceState, services::API_PREFIX};
+use actix_web::{middleware, web};
+use common::context::effectfull_context::ServiceState;
+use common::services::API_PREFIX;
+use handlers::cloc::count;
 
 pub mod handlers;
 pub mod repositories;
@@ -30,13 +33,6 @@ pub fn create_app(
         .wrap(cors)
         .wrap(middleware::Logger::default())
         .app_data(web::Data::new(state))
-        .service(
-            web::scope(&API_PREFIX)
-                .service(handlers::chat::messages)
-                .service(handlers::chat::preview)
-                .service(handlers::chat::send_message)
-                .service(handlers::chat::chat_unread)
-                .service(handlers::chat::delete_message),
-        );
+        .service(web::scope(&API_PREFIX).service(count));
     app
 }

@@ -18,4 +18,3 @@
 /users/.env
 docker-compose.yml
 docker-compose.yml.old
-Dockerfile

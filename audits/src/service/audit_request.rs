@@ -5,6 +5,11 @@ use common::{
         auditor::request_auditor,
         badge::BadgePayload,
         codes::post_code,
+        chat::{
+            create_audit_message, send_message,
+            delete_message, AuditMessageStatus,
+            CreateAuditMessage, AuditMessageId
+        },
         events::{EventPayload, PublicEvent},
         mail::send_mail,
         requests::CreateRequest,
@@ -93,6 +98,7 @@ impl RequestService {
             price: request.price,
             last_modified: Utc::now().timestamp_micros(),
             last_changer,
+            chat_id: None,
         };
 
         let old_version_of_this_request = requests
@@ -110,6 +116,7 @@ impl RequestService {
                 .delete("id", &old_version_of_this_request.id)
                 .await?;
             request.id = old_version_of_this_request.id;
+            request.chat_id = old_version_of_this_request.chat_id;
         } else if last_changer == Role::Customer {
             let mut new_notification: NewNotification =
                 serde_json::from_str(include_str!("../../templates/new_audit_request.txt"))?;
@@ -205,18 +212,39 @@ impl RequestService {
             send_mail(&self.context, letter).await?;
         }
 
-        requests.insert(&request).await?;
 
-        let event_reciver = if auth.id().unwrap() == customer_id {
-            auditor_id
+
+        let (event_receiver, receiver_role) = if last_changer == Role::Customer {
+            (auditor_id, Role::Auditor)
         } else {
-            customer_id
+            (customer_id, Role::Customer)
         };
 
-        let public_request = PublicRequest::new(&self.context, request).await?;
+        let public_request = PublicRequest::new(&self.context, request.clone()).await?;
+
+        if let Some(chat_id) = request.chat_id {
+            delete_message(chat_id.chat_id, chat_id.message_id, auth.clone())?
+        }
+
+        let message = create_audit_message(
+            CreateAuditMessage::Request(public_request.clone()),
+            Some(AuditMessageStatus::Request),
+            event_receiver,
+            receiver_role,
+            last_changer
+        );
+
+        let chat = send_message(message, auth)?;
+
+        request.chat_id = Some(AuditMessageId {
+            chat_id: chat.id,
+            message_id: chat.last_message.id,
+        });
+
+        requests.insert(&request).await?;
 
         let event = PublicEvent::new(
-            event_reciver,
+            event_receiver,
             EventPayload::NewRequest(public_request.clone()),
         );
 
@@ -333,7 +361,7 @@ impl RequestService {
             request.price = price;
         }
 
-        let role = if auth.id() == Some(request.customer_id) {
+        let last_changer_role = if auth.id() == Some(request.customer_id) {
             Role::Customer
         } else if auth.id() == Some(request.auditor_id) {
             Role::Auditor
@@ -341,14 +369,39 @@ impl RequestService {
             return Err(anyhow::anyhow!("User is not available to change this customer").code(400));
         };
 
-        request.last_changer = role;
+        let (receiver_id, receiver_role) = if last_changer_role == Role::Customer {
+            (request.auditor_id, Role::Auditor)
+        } else {
+            (request.customer_id, Role::Customer)
+        };
+
+        request.last_changer = last_changer_role;
 
         request.last_modified = Utc::now().timestamp_micros();
 
+        let public_request = PublicRequest::new(&self.context, request.clone()).await?;
+
+        if let Some(chat_id) = request.chat_id {
+            delete_message(chat_id.chat_id, chat_id.message_id, auth.clone())?
+        }
+
+        let message = create_audit_message(
+            CreateAuditMessage::Request(public_request.clone()),
+            Some(AuditMessageStatus::Request),
+            receiver_id,
+            receiver_role,
+            last_changer_role,
+        );
+
+        let chat = send_message(message, auth)?;
+
+        request.chat_id = Some(AuditMessageId {
+            chat_id: chat.id,
+            message_id: chat.last_message.id,
+        });
+
         requests.delete("id", &id).await?;
         requests.insert(&request).await?;
-
-        let public_request = PublicRequest::new(&self.context, request).await?;
 
         Ok(public_request)
     }
@@ -394,14 +447,14 @@ impl RequestService {
                 .await?;
         }
 
-        let event_reciver = if current_role == Role::Customer {
-            public_request.auditor_id.parse()?
+        let (event_receiver, receiver_role) = if current_role == Role::Customer {
+            (public_request.auditor_id.parse::<ObjectId>()?, Role::Auditor)
         } else {
-            public_request.customer_id.parse()?
+            (public_request.customer_id.parse::<ObjectId>()?, Role::Customer)
         };
 
         let event = PublicEvent::new(
-            event_reciver,
+            event_receiver,
             EventPayload::RequestDecline(public_request.id.clone()),
         );
 
@@ -417,6 +470,20 @@ impl RequestService {
             .json(&event)
             .send()
             .await?;
+
+        if let Some(chat_id) = request.chat_id {
+            delete_message(chat_id.chat_id, chat_id.message_id, auth.clone())?
+        }
+
+        let message = create_audit_message(
+            CreateAuditMessage::Request(public_request.clone()),
+            Some(AuditMessageStatus::Declined),
+            event_receiver,
+            receiver_role,
+            current_role,
+        );
+
+        send_message(message, auth)?;
 
         Ok(public_request)
     }

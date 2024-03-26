@@ -48,6 +48,12 @@ pub fn create_app(
                 .service(reset_password)
                 .service(restore_token)
                 .service(github_auth)
+                .service(add_linked_account)
+                .service(patch_linked_account)
+                .service(delete_linked_account)
+                .service(add_wallet)
+                .service(find_user_by_email)
+                .service(proxy_github_api)
                 .service(find_user_by_email)
                 .service(find_by_link_id),
         );

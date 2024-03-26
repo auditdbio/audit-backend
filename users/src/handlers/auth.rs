@@ -4,9 +4,9 @@ use actix_web::{
     HttpRequest, HttpResponse,
 };
 use common::{
-    api::user::{CreateUser, GithubAuth},
+    api::{user::CreateUser, linked_accounts::AddLinkedAccount},
     context::GeneralContext,
-    entities::user::{LinkedAccount, User},
+    entities::user::{PublicLinkedAccount, User},
     error,
 };
 use serde::{Deserialize, Serialize};
@@ -21,32 +21,36 @@ pub async fn login(context: GeneralContext, login: Json<Login>) -> error::Result
 #[post("/auth/github")]
 pub async fn github_auth(
     context: GeneralContext,
-    Json(data): Json<GithubAuth>,
+    Json(data): Json<AddLinkedAccount>,
 ) -> error::Result<Json<Token>> {
     Ok(Json(AuthService::new(context).github_auth(data).await?))
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateUserResponce {
     id: String,
     name: String,
     current_role: String,
     email: String,
     is_new: bool,
-    linked_accounts: Option<Vec<LinkedAccount>>,
+    linked_accounts: Option<Vec<PublicLinkedAccount>>,
     is_passwordless: Option<bool>,
     link_id: String,
 }
 
 impl From<User<String>> for CreateUserResponce {
     fn from(user: User<String>) -> Self {
+        let accounts = user.linked_accounts.map(|acc| {
+            acc.into_iter().map(PublicLinkedAccount::from).collect()
+        });
+
         Self {
             id: user.id,
             name: user.name,
             current_role: user.current_role,
             email: user.email,
             is_new: user.is_new,
-            linked_accounts: user.linked_accounts,
+            linked_accounts: accounts,
             is_passwordless: user.is_passwordless,
             link_id: user.link_id,
         }
