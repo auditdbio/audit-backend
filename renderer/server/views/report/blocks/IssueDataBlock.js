@@ -1,4 +1,5 @@
 import React from 'react'
+import linkShortener from '../../../utils/linkShortener.js'
 import RenderMarkdown from '../RenderMarkdown.js'
 import TitleLabel from '../TitleLabel.js'
 import SeverityChip from './SeverityChip.js'
@@ -16,6 +17,18 @@ const IssueDataBlock = ({ data, num, subsectionLevel }) => {
         {num}. {data?.title}
         <TitleLabel show={data?.include_in_toc} />
       </h2>
+
+      {!!data?.issue_data?.links?.length && (
+        <ul className="scope issue-links">
+          {data?.issue_data?.links?.map((link, idx) => (
+            <li key={idx} style={{marginBottom: '5px'}}>
+              <a href={link} className="issue-link">
+                {linkShortener(link)}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <div className="issue-data page-break">
         <div className="issue-info-wrapper">
@@ -39,16 +52,6 @@ const IssueDataBlock = ({ data, num, subsectionLevel }) => {
       <div className="project-description">
         <RenderMarkdown markdown={data?.text} />
       </div>
-
-      {!!data?.issue_data?.links?.length && (
-        <div className="scope issue-links">
-          {data?.issue_data?.links?.map((link, idx) => (
-            <a href={link} key={idx} className="issue-link">
-              {link}
-            </a>
-          ))}
-        </div>
-      )}
 
       {data?.feedback && (
         <div className="issue-feedback">
