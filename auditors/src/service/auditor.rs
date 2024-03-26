@@ -1,7 +1,7 @@
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
-    api::seartch::delete_from_search,
+    api::{seartch::delete_from_search, user::get_by_link_id},
     context::GeneralContext,
     entities::{
         audit_request::PriceRange,
@@ -99,6 +99,13 @@ impl AuditorService {
         Ok(Some(ExtendedAuditor::Auditor(auth.public_auditor(auditor))))
     }
 
+    pub async fn find_by_link_id(&self, link_id: String) -> error::Result<Option<ExtendedAuditor>> {
+        let auth = self.context.server_auth();
+        let user = get_by_link_id(&self.context, auth, link_id).await?;
+
+        self.find(user.id.parse()?).await
+    }
+
     pub async fn my_auditor(&self) -> error::Result<Option<Auditor<String>>> {
         let auth = self.context.auth();
 
@@ -151,7 +158,7 @@ impl AuditorService {
                 return Ok(None);
             }
 
-            let mut iter = user.name.split(' ');
+            let mut iter = user.name.split(|c| c == '_' || c == '-');
 
             let first_name = iter.next().unwrap();
             let last_name = iter.last().unwrap_or_default();

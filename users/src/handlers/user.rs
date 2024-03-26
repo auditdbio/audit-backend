@@ -26,6 +26,20 @@ pub async fn find_user_by_email(
     }
 }
 
+#[get("/user_by_link_id/{link_id}")]
+pub async fn find_by_link_id(
+    context: GeneralContext,
+    link_id: Path<String>,
+) -> error::Result<HttpResponse> {
+    let user = UserService::new(context).find_by_link_id(link_id.parse()?).await?;
+
+    if let Some(user) = user {
+        Ok(HttpResponse::Ok().json(user))
+    } else {
+        Ok(HttpResponse::Ok().json(json! {{}}))
+    }
+}
+
 #[get("/user/{id}")]
 pub async fn find_user(context: GeneralContext, id: Path<String>) -> error::Result<HttpResponse> {
     let user = UserService::new(context).find(id.parse()?).await?;

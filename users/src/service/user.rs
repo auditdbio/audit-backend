@@ -15,6 +15,7 @@ use common::{
     access_rules::{AccessRules, Edit, Read},
     api::{
         badge::merge,
+        user::validate_name,
         linked_accounts::{
             AddLinkedAccount, LinkedService,
             GetXAccessToken, XAccessResponse,
@@ -46,6 +47,7 @@ pub struct UserChange {
     name: Option<String>,
     current_role: Option<String>,
     is_new: Option<bool>,
+    link_id: Option<String>,
 }
 
 impl UserService {
@@ -77,6 +79,21 @@ impl UserService {
 
         let Some(user) = users.find("id", &Bson::ObjectId(id)).await? else {
             return Ok(None);
+        };
+
+        if !Read.get_access(&auth, &user) {
+            return Err(anyhow::anyhow!("User is not available to read this user").code(403));
+        }
+
+        Ok(Some(user.into()))
+    }
+
+    pub async fn find_by_link_id(&self, link_id: String) -> error::Result<Option<PublicUser>> {
+        let auth = self.context.auth();
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
+
+        let Some(user) = users.find("link_id", &Bson::String(link_id.clone())).await? else {
+            return self.find(link_id.parse()?).await;
         };
 
         if !Read.get_access(&auth, &user) {
@@ -157,7 +174,7 @@ impl UserService {
         }
 
         if let Some(name) = change.name {
-            user.name = name;
+            user.name = name.to_string();
         }
 
         if let Some(current_role) = change.current_role {
@@ -166,6 +183,34 @@ impl UserService {
 
         if let Some(is_new) = change.is_new {
             user.is_new = is_new;
+        }
+
+        if let Some(link_id) = change.link_id {
+            if !validate_name(&link_id) {
+                return Err(
+                    anyhow::anyhow!("Username may only contain alphanumeric characters, hyphens or underscore")
+                        .code(400)
+                );
+            }
+
+            if users
+                .find("link_id", &Bson::String(link_id.clone()))
+                .await?
+                .is_some() {
+                return Err(anyhow::anyhow!("This link id is already taken").code(400));
+            }
+
+            if let Ok(parsed_id) = link_id.parse::<ObjectId>() {
+                if let Some(user_by_id) = users
+                    .find("id", &Bson::ObjectId(parsed_id))
+                    .await? {
+                    if user_by_id.id != id {
+                        return Err(anyhow::anyhow!("This link id is already taken").code(400));
+                    }
+                }
+            }
+
+            user.link_id = link_id;
         }
 
         user.last_modified = Utc::now().timestamp_micros();
