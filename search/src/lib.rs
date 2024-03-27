@@ -41,6 +41,7 @@ pub fn create_app(
             web::scope(&API_PREFIX)
                 .service(insert)
                 .service(search)
+                .service(mongo_search)
                 .service(delete),
         );
     app

@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use crate::repositories::file_repo::{FileRepo, Scope};
+use crate::repositories::file_repo::{CountResult, FileRepo, Scope};
 use common::{context::GeneralContext, error};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -50,7 +50,7 @@ impl ClocService {
         Self { context }
     }
 
-    pub async fn count(&self, request: ClocRequest) -> error::Result<String> {
+    pub async fn count(&self, request: ClocRequest) -> error::Result<CountResult> {
         let user = self.context.auth().id().unwrap();
         let repo = self
             .context
@@ -64,8 +64,13 @@ impl ClocService {
             process_link(link);
         }
 
-        let id = repo.download(user, scope.clone()).await?;
+        let (id, skiped, errors) = repo.download(user, scope.clone()).await?;
 
-        repo.count(id).await
+        let result = repo.count(id).await?;
+        Ok(CountResult {
+            skiped,
+            errors,
+            result,
+        })
     }
 }

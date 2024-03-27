@@ -6,6 +6,7 @@ use common::{
 };
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use tokio::process::Command;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -44,19 +45,26 @@ fn append_to_path(p: PathBuf, s: &str) -> PathBuf {
     p.into()
 }
 
-pub fn log_error<T>(result: Result<T, std::io::Error>) -> T {
+pub fn log_error<T>(result: Result<T, std::io::Error>) -> Option<T> {
     match result {
-        Ok(value) => value,
+        Ok(value) => Some(value),
         Err(error) => {
             log::error!("Command error: {}", error);
-            panic!("Command error: {}", error);
+            None
         }
     }
 }
 
-pub async fn run_command(command: &mut Command) -> Output {
+pub async fn run_command(command: &mut Command) -> Option<Output> {
     log::error!("Command: {:?}", command);
     log_error(command.output().await)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CountResult {
+    pub skiped: Vec<String>,
+    pub errors: Vec<String>,
+    pub result: Value,
 }
 
 impl FileRepo {
@@ -64,7 +72,11 @@ impl FileRepo {
         Self { meta_repo, path }
     }
 
-    pub async fn download(&self, user: ObjectId, files: Scope) -> error::Result<ObjectId> {
+    pub async fn download(
+        &self,
+        user: ObjectId,
+        files: Scope,
+    ) -> error::Result<(ObjectId, Vec<String>, Vec<String>)> {
         let id = ObjectId::new();
         let entry = MetaEntry {
             id,
@@ -82,15 +94,48 @@ impl FileRepo {
         )
         .await;
         let path = append_to_path(self.path.clone(), &id.to_hex());
-
+        let mut errors = vec![];
+        let mut skiped = vec![];
         // download files
         for file_link in entry.links {
-            run_command(Command::new("wget").arg(file_link).current_dir(&path)).await;
+            if run_command(Command::new("wget").arg(&file_link).current_dir(&path))
+                .await
+                .is_none()
+            {
+                errors.push(file_link);
+                continue;
+            }
+            let basename = String::from_utf8(
+                Command::new("file")
+                    .arg("--mime")
+                    .arg(file_link.clone())
+                    .output()
+                    .await
+                    .unwrap()
+                    .stdout,
+            )
+            .unwrap();
+            let html_check_output = String::from_utf8(
+                Command::new("file")
+                    .arg("--mime")
+                    .arg(basename)
+                    .current_dir(path.clone())
+                    .output()
+                    .await
+                    .unwrap()
+                    .stdout,
+            )
+            .unwrap();
+
+            if html_check_output.contains("html") {
+                skiped.push(file_link);
+                continue;
+            }
         }
-        Ok(id)
+        Ok((id, skiped, errors))
     }
 
-    pub async fn count(&self, id: ObjectId) -> error::Result<String> {
+    pub async fn count(&self, id: ObjectId) -> error::Result<Value> {
         let path = append_to_path(self.path.clone(), &id.to_hex());
 
         let mut command = Command::new("cloc");
@@ -99,13 +144,13 @@ impl FileRepo {
         // get all files in directory
         for entry in fs::read_dir(path)? {
             let entry = entry?;
-            let path = entry.path();
-            if !path.is_dir() {
-                command.arg(path.file_name().unwrap());
+            let file_path = entry.path();
+            if !file_path.is_dir() {
+                command.arg(file_path.file_name().unwrap());
             }
         }
 
-        let output = String::from_utf8(run_command(&mut command).await.stdout)?;
-        Ok(output)
+        let output = String::from_utf8(run_command(&mut command).await.unwrap().stdout)?;
+        Ok(serde_json::from_str(&output)?)
     }
 }

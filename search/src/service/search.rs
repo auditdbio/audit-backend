@@ -16,7 +16,11 @@ use mongodb::bson::{oid::ObjectId, Bson, Document};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-use crate::repositories::{search::SearchRepo, since::SinceRepo};
+use crate::repositories::{
+    elasticsearch::{ElasticRepository, ElasticSearchResult},
+    search::SearchRepo,
+    since::SinceRepo,
+};
 
 pub(super) async fn get_data(client: &Client, url: &str, since: i64) -> Option<Vec<Document>> {
     let request = client.get(format!("{url}/{since}"));
@@ -197,6 +201,22 @@ impl SearchService {
             result,
             total_documents,
         })
+    }
+
+    pub async fn elasitc_search(&self, query: SearchQuery) -> error::Result<ElasticSearchResult> {
+        let mut auth = self.context.server_auth();
+        if Auth::None != self.context.auth() {
+            auth = auth.authorized();
+        }
+
+        let query = Self::normalize(query);
+
+        let repo = self
+            .context
+            .get_repository_manual::<ElasticRepository>()
+            .unwrap();
+
+        repo.search(query).await
     }
 
     pub async fn delete(&self, id: ObjectId) -> error::Result<()> {
