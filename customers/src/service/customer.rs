@@ -1,17 +1,16 @@
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
-    api::{seartch::delete_from_search, user::get_by_link_id},
+    api::{seartch::delete_from_search, user::{get_by_id, get_by_link_id}},
     context::GeneralContext,
     entities::{
         auditor::{ExtendedAuditor, PublicAuditor},
         contacts::Contacts,
         customer::{Customer, PublicCustomer},
         project::{Project, PublicProject},
-        user::{PublicUser, User},
     },
     error::{self, AddCode},
-    services::{API_PREFIX, AUDITORS_SERVICE, PROTOCOL, USERS_SERVICE},
+    services::{API_PREFIX, AUDITORS_SERVICE, PROTOCOL},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -51,10 +50,7 @@ impl CustomerService {
         let auth = self.context.auth();
         let id = auth.id().ok_or(anyhow::anyhow!("No user id found"))?;
 
-        let users = self.context.try_get_repository::<User<ObjectId>>()?;
-        let Some(user) = users.find("id", &Bson::ObjectId(id)).await? else {
-            return Err(anyhow::anyhow!("No user found").code(404));
-        };
+        let user = get_by_id(&self.context, auth, id.clone()).await?;
 
         let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
 
@@ -113,21 +109,7 @@ impl CustomerService {
             .map(Customer::stringify);
 
         if customer.is_none() {
-            let user = self
-                .context
-                .make_request::<PublicUser>()
-                .auth(auth)
-                .get(format!(
-                    "{}://{}/{}/user/{}",
-                    PROTOCOL.as_str(),
-                    USERS_SERVICE.as_str(),
-                    API_PREFIX.as_str(),
-                    auth.id().unwrap()
-                ))
-                .send()
-                .await?
-                .json::<PublicUser>()
-                .await?;
+            let user = get_by_id(&self.context, auth, auth.id().unwrap()).await?;
 
             if user.current_role.to_lowercase() != "customer" {
                 return Ok(None);
