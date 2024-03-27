@@ -9,7 +9,7 @@ use common::{
         badge::Badge,
         contacts::Contacts,
         customer::PublicCustomer,
-        user::PublicUser,
+        user::{PublicUser, User},
     },
     error::{self, AddCode},
     services::{API_PREFIX, PROTOCOL, USERS_SERVICE},
@@ -28,7 +28,6 @@ pub struct CreateAuditor {
     pub free_at: Option<String>,
     pub price_range: Option<PriceRange>,
     pub tags: Option<Vec<String>>,
-    pub link_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -57,6 +56,11 @@ impl AuditorService {
         let auth = self.context.auth();
         let id = auth.id().ok_or(anyhow::anyhow!("No user id found"))?;
 
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
+        let Some(user) = users.find("id", &Bson::ObjectId(id)).await? else {
+            return Err(anyhow::anyhow!("No user found").code(404));
+        };
+
         let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
 
         let auditor = Auditor {
@@ -72,7 +76,7 @@ impl AuditorService {
             created_at: Some(Utc::now().timestamp_micros()),
             free_at: auditor.free_at.unwrap_or_default(),
             price_range: auditor.price_range.unwrap_or_default(),
-            link_id: auditor.link_id.or_else(|| Some(id.to_hex())),
+            link_id: Some(user.link_id),
         };
 
         auditors.insert(&auditor).await?;
@@ -180,7 +184,6 @@ impl AuditorService {
                 tags: None,
                 free_at: None,
                 price_range: None,
-                link_id: Some(user.link_id),
             };
 
             let auditor = self.create(auditor).await?;
