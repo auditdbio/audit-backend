@@ -27,10 +27,15 @@ use common::{
     },
     auth::Auth,
     context::GeneralContext,
-    entities::user::{PublicUser, User, LinkedAccount, PublicLinkedAccount, UserLogin},
+    entities::{
+        auditor::Auditor,
+        customer::Customer,
+        user::{PublicUser, User, LinkedAccount, PublicLinkedAccount, UserLogin},
+    },
     error::{self, AddCode},
     services::{PROTOCOL, USERS_SERVICE, API_PREFIX},
 };
+
 use crate::service::auth::AuthService;
 
 use super::auth::ChangePassword;
@@ -209,6 +214,24 @@ impl UserService {
                     }
                 }
             }
+
+            let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
+            if let Some(mut auditor) = auditors
+                .find("user_id", &Bson::ObjectId(id))
+                .await? {
+                auditor.link_id = Some(link_id.clone());
+                auditors.delete("user_id", &id).await?;
+                auditors.insert(&auditor).await?;
+            };
+
+            let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
+            if let Some(mut customer) = customers
+                .find("user_id", &Bson::ObjectId(id))
+                .await? {
+                customer.link_id = Some(link_id.clone());
+                customers.delete("user_id", &id).await?;
+                customers.insert(&customer).await?;
+            };
 
             user.link_id = link_id;
         }

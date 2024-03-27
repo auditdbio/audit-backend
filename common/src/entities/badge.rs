@@ -23,6 +23,7 @@ pub struct Badge<Id> {
     pub price_range: PriceRange,
     pub last_modified: i64,
     pub created_at: Option<i64>,
+    pub link_id: Option<String>,
 }
 
 impl Badge<String> {
@@ -40,6 +41,7 @@ impl Badge<String> {
             price_range: self.price_range,
             last_modified: self.last_modified,
             created_at: self.created_at,
+            link_id: self.link_id,
         }
     }
 }
@@ -59,6 +61,7 @@ impl Badge<ObjectId> {
             price_range: self.price_range,
             last_modified: self.last_modified,
             created_at: self.created_at,
+            link_id: self.link_id,
         }
     }
 }
@@ -88,6 +91,7 @@ pub struct PublicBadge {
     pub price_range: PriceRange,
     pub kind: String,
     pub tags: Vec<String>,
+    pub link_id: Option<String>,
 }
 
 impl From<Badge<ObjectId>> for Option<Document> {

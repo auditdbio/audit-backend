@@ -28,6 +28,7 @@ pub struct CreateAuditor {
     pub free_at: Option<String>,
     pub price_range: Option<PriceRange>,
     pub tags: Option<Vec<String>>,
+    pub link_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -54,11 +55,12 @@ impl AuditorService {
 
     pub async fn create(&self, auditor: CreateAuditor) -> error::Result<Auditor<String>> {
         let auth = self.context.auth();
+        let id = auth.id().ok_or(anyhow::anyhow!("No user id found"))?;
 
         let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
 
         let auditor = Auditor {
-            user_id: auth.id().ok_or(anyhow::anyhow!("No user id found"))?,
+            user_id: id.clone(),
             avatar: auditor.avatar.unwrap_or_default(),
             first_name: auditor.first_name,
             last_name: auditor.last_name,
@@ -70,6 +72,7 @@ impl AuditorService {
             created_at: Some(Utc::now().timestamp_micros()),
             free_at: auditor.free_at.unwrap_or_default(),
             price_range: auditor.price_range.unwrap_or_default(),
+            link_id: auditor.link_id.or_else(|| Some(id.to_hex())),
         };
 
         auditors.insert(&auditor).await?;
@@ -177,6 +180,7 @@ impl AuditorService {
                 tags: None,
                 free_at: None,
                 price_range: None,
+                link_id: Some(user.link_id),
             };
 
             let auditor = self.create(auditor).await?;

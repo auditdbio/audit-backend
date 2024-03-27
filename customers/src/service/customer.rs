@@ -25,6 +25,7 @@ pub struct CreateCustomer {
     company: Option<String>,
     contacts: Contacts,
     tags: Option<Vec<String>>,
+    link_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -49,11 +50,12 @@ impl CustomerService {
 
     pub async fn create(&self, customer: CreateCustomer) -> error::Result<Customer<String>> {
         let auth = self.context.auth();
+        let id = auth.id().ok_or(anyhow::anyhow!("No user id found"))?;
 
         let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
 
         let customer = Customer {
-            user_id: auth.id().ok_or(anyhow::anyhow!("No user id found"))?,
+            user_id: id.clone(),
             avatar: customer.avatar.unwrap_or_default(),
             first_name: customer.first_name,
             last_name: customer.last_name,
@@ -63,6 +65,7 @@ impl CustomerService {
             tags: customer.tags.unwrap_or_default(),
             last_modified: Utc::now().timestamp_micros(),
             created_at: Some(Utc::now().timestamp_micros()),
+            link_id: customer.link_id.or_else(|| Some(id.to_hex())),
         };
 
         customers.insert(&customer).await?;
@@ -164,6 +167,7 @@ impl CustomerService {
                     public_contacts: true,
                 },
                 tags: None,
+                link_id: Some(user.link_id),
             };
 
             let customer = self.create(customer).await?;
