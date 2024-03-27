@@ -6,7 +6,7 @@ use common::{
         self,
         badge::{get_badge, BadgePayload},
         codes::post_code,
-        user::CreateUser,
+        user::{validate_name, CreateUser},
         linked_accounts::{
             LinkedService, GithubUserEmails,
             GetGithubAccessToken, GithubAccessResponse,
@@ -28,7 +28,6 @@ use mongodb::bson::{oid::ObjectId, Bson};
 use rand::{distributions::Alphanumeric, Rng};
 use reqwest::{header, Client};
 use serde::{Deserialize, Serialize};
-
 use std::env::var;
 
 extern crate crypto;
@@ -148,6 +147,13 @@ impl AuthService {
         mut user: CreateUser,
         mut verify_email: bool,
     ) -> error::Result<User<String>> {
+        if !validate_name(&user.name) {
+            return Err(
+                anyhow::anyhow!("Username may only contain alphanumeric characters, hyphens or underscore")
+                    .code(400)
+            );
+        }
+
         if let Some(secret) = &user.secret {
             log::info!("Secret: {}", secret);
             let payload: BadgePayload = serde_json::from_str(
@@ -229,9 +235,22 @@ impl AuthService {
 
         user.password.push_str(&salt);
         let password = sha256::digest(user.password);
+        let id = ObjectId::new();
+        let mut link_id = user.name.clone();
+
+        if users
+            .find("link_id", &Bson::String(user.name.clone()))
+            .await?
+            .is_some() {
+            link_id = format!(
+                "{}_{}",
+                user.name,
+                id.to_hex().chars().rev().take(8).collect::<String>(),
+            );
+        };
 
         let new_user = User {
-            id: ObjectId::new(),
+            id,
             name: user.name,
             email: user.email,
             salt,
@@ -243,6 +262,7 @@ impl AuthService {
             is_admin,
             linked_accounts: user.linked_accounts,
             is_passwordless: user.is_passwordless,
+            link_id,
         };
 
         let link = Link {
