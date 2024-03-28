@@ -69,6 +69,15 @@ pub async fn patch_customer(
     Ok(Json(CustomerService::new(context).change(data).await?))
 }
 
+#[patch("/customer/{id}")]
+pub async fn patch_customer_by_id(
+    context: GeneralContext,
+    id: web::Path<String>,
+    Json(data): Json<CustomerChange>,
+) -> error::Result<Json<Customer<String>>> {
+    Ok(Json(CustomerService::new(context).change_by_id(id.parse()?, data).await?))
+}
+
 #[delete("/customer/{id}")]
 pub async fn delete_customer(
     context: GeneralContext,

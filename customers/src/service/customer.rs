@@ -35,6 +35,7 @@ pub struct CustomerChange {
     company: Option<String>,
     contacts: Option<Contacts>,
     tags: Option<Vec<String>>,
+    link_id: Option<String>,
 }
 
 pub struct CustomerService {
@@ -216,6 +217,34 @@ impl CustomerService {
 
         if let Some(tags) = change.tags {
             customer.tags = tags;
+        }
+
+        customer.last_modified = Utc::now().timestamp_micros();
+
+        customers.delete("user_id", &id).await?;
+        customers.insert(&customer).await?;
+
+        Ok(customer.stringify())
+    }
+
+    pub async fn change_by_id(
+        &self,
+        id: ObjectId,
+        change: CustomerChange
+    ) -> error::Result<Customer<String>> {
+        let auth = self.context.auth();
+
+        if !auth.full_access() {
+            return Err(anyhow::anyhow!("User is not available to change this customer").code(400));
+        }
+
+        let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
+        let Some(mut customer) = customers.find("user_id", &Bson::ObjectId(id)).await? else {
+            return Err(anyhow::anyhow!("No customer found").code(400));
+        };
+
+        if change.link_id.is_some() {
+            customer.link_id = change.link_id;
         }
 
         customer.last_modified = Utc::now().timestamp_micros();
