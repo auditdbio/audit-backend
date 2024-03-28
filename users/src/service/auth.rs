@@ -242,10 +242,17 @@ impl AuthService {
             .find("link_id", &Bson::String(user.name.clone()))
             .await?
             .is_some() {
+            let rnd: String = rand::thread_rng()
+                .sample_iter(&Alphanumeric)
+                .take(5)
+                .map(char::from)
+                .collect();
+
             link_id = format!(
-                "{}_{}",
+                "{}_{}{}",
                 user.name,
-                id.to_hex().chars().rev().take(8).collect::<String>(),
+                id.to_hex().chars().rev().take(3).collect::<String>(),
+                rnd,
             );
         };
 

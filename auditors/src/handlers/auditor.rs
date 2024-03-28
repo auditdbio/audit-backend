@@ -69,6 +69,15 @@ pub async fn patch_auditor(
     Ok(Json(AuditorService::new(context).change(data).await?))
 }
 
+#[patch("/auditor/{id}")]
+pub async fn patch_auditor_by_id(
+    context: GeneralContext,
+    id: web::Path<String>,
+    Json(data): Json<AuditorChange>,
+) -> error::Result<Json<Auditor<String>>> {
+    Ok(Json(AuditorService::new(context).change_by_id(id.parse()?, data).await?))
+}
+
 #[delete("/auditor/{id}")]
 pub async fn delete_auditor(
     context: GeneralContext,

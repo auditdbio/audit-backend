@@ -105,6 +105,7 @@ impl Auth {
             contacts,
             tags: customer.tags,
             kind: "customer".to_string(),
+            link_id: customer.link_id,
         }
     }
 
@@ -136,6 +137,7 @@ impl Auth {
             price_range: auditor.price_range,
             tags: auditor.tags,
             kind: "auditor".to_string(),
+            link_id: auditor.link_id,
         }
     }
 
@@ -167,6 +169,7 @@ impl Auth {
             price_range: auditor.price_range,
             tags: auditor.tags,
             kind: "badge".to_string(),
+            link_id: auditor.link_id,
         }
     }
 

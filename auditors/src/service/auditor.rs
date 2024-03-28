@@ -1,7 +1,7 @@
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
-    api::{seartch::delete_from_search, user::get_by_link_id},
+    api::{seartch::delete_from_search, user::{get_by_id, get_by_link_id}},
     context::GeneralContext,
     entities::{
         audit_request::PriceRange,
@@ -9,7 +9,6 @@ use common::{
         badge::Badge,
         contacts::Contacts,
         customer::PublicCustomer,
-        user::PublicUser,
     },
     error::{self, AddCode},
     services::{API_PREFIX, PROTOCOL, USERS_SERVICE},
@@ -41,6 +40,7 @@ pub struct AuditorChange {
     free_at: Option<String>,
     price_range: Option<PriceRange>,
     tags: Option<Vec<String>>,
+    link_id: Option<String>,
 }
 
 pub struct AuditorService {
@@ -54,11 +54,14 @@ impl AuditorService {
 
     pub async fn create(&self, auditor: CreateAuditor) -> error::Result<Auditor<String>> {
         let auth = self.context.auth();
+        let id = auth.id().ok_or(anyhow::anyhow!("No user id found"))?;
+
+        let user = get_by_id(&self.context, auth, id.clone()).await?;
 
         let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
 
         let auditor = Auditor {
-            user_id: auth.id().ok_or(anyhow::anyhow!("No user id found"))?,
+            user_id: id.clone(),
             avatar: auditor.avatar.unwrap_or_default(),
             first_name: auditor.first_name,
             last_name: auditor.last_name,
@@ -70,6 +73,7 @@ impl AuditorService {
             created_at: Some(Utc::now().timestamp_micros()),
             free_at: auditor.free_at.unwrap_or_default(),
             price_range: auditor.price_range.unwrap_or_default(),
+            link_id: Some(user.link_id),
         };
 
         auditors.insert(&auditor).await?;
@@ -117,21 +121,7 @@ impl AuditorService {
             .map(Auditor::stringify);
 
         if auditor.is_none() {
-            let user = self
-                .context
-                .make_request::<PublicUser>()
-                .auth(auth)
-                .get(format!(
-                    "{}://{}/{}/user/{}",
-                    PROTOCOL.as_str(),
-                    USERS_SERVICE.as_str(),
-                    API_PREFIX.as_str(),
-                    auth.id().unwrap()
-                ))
-                .send()
-                .await?
-                .json::<PublicUser>()
-                .await?;
+            let user = get_by_id(&self.context, auth, auth.id().unwrap()).await?;
 
             if user.current_role.to_lowercase() != "auditor" {
                 return Ok(None);
@@ -235,6 +225,34 @@ impl AuditorService {
 
         if let Some(price_range) = change.price_range {
             auditor.price_range = price_range;
+        }
+
+        auditor.last_modified = Utc::now().timestamp_micros();
+
+        auditors.delete("user_id", &id).await?;
+        auditors.insert(&auditor).await?;
+
+        Ok(auditor.stringify())
+    }
+
+    pub async fn change_by_id(
+        &self,
+        id: ObjectId,
+        change: AuditorChange
+    ) -> error::Result<Auditor<String>> {
+        let auth = self.context.auth();
+
+        if !auth.full_access() {
+            return Err(anyhow::anyhow!("User is not available to change this auditor").code(400));
+        }
+
+        let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
+        let Some(mut auditor) = auditors.find("user_id", &Bson::ObjectId(id)).await? else {
+            return Err(anyhow::anyhow!("No auditor found").code(400));
+        };
+
+        if change.link_id.is_some() {
+            auditor.link_id = change.link_id;
         }
 
         auditor.last_modified = Utc::now().timestamp_micros();
