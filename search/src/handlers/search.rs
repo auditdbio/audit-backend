@@ -22,7 +22,7 @@ pub async fn insert(
     Ok(HttpResponse::Ok().finish())
 }
 
-#[get("/mongo_search")]
+#[get("/search")]
 pub async fn mongo_search(
     query: web::Query<SearchQuery>,
     repo: web::Data<SearchRepo>,
@@ -34,7 +34,7 @@ pub async fn mongo_search(
     Ok(Json(results))
 }
 
-#[get("/search")]
+#[get("/search_new")]
 pub async fn search(
     query: web::Query<SearchQuery>,
     repo: web::Data<SearchRepo>,
