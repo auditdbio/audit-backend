@@ -40,6 +40,7 @@ pub struct AuditorChange {
     free_at: Option<String>,
     price_range: Option<PriceRange>,
     tags: Option<Vec<String>>,
+    link_id: Option<String>,
 }
 
 pub struct AuditorService {
@@ -224,6 +225,34 @@ impl AuditorService {
 
         if let Some(price_range) = change.price_range {
             auditor.price_range = price_range;
+        }
+
+        auditor.last_modified = Utc::now().timestamp_micros();
+
+        auditors.delete("user_id", &id).await?;
+        auditors.insert(&auditor).await?;
+
+        Ok(auditor.stringify())
+    }
+
+    pub async fn change_by_id(
+        &self,
+        id: ObjectId,
+        change: AuditorChange
+    ) -> error::Result<Auditor<String>> {
+        let auth = self.context.auth();
+
+        if !auth.full_access() {
+            return Err(anyhow::anyhow!("User is not available to change this auditor").code(400));
+        }
+
+        let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
+        let Some(mut auditor) = auditors.find("user_id", &Bson::ObjectId(id)).await? else {
+            return Err(anyhow::anyhow!("No auditor found").code(400));
+        };
+
+        if change.link_id.is_some() {
+            auditor.link_id = change.link_id;
         }
 
         auditor.last_modified = Utc::now().timestamp_micros();

@@ -2,6 +2,7 @@ use chrono::Utc;
 use mongodb::bson::{oid::ObjectId, Bson};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use reqwest::{header, Client};
 use std::env::var;
 use actix_web::HttpResponse;
@@ -28,12 +29,10 @@ use common::{
     auth::Auth,
     context::GeneralContext,
     entities::{
-        auditor::Auditor,
-        customer::Customer,
         user::{PublicUser, User, LinkedAccount, PublicLinkedAccount, UserLogin},
     },
     error::{self, AddCode},
-    services::{PROTOCOL, USERS_SERVICE, API_PREFIX},
+    services::{PROTOCOL, USERS_SERVICE, AUDITORS_SERVICE, CUSTOMERS_SERVICE, API_PREFIX},
 };
 
 use crate::service::auth::AuthService;
@@ -215,23 +214,34 @@ impl UserService {
                 }
             }
 
-            let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
-            if let Some(mut auditor) = auditors
-                .find("user_id", &Bson::ObjectId(id))
-                .await? {
-                auditor.link_id = Some(link_id.clone());
-                auditors.delete("user_id", &id).await?;
-                auditors.insert(&auditor).await?;
-            };
+            self.context
+                .make_request()
+                .patch(format!(
+                    "{}://{}/{}/auditor/{}",
+                    PROTOCOL.as_str(),
+                    AUDITORS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
+                    id,
+                ))
+                .auth(self.context.server_auth())
+                .json(&json!({"link_id": link_id.clone()}))
+                .send()
+                .await?;
 
-            let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
-            if let Some(mut customer) = customers
-                .find("user_id", &Bson::ObjectId(id))
-                .await? {
-                customer.link_id = Some(link_id.clone());
-                customers.delete("user_id", &id).await?;
-                customers.insert(&customer).await?;
-            };
+            self.context
+                .make_request()
+                .patch(format!(
+                    "{}://{}/{}/customer/{}",
+                    PROTOCOL.as_str(),
+                    CUSTOMERS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
+                    id,
+                ))
+                .auth(self.context.server_auth())
+                .json(&json!({"link_id": link_id.clone()}))
+                .send()
+                .await?;
+
 
             user.link_id = link_id;
         }
