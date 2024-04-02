@@ -146,8 +146,8 @@ td {
 .QR-wrapper {
   display: inline-block;
   background: white;
-  padding: 10px;
-  margin-bottom: 20px;
+  padding: 10px 10px 10px 0;
+  margin: 10px 0 20px;
 }
 
 .report-block {
