@@ -54,6 +54,8 @@ pub struct Login {
 pub struct Token {
     pub token: String,
     pub user: UserLogin,
+    #[serde(default)]
+    pub choose_role: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -130,16 +132,7 @@ impl AuthService {
             return Err(anyhow::anyhow!("Incorrect password").code(401));
         }
 
-        let auth = if user.is_admin {
-            Auth::Admin(user.id)
-        } else {
-            Auth::User(user.id)
-        };
-
-        Ok(Token {
-            user: UserLogin::from(user),
-            token: auth.to_token()?,
-        })
+        create_auth_token(&user, false)
     }
 
     pub async fn authentication(
@@ -417,26 +410,10 @@ impl AuthService {
         let (github_user, linked_account) =
             self.github_get_user(github_auth, data.clone().current_role).await?;
 
-        if let Some(mut user) = user_service
+        if let Some(user) = user_service
             .find_user_by_linked_account(linked_account.id.clone(), &linked_account.name)
             .await?
         {
-            user.current_role = data.clone().current_role;
-            let _ = self
-                .context
-                .make_request()
-                .patch(format!(
-                    "{}://{}/{}/user/{}",
-                    PROTOCOL.as_str(),
-                    USERS_SERVICE.as_str(),
-                    API_PREFIX.as_str(),
-                    user.id
-                ))
-                .auth(self.context.server_auth())
-                .json(&data)
-                .send()
-                .await
-                .unwrap();
 
             let _ = self.context
                 .make_request()
@@ -457,7 +434,7 @@ impl AuthService {
                 .await
                 .unwrap();
 
-            return create_auth_token(&user);
+            return create_auth_token(&user, false);
         }
 
         let existing_email_user = user_service
@@ -465,28 +442,11 @@ impl AuthService {
             .await?;
 
         if let Some(user) = existing_email_user {
-            if let Some(mut user) = user_service
+            if let Some(user) = user_service
                 .add_linked_account(user.id, linked_account, self.context.server_auth())
                 .await?
             {
-                user.current_role = data.clone().current_role;
-                let _ = self
-                    .context
-                    .make_request()
-                    .patch(format!(
-                        "{}://{}/{}/user/{}",
-                        PROTOCOL.as_str(),
-                        USERS_SERVICE.as_str(),
-                        API_PREFIX.as_str(),
-                        user.id
-                    ))
-                    .auth(self.context.server_auth())
-                    .json(&data)
-                    .send()
-                    .await
-                    .unwrap();
-
-                return create_auth_token(&user);
+                return create_auth_token(&user, false);
             }
         }
 
@@ -494,7 +454,7 @@ impl AuthService {
         let user = self.authentication(github_user.clone(), verify_email)
             .await?;
 
-        create_auth_token(&user.parse())
+        create_auth_token(&user.parse(), true)
     }
 
     pub async fn verify_link(&self, code: String) -> error::Result<bool> {
@@ -638,7 +598,7 @@ impl AuthService {
     }
 }
 
-pub fn create_auth_token(user: &User<ObjectId>) -> error::Result<Token> {
+pub fn create_auth_token(user: &User<ObjectId>, choose_role: bool) -> error::Result<Token> {
     let auth = if user.is_admin {
         Auth::Admin(user.id)
     } else {
@@ -647,5 +607,6 @@ pub fn create_auth_token(user: &User<ObjectId>) -> error::Result<Token> {
     Ok(Token {
         user: UserLogin::from(user.clone()),
         token: auth.to_token()?,
+        choose_role,
     })
 }

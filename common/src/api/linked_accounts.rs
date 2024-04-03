@@ -12,9 +12,11 @@ pub enum LinkedService {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AddLinkedAccount {
     pub code: String,
+    #[serde(default = "linked_account_default_role")]
     pub current_role: String,
     pub service: LinkedService,
 }
+fn linked_account_default_role() -> String { "auditor".to_string() }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateLinkedAccount {
