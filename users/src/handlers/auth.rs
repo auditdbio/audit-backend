@@ -11,7 +11,11 @@ use common::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::service::auth::{AuthService, ChangePasswordData, Login, Token, TokenResponce};
+use crate::service::auth::{
+    AuthService, ChangePasswordData,
+    GithubAuthResponse, Login,
+    Token, TokenResponce
+};
 
 #[post("/auth/login")]
 pub async fn login(context: GeneralContext, login: Json<Login>) -> error::Result<Json<Token>> {
@@ -22,7 +26,7 @@ pub async fn login(context: GeneralContext, login: Json<Login>) -> error::Result
 pub async fn github_auth(
     context: GeneralContext,
     Json(data): Json<AddLinkedAccount>,
-) -> error::Result<Json<Token>> {
+) -> error::Result<Json<GithubAuthResponse>> {
     Ok(Json(AuthService::new(context).github_auth(data).await?))
 }
 

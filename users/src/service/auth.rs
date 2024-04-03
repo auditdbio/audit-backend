@@ -56,6 +56,12 @@ pub struct Token {
     pub user: UserLogin,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GithubAuthResponse {
+    pub auth: Token,
+    pub select_role: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Link {
     pub user: User<ObjectId>,
@@ -405,7 +411,7 @@ impl AuthService {
         return Ok((user, linked_account));
     }
 
-    pub async fn github_auth(&self, data: AddLinkedAccount) -> error::Result<Token> {
+    pub async fn github_auth(&self, data: AddLinkedAccount) -> error::Result<GithubAuthResponse> {
         let github_auth = GetGithubAccessToken {
             code: data.clone().code,
             client_id: var("GITHUB_CLIENT_ID").unwrap(),
@@ -417,26 +423,10 @@ impl AuthService {
         let (github_user, linked_account) =
             self.github_get_user(github_auth, data.clone().current_role).await?;
 
-        if let Some(mut user) = user_service
+        if let Some(user) = user_service
             .find_user_by_linked_account(linked_account.id.clone(), &linked_account.name)
             .await?
         {
-            user.current_role = data.clone().current_role;
-            let _ = self
-                .context
-                .make_request()
-                .patch(format!(
-                    "{}://{}/{}/user/{}",
-                    PROTOCOL.as_str(),
-                    USERS_SERVICE.as_str(),
-                    API_PREFIX.as_str(),
-                    user.id
-                ))
-                .auth(self.context.server_auth())
-                .json(&data)
-                .send()
-                .await
-                .unwrap();
 
             let _ = self.context
                 .make_request()
@@ -457,7 +447,11 @@ impl AuthService {
                 .await
                 .unwrap();
 
-            return create_auth_token(&user);
+            let token = create_auth_token(&user)?;
+            return Ok(GithubAuthResponse {
+                auth: token,
+                select_role: false,
+            })
         }
 
         let existing_email_user = user_service
@@ -465,28 +459,15 @@ impl AuthService {
             .await?;
 
         if let Some(user) = existing_email_user {
-            if let Some(mut user) = user_service
+            if let Some(user) = user_service
                 .add_linked_account(user.id, linked_account, self.context.server_auth())
                 .await?
             {
-                user.current_role = data.clone().current_role;
-                let _ = self
-                    .context
-                    .make_request()
-                    .patch(format!(
-                        "{}://{}/{}/user/{}",
-                        PROTOCOL.as_str(),
-                        USERS_SERVICE.as_str(),
-                        API_PREFIX.as_str(),
-                        user.id
-                    ))
-                    .auth(self.context.server_auth())
-                    .json(&data)
-                    .send()
-                    .await
-                    .unwrap();
-
-                return create_auth_token(&user);
+                let token = create_auth_token(&user)?;
+                return Ok(GithubAuthResponse {
+                    auth: token,
+                    select_role: false,
+                })
             }
         }
 
@@ -494,7 +475,11 @@ impl AuthService {
         let user = self.authentication(github_user.clone(), verify_email)
             .await?;
 
-        create_auth_token(&user.parse())
+        let token = create_auth_token(&user.parse())?;
+        return Ok(GithubAuthResponse {
+            auth: token,
+            select_role: true,
+        })
     }
 
     pub async fn verify_link(&self, code: String) -> error::Result<bool> {
