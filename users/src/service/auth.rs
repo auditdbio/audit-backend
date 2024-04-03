@@ -54,12 +54,8 @@ pub struct Login {
 pub struct Token {
     pub token: String,
     pub user: UserLogin,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct GithubAuthResponse {
-    pub auth: Token,
-    pub select_role: bool,
+    #[serde(default)]
+    pub choose_role: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -136,16 +132,7 @@ impl AuthService {
             return Err(anyhow::anyhow!("Incorrect password").code(401));
         }
 
-        let auth = if user.is_admin {
-            Auth::Admin(user.id)
-        } else {
-            Auth::User(user.id)
-        };
-
-        Ok(Token {
-            user: UserLogin::from(user),
-            token: auth.to_token()?,
-        })
+        create_auth_token(&user, false)
     }
 
     pub async fn authentication(
@@ -411,7 +398,7 @@ impl AuthService {
         return Ok((user, linked_account));
     }
 
-    pub async fn github_auth(&self, data: AddLinkedAccount) -> error::Result<GithubAuthResponse> {
+    pub async fn github_auth(&self, data: AddLinkedAccount) -> error::Result<Token> {
         let github_auth = GetGithubAccessToken {
             code: data.clone().code,
             client_id: var("GITHUB_CLIENT_ID").unwrap(),
@@ -447,11 +434,7 @@ impl AuthService {
                 .await
                 .unwrap();
 
-            let token = create_auth_token(&user)?;
-            return Ok(GithubAuthResponse {
-                auth: token,
-                select_role: false,
-            })
+            return create_auth_token(&user, false);
         }
 
         let existing_email_user = user_service
@@ -463,11 +446,7 @@ impl AuthService {
                 .add_linked_account(user.id, linked_account, self.context.server_auth())
                 .await?
             {
-                let token = create_auth_token(&user)?;
-                return Ok(GithubAuthResponse {
-                    auth: token,
-                    select_role: false,
-                })
+                return create_auth_token(&user, false);
             }
         }
 
@@ -475,11 +454,7 @@ impl AuthService {
         let user = self.authentication(github_user.clone(), verify_email)
             .await?;
 
-        let token = create_auth_token(&user.parse())?;
-        return Ok(GithubAuthResponse {
-            auth: token,
-            select_role: true,
-        })
+        create_auth_token(&user.parse(), true)
     }
 
     pub async fn verify_link(&self, code: String) -> error::Result<bool> {
@@ -623,7 +598,7 @@ impl AuthService {
     }
 }
 
-pub fn create_auth_token(user: &User<ObjectId>) -> error::Result<Token> {
+pub fn create_auth_token(user: &User<ObjectId>, choose_role: bool) -> error::Result<Token> {
     let auth = if user.is_admin {
         Auth::Admin(user.id)
     } else {
@@ -632,5 +607,6 @@ pub fn create_auth_token(user: &User<ObjectId>) -> error::Result<Token> {
     Ok(Token {
         user: UserLogin::from(user.clone()),
         token: auth.to_token()?,
+        choose_role,
     })
 }
