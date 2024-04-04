@@ -285,7 +285,7 @@ impl AuthService {
     pub async fn github_get_user(
         &self,
         data: GetGithubAccessToken,
-        current_role: String,
+        current_role: Option<String>,
     ) -> error::Result<(CreateUser, LinkedAccount)> {
         let client = Client::new();
 
@@ -387,7 +387,7 @@ impl AuthService {
             email,
             password: "".to_string(),
             name: user_data.login,
-            current_role,
+            current_role: current_role.unwrap_or("auditor".to_string()),
             use_email: None,
             admin_creation_password: None,
             secret: None,
@@ -410,10 +410,28 @@ impl AuthService {
         let (github_user, linked_account) =
             self.github_get_user(github_auth, data.clone().current_role).await?;
 
-        if let Some(user) = user_service
+        if let Some(mut user) = user_service
             .find_user_by_linked_account(linked_account.id.clone(), &linked_account.name)
             .await?
         {
+            if let Some(current_role) = data.clone().current_role {
+                user.current_role = current_role;
+                let _ = self
+                    .context
+                    .make_request()
+                    .patch(format!(
+                        "{}://{}/{}/user/{}",
+                        PROTOCOL.as_str(),
+                        USERS_SERVICE.as_str(),
+                        API_PREFIX.as_str(),
+                        user.id
+                    ))
+                    .auth(self.context.server_auth())
+                    .json(&data)
+                    .send()
+                    .await
+                    .unwrap();
+            }
 
             let _ = self.context
                 .make_request()
@@ -442,10 +460,29 @@ impl AuthService {
             .await?;
 
         if let Some(user) = existing_email_user {
-            if let Some(user) = user_service
+            if let Some(mut user) = user_service
                 .add_linked_account(user.id, linked_account, self.context.server_auth())
                 .await?
             {
+                if let Some(current_role) = data.clone().current_role {
+                    user.current_role = current_role;
+                    let _ = self
+                        .context
+                        .make_request()
+                        .patch(format!(
+                            "{}://{}/{}/user/{}",
+                            PROTOCOL.as_str(),
+                            USERS_SERVICE.as_str(),
+                            API_PREFIX.as_str(),
+                            user.id
+                        ))
+                        .auth(self.context.server_auth())
+                        .json(&data)
+                        .send()
+                        .await
+                        .unwrap();
+                }
+
                 return create_auth_token(&user, false);
             }
         }
