@@ -109,6 +109,13 @@ impl ExtendedAuditor {
         }
     }
 
+    pub fn user_id(&self) -> &String {
+        match self {
+            ExtendedAuditor::Auditor(auditor) => &auditor.user_id,
+            ExtendedAuditor::Badge(badge) => &badge.user_id,
+        }
+    }
+
     pub fn first_name(&self) -> &String {
         match self {
             ExtendedAuditor::Auditor(auditor) => &auditor.first_name,

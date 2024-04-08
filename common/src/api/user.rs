@@ -102,7 +102,17 @@ pub async fn new_link_id(
         .send()
         .await?;
 
-    let is_taken = auditor.status().is_success() || customer.status().is_success();
+    let is_taken = if auditor.status().is_success() {
+        auditor.json::<ExtendedAuditor>().await.map_or_else(
+            |_| false,
+            |auditor| auditor.user_id().clone() != user_id.to_hex()
+        )
+    } else if customer.status().is_success() {
+        customer.json::<PublicCustomer>().await.map_or_else(
+            |_| false,
+            |customer| customer.user_id.clone() != user_id.to_hex()
+        )
+    } else { false };
 
     if !add_postfix && is_taken.clone() {
         return Err(anyhow::anyhow!("This link id is already taken").code(400));
