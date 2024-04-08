@@ -42,13 +42,10 @@ pub async fn get_customer(
 pub async fn find_by_link_id(
     context: GeneralContext,
     link_id: web::Path<String>,
-) -> error::Result<HttpResponse> {
-    let res = CustomerService::new(context).find_by_link_id(link_id.parse()?).await?;
-    if let Some(res) = res {
-        Ok(HttpResponse::Ok().json(res))
-    } else {
-        Ok(HttpResponse::Ok().json(json! {{}}))
-    }
+) -> error::Result<Json<PublicCustomer>> {
+    Ok(Json(
+        CustomerService::new(context).find_by_link_id(link_id.into_inner()).await?
+    ))
 }
 
 #[get("/my_customer")]

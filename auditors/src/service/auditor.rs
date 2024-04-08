@@ -1,7 +1,7 @@
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
-    api::{seartch::delete_from_search, user::{get_by_id, get_by_link_id}},
+    api::{seartch::delete_from_search, user::{get_by_id, new_link_id, validate_name}},
     context::GeneralContext,
     entities::{
         audit_request::PriceRange,
@@ -60,8 +60,15 @@ impl AuditorService {
 
         let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
 
+        let link_id = new_link_id(
+            &self.context,
+            user.name,
+            id.clone(),
+            true,
+        ).await?;
+
         let auditor = Auditor {
-            user_id: id.clone(),
+            user_id: id,
             avatar: auditor.avatar.unwrap_or_default(),
             first_name: auditor.first_name,
             last_name: auditor.last_name,
@@ -73,7 +80,7 @@ impl AuditorService {
             created_at: Some(Utc::now().timestamp_micros()),
             free_at: auditor.free_at.unwrap_or_default(),
             price_range: auditor.price_range.unwrap_or_default(),
-            link_id: Some(user.link_id),
+            link_id: Some(link_id),
         };
 
         auditors.insert(&auditor).await?;
@@ -103,11 +110,33 @@ impl AuditorService {
         Ok(Some(ExtendedAuditor::Auditor(auth.public_auditor(auditor))))
     }
 
-    pub async fn find_by_link_id(&self, link_id: String) -> error::Result<Option<ExtendedAuditor>> {
-        let auth = self.context.server_auth();
-        let user = get_by_link_id(&self.context, auth, link_id).await?;
+    pub async fn find_by_link_id(&self, link_id: String) -> error::Result<ExtendedAuditor> {
+        let auth = self.context.auth();
 
-        self.find(user.id.parse()?).await
+        let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
+
+        if let Some(auditor) = auditors
+            .find("link_id", &Bson::String(link_id.clone()))
+            .await? {
+            return Ok(ExtendedAuditor::Auditor(auth.public_auditor(auditor)));
+        }
+
+        let badges = self.context.try_get_repository::<Badge<ObjectId>>()?;
+        if let Some(badge) = badges
+            .find("link_id", &Bson::String(link_id.clone()))
+            .await? {
+            return Ok(ExtendedAuditor::Badge(auth.public_badge(badge)));
+        }
+
+        let id = link_id
+            .parse()
+            .map_err(|_| anyhow::anyhow!("Auditor not found").code(404))?;
+
+        if let Some(auditor) = self.find(id).await? {
+            return Ok(auditor);
+        }
+
+        Err(anyhow::anyhow!("Auditor not found").code(404))
     }
 
     pub async fn my_auditor(&self) -> error::Result<Option<Auditor<String>>> {
@@ -183,7 +212,9 @@ impl AuditorService {
 
         let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
 
-        let Some(mut auditor) = auditors.find("user_id", &Bson::ObjectId(id)).await? else {
+        let Some(mut auditor) = auditors
+            .find("user_id", &Bson::ObjectId(id.clone()))
+            .await? else {
             return Err(anyhow::anyhow!("No auditor found").code(400));
         };
 
@@ -225,6 +256,24 @@ impl AuditorService {
 
         if let Some(price_range) = change.price_range {
             auditor.price_range = price_range;
+        }
+
+        if let Some(link_id) = change.link_id {
+            if !validate_name(&link_id) {
+                return Err(
+                    anyhow::anyhow!("Link ID may only contain alphanumeric characters, hyphens or underscore")
+                        .code(400)
+                );
+            }
+
+            let new_link_id = new_link_id(
+                &self.context,
+                link_id,
+                id,
+                false,
+            ).await?;
+
+            auditor.link_id = Some(new_link_id)
         }
 
         auditor.last_modified = Utc::now().timestamp_micros();
