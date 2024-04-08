@@ -105,7 +105,7 @@ impl CustomerService {
         let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
 
         if let Some(customer) = customers
-            .find("user_id", &Bson::String(link_id.clone()))
+            .find("link_id", &Bson::String(link_id.clone()))
             .await? {
             return Ok(auth.public_customer(customer));
         };
