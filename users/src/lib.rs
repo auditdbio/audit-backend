@@ -54,8 +54,7 @@ pub fn create_app(
                 .service(add_wallet)
                 .service(find_user_by_email)
                 .service(proxy_github_api)
-                .service(find_user_by_email)
-                .service(find_by_link_id),
+                .service(find_user_by_email),
         );
     app
 }

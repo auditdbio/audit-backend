@@ -1,7 +1,7 @@
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
-    api::{seartch::delete_from_search, user::{get_by_id, get_by_link_id}},
+    api::{seartch::delete_from_search, user::{get_by_id, new_link_id, validate_name}},
     context::GeneralContext,
     entities::{
         auditor::{ExtendedAuditor, PublicAuditor},
@@ -55,6 +55,13 @@ impl CustomerService {
 
         let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
 
+        let link_id = new_link_id(
+            &self.context,
+            user.name,
+            id.clone(),
+            true,
+        ).await?;
+
         let customer = Customer {
             user_id: id,
             avatar: customer.avatar.unwrap_or_default(),
@@ -66,7 +73,7 @@ impl CustomerService {
             tags: customer.tags.unwrap_or_default(),
             last_modified: Utc::now().timestamp_micros(),
             created_at: Some(Utc::now().timestamp_micros()),
-            link_id: Some(user.link_id),
+            link_id: Some(link_id),
         };
 
         customers.insert(&customer).await?;
@@ -92,11 +99,26 @@ impl CustomerService {
         Ok(Some(auth.public_customer(customer)))
     }
 
-    pub async fn find_by_link_id(&self, link_id: String) -> error::Result<Option<PublicCustomer>> {
-        let auth = self.context.server_auth();
-        let user = get_by_link_id(&self.context, auth, link_id).await?;
+    pub async fn find_by_link_id(&self, link_id: String) -> error::Result<PublicCustomer> {
+        let auth = self.context.auth();
 
-        self.find(user.id.parse()?).await
+        let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
+
+        if let Some(customer) = customers
+            .find("user_id", &Bson::String(link_id.clone()))
+            .await? {
+            return Ok(auth.public_customer(customer));
+        };
+
+        let id = link_id
+            .parse::<ObjectId>()
+            .map_err(|_| anyhow::anyhow!("Customer not found").code(404))?;
+
+        if let Some(customer) = self.find(id).await? {
+            return Ok(customer);
+        }
+
+        Err(anyhow::anyhow!("Customer not found").code(404))
     }
 
     pub async fn my_customer(&self) -> error::Result<Option<Customer<String>>> {
@@ -217,6 +239,24 @@ impl CustomerService {
 
         if let Some(tags) = change.tags {
             customer.tags = tags;
+        }
+
+        if let Some(link_id) = change.link_id {
+            if !validate_name(&link_id) {
+                return Err(
+                    anyhow::anyhow!("Link ID may only contain alphanumeric characters, hyphens or underscore")
+                        .code(400)
+                );
+            }
+
+            let new_link_id = new_link_id(
+                &self.context,
+                link_id,
+                id,
+                false,
+            ).await?;
+
+            customer.link_id = Some(new_link_id)
         }
 
         customer.last_modified = Utc::now().timestamp_micros();

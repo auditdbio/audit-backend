@@ -228,29 +228,9 @@ impl AuthService {
 
         user.password.push_str(&salt);
         let password = sha256::digest(user.password);
-        let id = ObjectId::new();
-        let mut link_id = user.name.clone();
-
-        if users
-            .find("link_id", &Bson::String(user.name.clone()))
-            .await?
-            .is_some() {
-            let rnd: String = rand::thread_rng()
-                .sample_iter(&Alphanumeric)
-                .take(5)
-                .map(char::from)
-                .collect();
-
-            link_id = format!(
-                "{}_{}{}",
-                user.name,
-                id.to_hex().chars().rev().take(3).collect::<String>(),
-                rnd,
-            );
-        };
 
         let new_user = User {
-            id,
+            id: ObjectId::new(),
             name: user.name,
             email: user.email,
             salt,
@@ -262,7 +242,6 @@ impl AuthService {
             is_admin,
             linked_accounts: user.linked_accounts,
             is_passwordless: user.is_passwordless,
-            link_id,
         };
 
         let link = Link {
