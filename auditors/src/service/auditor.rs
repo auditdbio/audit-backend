@@ -116,19 +116,20 @@ impl AuditorService {
         let auditors = self.context.try_get_repository::<Auditor<ObjectId>>()?;
 
         if let Some(auditor) = auditors
-            .find("link_id", &Bson::String(link_id.clone()))
+            .find("link_id", &Bson::String(link_id.clone().to_lowercase()))
             .await? {
             return Ok(ExtendedAuditor::Auditor(auth.public_auditor(auditor)));
         }
 
         let badges = self.context.try_get_repository::<Badge<ObjectId>>()?;
         if let Some(badge) = badges
-            .find("link_id", &Bson::String(link_id.clone()))
+            .find("link_id", &Bson::String(link_id.clone().to_lowercase()))
             .await? {
             return Ok(ExtendedAuditor::Badge(auth.public_badge(badge)));
         }
 
         let id = link_id
+            .to_lowercase()
             .parse()
             .map_err(|_| anyhow::anyhow!("Auditor not found").code(404))?;
 

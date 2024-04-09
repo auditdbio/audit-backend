@@ -131,10 +131,10 @@ pub async fn new_link_id(
             user_id.to_hex().chars().rev().take(3).collect::<String>(),
             rnd,
         );
-        return Ok(result_link_id);
+        return Ok(result_link_id.to_lowercase());
     }
 
-    Ok(link_id)
+    Ok(link_id.to_lowercase())
 }
 
 pub fn validate_name(name: &str) -> bool {
