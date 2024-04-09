@@ -97,7 +97,7 @@ impl BadgeService {
             created_at: Some(Utc::now().timestamp_micros()),
             free_at: badge.free_at.unwrap_or_default(),
             price_range: badge.price_range.unwrap_or_default(),
-            link_id: badge.link_id.or_else(|| Some(id.to_hex())),
+            link_id: badge.link_id.map(|id| id.to_lowercase()).or_else(|| Some(id.to_hex())),
         };
 
         let payload = BadgePayload {

@@ -105,12 +105,13 @@ impl CustomerService {
         let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
 
         if let Some(customer) = customers
-            .find("link_id", &Bson::String(link_id.clone()))
+            .find("link_id", &Bson::String(link_id.clone().to_lowercase()))
             .await? {
             return Ok(auth.public_customer(customer));
         };
 
         let id = link_id
+            .to_lowercase()
             .parse::<ObjectId>()
             .map_err(|_| anyhow::anyhow!("Customer not found").code(404))?;
 
