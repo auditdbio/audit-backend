@@ -6,12 +6,11 @@ use actix_web::{
 
 use common::{
     context::GeneralContext,
-    entities::auditor::{Auditor, PublicAuditor},
+    entities::auditor::{Auditor, PublicAuditor, ExtendedAuditor},
     error,
 };
 
 use serde_json::json;
-use common::entities::auditor::ExtendedAuditor;
 
 use crate::service::auditor::{AuditorChange, AuditorService, CreateAuditor};
 
