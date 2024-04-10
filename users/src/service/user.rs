@@ -120,7 +120,7 @@ impl UserService {
         Ok(Some(UserLogin::from(user)))
     }
 
-    pub async fn change(&self, id: ObjectId, change: UserChange) -> error::Result<PublicUser> {
+    pub async fn change(&self, id: ObjectId, change: UserChange) -> error::Result<UserLogin> {
         let auth = self.context.auth();
 
         let users = self.context.try_get_repository::<User<ObjectId>>()?;

@@ -5,7 +5,7 @@ use actix_web::{
 };
 use common::{
     context::GeneralContext,
-    entities::user::{PublicUser, PublicLinkedAccount},
+    entities::user::{PublicUser, PublicLinkedAccount, UserLogin},
     error,
     api::linked_accounts::{AddLinkedAccount, UpdateLinkedAccount, AddWallet},
 };
@@ -51,7 +51,7 @@ pub async fn change_user(
     context: GeneralContext,
     id: Path<String>,
     user: Json<UserChange>,
-) -> error::Result<Json<PublicUser>> {
+) -> error::Result<Json<UserLogin>> {
     Ok(Json(
         UserService::new(context)
             .change(id.parse()?, user.into_inner())
