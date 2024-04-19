@@ -66,6 +66,7 @@ pub struct Audit<Id: Eq + Hash> {
     #[serde(default)]
     pub no_customer: bool,
     pub chat_id: Option<AuditMessageId>,
+    pub conclusion: Option<String>,
 }
 
 impl Audit<String> {
@@ -89,6 +90,7 @@ impl Audit<String> {
             public: self.public,
             no_customer: self.no_customer,
             chat_id: self.chat_id,
+            conclusion: self.conclusion,
         }
     }
 }
@@ -114,6 +116,7 @@ impl Audit<ObjectId> {
             public: self.public,
             no_customer: self.no_customer,
             chat_id: self.chat_id,
+            conclusion: self.conclusion,
         }
     }
 

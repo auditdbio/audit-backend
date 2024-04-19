@@ -80,6 +80,7 @@ impl AuditService {
             public: false,
             no_customer: false,
             chat_id: None,
+            conclusion: None,
         };
 
         let requests = self
@@ -167,6 +168,7 @@ impl AuditService {
             no_customer: true,
             issues: CreateIssue::to_issue_map(request.issues),
             chat_id: None,
+            conclusion: request.conclusion,
         };
 
         if !Edit.get_access(&auth, &audit) {
@@ -280,6 +282,11 @@ impl AuditService {
             }
             if let Some(tags) = change.tags {
                 audit.tags = tags;
+            }
+            if let Some(conclusion) = change.conclusion {
+                if auth.id().unwrap() == audit.auditor_id {
+                    audit.conclusion = Some(conclusion);
+                }
             }
         }
 
