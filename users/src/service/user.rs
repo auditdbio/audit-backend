@@ -346,6 +346,7 @@ impl UserService {
                 is_public: false,
                 username: account_data.data.username,
                 token: None,
+                scope: None,
             };
 
             if Self::find_user_by_linked_account(
@@ -404,6 +405,7 @@ impl UserService {
                 is_public: false,
                 username: account_data.name,
                 token: None,
+                scope: None,
             };
 
             if Self::find_user_by_linked_account(
@@ -549,7 +551,8 @@ impl UserService {
                 avatar: "".to_string(),
                 is_public: false,
                 username: data.address,
-                token: None
+                token: None,
+                scope: None,
             };
 
             if Self::find_user_by_linked_account(
