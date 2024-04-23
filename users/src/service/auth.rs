@@ -279,7 +279,6 @@ impl AuthService {
 
         let access_json: GithubAccessResponse = serde_json::from_str(&access_response)?;
         let access_token = access_json.access_token;
-        let scope = access_json.scope;
 
         let user_response = client
             .get("https://api.github.com/user")
@@ -359,7 +358,7 @@ impl AuthService {
             is_public: false,
             username: user_data.login.clone(),
             token: Some(encrypted_data),
-            scope: Some(scope),
+            scope: Some(access_json.scope),
         };
 
         let user = CreateUser {
@@ -425,7 +424,8 @@ impl AuthService {
                 .auth(self.context.server_auth())
                 .json(&UpdateLinkedAccount {
                     is_public: None,
-                    token: linked_account.token
+                    token: linked_account.token,
+                    scope: linked_account.scope,
                 })
                 .send()
                 .await

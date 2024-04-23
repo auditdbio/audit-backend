@@ -286,7 +286,8 @@ impl UserService {
                     .auth(self.context.server_auth())
                     .json(&UpdateLinkedAccount {
                         is_public: None,
-                        token: linked_account.token
+                        token: linked_account.token,
+                        scope: linked_account.scope,
                     })
                     .send()
                     .await
@@ -492,6 +493,10 @@ impl UserService {
 
                 if let Some(token) = data.token {
                     account.token = Some(token);
+                }
+
+                if let Some(scope) = data.scope {
+                    account.scope = Some(scope);
                 }
 
                 if let Some(idx) = linked_accounts
