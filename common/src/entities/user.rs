@@ -17,6 +17,7 @@ pub struct LinkedAccount {
     #[serde(default)]
     pub username: String,
     pub token: Option<Vec<u8>>,
+    pub scope: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,6 +29,7 @@ pub struct PublicLinkedAccount {
     pub url: String,
     pub avatar: String,
     pub is_public: bool,
+    pub scope: Option<String>,
 }
 
 impl From<LinkedAccount> for PublicLinkedAccount {
@@ -40,6 +42,7 @@ impl From<LinkedAccount> for PublicLinkedAccount {
             url: account.url,
             avatar: account.avatar,
             is_public: account.is_public,
+            scope: account.scope,
         }
     }
 }
