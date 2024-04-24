@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use crate::repositories::file_repo::{CountResult, FileRepo, Scope};
-use common::{context::GeneralContext, error};
+use common::{context::GeneralContext, error::{self, AddCode}};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -64,13 +64,27 @@ impl ClocService {
             process_link(link);
         }
 
-        let (id, skiped, errors) = repo.download(user, scope.clone()).await?;
+        // let (id, skiped, errors) = repo.download(user, scope.clone()).await?;
+        //
+        // let result = repo.count(id).await?;
+        // Ok(CountResult {
+        //     skiped,
+        //     errors,
+        //     result,
+        // })
 
-        let result = repo.count(id).await?;
-        Ok(CountResult {
-            skiped,
-            errors,
-            result,
-        })
+        match repo.download(user, scope.clone()).await {
+            Ok((id, skiped, errors)) => {
+                match repo.count(id).await {
+                    Ok(result) => Ok(CountResult { skiped, errors, result }),
+                    Err(e) => Err(
+                        anyhow::anyhow!(format!("Error during count: {:?}", e)).code(502)
+                    ),
+                }
+            }
+            Err(e) => Err(
+                anyhow::anyhow!(format!("Error during download: {:?}", e)).code(502)
+            ),
+        }
     }
 }
