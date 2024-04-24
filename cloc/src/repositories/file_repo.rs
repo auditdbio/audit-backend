@@ -106,10 +106,14 @@ impl FileRepo {
                 errors.push(file_link);
                 continue;
             }
+
+            let file_name = file_link.split('/').last().unwrap();
+            let saved_file_path = path.join(file_name);
+
             let basename = String::from_utf8(
                 Command::new("file")
                     .arg("--mime")
-                    .arg(file_link.clone())
+                    .arg(saved_file_path)
                     .output()
                     .await
                     .context("Failed to get file mime type")?
