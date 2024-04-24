@@ -1,4 +1,5 @@
 use std::{fs, path::PathBuf, process::Output};
+use anyhow::Context;
 
 use common::{
     error,
@@ -91,8 +92,8 @@ impl FileRepo {
             Command::new("mkdir")
                 .arg(&id.to_hex())
                 .current_dir(&self.path),
-        )
-        .await;
+        ).await.context("Failed to create directory")?;
+
         let path = append_to_path(self.path.clone(), &id.to_hex());
         let mut errors = vec![];
         let mut skiped = vec![];
@@ -111,10 +112,10 @@ impl FileRepo {
                     .arg(file_link.clone())
                     .output()
                     .await
-                    .unwrap()
+                    .context("Failed to get file mime type")?
                     .stdout,
-            )
-            .unwrap();
+            ).context("Failed to parse basename")?;
+
             let html_check_output = String::from_utf8(
                 Command::new("file")
                     .arg("--mime")
@@ -122,10 +123,9 @@ impl FileRepo {
                     .current_dir(path.clone())
                     .output()
                     .await
-                    .unwrap()
+                    .context("Failed to check file mime type")?
                     .stdout,
-            )
-            .unwrap();
+            ).context("Failed to parse HTML check output")?;
 
             if html_check_output.contains("html") {
                 skiped.push(file_link);

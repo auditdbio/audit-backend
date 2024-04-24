@@ -56,6 +56,7 @@ impl ClocService {
             .context
             .get_repository_manual::<Arc<FileRepo>>()
             .unwrap();
+
         let mut scope = Scope::new(request.links);
         // https://raw.githubusercontent.com/auditdbio/audit-web/942b43136ace347e69ecbd64fdda819f85775117/src/components/Chat/ImageMessage.jsx
         // https://               github.com/auditdbio/audit-web/blob/942b43136ace347e69ecbd64fdda819f85775117/src/components/Chat/ImageMessage.jsx
@@ -78,12 +79,12 @@ impl ClocService {
                 match repo.count(id).await {
                     Ok(result) => Ok(CountResult { skiped, errors, result }),
                     Err(e) => Err(
-                        anyhow::anyhow!(format!("Error during count: {:?}", e)).code(502)
+                        anyhow::anyhow!(format!("Error during count: {}", e)).code(502)
                     ),
                 }
             }
             Err(e) => Err(
-                anyhow::anyhow!(format!("Error during download: {:?}", e)).code(502)
+                anyhow::anyhow!(format!("Error during download: {}", e)).code(502)
             ),
         }
     }
