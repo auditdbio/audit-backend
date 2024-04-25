@@ -2,7 +2,7 @@ use chrono::Utc;
 use mongodb::bson::{oid::ObjectId, Bson};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
-use reqwest::{header, Client};
+use reqwest::{header, Client, StatusCode};
 use std::env::var;
 use actix_web::HttpResponse;
 use web3::signing::{keccak256, recover};
@@ -273,25 +273,30 @@ impl UserService {
                 linked_account.id.clone(),
                 &LinkedService::GitHub
             ).await?.is_some() {
-                let _ = self.context
-                    .make_request()
-                    .patch(format!(
-                        "{}://{}/{}/user/{}/linked_account/{}",
-                        PROTOCOL.as_str(),
-                        USERS_SERVICE.as_str(),
-                        API_PREFIX.as_str(),
-                        id,
-                        linked_account.id.clone(),
-                    ))
-                    .auth(self.context.server_auth())
-                    .json(&UpdateLinkedAccount {
-                        is_public: None,
-                        token: linked_account.token,
-                        scope: linked_account.scope,
-                    })
-                    .send()
-                    .await
-                    .unwrap();
+                if let Some(update_token) = data.update_token {
+                    if update_token {
+                        let _ = self.context
+                            .make_request()
+                            .patch(format!(
+                                "{}://{}/{}/user/{}/linked_account/{}",
+                                PROTOCOL.as_str(),
+                                USERS_SERVICE.as_str(),
+                                API_PREFIX.as_str(),
+                                id,
+                                linked_account.id.clone(),
+                            ))
+                            .auth(self.context.server_auth())
+                            .json(&UpdateLinkedAccount {
+                                is_public: None,
+                                update_token: Some(true),
+                                token: linked_account.token,
+                                scope: linked_account.scope,
+                            })
+                            .send()
+                            .await
+                            .unwrap();
+                    }
+                }
 
                 return Err(anyhow::anyhow!("Account has already been added").code(404))
             }
@@ -491,12 +496,11 @@ impl UserService {
                     account.is_public = is_public;
                 }
 
-                if let Some(token) = data.token {
-                    account.token = Some(token);
-                }
-
-                if let Some(scope) = data.scope {
-                    account.scope = Some(scope);
+                if let Some(update_token) = data.update_token {
+                    if update_token {
+                        account.token = data.token;
+                        account.scope = data.scope;
+                    }
                 }
 
                 if let Some(idx) = linked_accounts
@@ -592,12 +596,14 @@ impl UserService {
         };
 
         let mut access_token: Option<Vec<u8>> = None;
+        let mut github_account_id: Option<String> = None;
 
         if let Some(linked_accounts) = user.linked_accounts {
             if let Some(github_account) = linked_accounts
                 .iter()
                 .find(|account| account.name == LinkedService::GitHub) {
                 access_token = github_account.token.clone();
+                github_account_id = Some(github_account.id.clone());
             }
         }
 
@@ -671,7 +677,30 @@ impl UserService {
         response.append_header(("Content-Type", "application/json"));
 
         let body = github_response.text().await?;
-        let response = response.body(body);
+        let response = response.body(body.clone());
+
+        if status_code == StatusCode::UNAUTHORIZED
+            && body.contains("\"Bad credentials\"")
+            && github_account_id.is_some() {
+            let _ = self.context
+                .make_request()
+                .patch(format!(
+                    "{}://{}/{}/user/{}/linked_account/{}",
+                    PROTOCOL.as_str(),
+                    USERS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
+                    id,
+                    github_account_id.unwrap(),
+                ))
+                .auth(self.context.server_auth())
+                .json(&UpdateLinkedAccount {
+                    update_token: Some(true),
+                    ..UpdateLinkedAccount::default()
+                })
+                .send()
+                .await
+                .unwrap();
+        }
 
         Ok(response)
     }
