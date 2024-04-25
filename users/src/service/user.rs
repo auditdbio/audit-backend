@@ -661,7 +661,8 @@ impl UserService {
             .send()
             .await?;
 
-        let mut response = HttpResponse::Ok();
+        let status_code = github_response.status();
+        let mut response = HttpResponse::build(status_code);
 
         for (name, value) in github_response.headers() {
             response.append_header((name.clone(), value.clone()));
