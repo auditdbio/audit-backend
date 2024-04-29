@@ -110,31 +110,31 @@ impl FileRepo {
             let file_name = file_link.split('/').last().unwrap();
             let saved_file_path = path.join(file_name);
 
-            let basename = String::from_utf8(
-                Command::new("file")
-                    .arg("--mime")
-                    .arg(saved_file_path)
-                    .output()
-                    .await
-                    .context("Failed to get file mime type")?
-                    .stdout,
-            ).context("Failed to parse basename")?;
-
-            let html_check_output = String::from_utf8(
-                Command::new("file")
-                    .arg("--mime")
-                    .arg(basename)
-                    .current_dir(path.clone())
-                    .output()
-                    .await
-                    .context("Failed to check file mime type")?
-                    .stdout,
-            ).context("Failed to parse HTML check output")?;
-
-            if html_check_output.contains("html") {
-                skiped.push(file_link);
-                continue;
-            }
+            // let basename = String::from_utf8(
+            //     Command::new("file")
+            //         .arg("--mime")
+            //         .arg(saved_file_path)
+            //         .output()
+            //         .await
+            //         .context("Failed to get file mime type")?
+            //         .stdout,
+            // ).context("Failed to parse basename")?;
+            //
+            // let html_check_output = String::from_utf8(
+            //     Command::new("file")
+            //         .arg("--mime")
+            //         .arg(basename)
+            //         .current_dir(path.clone())
+            //         .output()
+            //         .await
+            //         .context("Failed to check file mime type")?
+            //         .stdout,
+            // ).context("Failed to parse HTML check output")?;
+            //
+            // if html_check_output.contains("html") {
+            //     skiped.push(file_link);
+            //     continue;
+            // }
         }
         Ok((id, skiped, errors))
     }
