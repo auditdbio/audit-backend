@@ -300,11 +300,11 @@ impl AuditService {
             audit.report = Some(report.clone());
         }
 
-        if let Some(report_name) = change.report_name {
-            audit.report_name = Some(report_name);
+        if let Some(ref report_name) = change.report_name {
+            audit.report_name = Some(report_name.clone());
         }
 
-        if let Some(action) = change.action {
+        if let Some(ref action) = change.action {
             match action {
                 AuditAction::Start => {
                     if audit.status == AuditStatus::Waiting {
@@ -347,24 +347,28 @@ impl AuditService {
             return Ok(public_audit)
         }
 
-        if let Some(chat_id) = audit.chat_id {
-            delete_message(chat_id.chat_id, chat_id.message_id, auth.clone())?
+        if !audit.no_customer
+           && (change.report.is_some() || change.report_name.is_some() || change.action.is_some())
+        {
+            if let Some(chat_id) = audit.chat_id {
+                delete_message(chat_id.chat_id, chat_id.message_id, auth.clone())?
+            }
+
+            let message = create_audit_message(
+                CreateAuditMessage::Audit(public_audit.clone()),
+                Some(audit.status.clone().into()),
+                event_receiver,
+                receiver_role,
+                last_changer_role
+            );
+
+            let chat = send_message(message, auth)?;
+
+            audit.chat_id = Some(AuditMessageId {
+                chat_id: chat.id,
+                message_id: chat.last_message.id,
+            });
         }
-
-        let message = create_audit_message(
-            CreateAuditMessage::Audit(public_audit.clone()),
-            Some(audit.status.clone().into()),
-            event_receiver,
-            receiver_role,
-            last_changer_role
-        );
-
-        let chat = send_message(message, auth)?;
-
-        audit.chat_id = Some(AuditMessageId {
-            chat_id: chat.id,
-            message_id: chat.last_message.id,
-        });
 
         audits.delete("_id", &id).await?;
         audits.insert(&audit).await?;
