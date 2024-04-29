@@ -14,13 +14,15 @@ pub struct AddLinkedAccount {
     pub code: String,
     pub current_role: Option<String>,
     pub service: LinkedService,
+    pub update_token: Option<bool>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct UpdateLinkedAccount {
     pub is_public: Option<bool>,
     pub token: Option<Vec<u8>>,
     pub scope: Option<String>,
+    pub update_token: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

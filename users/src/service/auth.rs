@@ -392,14 +392,6 @@ impl AuthService {
             .find_user_by_linked_account(linked_account.id.clone(), &linked_account.name)
             .await?
         {
-            if let Some(user_accounts) = &mut user.linked_accounts {
-                if let Some(account) = user_accounts
-                    .iter_mut()
-                    .find(|a| a.id == linked_account.id) {
-                    *account = linked_account.clone();
-                }
-            }
-
             if let Some(current_role) = data.clone().current_role {
                 user.current_role = current_role;
                 let _ = self
@@ -419,25 +411,38 @@ impl AuthService {
                     .unwrap();
             }
 
-            let _ = self.context
-                .make_request()
-                .patch(format!(
-                    "{}://{}/{}/user/{}/linked_account/{}",
-                    PROTOCOL.as_str(),
-                    USERS_SERVICE.as_str(),
-                    API_PREFIX.as_str(),
-                    user.id,
-                    linked_account.id.clone(),
-                ))
-                .auth(self.context.server_auth())
-                .json(&UpdateLinkedAccount {
-                    is_public: None,
-                    token: linked_account.token,
-                    scope: linked_account.scope,
-                })
-                .send()
-                .await
-                .unwrap();
+            if let Some(update_token) = data.update_token {
+                if update_token {
+                    if let Some(user_accounts) = &mut user.linked_accounts {
+                        if let Some(account) = user_accounts
+                            .iter_mut()
+                            .find(|a| a.id == linked_account.id) {
+                            *account = linked_account.clone();
+                        }
+                    }
+
+                    let _ = self.context
+                        .make_request()
+                        .patch(format!(
+                            "{}://{}/{}/user/{}/linked_account/{}",
+                            PROTOCOL.as_str(),
+                            USERS_SERVICE.as_str(),
+                            API_PREFIX.as_str(),
+                            user.id,
+                            linked_account.id.clone(),
+                        ))
+                        .auth(self.context.server_auth())
+                        .json(&UpdateLinkedAccount {
+                            is_public: None,
+                            update_token: Some(true),
+                            token: linked_account.token,
+                            scope: linked_account.scope,
+                        })
+                        .send()
+                        .await
+                        .unwrap();
+                }
+            }
 
             return create_auth_token(&user);
         }
