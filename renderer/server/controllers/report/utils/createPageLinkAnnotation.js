@@ -8,7 +8,7 @@ const createPageLinkAnnotation = async (pdfDoc, tableOfContents, tocPagesCounter
       pdfDoc.context.obj({
         Type: 'Annot',
         Subtype: 'Link',
-        Rect: [60, 360, 150, 390],
+        Rect: [60, 490, 230, 460],
         Border: [0, 0, 0],
         C: [1, 1, 1],
         A: { Type: 'Action', S: 'URI', URI: PDFString.of(profileLink) },

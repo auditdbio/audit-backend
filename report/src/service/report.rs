@@ -206,6 +206,7 @@ fn generate_audit_sections(audit: &PublicAudit, issues: Vec<Section>) -> Vec<Sec
      * Summary
      *     Project description
      *     Scope
+     *     Conclusion
      */
     let disclaimer = include_str!("../../templates/disclaimer.md").to_string();
 
@@ -221,22 +222,34 @@ fn generate_audit_sections(audit: &PublicAudit, issues: Vec<Section>) -> Vec<Sec
             typ: "plain_text".to_string(),
             title: "Summary".to_string(),
             include_in_toc: true,
-            subsections: Some(vec![
-                Section {
-                    typ: "project_description".to_string(),
-                    title: "Project Description".to_string(),
-                    text: audit.description.clone(),
-                    include_in_toc: true,
-                    ..Default::default()
-                },
-                Section {
-                    typ: "scope".to_string(),
-                    title: "Scope".to_string(),
-                    links: Some(audit.scope.clone()),
-                    include_in_toc: true,
-                    ..Default::default()
-                },
-            ]),
+            subsections: Some({
+                let mut subsections = vec![
+                    Section {
+                        typ: "project_description".to_string(),
+                        title: "Project Description".to_string(),
+                        text: audit.description.clone(),
+                        include_in_toc: true,
+                        ..Default::default()
+                    },
+                    Section {
+                        typ: "scope".to_string(),
+                        title: "Scope".to_string(),
+                        links: Some(audit.scope.clone()),
+                        include_in_toc: true,
+                        ..Default::default()
+                    },
+                ];
+                if let Some(conclusion) = audit.conclusion.clone() {
+                    subsections.push(Section {
+                        typ: "markdown".to_string(),
+                        title: "Conclusion".to_string(),
+                        text: conclusion,
+                        include_in_toc: true,
+                        ..Default::default()
+                    });
+                }
+                subsections
+            }),
             ..Default::default()
         },
         Section {
@@ -296,7 +309,7 @@ pub async fn create_report(
             FRONTEND.as_str(),
             audit.auditor_id
         ),
-        project_name: audit.project_name,
+        project_name: audit.project_name.clone(),
         scope: audit.scope,
         report_data,
     };
@@ -342,6 +355,7 @@ pub async fn create_report(
     } else {
         let audit_change = AuditChange {
             report: Some(path.clone()),
+            report_name: Some(format!("{} report.pdf", audit.project_name)),
             ..AuditChange::default()
         };
 

@@ -4,7 +4,10 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    api::report::PublicReport,
+    api::{
+        chat::AuditMessageId,
+        report::PublicReport,
+    },
     context::GeneralContext,
     repository::Entity,
     services::{API_PREFIX, PROTOCOL, REPORT_SERVICE},
@@ -62,6 +65,8 @@ pub struct Audit<Id: Eq + Hash> {
 
     #[serde(default)]
     pub no_customer: bool,
+    pub chat_id: Option<AuditMessageId>,
+    pub conclusion: Option<String>,
 }
 
 impl Audit<String> {
@@ -84,6 +89,8 @@ impl Audit<String> {
             issues: Issue::parse_map(self.issues),
             public: self.public,
             no_customer: self.no_customer,
+            chat_id: self.chat_id,
+            conclusion: self.conclusion,
         }
     }
 }
@@ -108,6 +115,8 @@ impl Audit<ObjectId> {
             issues: Issue::to_string_map(self.issues),
             public: self.public,
             no_customer: self.no_customer,
+            chat_id: self.chat_id,
+            conclusion: self.conclusion,
         }
     }
 

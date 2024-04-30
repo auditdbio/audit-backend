@@ -40,6 +40,7 @@ pub fn create_app(
                 .service(post_auditor)
                 .service(get_auditor)
                 .service(patch_auditor)
+                .service(patch_auditor_by_id)
                 .service(delete_auditor)
                 .service(provide_auditor_data)
                 .service(provide_badges_data)
@@ -50,7 +51,8 @@ pub fn create_app(
                 .service(post_badge)
                 .service(merge)
                 .service(delete)
-                .service(find_badge),
+                .service(find_badge)
+                .service(find_by_link_id),
         );
     app
 }

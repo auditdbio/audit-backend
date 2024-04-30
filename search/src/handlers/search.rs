@@ -6,7 +6,7 @@ use actix_web::{
 use common::{context::GeneralContext, error};
 
 use crate::{
-    repositories::search::SearchRepo,
+    repositories::{elasticsearch::ElasticSearchResult, search::SearchRepo},
     service::search::{SearchInsertRequest, SearchQuery, SearchResult, SearchService},
 };
 
@@ -23,13 +23,25 @@ pub async fn insert(
 }
 
 #[get("/search")]
-pub async fn search(
+pub async fn mongo_search(
     query: web::Query<SearchQuery>,
     repo: web::Data<SearchRepo>,
     context: GeneralContext,
 ) -> error::Result<Json<SearchResult>> {
     let results = SearchService::new(repo, context)
         .search(query.into_inner())
+        .await?;
+    Ok(Json(results))
+}
+
+#[get("/search_new")]
+pub async fn search(
+    query: web::Query<SearchQuery>,
+    repo: web::Data<SearchRepo>,
+    context: GeneralContext,
+) -> error::Result<Json<ElasticSearchResult>> {
+    let results = SearchService::new(repo, context)
+        .elasitc_search(query.into_inner())
         .await?;
     Ok(Json(results))
 }

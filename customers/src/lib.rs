@@ -45,6 +45,7 @@ pub fn create_app(
                 .service(post_customer)
                 .service(get_customer)
                 .service(patch_customer)
+                .service(patch_customer_by_id)
                 .service(delete_customer)
                 .service(post_project)
                 .service(get_project)
@@ -59,7 +60,8 @@ pub fn create_app(
                 .service(ping)
                 .service(get_customer_projects)
                 .service(add_auditor)
-                .service(delete_auditor),
+                .service(delete_auditor)
+                .service(find_by_link_id),
         );
     app
 }

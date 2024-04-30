@@ -19,14 +19,13 @@ const TitlePage = ({ project }) => {
             <div className="hero-text">Smart Contract Security Audit Report</div>
             <div className="auditor-info-block">
               <div className="auditor-info auditor-info-heading">By</div>
-              <div className="auditor-info">{project?.auditor_name}</div>
-              <div className="QR-wrapper">
-                <QRCode.QRCodeSVG value={link} />
-              </div>
               <div>
                 <a className="auditor-info" href={link}>
-                  {project?.profile_link ? "Profile link" : FRONTEND}
+                  {project?.auditor_name}
                 </a>
+              </div>
+              <div className="QR-wrapper">
+                <QRCode.QRCodeSVG value={link} />
               </div>
             </div>
           </div>

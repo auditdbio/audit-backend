@@ -38,6 +38,16 @@ pub async fn get_customer(
     }
 }
 
+#[get("/customer_by_link_id/{link_id}")]
+pub async fn find_by_link_id(
+    context: GeneralContext,
+    link_id: web::Path<String>,
+) -> error::Result<Json<PublicCustomer>> {
+    Ok(Json(
+        CustomerService::new(context).find_by_link_id(link_id.into_inner()).await?
+    ))
+}
+
 #[get("/my_customer")]
 pub async fn my_customer(context: GeneralContext) -> error::Result<HttpResponse> {
     let res = CustomerService::new(context).my_customer().await?;
@@ -54,6 +64,15 @@ pub async fn patch_customer(
     Json(data): Json<CustomerChange>,
 ) -> error::Result<Json<Customer<String>>> {
     Ok(Json(CustomerService::new(context).change(data).await?))
+}
+
+#[patch("/customer/{id}")]
+pub async fn patch_customer_by_id(
+    context: GeneralContext,
+    id: web::Path<String>,
+    Json(data): Json<CustomerChange>,
+) -> error::Result<Json<Customer<String>>> {
+    Ok(Json(CustomerService::new(context).change_by_id(id.parse()?, data).await?))
 }
 
 #[delete("/customer/{id}")]

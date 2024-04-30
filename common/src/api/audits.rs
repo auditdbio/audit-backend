@@ -41,6 +41,7 @@ pub struct AuditChange {
     pub start_audit: Option<bool>,
     #[serde(rename = "isPublic")]
     pub public: Option<bool>,
+    pub conclusion: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -112,6 +113,7 @@ pub struct PublicAudit {
 
     #[serde(default)]
     pub no_customer: bool,
+    pub conclusion: Option<String>,
 }
 
 impl PublicAudit {
@@ -218,6 +220,7 @@ impl PublicAudit {
                 .collect(),
             public: audit.public,
             no_customer: audit.no_customer,
+            conclusion: audit.conclusion,
         };
 
         Ok(public_audit)
@@ -244,4 +247,5 @@ pub struct NoCustomerAuditRequest {
     pub public: bool,
 
     pub issues: Vec<CreateIssue>,
+    pub conclusion: Option<String>,
 }

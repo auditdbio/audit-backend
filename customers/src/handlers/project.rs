@@ -57,7 +57,7 @@ pub async fn patch_project(
     ))
 }
 
-#[delete("/customer/{id}")]
+#[delete("/project/{id}")]
 pub async fn delete_project(
     context: GeneralContext,
     id: web::Path<String>,

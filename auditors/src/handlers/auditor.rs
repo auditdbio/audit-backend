@@ -6,7 +6,7 @@ use actix_web::{
 
 use common::{
     context::GeneralContext,
-    entities::auditor::{Auditor, PublicAuditor},
+    entities::auditor::{Auditor, PublicAuditor, ExtendedAuditor},
     error,
 };
 
@@ -36,6 +36,18 @@ pub async fn get_auditor(
     }
 }
 
+#[get("/auditor_by_link_id/{link_id}")]
+pub async fn find_by_link_id(
+    context: GeneralContext,
+    link_id: web::Path<String>,
+) -> error::Result<Json<ExtendedAuditor>> {
+    Ok(Json(
+        AuditorService::new(context)
+            .find_by_link_id(link_id.into_inner())
+            .await?
+    ))
+}
+
 #[get("/my_auditor")]
 pub async fn get_my_auditor(context: GeneralContext) -> error::Result<HttpResponse> {
     let res = AuditorService::new(context).my_auditor().await?;
@@ -52,6 +64,15 @@ pub async fn patch_auditor(
     Json(data): Json<AuditorChange>,
 ) -> error::Result<Json<Auditor<String>>> {
     Ok(Json(AuditorService::new(context).change(data).await?))
+}
+
+#[patch("/auditor/{id}")]
+pub async fn patch_auditor_by_id(
+    context: GeneralContext,
+    id: web::Path<String>,
+    Json(data): Json<AuditorChange>,
+) -> error::Result<Json<Auditor<String>>> {
+    Ok(Json(AuditorService::new(context).change_by_id(id.parse()?, data).await?))
 }
 
 #[delete("/auditor/{id}")]
