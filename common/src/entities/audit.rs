@@ -122,7 +122,7 @@ impl Audit<ObjectId> {
 
     pub async fn resolve(&mut self, context: &GeneralContext) {
         if self.report.is_none() {
-            let public_report = context
+            let report_response = context
                 .make_request::<()>()
                 .post(format!(
                     "{}://{}/{}/report/{}",
@@ -133,18 +133,29 @@ impl Audit<ObjectId> {
                 ))
                 .auth(context.server_auth())
                 .send()
-                .await
-                .unwrap()
-                .json::<PublicReport>()
                 .await;
+                // .unwrap()
+                // .json::<PublicReport>()
+                // .await;
 
-            if let Err(err) = public_report {
-                println!("Error in audit::resolve: {}", err);
+            if let Err(err) = report_response {
+                println!("Error in report request: {}", err);
                 return;
             }
-            let public_report = public_report.unwrap();
-            self.report = Some(public_report.path.clone());
-            self.report_name = Some(public_report.path);
+
+            let report_response = report_response.unwrap();
+            if report_response.status().is_success() {
+                let public_report = report_response.json::<PublicReport>().await;
+                if let Err(err) = public_report {
+                    println!("Error in report response json: {}", err);
+                    return;
+                }
+                let public_report = public_report.unwrap();
+                self.report = Some(public_report.path.clone());
+                self.report_name = Some(public_report.path);
+            } else {
+                println!("Report receiving error: {}", report_response.status());
+            }
         }
     }
 }
