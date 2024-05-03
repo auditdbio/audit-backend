@@ -411,16 +411,13 @@ impl AuthService {
                     .unwrap();
             }
 
-            if let Some(update_token) = data.update_token {
-                if update_token {
-                    if let Some(user_accounts) = &mut user.linked_accounts {
-                        if let Some(account) = user_accounts
-                            .iter_mut()
-                            .find(|a| a.id == linked_account.id) {
-                            *account = linked_account.clone();
-                        }
-                    }
+            if let Some(account) = user.linked_accounts
+                .as_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|a| a.id == linked_account.id) {
 
+                if data.update_token == Some(true) || account.token.is_none() {
                     let _ = self.context
                         .make_request()
                         .patch(format!(
@@ -435,12 +432,14 @@ impl AuthService {
                         .json(&UpdateLinkedAccount {
                             is_public: None,
                             update_token: Some(true),
-                            token: linked_account.token,
-                            scope: linked_account.scope,
+                            token: linked_account.token.clone(),
+                            scope: linked_account.scope.clone(),
                         })
                         .send()
                         .await
                         .unwrap();
+
+                    *account = linked_account;
                 }
             }
 
