@@ -346,7 +346,7 @@ impl RequestService {
         };
 
         if !Edit.get_access(&auth, &request) {
-            return Err(anyhow::anyhow!("User is not available to change this customer").code(400));
+            return Err(anyhow::anyhow!("User is not available to change this audit request").code(400));
         }
 
         if let Some(description) = change.description {

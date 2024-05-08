@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use chrono::Utc;
 use rand::Rng;
 use mongodb::bson::{oid::ObjectId, Bson};
@@ -20,7 +21,7 @@ use common::{
     },
     context::GeneralContext,
     entities::{
-        audit::{Audit, AuditStatus},
+        audit::{Audit, AuditStatus, AuditEditHistory},
         audit_request::{AuditRequest, TimeRange},
         issue::{severity_to_integer, ChangeIssue, Event, EventKind, Issue, Status, Action},
         project::get_project,
@@ -81,6 +82,7 @@ impl AuditService {
             no_customer: false,
             chat_id: None,
             conclusion: None,
+            edit_history: Vec::new(),
         };
 
         let requests = self
@@ -169,6 +171,7 @@ impl AuditService {
             issues: CreateIssue::to_issue_map(request.issues),
             chat_id: None,
             conclusion: request.conclusion,
+            edit_history: Vec::new(),
         };
 
         if !Edit.get_access(&auth, &audit) {
@@ -258,6 +261,7 @@ impl AuditService {
 
     pub async fn change(&self, id: ObjectId, change: AuditChange) -> error::Result<PublicAudit> {
         let auth = self.context.auth();
+        let user_id = auth.id().unwrap();
 
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
@@ -269,6 +273,9 @@ impl AuditService {
             return Err(anyhow::anyhow!("User is not available to change this audit").code(403));
         }
 
+        let old_audit = audit.clone();
+        let mut is_history_changed = false;
+
         if let Some(public) = change.public {
             audit.public = public;
         }
@@ -276,16 +283,20 @@ impl AuditService {
         if audit.status != AuditStatus::Resolved || audit.no_customer {
             if let Some(scope) = change.scope {
                 audit.scope = scope;
+                is_history_changed = true;
             }
             if let Some(description) = change.description {
                 audit.description = description;
+                is_history_changed = true;
             }
             if let Some(tags) = change.tags {
                 audit.tags = tags;
+                is_history_changed = true;
             }
             if let Some(conclusion) = change.conclusion {
-                if auth.id().unwrap() == audit.auditor_id {
+                if user_id == audit.auditor_id {
                     audit.conclusion = Some(conclusion);
+                    is_history_changed = true;
                 }
             }
         }
@@ -293,6 +304,7 @@ impl AuditService {
         if audit.no_customer {
             if let Some(project_name) = change.project_name {
                 audit.project_name = project_name;
+                is_history_changed = true;
             }
         }
 
@@ -322,11 +334,31 @@ impl AuditService {
 
         audit.last_modified = Utc::now().timestamp_micros();
 
+        if is_history_changed {
+            let edit_history_item = AuditEditHistory {
+                id: audit.edit_history.len(),
+                date: audit.last_modified.clone(),
+                author: user_id.to_hex(),
+                comment: None,
+                audit: serde_json::to_string(&json!({
+                    "project_name": old_audit.project_name,
+                    "description": old_audit.description,
+                    "scope": old_audit.scope,
+                    "tags": old_audit.tags,
+                    "price": old_audit.price,
+                    "time": old_audit.time,
+                    "conclusion": old_audit.conclusion,
+                })).unwrap(),
+            };
+
+            audit.edit_history.push(edit_history_item);
+        }
+
         let (
             event_receiver,
             receiver_role,
             last_changer_role,
-        ) = if auth.id().unwrap() == audit.customer_id {
+        ) = if user_id == audit.customer_id {
             (audit.auditor_id, Role::Auditor, Role::Customer)
         } else {
             (audit.customer_id, Role::Customer, Role::Auditor)

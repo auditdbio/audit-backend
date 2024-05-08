@@ -64,6 +64,9 @@ pub struct Audit<Id: Eq + Hash> {
     pub issues: Vec<Issue<Id>>,
 
     #[serde(default)]
+    pub edit_history: Vec<AuditEditHistory>,
+
+    #[serde(default)]
     pub no_customer: bool,
     pub chat_id: Option<AuditMessageId>,
     pub conclusion: Option<String>,
@@ -91,6 +94,7 @@ impl Audit<String> {
             no_customer: self.no_customer,
             chat_id: self.chat_id,
             conclusion: self.conclusion,
+            edit_history: self.edit_history,
         }
     }
 }
@@ -117,6 +121,7 @@ impl Audit<ObjectId> {
             no_customer: self.no_customer,
             chat_id: self.chat_id,
             conclusion: self.conclusion,
+            edit_history: self.edit_history,
         }
     }
 
@@ -164,4 +169,13 @@ impl Entity for Audit<ObjectId> {
     fn id(&self) -> ObjectId {
         self.id
     }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct AuditEditHistory {
+    pub id: usize,
+    pub date: i64,
+    pub author: String,
+    pub comment: Option<String>,
+    pub audit: String,
 }
