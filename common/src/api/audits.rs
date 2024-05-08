@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use crate::{
     context::GeneralContext,
     entities::{
-        audit::{Audit, AuditStatus, PublicAuditStatus},
+        audit::{Audit, AuditStatus, AuditEditHistory, PublicAuditStatus},
         audit_request::TimeRange,
         auditor::{ExtendedAuditor, PublicAuditor},
         contacts::Contacts,
@@ -110,6 +110,7 @@ pub struct PublicAudit {
     pub time: TimeRange,
 
     pub issues: Vec<PublicIssue>,
+    pub edit_history: Vec<AuditEditHistory>,
 
     #[serde(default)]
     pub no_customer: bool,
@@ -218,6 +219,7 @@ impl PublicAudit {
                 .into_iter()
                 .map(|i| auth.public_issue(i))
                 .collect(),
+            edit_history: audit.edit_history,
             public: audit.public,
             no_customer: audit.no_customer,
             conclusion: audit.conclusion,

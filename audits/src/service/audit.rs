@@ -193,7 +193,7 @@ impl AuditService {
         };
 
         if !Read.get_access(&auth, &audit) {
-            return Err(anyhow::anyhow!("User is not available to change this audit").code(403));
+            return Err(anyhow::anyhow!("User is not available to read this audit").code(403));
         }
 
         Ok(Some(audit))
