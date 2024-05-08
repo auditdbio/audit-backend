@@ -42,6 +42,7 @@ pub struct AuditChange {
     #[serde(rename = "isPublic")]
     pub public: Option<bool>,
     pub conclusion: Option<String>,
+    pub comment: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

@@ -339,7 +339,7 @@ impl AuditService {
                 id: audit.edit_history.len(),
                 date: audit.last_modified.clone(),
                 author: user_id.to_hex(),
-                comment: None,
+                comment: change.comment,
                 audit: serde_json::to_string(&json!({
                     "project_name": old_audit.project_name,
                     "description": old_audit.description,
