@@ -8,9 +8,11 @@ use crate::{
         chat::AuditMessageId,
         report::PublicReport,
     },
+    entities::{auditor::ExtendedAuditor, customer::PublicCustomer, role::Role},
+    error,
     context::GeneralContext,
     repository::Entity,
-    services::{API_PREFIX, PROTOCOL, REPORT_SERVICE},
+    services::{API_PREFIX, PROTOCOL, AUDITORS_SERVICE, CUSTOMERS_SERVICE, REPORT_SERVICE},
 };
 
 use super::{audit_request::TimeRange, issue::Issue};
@@ -178,4 +180,83 @@ pub struct AuditEditHistory {
     pub author: String,
     pub comment: Option<String>,
     pub audit: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct EditHistoryAuthor {
+    pub id: String,
+    pub name: String,
+    pub role: Role,
+    pub avatar: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct PublicAuditEditHistory {
+    pub id: usize,
+    pub date: i64,
+    pub author: EditHistoryAuthor,
+    pub comment: Option<String>,
+    pub audit: String,
+}
+
+impl PublicAuditEditHistory {
+    pub async fn new(
+        context: &GeneralContext,
+        history: AuditEditHistory,
+        role: Role,
+    ) -> error::Result<PublicAuditEditHistory> {
+        let author = if role == Role::Auditor {
+            let auditor = context
+                .make_request::<ExtendedAuditor>()
+                .get(format!(
+                    "{}://{}/{}/auditor/{}",
+                    PROTOCOL.as_str(),
+                    AUDITORS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
+                    history.author,
+                ))
+                .auth(context.server_auth())
+                .send()
+                .await?
+                .json::<ExtendedAuditor>()
+                .await?;
+
+            EditHistoryAuthor {
+                id: history.author,
+                name: format!("{} {}", auditor.first_name(), auditor.last_name()),
+                role,
+                avatar: auditor.avatar().clone(),
+            }
+        } else {
+            let customer = context
+                .make_request::<PublicCustomer>()
+                .get(format!(
+                    "{}://{}/{}/customer/{}",
+                    PROTOCOL.as_str(),
+                    CUSTOMERS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
+                    history.author,
+                ))
+                .auth(context.server_auth())
+                .send()
+                .await?
+                .json::<PublicCustomer>()
+                .await?;
+
+            EditHistoryAuthor {
+                id: history.author,
+                name: format!("{} {}", customer.first_name, customer.last_name),
+                role,
+                avatar: customer.avatar,
+            }
+        };
+
+        Ok(PublicAuditEditHistory {
+            id: history.id,
+            date: history.date,
+            author,
+            comment: history.comment,
+            audit: history.audit,
+        })
+    }
 }

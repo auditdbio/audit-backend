@@ -21,7 +21,7 @@ use common::{
     },
     context::GeneralContext,
     entities::{
-        audit::{Audit, AuditStatus, AuditEditHistory},
+        audit::{Audit, AuditStatus, AuditEditHistory, PublicAuditEditHistory},
         audit_request::{AuditRequest, TimeRange},
         issue::{severity_to_integer, ChangeIssue, Event, EventKind, Issue, Status, Action},
         project::get_project,
@@ -940,6 +940,28 @@ impl AuditService {
 
         for audit in audits {
             result.push(PublicAudit::new(&self.context, audit).await?);
+        }
+
+        Ok(result)
+    }
+
+    pub async fn get_audit_edit_history(
+        &self,
+        id: ObjectId,
+    ) -> error::Result<Vec<PublicAuditEditHistory>> {
+        let Some(audit) = self.get_audit(id).await? else {
+            return Err(anyhow::anyhow!("Audit not found").code(404));
+        };
+
+        let mut result = vec![];
+
+        for history in audit.edit_history {
+            let role = if history.author == audit.auditor_id.to_hex() {
+                Role::Auditor
+            } else {
+                Role::Customer
+            };
+            result.push(PublicAuditEditHistory::new(&self.context, history, role).await?);
         }
 
         Ok(result)

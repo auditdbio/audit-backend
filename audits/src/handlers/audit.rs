@@ -10,7 +10,11 @@ use common::{
         seartch::PaginationParams,
     },
     context::GeneralContext,
-    entities::{issue::ChangeIssue, role::Role},
+    entities::{
+        audit::PublicAuditEditHistory,
+        issue::ChangeIssue,
+        role::Role
+    },
     error,
 };
 
@@ -169,5 +173,17 @@ pub async fn get_public_audits(
         AuditService::new(context)
             .find_public(id.parse()?, role)
             .await?,
+    ))
+}
+
+#[get("/audit/{id}/edit_history")]
+pub async fn get_audit_edit_history(
+    context: GeneralContext,
+    id: web::Path<String>,
+) -> error::Result<Json<Vec<PublicAuditEditHistory>>> {
+    Ok(Json(
+        AuditService::new(context)
+            .get_audit_edit_history(id.parse()?)
+            .await?
     ))
 }
