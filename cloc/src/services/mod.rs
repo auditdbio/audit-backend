@@ -1,7 +1,16 @@
 use std::{collections::HashMap, sync::Arc};
+use mongodb::bson::{Bson, oid::ObjectId};
 
 use crate::repositories::file_repo::{CountResult, FileRepo, Scope};
-use common::{context::GeneralContext, error::{self, AddCode}};
+use common::{
+    api::{
+        linked_accounts::LinkedService,
+        user::decrypt_github_token
+    },
+    context::GeneralContext,
+    error::{self, AddCode},
+    entities::user::User,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -51,7 +60,7 @@ impl ClocService {
     }
 
     pub async fn count(&self, request: ClocRequest) -> error::Result<CountResult> {
-        let user = self.context.auth().id().unwrap();
+        let user_id = self.context.auth().id().unwrap();
         let repo = self
             .context
             .get_repository_manual::<Arc<FileRepo>>()
@@ -65,6 +74,22 @@ impl ClocService {
             process_link(link);
         }
 
+        let users = self.context.try_get_repository::<User<ObjectId>>()?;
+        let Some(user) = users.find("id", &Bson::ObjectId(user_id)).await? else {
+            return Err(anyhow::anyhow!("User not found").code(404));
+        };
+
+        let mut access_token: Option<String> = None;
+        if let Some(linked_accounts) = user.linked_accounts {
+            if let Some(github_account) = linked_accounts
+                .iter()
+                .find(|account| account.name == LinkedService::GitHub) {
+                if let Some(encrypted_token) = github_account.token.clone() {
+                    access_token = Option::from(decrypt_github_token(encrypted_token).await?);
+                }
+            }
+        }
+
         // let (id, skiped, errors) = repo.download(user, scope.clone()).await?;
         //
         // let result = repo.count(id).await?;
@@ -74,7 +99,7 @@ impl ClocService {
         //     result,
         // })
 
-        match repo.download(user, scope.clone()).await {
+        match repo.download(user.id, scope.clone(), access_token).await {
             Ok((id, skiped, errors)) => {
                 match repo.count(id).await {
                     Ok(result) => Ok(CountResult { skiped, errors, result }),

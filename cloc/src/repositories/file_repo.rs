@@ -9,6 +9,7 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tokio::process::Command;
+use common::entities::user::User;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct MetaEntry {
@@ -75,13 +76,14 @@ impl FileRepo {
 
     pub async fn download(
         &self,
-        user: ObjectId,
+        user_id: ObjectId,
         files: Scope,
+        token: Option<String>,
     ) -> error::Result<(ObjectId, Vec<String>, Vec<String>)> {
         let id = ObjectId::new();
         let entry = MetaEntry {
             id,
-            user,
+            user: user_id,
             links: files.links,
         };
 
@@ -99,7 +101,14 @@ impl FileRepo {
         let mut skiped = vec![];
         // download files
         for file_link in entry.links {
-            if run_command(Command::new("wget").arg(&file_link).current_dir(&path))
+            let mut command = Command::new("wget");
+            command.current_dir(&path);
+            if let Some(token) = token.clone() {
+                command.arg("--header").arg(format!("Authorization: Bearer {}", token));
+            }
+            command.arg(&file_link);
+
+            if run_command(&mut command)
                 .await
                 .is_none()
             {

@@ -29,10 +29,7 @@ use rand::{distributions::Alphanumeric, Rng};
 use reqwest::{header, Client};
 use serde::{Deserialize, Serialize};
 use std::env::var;
-
-extern crate crypto;
-use crypto::{ buffer, aes, blockmodes };
-use crypto::buffer::{ ReadBuffer, WriteBuffer, BufferResult };
+use crypto::{ aes, blockmodes, buffer::{self, ReadBuffer, WriteBuffer, BufferResult}};
 
 use super::user::UserService;
 
