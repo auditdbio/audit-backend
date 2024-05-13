@@ -92,6 +92,8 @@ impl AuditService {
         if let Some(request) = requests
             .delete("id", &request.id.parse()?)
             .await? {
+            audit.edit_history = request.edit_history;
+
             if let Some(chat_id) = request.chat_id {
                 delete_message(chat_id.chat_id, chat_id.message_id, auth.clone())?
             }
@@ -282,29 +284,39 @@ impl AuditService {
 
         if audit.status != AuditStatus::Resolved || audit.no_customer {
             if let Some(scope) = change.scope {
-                audit.scope = scope;
-                is_history_changed = true;
+                if audit.scope != scope {
+                    audit.scope = scope;
+                    is_history_changed = true;
+                }
             }
             if let Some(description) = change.description {
-                audit.description = description;
-                is_history_changed = true;
+                if audit.description != description {
+                    audit.description = description;
+                    is_history_changed = true;
+                }
             }
             if let Some(tags) = change.tags {
-                audit.tags = tags;
-                is_history_changed = true;
+                if audit.tags != tags {
+                    audit.tags = tags;
+                    is_history_changed = true;
+                }
             }
             if let Some(conclusion) = change.conclusion {
                 if user_id == audit.auditor_id {
-                    audit.conclusion = Some(conclusion);
-                    is_history_changed = true;
+                    if audit.conclusion.is_some() && audit.conclusion.clone().unwrap() != conclusion {
+                        audit.conclusion = Some(conclusion);
+                        is_history_changed = true;
+                    }
                 }
             }
         }
 
         if audit.no_customer {
             if let Some(project_name) = change.project_name {
-                audit.project_name = project_name;
-                is_history_changed = true;
+                if audit.project_name != project_name {
+                    audit.project_name = project_name;
+                    is_history_changed = true;
+                }
             }
         }
 
