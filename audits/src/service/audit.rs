@@ -984,6 +984,9 @@ impl AuditService {
         history_id: usize,
         change: ChangeAuditHistory,
     ) -> error::Result<PublicAuditEditHistory> {
+        let auth = self.context.auth();
+        let user_id = auth.id().unwrap();
+
         let Some(mut audit) = self.get_audit(audit_id).await? else {
             return Err(anyhow::anyhow!("Audit not found").code(404));
         };
@@ -998,7 +1001,11 @@ impl AuditService {
             };
 
         if let Some(comment) = change.comment {
-            history.comment = Some(comment);
+            if user_id == history.author.parse()? {
+                history.comment = Some(comment);
+            } else {
+                return Err(anyhow::anyhow!("Only the author of the edit can change a comment").code(403))
+            }
         }
 
         if let Some(idx) = audit.edit_history.iter().position(|h| h.id == history_id) {
