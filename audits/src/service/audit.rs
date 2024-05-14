@@ -21,7 +21,7 @@ use common::{
     },
     context::GeneralContext,
     entities::{
-        audit::{Audit, AuditStatus, AuditEditHistory, PublicAuditEditHistory},
+        audit::{Audit, AuditStatus, AuditEditHistory, PublicAuditEditHistory, ChangeAuditHistory},
         audit_request::{AuditRequest, TimeRange},
         issue::{severity_to_integer, ChangeIssue, Event, EventKind, Issue, Status, Action},
         project::get_project,
@@ -747,7 +747,6 @@ impl AuditService {
 
         issue.last_modified = Utc::now().timestamp();
 
-        // audit.issues[issue_id] = issue.clone();
         if let Some(idx) = audit.issues.iter().position(|issue| issue.id == issue_id) {
             audit.issues[idx] = issue.clone();
         }
@@ -977,5 +976,45 @@ impl AuditService {
         }
 
         Ok(result)
+    }
+
+    pub async fn change_audit_edit_history(
+        &self,
+        audit_id: ObjectId,
+        history_id: usize,
+        change: ChangeAuditHistory,
+    ) -> error::Result<PublicAuditEditHistory> {
+        let Some(mut audit) = self.get_audit(audit_id).await? else {
+            return Err(anyhow::anyhow!("Audit not found").code(404));
+        };
+
+        let Some(mut history) = audit
+            .edit_history
+            .iter()
+            .find(|h| h.id == history_id)
+            .cloned()
+            else {
+                return Err(anyhow::anyhow!("History not found").code(404));
+            };
+
+        if let Some(comment) = change.comment {
+            history.comment = Some(comment);
+        }
+
+        if let Some(idx) = audit.edit_history.iter().position(|h| h.id == history_id) {
+            audit.edit_history[idx] = history.clone();
+        }
+
+        let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
+        audits.delete("_id", &audit_id).await?;
+        audits.insert(&audit).await?;
+
+        let role = if history.author == audit.auditor_id.to_hex() {
+            Role::Auditor
+        } else {
+            Role::Customer
+        };
+
+        Ok(PublicAuditEditHistory::new(&self.context, history, role).await?)
     }
 }
