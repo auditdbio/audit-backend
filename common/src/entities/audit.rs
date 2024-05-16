@@ -8,9 +8,11 @@ use crate::{
         chat::AuditMessageId,
         report::PublicReport,
     },
+    entities::{auditor::ExtendedAuditor, customer::PublicCustomer, role::Role},
+    error,
     context::GeneralContext,
     repository::Entity,
-    services::{API_PREFIX, PROTOCOL, REPORT_SERVICE},
+    services::{API_PREFIX, PROTOCOL, AUDITORS_SERVICE, CUSTOMERS_SERVICE, REPORT_SERVICE},
 };
 
 use super::{audit_request::TimeRange, issue::Issue};
@@ -64,6 +66,9 @@ pub struct Audit<Id: Eq + Hash> {
     pub issues: Vec<Issue<Id>>,
 
     #[serde(default)]
+    pub edit_history: Vec<AuditEditHistory>,
+
+    #[serde(default)]
     pub no_customer: bool,
     pub chat_id: Option<AuditMessageId>,
     pub conclusion: Option<String>,
@@ -91,6 +96,7 @@ impl Audit<String> {
             no_customer: self.no_customer,
             chat_id: self.chat_id,
             conclusion: self.conclusion,
+            edit_history: self.edit_history,
         }
     }
 }
@@ -117,12 +123,13 @@ impl Audit<ObjectId> {
             no_customer: self.no_customer,
             chat_id: self.chat_id,
             conclusion: self.conclusion,
+            edit_history: self.edit_history,
         }
     }
 
     pub async fn resolve(&mut self, context: &GeneralContext) {
         if self.report.is_none() {
-            let public_report = context
+            let report_response = context
                 .make_request::<()>()
                 .post(format!(
                     "{}://{}/{}/report/{}",
@@ -133,18 +140,29 @@ impl Audit<ObjectId> {
                 ))
                 .auth(context.server_auth())
                 .send()
-                .await
-                .unwrap()
-                .json::<PublicReport>()
                 .await;
+                // .unwrap()
+                // .json::<PublicReport>()
+                // .await;
 
-            if let Err(err) = public_report {
-                println!("Error in audit::resolve: {}", err);
+            if let Err(err) = report_response {
+                println!("Error in report request: {}", err);
                 return;
             }
-            let public_report = public_report.unwrap();
-            self.report = Some(public_report.path.clone());
-            self.report_name = Some(public_report.path);
+
+            let report_response = report_response.unwrap();
+            if report_response.status().is_success() {
+                let public_report = report_response.json::<PublicReport>().await;
+                if let Err(err) = public_report {
+                    println!("Error in report response json: {}", err);
+                    return;
+                }
+                let public_report = public_report.unwrap();
+                self.report = Some(public_report.path.clone());
+                self.report_name = Some(public_report.path);
+            } else {
+                println!("Report receiving error: {}", report_response.status());
+            }
         }
     }
 }
@@ -153,4 +171,97 @@ impl Entity for Audit<ObjectId> {
     fn id(&self) -> ObjectId {
         self.id
     }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct AuditEditHistory {
+    pub id: usize,
+    pub date: i64,
+    pub author: String,
+    pub comment: Option<String>,
+    pub audit: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct EditHistoryAuthor {
+    pub id: String,
+    pub name: String,
+    pub role: Role,
+    pub avatar: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct PublicAuditEditHistory {
+    pub id: usize,
+    pub date: i64,
+    pub author: EditHistoryAuthor,
+    pub comment: Option<String>,
+    pub audit: String,
+}
+
+impl PublicAuditEditHistory {
+    pub async fn new(
+        context: &GeneralContext,
+        history: AuditEditHistory,
+        role: Role,
+    ) -> error::Result<PublicAuditEditHistory> {
+        let author = if role == Role::Auditor {
+            let auditor = context
+                .make_request::<ExtendedAuditor>()
+                .get(format!(
+                    "{}://{}/{}/auditor/{}",
+                    PROTOCOL.as_str(),
+                    AUDITORS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
+                    history.author,
+                ))
+                .auth(context.server_auth())
+                .send()
+                .await?
+                .json::<ExtendedAuditor>()
+                .await?;
+
+            EditHistoryAuthor {
+                id: history.author,
+                name: format!("{} {}", auditor.first_name(), auditor.last_name()),
+                role,
+                avatar: auditor.avatar().clone(),
+            }
+        } else {
+            let customer = context
+                .make_request::<PublicCustomer>()
+                .get(format!(
+                    "{}://{}/{}/customer/{}",
+                    PROTOCOL.as_str(),
+                    CUSTOMERS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
+                    history.author,
+                ))
+                .auth(context.server_auth())
+                .send()
+                .await?
+                .json::<PublicCustomer>()
+                .await?;
+
+            EditHistoryAuthor {
+                id: history.author,
+                name: format!("{} {}", customer.first_name, customer.last_name),
+                role,
+                avatar: customer.avatar,
+            }
+        };
+
+        Ok(PublicAuditEditHistory {
+            id: history.id,
+            date: history.date,
+            author,
+            comment: history.comment,
+            audit: history.audit,
+        })
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct ChangeAuditHistory {
+    pub comment: Option<String>,
 }
