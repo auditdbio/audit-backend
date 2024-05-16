@@ -275,7 +275,6 @@ impl AuditService {
             return Err(anyhow::anyhow!("User is not available to change this audit").code(403));
         }
 
-        let old_audit = audit.clone();
         let mut is_history_changed = false;
 
         if let Some(public) = change.public {
@@ -353,13 +352,13 @@ impl AuditService {
                 author: user_id.to_hex(),
                 comment: change.comment,
                 audit: serde_json::to_string(&json!({
-                    "project_name": old_audit.project_name,
-                    "description": old_audit.description,
-                    "scope": old_audit.scope,
-                    "tags": old_audit.tags,
-                    "price": old_audit.price,
-                    "time": old_audit.time,
-                    "conclusion": old_audit.conclusion,
+                    "project_name": audit.project_name,
+                    "description": audit.description,
+                    "scope": audit.scope,
+                    "tags": audit.tags,
+                    "price": audit.price,
+                    "time": audit.time,
+                    "conclusion": audit.conclusion,
                 })).unwrap(),
             };
 
@@ -975,6 +974,7 @@ impl AuditService {
             result.push(PublicAuditEditHistory::new(&self.context, history, role).await?);
         }
 
+        result.reverse();
         Ok(result)
     }
 

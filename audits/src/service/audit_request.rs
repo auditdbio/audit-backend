@@ -106,6 +106,26 @@ impl RequestService {
             edit_history: Vec::new(),
         };
 
+        let project = get_project(&self.context, request.project_id).await?;
+
+        let edit_history_item = AuditEditHistory {
+            id: request.edit_history.len(),
+            date: request.last_modified.clone(),
+            author: project.customer_id.clone(),
+            comment: None,
+            audit: serde_json::to_string(&json!({
+                    "project_name": project.name,
+                    "description": request.description,
+                    "scope": project.scope,
+                    "tags": project.tags,
+                    "price": request.price,
+                    "time": request.time,
+                    "conclusion": "".to_string(),
+                })).unwrap(),
+        };
+
+        request.edit_history.push(edit_history_item);
+
         let old_version_of_this_request = requests
             .find_many("project_id", &Bson::ObjectId(request.project_id))
             .await?
@@ -113,8 +133,6 @@ impl RequestService {
             .filter(|r| r.customer_id == request.customer_id && r.auditor_id == request.auditor_id)
             .collect::<Vec<_>>()
             .pop();
-
-        let project = get_project(&self.context, request.project_id).await?;
 
         if let Some(old_version_of_this_request) = old_version_of_this_request {
             requests
@@ -362,7 +380,6 @@ impl RequestService {
             return Err(anyhow::anyhow!("User is not available to change this audit request").code(400));
         }
 
-        let old_request = request.clone();
         let mut is_history_changed = false;
 
         if let Some(description) = change.description {
@@ -403,15 +420,21 @@ impl RequestService {
         request.last_modified = Utc::now().timestamp_micros();
 
         if is_history_changed {
+            let project = get_project(&self.context, request.project_id).await?;
+
             let edit_history_item = AuditEditHistory {
                 id: request.edit_history.len(),
                 date: request.last_modified.clone(),
                 author: user_id.to_hex(),
                 comment: change.comment,
                 audit: serde_json::to_string(&json!({
-                    "description": old_request.description,
-                    "price": old_request.price,
-                    "time": old_request.time,
+                    "project_name": project.name,
+                    "description": request.description,
+                    "scope": project.scope,
+                    "tags": project.tags,
+                    "price": request.price,
+                    "time": request.time,
+                    "conclusion": "".to_string(),
                 })).unwrap(),
             };
 
@@ -570,6 +593,7 @@ impl RequestService {
             result.push(PublicAuditEditHistory::new(&self.context, history, role).await?);
         }
 
+        result.reverse();
         Ok(result)
     }
 }
