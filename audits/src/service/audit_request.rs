@@ -18,7 +18,7 @@ use common::{
     },
     context::GeneralContext,
     entities::{
-        audit_request::{AuditRequest, PriceRange, TimeRange},
+        audit_request::{AuditRequest, TimeRange},
         auditor::ExtendedAuditor,
         letter::CreateLetter,
         project::get_project,
@@ -37,8 +37,8 @@ pub struct RequestChange {
     description: Option<String>,
     time: Option<TimeRange>,
     project_scope: Option<Vec<String>>,
-    price_range: Option<PriceRange>,
     price: Option<i64>,
+    total_cost: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -88,6 +88,12 @@ impl RequestService {
             );
         };
 
+        let price_per_line = if request.total_cost.is_none() {
+            request.price
+        } else {
+            None
+        };
+
         let mut request = AuditRequest {
             id: ObjectId::new(),
             customer_id,
@@ -95,7 +101,8 @@ impl RequestService {
             project_id: request.project_id.parse()?,
             description: request.description,
             time: request.time,
-            price: request.price,
+            price: price_per_line,
+            total_cost: request.total_cost,
             last_modified: Utc::now().timestamp_micros(),
             last_changer,
             chat_id: None,
@@ -211,8 +218,6 @@ impl RequestService {
             };
             send_mail(&self.context, letter).await?;
         }
-
-
 
         let (event_receiver, receiver_role) = if last_changer == Role::Customer {
             (auditor_id, Role::Auditor)
@@ -358,7 +363,15 @@ impl RequestService {
         }
 
         if let Some(price) = change.price {
-            request.price = price;
+            if change.total_cost.is_none() {
+                request.price = Some(price);
+            }
+        }
+
+        if let Some(total_cost) = change.total_cost {
+            if change.price.is_none() {
+                request.total_cost = Some(total_cost);
+            }
         }
 
         let last_changer_role = if auth.id() == Some(request.customer_id) {

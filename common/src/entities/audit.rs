@@ -53,7 +53,8 @@ pub struct Audit<Id: Eq + Hash> {
     pub scope: Vec<String>,
     #[serde(default)]
     pub tags: Vec<String>,
-    pub price: i64,
+    pub price: Option<i64>,
+    pub total_cost: Option<i64>,
 
     pub last_modified: i64,
     pub report: Option<String>,
@@ -82,6 +83,7 @@ impl Audit<String> {
             scope: self.scope,
             tags: self.tags,
             price: self.price,
+            total_cost: self.total_cost,
             last_modified: self.last_modified,
             report: self.report,
             report_name: self.report_name,
@@ -108,6 +110,7 @@ impl Audit<ObjectId> {
             scope: self.scope,
             tags: self.tags,
             price: self.price,
+            total_cost: self.total_cost,
             last_modified: self.last_modified,
             report: self.report,
             report_name: self.report_name,

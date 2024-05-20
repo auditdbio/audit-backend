@@ -30,7 +30,8 @@ pub struct AuditRequest<Id> {
 
     pub description: String,
 
-    pub price: i64,
+    pub price: Option<i64>,
+    pub total_cost: Option<i64>,
     pub last_modified: i64,
     pub last_changer: Role,
     pub time: TimeRange,
@@ -47,6 +48,7 @@ impl AuditRequest<String> {
             project_id: self.project_id.parse().unwrap(),
             description: self.description,
             price: self.price,
+            total_cost: self.total_cost,
             last_modified: self.last_modified,
             last_changer: self.last_changer,
             time: self.time,
@@ -64,6 +66,7 @@ impl AuditRequest<ObjectId> {
             project_id: self.project_id.to_hex(),
             description: self.description,
             price: self.price,
+            total_cost: self.total_cost,
             last_modified: self.last_modified,
             last_changer: self.last_changer,
             time: self.time,

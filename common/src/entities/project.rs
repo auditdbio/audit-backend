@@ -30,7 +30,8 @@ pub struct Project<Id> {
     pub creator_contacts: Contacts,
     pub last_modified: i64,
     pub created_at: Option<i64>,
-    pub price: i64,
+    pub price: Option<i64>,
+    pub total_cost: Option<i64>,
     #[serde(default)]
     pub auditors: Vec<Id>,
 }
@@ -50,6 +51,7 @@ impl Project<String> {
             last_modified: self.last_modified,
             created_at: self.created_at,
             price: self.price,
+            total_cost: self.total_cost,
             auditors: self
                 .auditors
                 .into_iter()
@@ -74,6 +76,7 @@ impl Project<ObjectId> {
             last_modified: self.last_modified,
             created_at: self.created_at,
             price: self.price,
+            total_cost: self.total_cost,
             auditors: self.auditors.into_iter().map(|id| id.to_hex()).collect(),
         }
     }
@@ -97,7 +100,8 @@ pub struct PublicProject {
     pub status: String,
     pub creator_contacts: Contacts,
     pub kind: String,
-    pub price: i64,
+    pub price: Option<i64>,
+    pub total_cost: Option<i64>,
     pub created_at: Option<i64>,
 }
 
