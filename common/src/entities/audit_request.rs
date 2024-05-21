@@ -4,6 +4,7 @@ use utoipa::ToSchema;
 
 use crate::{
     api::chat::AuditMessageId,
+    entities::audit::AuditEditHistory,
     repository::Entity,
 };
 
@@ -36,6 +37,9 @@ pub struct AuditRequest<Id> {
     pub time: TimeRange,
 
     pub chat_id: Option<AuditMessageId>,
+
+    #[serde(default)]
+    pub edit_history: Vec<AuditEditHistory>,
 }
 
 impl AuditRequest<String> {
@@ -51,6 +55,7 @@ impl AuditRequest<String> {
             last_changer: self.last_changer,
             time: self.time,
             chat_id: self.chat_id,
+            edit_history: self.edit_history,
         }
     }
 }
@@ -68,6 +73,7 @@ impl AuditRequest<ObjectId> {
             last_changer: self.last_changer,
             time: self.time,
             chat_id: self.chat_id,
+            edit_history: self.edit_history,
         }
     }
 }
