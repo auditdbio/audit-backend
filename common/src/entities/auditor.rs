@@ -4,7 +4,7 @@ use utoipa::ToSchema;
 
 use crate::{
     repository::Entity,
-    services::{AUDITORS_SERVICE, PROTOCOL},
+    services::{API_PREFIX, AUDITORS_SERVICE, PROTOCOL},
 };
 
 use super::{audit_request::PriceRange, badge::PublicBadge, contacts::Contacts};
@@ -22,6 +22,8 @@ pub struct Auditor<Id> {
     pub contacts: Contacts,
     pub price_range: PriceRange,
     pub last_modified: i64,
+    pub created_at: Option<i64>,
+    pub link_id: Option<String>,
 }
 
 impl Auditor<String> {
@@ -38,6 +40,8 @@ impl Auditor<String> {
             contacts: self.contacts,
             price_range: self.price_range,
             last_modified: self.last_modified,
+            created_at: self.created_at,
+            link_id: self.link_id,
         }
     }
 }
@@ -56,6 +60,8 @@ impl Auditor<ObjectId> {
             contacts: self.contacts,
             price_range: self.price_range,
             last_modified: self.last_modified,
+            created_at: self.created_at,
+            link_id: self.link_id,
         }
     }
 }
@@ -85,6 +91,7 @@ pub struct PublicAuditor {
     pub price_range: PriceRange,
     pub kind: String,
     pub tags: Vec<String>,
+    pub link_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -99,6 +106,13 @@ impl ExtendedAuditor {
         match self {
             ExtendedAuditor::Auditor(auditor) => &auditor.avatar,
             ExtendedAuditor::Badge(badge) => &badge.avatar,
+        }
+    }
+
+    pub fn user_id(&self) -> &String {
+        match self {
+            ExtendedAuditor::Auditor(auditor) => &auditor.user_id,
+            ExtendedAuditor::Badge(badge) => &badge.user_id,
         }
     }
 
@@ -122,6 +136,13 @@ impl ExtendedAuditor {
             ExtendedAuditor::Badge(badge) => &badge.contacts,
         }
     }
+
+    pub fn is_empty(&self) -> bool {
+        match self {
+            ExtendedAuditor::Auditor(auditor) => auditor.first_name.is_empty(),
+            ExtendedAuditor::Badge(badge) => badge.first_name.is_empty(),
+        }
+    }
 }
 
 impl From<Auditor<ObjectId>> for Option<Document> {
@@ -135,9 +156,10 @@ impl From<Auditor<ObjectId>> for Option<Document> {
         document.insert(
             "request_url",
             format!(
-                "{}://{}/api/auditor/data",
+                "{}://{}/{}/auditor/data",
                 PROTOCOL.as_str(),
-                AUDITORS_SERVICE.as_str()
+                AUDITORS_SERVICE.as_str(),
+                API_PREFIX.as_str(),
             ),
         );
         document.insert(

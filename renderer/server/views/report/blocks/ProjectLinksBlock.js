@@ -1,5 +1,6 @@
 import React from 'react'
 import TitleLabel from '../TitleLabel.js'
+import linkShortener from '../../../utils/linkShortener.js'
 
 const ProjectLinksBlock = ({ data, num, subsectionLevel }) => {
   return (
@@ -8,13 +9,15 @@ const ProjectLinksBlock = ({ data, num, subsectionLevel }) => {
         {num}. {data?.title}
         <TitleLabel show={true} />
       </h2>
-      <div className="scope page-break">
+      <ul className="scope page-break project-links">
         {data?.links?.map((link, idx) => (
-          <a href={link} key={idx} className="project-link">
-            {link}
-          </a>
+          <li key={idx} style={{marginBottom: '5px'}}>
+            <a href={link} className="project-link">
+              {linkShortener(link)}
+            </a>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   )
 }

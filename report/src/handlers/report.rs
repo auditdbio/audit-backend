@@ -4,7 +4,7 @@ use actix_web::{
 };
 use common::{api::report::PublicReport, context::GeneralContext, error};
 
-#[post("/api/report/{id}")]
+#[post("/report/{id}")]
 pub async fn create_report(
     context: GeneralContext,
     id: Path<String>,

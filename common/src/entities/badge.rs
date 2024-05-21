@@ -4,7 +4,7 @@ use utoipa::ToSchema;
 
 use crate::{
     repository::Entity,
-    services::{AUDITORS_SERVICE, PROTOCOL},
+    services::{API_PREFIX, AUDITORS_SERVICE, PROTOCOL},
 };
 
 use super::{audit_request::PriceRange, contacts::Contacts};
@@ -22,6 +22,8 @@ pub struct Badge<Id> {
     pub contacts: Contacts,
     pub price_range: PriceRange,
     pub last_modified: i64,
+    pub created_at: Option<i64>,
+    pub link_id: Option<String>,
 }
 
 impl Badge<String> {
@@ -38,6 +40,8 @@ impl Badge<String> {
             contacts: self.contacts,
             price_range: self.price_range,
             last_modified: self.last_modified,
+            created_at: self.created_at,
+            link_id: self.link_id,
         }
     }
 }
@@ -56,6 +60,8 @@ impl Badge<ObjectId> {
             contacts: self.contacts,
             price_range: self.price_range,
             last_modified: self.last_modified,
+            created_at: self.created_at,
+            link_id: self.link_id,
         }
     }
 }
@@ -85,6 +91,7 @@ pub struct PublicBadge {
     pub price_range: PriceRange,
     pub kind: String,
     pub tags: Vec<String>,
+    pub link_id: Option<String>,
 }
 
 impl From<Badge<ObjectId>> for Option<Document> {
@@ -98,9 +105,10 @@ impl From<Badge<ObjectId>> for Option<Document> {
         document.insert(
             "request_url",
             format!(
-                "{}://{}/api/badge/data",
+                "{}://{}/{}/badge/data",
                 PROTOCOL.as_str(),
-                AUDITORS_SERVICE.as_str()
+                AUDITORS_SERVICE.as_str(),
+                API_PREFIX.as_str(),
             ),
         );
         document.insert(

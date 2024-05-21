@@ -16,5 +16,6 @@ lazy_static! {
     pub static ref EVENTS_SERVICE: String = var("EVENTS_SERVICE_URL").unwrap();
     pub static ref CHAT_SERVICE: String = var("EVENTS_SERVICE_URL").unwrap();
     pub static ref REPORT_SERVICE: String = var("REPORT_SERVICE_URL").unwrap();
+    pub static ref API_PREFIX: String = var("API_PREFIX").unwrap();
     pub static ref FRONTEND: String = var("FRONTEND").unwrap();
 }

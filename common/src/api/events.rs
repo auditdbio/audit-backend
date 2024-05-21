@@ -5,7 +5,7 @@ use crate::{
     auth::Auth,
     context::GeneralContext,
     error,
-    services::{EVENTS_SERVICE, PROTOCOL},
+    services::{API_PREFIX, EVENTS_SERVICE, PROTOCOL},
 };
 
 use super::{
@@ -22,6 +22,7 @@ pub enum EventPayload {
     NewAudit(PublicAudit),
     AuditUpdate(PublicAudit),
     ChatMessage(PublicMessage),
+    ChatDeleteMessage(String),
     IssueUpdate { issue: PublicIssue, audit: String },
     VersionUpdate,
 }
@@ -34,6 +35,7 @@ impl EventPayload {
             EventPayload::NewAudit(_) => "NewAudit".to_owned(),
             EventPayload::AuditUpdate(_) => "AuditUpdate".to_owned(),
             EventPayload::ChatMessage(_) => "ChatMessage".to_owned(),
+            EventPayload::ChatDeleteMessage(_) => "ChatDeleteMessage".to_owned(),
             EventPayload::RequestAccept(_) => "RequestAccept".to_owned(),
             EventPayload::RequestDecline(_) => "RequestDecline".to_owned(),
             EventPayload::IssueUpdate { issue: _, audit: _ } => "IssueUpdated".to_owned(),
@@ -72,9 +74,10 @@ pub async fn post_event(
     context
         .make_request()
         .post(format!(
-            "{}://{}/api/event",
+            "{}://{}/{}/event",
             PROTOCOL.as_str(),
-            EVENTS_SERVICE.as_str()
+            EVENTS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
         ))
         .auth(auth)
         .json(&event)

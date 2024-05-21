@@ -4,10 +4,15 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    api::report::PublicReport,
-    context::{self, context_trait::Context, GeneralContext},
+    api::{
+        chat::AuditMessageId,
+        report::PublicReport,
+    },
+    entities::{auditor::ExtendedAuditor, customer::PublicCustomer, role::Role},
+    error,
+    context::GeneralContext,
     repository::Entity,
-    services::{PROTOCOL, REPORT_SERVICE},
+    services::{API_PREFIX, PROTOCOL, AUDITORS_SERVICE, CUSTOMERS_SERVICE, REPORT_SERVICE},
 };
 
 use super::{audit_request::TimeRange, issue::Issue};
@@ -48,6 +53,8 @@ pub struct Audit<Id: Eq + Hash> {
     pub description: String,
     pub status: AuditStatus,
     pub scope: Vec<String>,
+    #[serde(default)]
+    pub tags: Vec<String>,
     pub price: i64,
 
     pub last_modified: i64,
@@ -59,7 +66,12 @@ pub struct Audit<Id: Eq + Hash> {
     pub issues: Vec<Issue<Id>>,
 
     #[serde(default)]
+    pub edit_history: Vec<AuditEditHistory>,
+
+    #[serde(default)]
     pub no_customer: bool,
+    pub chat_id: Option<AuditMessageId>,
+    pub conclusion: Option<String>,
 }
 
 impl Audit<String> {
@@ -73,6 +85,7 @@ impl Audit<String> {
             description: self.description,
             status: self.status,
             scope: self.scope,
+            tags: self.tags,
             price: self.price,
             last_modified: self.last_modified,
             report: self.report,
@@ -81,6 +94,9 @@ impl Audit<String> {
             issues: Issue::parse_map(self.issues),
             public: self.public,
             no_customer: self.no_customer,
+            chat_id: self.chat_id,
+            conclusion: self.conclusion,
+            edit_history: self.edit_history,
         }
     }
 }
@@ -96,6 +112,7 @@ impl Audit<ObjectId> {
             description: self.description,
             status: self.status,
             scope: self.scope,
+            tags: self.tags,
             price: self.price,
             last_modified: self.last_modified,
             report: self.report,
@@ -104,28 +121,48 @@ impl Audit<ObjectId> {
             issues: Issue::to_string_map(self.issues),
             public: self.public,
             no_customer: self.no_customer,
+            chat_id: self.chat_id,
+            conclusion: self.conclusion,
+            edit_history: self.edit_history,
         }
     }
 
     pub async fn resolve(&mut self, context: &GeneralContext) {
         if self.report.is_none() {
-            let public_report = context
+            let report_response = context
                 .make_request::<()>()
                 .post(format!(
-                    "{}://{}/api/report/{}",
+                    "{}://{}/{}/report/{}",
                     PROTOCOL.as_str(),
                     REPORT_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
                     self.id
                 ))
                 .auth(context.server_auth())
                 .send()
-                .await
-                .unwrap()
-                .json::<PublicReport>()
-                .await
-                .unwrap();
-            self.report = Some(public_report.path.clone());
-            self.report_name = Some(public_report.path);
+                .await;
+                // .unwrap()
+                // .json::<PublicReport>()
+                // .await;
+
+            if let Err(err) = report_response {
+                println!("Error in report request: {}", err);
+                return;
+            }
+
+            let report_response = report_response.unwrap();
+            if report_response.status().is_success() {
+                let public_report = report_response.json::<PublicReport>().await;
+                if let Err(err) = public_report {
+                    println!("Error in report response json: {}", err);
+                    return;
+                }
+                let public_report = public_report.unwrap();
+                self.report = Some(public_report.path.clone());
+                self.report_name = Some(public_report.path);
+            } else {
+                println!("Report receiving error: {}", report_response.status());
+            }
         }
     }
 }
@@ -134,4 +171,97 @@ impl Entity for Audit<ObjectId> {
     fn id(&self) -> ObjectId {
         self.id
     }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct AuditEditHistory {
+    pub id: usize,
+    pub date: i64,
+    pub author: String,
+    pub comment: Option<String>,
+    pub audit: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct EditHistoryAuthor {
+    pub id: String,
+    pub name: String,
+    pub role: Role,
+    pub avatar: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct PublicAuditEditHistory {
+    pub id: usize,
+    pub date: i64,
+    pub author: EditHistoryAuthor,
+    pub comment: Option<String>,
+    pub audit: String,
+}
+
+impl PublicAuditEditHistory {
+    pub async fn new(
+        context: &GeneralContext,
+        history: AuditEditHistory,
+        role: Role,
+    ) -> error::Result<PublicAuditEditHistory> {
+        let author = if role == Role::Auditor {
+            let auditor = context
+                .make_request::<ExtendedAuditor>()
+                .get(format!(
+                    "{}://{}/{}/auditor/{}",
+                    PROTOCOL.as_str(),
+                    AUDITORS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
+                    history.author,
+                ))
+                .auth(context.server_auth())
+                .send()
+                .await?
+                .json::<ExtendedAuditor>()
+                .await?;
+
+            EditHistoryAuthor {
+                id: history.author,
+                name: format!("{} {}", auditor.first_name(), auditor.last_name()),
+                role,
+                avatar: auditor.avatar().clone(),
+            }
+        } else {
+            let customer = context
+                .make_request::<PublicCustomer>()
+                .get(format!(
+                    "{}://{}/{}/customer/{}",
+                    PROTOCOL.as_str(),
+                    CUSTOMERS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
+                    history.author,
+                ))
+                .auth(context.server_auth())
+                .send()
+                .await?
+                .json::<PublicCustomer>()
+                .await?;
+
+            EditHistoryAuthor {
+                id: history.author,
+                name: format!("{} {}", customer.first_name, customer.last_name),
+                role,
+                avatar: customer.avatar,
+            }
+        };
+
+        Ok(PublicAuditEditHistory {
+            id: history.id,
+            date: history.date,
+            author,
+            comment: history.comment,
+            audit: history.audit,
+        })
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct ChangeAuditHistory {
+    pub comment: Option<String>,
 }

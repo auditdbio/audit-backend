@@ -2,7 +2,11 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::repository::Entity;
+use crate::{
+    api::chat::AuditMessageId,
+    entities::audit::AuditEditHistory,
+    repository::Entity,
+};
 
 use super::role::Role;
 
@@ -31,6 +35,11 @@ pub struct AuditRequest<Id> {
     pub last_modified: i64,
     pub last_changer: Role,
     pub time: TimeRange,
+
+    pub chat_id: Option<AuditMessageId>,
+
+    #[serde(default)]
+    pub edit_history: Vec<AuditEditHistory>,
 }
 
 impl AuditRequest<String> {
@@ -45,6 +54,8 @@ impl AuditRequest<String> {
             last_modified: self.last_modified,
             last_changer: self.last_changer,
             time: self.time,
+            chat_id: self.chat_id,
+            edit_history: self.edit_history,
         }
     }
 }
@@ -61,6 +72,8 @@ impl AuditRequest<ObjectId> {
             last_modified: self.last_modified,
             last_changer: self.last_changer,
             time: self.time,
+            chat_id: self.chat_id,
+            edit_history: self.edit_history,
         }
     }
 }

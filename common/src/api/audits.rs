@@ -1,7 +1,7 @@
-use std::collections::HashMap;
 use chrono::Utc;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use crate::{
     context::GeneralContext,
@@ -10,11 +10,11 @@ use crate::{
         audit_request::TimeRange,
         auditor::{ExtendedAuditor, PublicAuditor},
         contacts::Contacts,
-        issue::{Status, Issue},
+        issue::{Issue, Status},
         project::PublicProject,
     },
     error,
-    services::{AUDITORS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL},
+    services::{API_PREFIX, AUDITORS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL},
 };
 
 use super::issue::PublicIssue;
@@ -34,12 +34,15 @@ pub struct AuditChange {
     pub project_name: Option<String>,
     pub description: Option<String>,
     pub scope: Option<Vec<String>>,
+    pub tags: Option<Vec<String>>,
     pub report_name: Option<String>,
     pub report: Option<String>,
     pub time: Option<TimeRange>,
     pub start_audit: Option<bool>,
     #[serde(rename = "isPublic")]
     pub public: Option<bool>,
+    pub conclusion: Option<String>,
+    pub comment: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -111,6 +114,7 @@ pub struct PublicAudit {
 
     #[serde(default)]
     pub no_customer: bool,
+    pub conclusion: Option<String>,
 }
 
 impl PublicAudit {
@@ -122,9 +126,10 @@ impl PublicAudit {
         let auditor = context
             .make_request::<PublicAuditor>()
             .get(format!(
-                "{}://{}/api/auditor/{}",
+                "{}://{}/{}/auditor/{}",
                 PROTOCOL.as_str(),
                 AUDITORS_SERVICE.as_str(),
+                API_PREFIX.as_str(),
                 audit.auditor_id
             ))
             .auth(context.server_auth())
@@ -139,9 +144,10 @@ impl PublicAudit {
                 context
                     .make_request::<PublicProject>()
                     .get(format!(
-                        "{}://{}/api/project/{}",
+                        "{}://{}/{}/project/{}",
                         PROTOCOL.as_str(),
                         CUSTOMERS_SERVICE.as_str(),
+                        API_PREFIX.as_str(),
                         audit.project_id
                     ))
                     .auth(context.server_auth())
@@ -178,12 +184,6 @@ impl PublicAudit {
             }
         };
 
-        let tags = if let Some(project) = &project {
-            project.tags.clone()
-        } else {
-            Vec::new()
-        };
-
         let project_name = if let Some(project) = &project {
             if audit.project_name == "" {
                 project.name.clone()
@@ -209,7 +209,7 @@ impl PublicAudit {
             price: audit.price,
             auditor_contacts: auditor.contacts().clone(),
             customer_contacts,
-            tags,
+            tags: audit.tags,
             last_modified: audit.last_modified,
             report: audit.report,
             report_name: audit.report_name,
@@ -221,6 +221,7 @@ impl PublicAudit {
                 .collect(),
             public: audit.public,
             no_customer: audit.no_customer,
+            conclusion: audit.conclusion,
         };
 
         Ok(public_audit)
@@ -247,4 +248,5 @@ pub struct NoCustomerAuditRequest {
     pub public: bool,
 
     pub issues: Vec<CreateIssue>,
+    pub conclusion: Option<String>,
 }

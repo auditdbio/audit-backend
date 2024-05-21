@@ -36,6 +36,11 @@ pre code {
   white-space: pre-wrap !important;
 }
 
+a {
+  text-decoration: none;
+  letter-spacing: normal;
+}
+
 table {
   border: 1px solid #f6f6f6;
   border-collapse: collapse;
@@ -141,8 +146,8 @@ td {
 .QR-wrapper {
   display: inline-block;
   background: white;
-  padding: 10px;
-  margin-bottom: 20px;
+  padding: 10px 10px 10px 0;
+  margin: 10px 0 20px;
 }
 
 .report-block {
@@ -178,12 +183,18 @@ td {
   widows: 2;
 }
 
+.project-links {
+  padding-left: 25px;
+}
+
 .project-name {
   text-align: center;
   font-weight: 600;
   color: #434242;
   margin: 200px 0 20px;
   word-break: break-word;
+  overflow: hidden;
+  max-height: 490px;
 }
 
 .project-description {
@@ -230,8 +241,8 @@ td {
 }
 
 .issue-links {
-  padding: 0 20px;
-  margin-bottom: 30px;
+  padding-left: 25px;
+  margin-bottom: 20px;
   page-break-inside: avoid;
 }
 

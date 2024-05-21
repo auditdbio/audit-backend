@@ -1,32 +1,43 @@
 use std::collections::HashMap;
-
+use serde::{Deserialize, Serialize};
+use serde_json::json;
 use chrono::Utc;
+use rand::Rng;
+use mongodb::bson::{oid::ObjectId, Bson};
 
-use common::api::audits::NoCustomerAuditRequest;
-use common::entities::audit_request::TimeRange;
-use common::entities::contacts::Contacts;
-use common::entities::project::{PublicProject, PublishOptions};
 use common::{
     access_rules::{AccessRules, Edit, Read},
     api::{
-        audits::{AuditAction, AuditChange, CreateIssue, PublicAudit},
+        audits::{AuditAction, AuditChange, CreateIssue, PublicAudit, NoCustomerAuditRequest},
+        chat::{
+            send_message, create_audit_message,
+            delete_message, AuditMessageStatus,
+            CreateAuditMessage, AuditMessageId
+        },
         events::{post_event, EventPayload, PublicEvent},
         issue::PublicIssue,
         send_notification, NewNotification,
+        seartch::PaginationParams,
     },
     context::GeneralContext,
     entities::{
-        audit::{Audit, AuditStatus},
-        audit_request::AuditRequest,
-        issue::{severity_to_integer, ChangeIssue, Event, EventKind, Issue, Status},
+        audit::{Audit, AuditStatus, AuditEditHistory, PublicAuditEditHistory, ChangeAuditHistory},
+        audit_request::{AuditRequest, TimeRange},
+        issue::{severity_to_integer, ChangeIssue, Event, EventKind, Issue, Status, Action},
         project::get_project,
         role::Role,
     },
     error::{self, AddCode},
 };
-use mongodb::bson::{oid::ObjectId, Bson};
 
 use super::audit_request::PublicRequest;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MyAuditResult {
+    pub result: Vec<PublicAudit>,
+    #[serde(rename = "totalDocuments")]
+    pub total_documents: u64,
+}
 
 pub struct AuditService {
     context: GeneralContext,
@@ -41,10 +52,17 @@ impl AuditService {
         let auth = self.context.auth();
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
+        let user_id = auth.id().unwrap();
         let auditor_id = request.auditor_id.parse()?;
         let customer_id = request.customer_id.parse()?;
 
-        let audit = Audit {
+        let tags = if let Some(request_tags) = request.tags {
+            request_tags
+        } else {
+            Vec::new()
+        };
+
+        let mut audit = Audit {
             id: request.id.parse()?,
             customer_id,
             auditor_id,
@@ -53,6 +71,7 @@ impl AuditService {
             description: request.description,
             status: AuditStatus::Waiting,
             scope: request.project_scope,
+            tags,
             price: request.price,
             last_modified: Utc::now().timestamp_micros(),
             report: None,
@@ -61,30 +80,56 @@ impl AuditService {
             issues: Vec::new(),
             public: false,
             no_customer: false,
+            chat_id: None,
+            conclusion: None,
+            edit_history: Vec::new(),
         };
-
-        audits.insert(&audit).await?;
 
         let requests = self
             .context
             .try_get_repository::<AuditRequest<ObjectId>>()?;
 
-        requests.delete("id", &request.id.parse()?).await?;
+        if let Some(request) = requests
+            .delete("id", &request.id.parse()?)
+            .await? {
+            audit.edit_history = request.edit_history;
 
-        let public_audit = PublicAudit::new(&self.context, audit).await?;
+            if let Some(chat_id) = request.chat_id {
+                delete_message(chat_id.chat_id, chat_id.message_id, auth.clone())?
+            }
+        }
 
-        let event_reciver = if auth.id().unwrap() == customer_id {
-            auditor_id
+        let public_audit = PublicAudit::new(&self.context, audit.clone()).await?;
+
+        let (event_receiver, receiver_role, last_changer) = if user_id == customer_id {
+            (auditor_id, Role::Auditor, Role::Customer)
         } else {
-            customer_id
+            (customer_id, Role::Customer, Role::Auditor)
         };
 
-        let event = PublicEvent::new(event_reciver, EventPayload::NewAudit(public_audit.clone()));
+        let message = create_audit_message(
+            CreateAuditMessage::Audit(public_audit.clone()),
+            Some(audit.status.clone().into()),
+            event_receiver,
+            receiver_role,
+            last_changer
+        );
+
+        let chat = send_message(message, auth)?;
+
+        audit.chat_id = Some(AuditMessageId {
+            chat_id: chat.id,
+            message_id: chat.last_message.id,
+        });
+
+        audits.insert(&audit).await?;
+
+        let event = PublicEvent::new(event_receiver, EventPayload::NewAudit(public_audit.clone()));
 
         post_event(&self.context, event, self.context.server_auth()).await?;
 
         let event = PublicEvent::new(
-            event_reciver,
+            event_receiver,
             EventPayload::RequestAccept(request.id.clone()),
         );
 
@@ -117,6 +162,7 @@ impl AuditService {
             description: request.description,
             status: request.status,
             scope: request.scope,
+            tags: request.tags,
             price: 0,
             last_modified: Utc::now().timestamp_micros(),
             report: None,
@@ -125,6 +171,9 @@ impl AuditService {
             public: false,
             no_customer: true,
             issues: CreateIssue::to_issue_map(request.issues),
+            chat_id: None,
+            conclusion: request.conclusion,
+            edit_history: Vec::new(),
         };
 
         if !Edit.get_access(&auth, &audit) {
@@ -146,7 +195,7 @@ impl AuditService {
         };
 
         if !Read.get_access(&auth, &audit) {
-            return Err(anyhow::anyhow!("User is not available to change this audit").code(403));
+            return Err(anyhow::anyhow!("User is not available to read this audit").code(403));
         }
 
         Ok(Some(audit))
@@ -164,21 +213,38 @@ impl AuditService {
         Ok(None)
     }
 
-    pub async fn my_audit(&self, role: Role) -> error::Result<Vec<PublicAudit>> {
+    pub async fn my_audit(
+        &self,
+        role: Role,
+        pagination: PaginationParams
+    ) -> error::Result<Vec<PublicAudit>> {
+        let page = pagination.page.unwrap_or(0);
+        let per_page = pagination.per_page.unwrap_or(0);
+        let limit = pagination.per_page.unwrap_or(1000);
+        let skip = (page - 1) * per_page;
+
         let auth = self.context.auth();
 
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
-        let audits = match role {
+        let (audits, _total_documents) = match role {
             Role::Auditor => {
                 audits
-                    .find_many("auditor_id", &Bson::ObjectId(auth.id().unwrap()))
-                    .await?
+                    .find_many_limit(
+                        "auditor_id",
+                        &Bson::ObjectId(auth.id().unwrap()),
+                        skip,
+                        limit,
+                    ).await?
             }
             Role::Customer => {
                 audits
-                    .find_many("customer_id", &Bson::ObjectId(auth.id().unwrap()))
-                    .await?
+                    .find_many_limit(
+                        "customer_id",
+                        &Bson::ObjectId(auth.id().unwrap()),
+                        skip,
+                        limit,
+                    ).await?
             }
         };
 
@@ -188,11 +254,16 @@ impl AuditService {
             public_audits.push(PublicAudit::new(&self.context, audit).await?);
         }
 
+        // Ok(MyAuditResult {
+        //     result: public_audits,
+        //     total_documents,
+        // })
         Ok(public_audits)
     }
 
     pub async fn change(&self, id: ObjectId, change: AuditChange) -> error::Result<PublicAudit> {
         let auth = self.context.auth();
+        let user_id = auth.id().unwrap();
 
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
@@ -204,34 +275,59 @@ impl AuditService {
             return Err(anyhow::anyhow!("User is not available to change this audit").code(403));
         }
 
+        let mut is_history_changed = false;
+
         if let Some(public) = change.public {
             audit.public = public;
         }
 
         if audit.status != AuditStatus::Resolved || audit.no_customer {
             if let Some(scope) = change.scope {
-                audit.scope = scope;
+                if audit.scope != scope {
+                    audit.scope = scope;
+                    is_history_changed = true;
+                }
             }
             if let Some(description) = change.description {
-                audit.description = description;
+                if audit.description != description {
+                    audit.description = description;
+                    is_history_changed = true;
+                }
+            }
+            if let Some(tags) = change.tags {
+                if audit.tags != tags {
+                    audit.tags = tags;
+                    is_history_changed = true;
+                }
+            }
+            if let Some(conclusion) = change.conclusion {
+                if user_id == audit.auditor_id {
+                    if audit.conclusion.is_some() && audit.conclusion.clone().unwrap() != conclusion {
+                        audit.conclusion = Some(conclusion);
+                        is_history_changed = true;
+                    }
+                }
             }
         }
 
         if audit.no_customer {
             if let Some(project_name) = change.project_name {
-                audit.project_name = project_name;
+                if audit.project_name != project_name {
+                    audit.project_name = project_name;
+                    is_history_changed = true;
+                }
             }
         }
 
-        if let Some(report) = change.report {
-            audit.report = Some(report);
+        if let Some(ref report) = change.report {
+            audit.report = Some(report.clone());
         }
 
-        if let Some(report_name) = change.report_name {
-            audit.report_name = Some(report_name);
+        if let Some(ref report_name) = change.report_name {
+            audit.report_name = Some(report_name.clone());
         }
 
-        if let Some(action) = change.action {
+        if let Some(ref action) = change.action {
             match action {
                 AuditAction::Start => {
                     if audit.status == AuditStatus::Waiting {
@@ -249,23 +345,76 @@ impl AuditService {
 
         audit.last_modified = Utc::now().timestamp_micros();
 
-        audits.delete("_id", &id).await?;
-        audits.insert(&audit).await?;
+        if is_history_changed {
+            let edit_history_item = AuditEditHistory {
+                id: audit.edit_history.len(),
+                date: audit.last_modified.clone(),
+                author: user_id.to_hex(),
+                comment: change.comment,
+                audit: serde_json::to_string(&json!({
+                    "project_name": audit.project_name,
+                    "description": audit.description,
+                    "scope": audit.scope,
+                    "tags": audit.tags,
+                    "price": audit.price,
+                    "time": audit.time,
+                    "conclusion": audit.conclusion,
+                })).unwrap(),
+            };
 
-        let event_reciver = if auth.id().unwrap() == audit.customer_id {
-            audit.auditor_id
+            audit.edit_history.push(edit_history_item);
+        }
+
+        let (
+            event_receiver,
+            receiver_role,
+            last_changer_role,
+        ) = if user_id == audit.customer_id {
+            (audit.auditor_id, Role::Auditor, Role::Customer)
         } else {
-            audit.customer_id
+            (audit.customer_id, Role::Customer, Role::Auditor)
         };
 
-        let public_audit = PublicAudit::new(&self.context, audit).await?;
+        let public_audit = PublicAudit::new(&self.context, audit.clone()).await?;
 
         let event = PublicEvent::new(
-            event_reciver,
+            event_receiver,
             EventPayload::AuditUpdate(public_audit.clone()),
         );
 
         post_event(&self.context, event, self.context.server_auth()).await?;
+
+        if change.report.is_some() && audit.status != AuditStatus::Resolved {
+            audits.delete("_id", &id).await?;
+            audits.insert(&audit).await?;
+            return Ok(public_audit)
+        }
+
+        if !audit.no_customer
+           && (change.report.is_some() || change.report_name.is_some() || change.action.is_some())
+        {
+            if let Some(chat_id) = audit.chat_id {
+                delete_message(chat_id.chat_id, chat_id.message_id, auth.clone())?
+            }
+
+            let message = create_audit_message(
+                CreateAuditMessage::Audit(public_audit.clone()),
+                Some(audit.status.clone().into()),
+                event_receiver,
+                receiver_role,
+                last_changer_role
+            );
+
+            let chat = send_message(message, auth)?;
+
+            audit.chat_id = Some(AuditMessageId {
+                chat_id: chat.id,
+                message_id: chat.last_message.id,
+            });
+        }
+
+        audits.delete("_id", &id).await?;
+        audits.insert(&audit).await?;
 
         Ok(public_audit)
     }
@@ -284,7 +433,27 @@ impl AuditService {
             return Err(anyhow::anyhow!("User is not available to delete this audit").code(403));
         }
 
-        let public_audit = PublicAudit::new(&self.context, audit).await?;
+        let public_audit = PublicAudit::new(&self.context, audit.clone()).await?;
+
+        let (receiver_id, receiver_role, current_role) = if auth.id().unwrap() == audit.customer_id {
+            (audit.auditor_id, Role::Auditor, Role::Customer)
+        } else {
+            (audit.customer_id, Role::Customer, Role::Auditor)
+        };
+
+        if let Some(chat_id) = audit.chat_id {
+            delete_message(chat_id.chat_id, chat_id.message_id, auth.clone())?
+        }
+
+        let message = create_audit_message(
+            CreateAuditMessage::Audit(public_audit.clone()),
+            Some(AuditMessageStatus::Declined),
+            receiver_id,
+            receiver_role,
+            current_role
+        );
+
+        send_message(message, auth)?;
 
         Ok(public_audit)
     }
@@ -300,7 +469,7 @@ impl AuditService {
         };
 
         let issue: Issue<ObjectId> = Issue {
-            id: audit.issues.len(),
+            id: rand::thread_rng().gen_range(10000..=99999) + audit.issues.len(),
             name: issue.name,
             description: issue.description,
             status: issue.status,
@@ -375,7 +544,7 @@ impl AuditService {
             return Err(anyhow::anyhow!("No audit found").code(404));
         };
 
-        if !change.get_access(&audit, &auth) {
+        if !change.get_access(&audit, &auth) && !audit.no_customer {
             return Err(anyhow::anyhow!("User is not available to change this issue").code(403));
         }
 
@@ -384,9 +553,9 @@ impl AuditService {
             .iter()
             .find(|issue| issue.id == issue_id)
             .cloned()
-        else {
-            return Err(anyhow::anyhow!("No issue found").code(404));
-        };
+            else {
+                return Err(anyhow::anyhow!("No issue found").code(404));
+            };
 
         if let Some(name) = change.name {
             issue.name = name;
@@ -423,11 +592,17 @@ impl AuditService {
         };
 
         if let Some(action) = change.status {
-            let Some(new_state) = issue.status.apply(&action) else {
-                return Err(anyhow::anyhow!("Invalid action").code(400));
-            };
+            if audit.no_customer {
+                issue.status = match action {
+                    Action::Fixed => Status::Fixed,
+                    Action::NotFixed => Status::NotFixed,
+                    _ => return Err(anyhow::anyhow!("Invalid action").code(400))
+                }
+            } else {
+                let Some(new_state) = issue.status.apply(&action) else {
+                    return Err(anyhow::anyhow!("Invalid action").code(400));
+                };
 
-            if !&audit.no_customer {
                 let mut new_notification: NewNotification = if role == Role::Customer {
                     serde_json::from_str(include_str!(
                         "../../templates/audit_issue_status_change_auditor.txt"
@@ -448,16 +623,16 @@ impl AuditService {
                 ];
 
                 send_notification(&self.context, true, true, new_notification, variables).await?;
-            }
 
-            issue.status = new_state.clone();
+                issue.status = new_state.clone();
 
-            Self::create_event(
-                &self.context,
-                &mut issue,
-                EventKind::StatusChange,
-                format!("changed status to {:?}", new_state),
-            );
+                Self::create_event(
+                    &self.context,
+                    &mut issue,
+                    EventKind::StatusChange,
+                    format!("changed status to {:?}", new_state),
+                );
+            };
         }
 
         if let Some(severity) = change.severity.clone() {
@@ -571,7 +746,6 @@ impl AuditService {
 
         issue.last_modified = Utc::now().timestamp();
 
-        // audit.issues[issue_id] = issue.clone();
         if let Some(idx) = audit.issues.iter().position(|issue| issue.id == issue_id) {
             audit.issues[idx] = issue.clone();
         }
@@ -678,7 +852,11 @@ impl AuditService {
         let audit = self.get_audit(audit_id).await?;
 
         if let Some(audit) = audit {
-            let issue = audit.issues.get(issue_id).cloned();
+            let issue = audit
+                .issues
+                .iter()
+                .find(|issue| issue.id == issue_id)
+                .cloned();
 
             if let Some(issue) = issue {
                 return Ok(auth.public_issue(issue));
@@ -686,6 +864,39 @@ impl AuditService {
         }
 
         Err(anyhow::anyhow!("No issue found").code(404))
+    }
+
+    pub async fn delete_issue(
+        &self,
+        audit_id: ObjectId,
+        issue_id: usize,
+    ) -> error::Result<PublicIssue> {
+        let auth = self.context.auth();
+        let Some(mut audit) = self.get_audit(audit_id).await? else {
+            return Err(anyhow::anyhow!("No audit found").code(404));
+        };
+
+        if !Edit.get_access(&auth, &audit) || !audit.no_customer {
+            return Err(anyhow::anyhow!("User is not available to delete this issue").code(403));
+        }
+
+        let Some(issue) = audit
+            .issues
+            .iter()
+            .find(|issue| issue.id == issue_id)
+            .cloned()
+            else {
+                return Err(anyhow::anyhow!("No issue found").code(404));
+            };
+
+        audit.issues.retain(|issue| issue.id != issue_id);
+
+        let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
+        audits.delete("_id", &audit_id).await?;
+        audits.insert(&audit).await?;
+        let public_issue = auth.public_issue(issue);
+
+        Ok(public_issue)
     }
 
     pub async fn read_events(
@@ -699,7 +910,10 @@ impl AuditService {
         let audit = self.get_audit(audit_id).await?;
 
         if let Some(mut audit) = audit {
-            let issue = audit.issues.get_mut(issue_id);
+            let issue = audit
+                .issues
+                .iter_mut()
+                .find(|issue| issue.id == issue_id);
 
             if let Some(issue) = issue {
                 issue.read.insert(auth.id().unwrap().to_hex(), read);
@@ -739,5 +953,75 @@ impl AuditService {
         }
 
         Ok(result)
+    }
+
+    pub async fn get_audit_edit_history(
+        &self,
+        id: ObjectId,
+    ) -> error::Result<Vec<PublicAuditEditHistory>> {
+        let Some(audit) = self.get_audit(id).await? else {
+            return Err(anyhow::anyhow!("Audit not found").code(404));
+        };
+
+        let mut result = vec![];
+
+        for history in audit.edit_history {
+            let role = if history.author == audit.auditor_id.to_hex() {
+                Role::Auditor
+            } else {
+                Role::Customer
+            };
+            result.push(PublicAuditEditHistory::new(&self.context, history, role).await?);
+        }
+
+        result.reverse();
+        Ok(result)
+    }
+
+    pub async fn change_audit_edit_history(
+        &self,
+        audit_id: ObjectId,
+        history_id: usize,
+        change: ChangeAuditHistory,
+    ) -> error::Result<PublicAuditEditHistory> {
+        let auth = self.context.auth();
+        let user_id = auth.id().unwrap();
+
+        let Some(mut audit) = self.get_audit(audit_id).await? else {
+            return Err(anyhow::anyhow!("Audit not found").code(404));
+        };
+
+        let Some(mut history) = audit
+            .edit_history
+            .iter()
+            .find(|h| h.id == history_id)
+            .cloned()
+            else {
+                return Err(anyhow::anyhow!("History not found").code(404));
+            };
+
+        if let Some(comment) = change.comment {
+            if user_id == history.author.parse()? {
+                history.comment = Some(comment);
+            } else {
+                return Err(anyhow::anyhow!("Only the author of the edit can change a comment").code(403))
+            }
+        }
+
+        if let Some(idx) = audit.edit_history.iter().position(|h| h.id == history_id) {
+            audit.edit_history[idx] = history.clone();
+        }
+
+        let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
+        audits.delete("_id", &audit_id).await?;
+        audits.insert(&audit).await?;
+
+        let role = if history.author == audit.auditor_id.to_hex() {
+            Role::Auditor
+        } else {
+            Role::Customer
+        };
+
+        Ok(PublicAuditEditHistory::new(&self.context, history, role).await?)
     }
 }

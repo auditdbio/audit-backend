@@ -6,7 +6,7 @@ use actix_web::{
 
 use common::{
     context::GeneralContext,
-    entities::auditor::{Auditor, PublicAuditor},
+    entities::auditor::{Auditor, PublicAuditor, ExtendedAuditor},
     error,
 };
 
@@ -14,7 +14,7 @@ use serde_json::json;
 
 use crate::service::auditor::{AuditorChange, AuditorService, CreateAuditor};
 
-#[post("/api/auditor")]
+#[post("/auditor")]
 pub async fn post_auditor(
     context: GeneralContext,
     Json(data): web::Json<CreateAuditor>,
@@ -22,7 +22,7 @@ pub async fn post_auditor(
     Ok(Json(AuditorService::new(context).create(data).await?))
 }
 
-#[get("/api/auditor/{id}")]
+#[get("/auditor/{id}")]
 pub async fn get_auditor(
     context: GeneralContext,
     id: web::Path<String>,
@@ -36,7 +36,19 @@ pub async fn get_auditor(
     }
 }
 
-#[get("/api/my_auditor")]
+#[get("/auditor_by_link_id/{link_id}")]
+pub async fn find_by_link_id(
+    context: GeneralContext,
+    link_id: web::Path<String>,
+) -> error::Result<Json<ExtendedAuditor>> {
+    Ok(Json(
+        AuditorService::new(context)
+            .find_by_link_id(link_id.into_inner())
+            .await?
+    ))
+}
+
+#[get("/my_auditor")]
 pub async fn get_my_auditor(context: GeneralContext) -> error::Result<HttpResponse> {
     let res = AuditorService::new(context).my_auditor().await?;
     if let Some(res) = res {
@@ -46,7 +58,7 @@ pub async fn get_my_auditor(context: GeneralContext) -> error::Result<HttpRespon
     }
 }
 
-#[patch("/api/my_auditor")]
+#[patch("/my_auditor")]
 pub async fn patch_auditor(
     context: GeneralContext,
     Json(data): Json<AuditorChange>,
@@ -54,7 +66,16 @@ pub async fn patch_auditor(
     Ok(Json(AuditorService::new(context).change(data).await?))
 }
 
-#[delete("/api/auditor/{id}")]
+#[patch("/auditor/{id}")]
+pub async fn patch_auditor_by_id(
+    context: GeneralContext,
+    id: web::Path<String>,
+    Json(data): Json<AuditorChange>,
+) -> error::Result<Json<Auditor<String>>> {
+    Ok(Json(AuditorService::new(context).change_by_id(id.parse()?, data).await?))
+}
+
+#[delete("/auditor/{id}")]
 pub async fn delete_auditor(
     context: GeneralContext,
     id: web::Path<String>,

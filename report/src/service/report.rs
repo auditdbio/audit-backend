@@ -7,7 +7,7 @@ use common::{
     auth::{Auth, Service},
     context::GeneralContext,
     entities::issue::Status,
-    services::{FILES_SERVICE, FRONTEND, PROTOCOL, RENDERER_SERVICE, USERS_SERVICE},
+    services::{API_PREFIX, FILES_SERVICE, FRONTEND, PROTOCOL, RENDERER_SERVICE, USERS_SERVICE},
 };
 use reqwest::multipart::{Form, Part};
 use serde::{Deserialize, Serialize};
@@ -206,6 +206,7 @@ fn generate_audit_sections(audit: &PublicAudit, issues: Vec<Section>) -> Vec<Sec
      * Summary
      *     Project description
      *     Scope
+     *     Conclusion
      */
     let disclaimer = include_str!("../../templates/disclaimer.md").to_string();
 
@@ -221,22 +222,34 @@ fn generate_audit_sections(audit: &PublicAudit, issues: Vec<Section>) -> Vec<Sec
             typ: "plain_text".to_string(),
             title: "Summary".to_string(),
             include_in_toc: true,
-            subsections: Some(vec![
-                Section {
-                    typ: "project_description".to_string(),
-                    title: "Project Description".to_string(),
-                    text: audit.description.clone(),
-                    include_in_toc: true,
-                    ..Default::default()
-                },
-                Section {
-                    typ: "scope".to_string(),
-                    title: "Scope".to_string(),
-                    links: Some(audit.scope.clone()),
-                    include_in_toc: true,
-                    ..Default::default()
-                },
-            ]),
+            subsections: Some({
+                let mut subsections = vec![
+                    Section {
+                        typ: "project_description".to_string(),
+                        title: "Project Description".to_string(),
+                        text: audit.description.clone(),
+                        include_in_toc: true,
+                        ..Default::default()
+                    },
+                    Section {
+                        typ: "scope".to_string(),
+                        title: "Scope".to_string(),
+                        links: Some(audit.scope.clone()),
+                        include_in_toc: true,
+                        ..Default::default()
+                    },
+                ];
+                if let Some(conclusion) = audit.conclusion.clone() {
+                    subsections.push(Section {
+                        typ: "markdown".to_string(),
+                        title: "Conclusion".to_string(),
+                        text: conclusion,
+                        include_in_toc: true,
+                        ..Default::default()
+                    });
+                }
+                subsections
+            }),
             ..Default::default()
         },
         Section {
@@ -275,9 +288,10 @@ pub async fn create_report(
         .make_request::<PublicAudit>()
         .auth(context.auth())
         .get(format!(
-            "{}://{}/api/audit/{}",
+            "{}://{}/{}/audit/{}",
             PROTOCOL.as_str(),
             USERS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
             audit_id
         ))
         .send()
@@ -295,7 +309,7 @@ pub async fn create_report(
             FRONTEND.as_str(),
             audit.auditor_id
         ),
-        project_name: audit.project_name,
+        project_name: audit.project_name.clone(),
         scope: audit.scope,
         report_data,
     };
@@ -303,9 +317,10 @@ pub async fn create_report(
     let report = context
         .make_request()
         .post(format!(
-            "{}://{}/api/generate-report",
+            "{}://{}/{}/generate-report",
             PROTOCOL.as_str(),
-            RENDERER_SERVICE.as_str()
+            RENDERER_SERVICE.as_str(),
+            API_PREFIX.as_str(),
         ))
         .json(&input)
         .send()
@@ -327,9 +342,10 @@ pub async fn create_report(
 
     let _ = client
         .post(format!(
-            "{}://{}/api/file",
+            "{}://{}/{}/file",
             PROTOCOL.as_str(),
-            FILES_SERVICE.as_str()
+            FILES_SERVICE.as_str(),
+            API_PREFIX.as_str(),
         ))
         .multipart(form)
         .send()
@@ -339,15 +355,17 @@ pub async fn create_report(
     } else {
         let audit_change = AuditChange {
             report: Some(path.clone()),
+            report_name: Some(format!("{} report.pdf", audit.project_name)),
             ..AuditChange::default()
         };
 
         let _ = context
             .make_request()
             .patch(format!(
-                "{}://{}/api/audit/{}",
+                "{}://{}/{}/audit/{}",
                 PROTOCOL.as_str(),
                 USERS_SERVICE.as_str(),
+                API_PREFIX.as_str(),
                 audit.id
             ))
             .auth(context.auth())

@@ -6,30 +6,30 @@ use common::{
         self,
         badge::{get_badge, BadgePayload},
         codes::post_code,
-        user::{
-            CreateUser, GetGithubAccessToken, GithubAccessResponse, GithubAuth, GithubUserData,
-            GithubUserEmails,
+        user::{validate_name, CreateUser},
+        linked_accounts::{
+            LinkedService, GithubUserEmails,
+            GetGithubAccessToken, GithubAccessResponse,
+            GithubUserData, AddLinkedAccount,
+            UpdateLinkedAccount,
         },
     },
     auth::Auth,
     context::GeneralContext,
     entities::{
-        badge::PublicBadge,
         letter::CreateLetter,
-        user::{LinkedAccount, User},
+        user::{LinkedAccount, User, UserLogin},
     },
     error::{self, AddCode},
     repository::Entity,
-    services::{
-        AUDITORS_SERVICE, CUSTOMERS_SERVICE, FRONTEND, MAIL_SERVICE, PROTOCOL, USERS_SERVICE,
-    },
+    services::{API_PREFIX, FRONTEND, MAIL_SERVICE, PROTOCOL, USERS_SERVICE},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use rand::{distributions::Alphanumeric, Rng};
 use reqwest::{header, Client};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use std::env::var;
+use crypto::{ aes, blockmodes, buffer::{self, ReadBuffer, WriteBuffer, BufferResult}};
 
 use super::user::UserService;
 
@@ -50,7 +50,7 @@ pub struct Login {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Token {
     pub token: String,
-    pub user: User<String>,
+    pub user: UserLogin,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -127,16 +127,7 @@ impl AuthService {
             return Err(anyhow::anyhow!("Incorrect password").code(401));
         }
 
-        let auth = if user.is_admin {
-            Auth::Admin(user.id)
-        } else {
-            Auth::User(user.id)
-        };
-
-        Ok(Token {
-            user: user.stringify(),
-            token: auth.to_token()?,
-        })
+        create_auth_token(&user)
     }
 
     pub async fn authentication(
@@ -144,6 +135,13 @@ impl AuthService {
         mut user: CreateUser,
         mut verify_email: bool,
     ) -> error::Result<User<String>> {
+        if !validate_name(&user.name) {
+            return Err(
+                anyhow::anyhow!("Username may only contain alphanumeric characters, hyphens or underscore")
+                    .code(400)
+            );
+        }
+
         if let Some(secret) = &user.secret {
             log::info!("Secret: {}", secret);
             let payload: BadgePayload = serde_json::from_str(
@@ -186,9 +184,10 @@ impl AuthService {
                 .replace(
                     "{link}",
                     format!(
-                        "{}://{}/api/auth/verify/{}",
+                        "{}://{}/{}/auth/verify/{}",
                         PROTOCOL.as_str(),
                         USERS_SERVICE.as_str(),
+                        API_PREFIX.as_str(),
                         code
                     )
                     .as_str(),
@@ -206,9 +205,10 @@ impl AuthService {
                 .make_request()
                 .auth(self.context.server_auth())
                 .post(format!(
-                    "{}://{}/api/mail",
+                    "{}://{}/{}/mail",
                     PROTOCOL.as_str(),
-                    MAIL_SERVICE.as_str()
+                    MAIL_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
                 ))
                 .json(&letter)
                 .send()
@@ -232,6 +232,7 @@ impl AuthService {
             password,
             current_role: user.current_role,
             last_modified: Utc::now().timestamp_micros(),
+            created_at: Some(Utc::now().timestamp_micros()),
             is_new: true,
             is_admin,
             linked_accounts: user.linked_accounts,
@@ -258,7 +259,7 @@ impl AuthService {
     pub async fn github_get_user(
         &self,
         data: GetGithubAccessToken,
-        current_role: String,
+        current_role: Option<String>,
     ) -> error::Result<(CreateUser, LinkedAccount)> {
         let client = Client::new();
 
@@ -278,9 +279,9 @@ impl AuthService {
 
         let user_response = client
             .get("https://api.github.com/user")
-            .header(header::AUTHORIZATION, format!("Bearer {}", access_token))
             .header(header::ACCEPT, "application/json")
             .header("User-Agent", "auditdbio")
+            .bearer_auth(access_token.clone())
             .send()
             .await?
             .text()
@@ -288,9 +289,9 @@ impl AuthService {
 
         let emails_response = client
             .get("https://api.github.com/user/emails")
-            .header(header::AUTHORIZATION, format!("Bearer {}", access_token))
             .header(header::ACCEPT, "application/json")
             .header("User-Agent", "auditdbio")
+            .bearer_auth(access_token.clone())
             .send()
             .await?
             .text()
@@ -307,19 +308,61 @@ impl AuthService {
             return Err(anyhow::anyhow!("No email found").code(404));
         };
 
+        let key = var("GITHUB_TOKEN_CRYPTO_KEY").unwrap();
+        let iv = var("GITHUB_TOKEN_CRYPTO_IV").unwrap();
+
+        let mut encryptor = aes::cbc_encryptor(
+            aes::KeySize::KeySize256,
+            key.as_bytes(),
+            iv.as_bytes(),
+            blockmodes::PkcsPadding,
+        );
+
+        let mut encrypted_data = Vec::<u8>::new();
+        let mut read_buffer = buffer::RefReadBuffer::new(access_token.as_bytes());
+        let mut buffer = [0; 4096];
+        let mut write_buffer = buffer::RefWriteBuffer::new(&mut buffer);
+
+        loop {
+            let result = match encryptor.encrypt(
+                &mut read_buffer,
+                &mut write_buffer,
+                true
+            ) {
+                Ok(value) => value,
+                _ => return Err(anyhow::anyhow!("Encryption error").code(500))
+            };
+
+            encrypted_data.extend(write_buffer
+                .take_read_buffer()
+                .take_remaining()
+                .iter()
+                .map(|&i| i)
+            );
+
+            match result {
+                BufferResult::BufferUnderflow => break,
+                BufferResult::BufferOverflow => {}
+            }
+        }
+
         let linked_account = LinkedAccount {
-            id: user_data.id.clone(),
-            name: "GitHub".to_string(),
+            id: user_data.id.to_string(),
+            name: LinkedService::GitHub,
             email: email.clone(),
             url: user_data.html_url,
             avatar: user_data.avatar_url,
+            is_public: false,
+            username: user_data.login.clone(),
+            token: Some(encrypted_data),
+            scope: Some(access_json.scope),
         };
 
         let user = CreateUser {
             email,
             password: "".to_string(),
             name: user_data.login,
-            current_role,
+            current_role: current_role.unwrap_or("auditor".to_string()),
             use_email: None,
             admin_creation_password: None,
             secret: None,
@@ -330,9 +373,9 @@ impl AuthService {
         return Ok((user, linked_account));
     }
 
-    pub async fn github_auth(&self, data: GithubAuth) -> error::Result<Token> {
+    pub async fn github_auth(&self, data: AddLinkedAccount) -> error::Result<Token> {
         let github_auth = GetGithubAccessToken {
-            code: data.code,
+            code: data.clone().code,
             client_id: var("GITHUB_CLIENT_ID").unwrap(),
             client_secret: var("GITHUB_CLIENT_SECRET").unwrap(),
         };
@@ -340,12 +383,63 @@ impl AuthService {
         let user_service = UserService::new(self.context.clone());
 
         let (github_user, linked_account) =
-            self.github_get_user(github_auth, data.current_role).await?;
+            self.github_get_user(github_auth, data.clone().current_role).await?;
 
-        if let Some(user) = user_service
-            .find_linked_account(linked_account.id.clone())
+        if let Some(mut user) = user_service
+            .find_user_by_linked_account(linked_account.id.clone(), &linked_account.name)
             .await?
         {
+            if let Some(current_role) = data.clone().current_role {
+                user.current_role = current_role;
+                let _ = self
+                    .context
+                    .make_request()
+                    .patch(format!(
+                        "{}://{}/{}/user/{}",
+                        PROTOCOL.as_str(),
+                        USERS_SERVICE.as_str(),
+                        API_PREFIX.as_str(),
+                        user.id
+                    ))
+                    .auth(self.context.server_auth())
+                    .json(&data)
+                    .send()
+                    .await
+                    .unwrap();
+            }
+
+            if let Some(account) = user.linked_accounts
+                .as_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|a| a.id == linked_account.id) {
+
+                if data.update_token == Some(true) || account.token.is_none() {
+                    let _ = self.context
+                        .make_request()
+                        .patch(format!(
+                            "{}://{}/{}/user/{}/linked_account/{}",
+                            PROTOCOL.as_str(),
+                            USERS_SERVICE.as_str(),
+                            API_PREFIX.as_str(),
+                            user.id,
+                            linked_account.id.clone(),
+                        ))
+                        .auth(self.context.server_auth())
+                        .json(&UpdateLinkedAccount {
+                            is_public: None,
+                            update_token: Some(true),
+                            token: linked_account.token.clone(),
+                            scope: linked_account.scope.clone(),
+                        })
+                        .send()
+                        .await
+                        .unwrap();
+
+                    *account = linked_account;
+                }
+            }
+
             return create_auth_token(&user);
         }
 
@@ -354,24 +448,42 @@ impl AuthService {
             .await?;
 
         if let Some(user) = existing_email_user {
-            let _ = user_service
-                .add_linked_account(user.id, linked_account)
-                .await?;
-            return create_auth_token(&user);
+            if let Some(mut user) = user_service
+                .add_linked_account(user.id, linked_account, self.context.server_auth())
+                .await?
+            {
+                if let Some(current_role) = data.clone().current_role {
+                    user.current_role = current_role;
+                    let _ = self
+                        .context
+                        .make_request()
+                        .patch(format!(
+                            "{}://{}/{}/user/{}",
+                            PROTOCOL.as_str(),
+                            USERS_SERVICE.as_str(),
+                            API_PREFIX.as_str(),
+                            user.id
+                        ))
+                        .auth(self.context.server_auth())
+                        .json(&data)
+                        .send()
+                        .await
+                        .unwrap();
+                }
+
+                return create_auth_token(&user);
+            }
+        }
+
+        if data.current_role.is_none() {
+            return Err(anyhow::anyhow!("Role required").code(400));
         }
 
         let verify_email = false;
-        self.authentication(github_user.clone(), verify_email)
+        let user = self.authentication(github_user.clone(), verify_email)
             .await?;
 
-        if let Some(user) = user_service
-            .find_by_email(github_user.email.clone())
-            .await?
-        {
-            return create_auth_token(&user);
-        }
-
-        Err(anyhow::anyhow!("Login failed").code(404))
+        create_auth_token(&user.parse())
     }
 
     pub async fn verify_link(&self, code: String) -> error::Result<bool> {
@@ -456,9 +568,10 @@ impl AuthService {
             .make_request()
             .auth(self.context.server_auth())
             .post(format!(
-                "{}://{}/api/mail",
+                "{}://{}/{}/mail",
                 PROTOCOL.as_str(),
-                MAIL_SERVICE.as_str()
+                MAIL_SERVICE.as_str(),
+                API_PREFIX.as_str(),
             ))
             .json(&letter)
             .send()
@@ -521,7 +634,7 @@ pub fn create_auth_token(user: &User<ObjectId>) -> error::Result<Token> {
         Auth::User(user.id)
     };
     Ok(Token {
-        user: user.clone().stringify(),
+        user: UserLogin::from(user.clone()),
         token: auth.to_token()?,
     })
 }

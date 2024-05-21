@@ -16,3 +16,5 @@
 /search/.env
 /telemetry/.env
 /users/.env
+docker-compose.yml
+docker-compose.yml.old

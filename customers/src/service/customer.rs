@@ -1,17 +1,16 @@
 use chrono::Utc;
 use common::{
     access_rules::{AccessRules, Edit, Read},
-    api::seartch::delete_from_search,
+    api::{seartch::delete_from_search, user::{get_by_id, new_link_id, validate_name}},
     context::GeneralContext,
     entities::{
         auditor::{ExtendedAuditor, PublicAuditor},
         contacts::Contacts,
         customer::{Customer, PublicCustomer},
         project::{Project, PublicProject},
-        user::PublicUser,
     },
     error::{self, AddCode},
-    services::{AUDITORS_SERVICE, PROTOCOL, USERS_SERVICE},
+    services::{API_PREFIX, AUDITORS_SERVICE, PROTOCOL},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -36,6 +35,7 @@ pub struct CustomerChange {
     company: Option<String>,
     contacts: Option<Contacts>,
     tags: Option<Vec<String>>,
+    link_id: Option<String>,
 }
 
 pub struct CustomerService {
@@ -49,11 +49,21 @@ impl CustomerService {
 
     pub async fn create(&self, customer: CreateCustomer) -> error::Result<Customer<String>> {
         let auth = self.context.auth();
+        let id = auth.id().ok_or(anyhow::anyhow!("No user id found"))?;
+
+        let user = get_by_id(&self.context, auth, id.clone()).await?;
 
         let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
 
+        let link_id = new_link_id(
+            &self.context,
+            user.name,
+            id.clone(),
+            true,
+        ).await?;
+
         let customer = Customer {
-            user_id: auth.id().ok_or(anyhow::anyhow!("No user id found"))?,
+            user_id: id,
             avatar: customer.avatar.unwrap_or_default(),
             first_name: customer.first_name,
             last_name: customer.last_name,
@@ -62,6 +72,8 @@ impl CustomerService {
             contacts: customer.contacts,
             tags: customer.tags.unwrap_or_default(),
             last_modified: Utc::now().timestamp_micros(),
+            created_at: Some(Utc::now().timestamp_micros()),
+            link_id: Some(link_id),
         };
 
         customers.insert(&customer).await?;
@@ -87,6 +99,29 @@ impl CustomerService {
         Ok(Some(auth.public_customer(customer)))
     }
 
+    pub async fn find_by_link_id(&self, link_id: String) -> error::Result<PublicCustomer> {
+        let auth = self.context.auth();
+
+        let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
+
+        if let Some(customer) = customers
+            .find("link_id", &Bson::String(link_id.clone().to_lowercase()))
+            .await? {
+            return Ok(auth.public_customer(customer));
+        };
+
+        let id = link_id
+            .to_lowercase()
+            .parse::<ObjectId>()
+            .map_err(|_| anyhow::anyhow!("Customer not found").code(404))?;
+
+        if let Some(customer) = self.find(id).await? {
+            return Ok(customer);
+        }
+
+        Err(anyhow::anyhow!("Customer not found").code(404))
+    }
+
     pub async fn my_customer(&self) -> error::Result<Option<Customer<String>>> {
         let auth = self.context.auth();
 
@@ -98,20 +133,7 @@ impl CustomerService {
             .map(Customer::stringify);
 
         if customer.is_none() {
-            let user = self
-                .context
-                .make_request::<PublicUser>()
-                .auth(auth)
-                .get(format!(
-                    "{}://{}/api/user/{}",
-                    PROTOCOL.as_str(),
-                    USERS_SERVICE.as_str(),
-                    auth.id().unwrap()
-                ))
-                .send()
-                .await?
-                .json::<PublicUser>()
-                .await?;
+            let user = get_by_id(&self.context, auth, auth.id().unwrap()).await?;
 
             if user.current_role.to_lowercase() != "customer" {
                 return Ok(None);
@@ -122,9 +144,10 @@ impl CustomerService {
                 .make_request::<PublicAuditor>()
                 .auth(auth)
                 .get(format!(
-                    "{}://{}/api/auditor/{}",
+                    "{}://{}/{}/auditor/{}",
                     PROTOCOL.as_str(),
                     AUDITORS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
                     auth.id().unwrap()
                 ))
                 .send()
@@ -217,6 +240,52 @@ impl CustomerService {
 
         if let Some(tags) = change.tags {
             customer.tags = tags;
+        }
+
+        if let Some(link_id) = change.link_id {
+            if !validate_name(&link_id) {
+                return Err(
+                    anyhow::anyhow!("Link ID may only contain alphanumeric characters, hyphens or underscore")
+                        .code(400)
+                );
+            }
+
+            let new_link_id = new_link_id(
+                &self.context,
+                link_id,
+                id,
+                false,
+            ).await?;
+
+            customer.link_id = Some(new_link_id)
+        }
+
+        customer.last_modified = Utc::now().timestamp_micros();
+
+        customers.delete("user_id", &id).await?;
+        customers.insert(&customer).await?;
+
+        Ok(customer.stringify())
+    }
+
+    pub async fn change_by_id(
+        &self,
+        id: ObjectId,
+        change: CustomerChange
+    ) -> error::Result<Customer<String>> {
+        let auth = self.context.auth();
+
+        if !auth.full_access() {
+            return Err(anyhow::anyhow!("User is not available to change this customer").code(400));
+        }
+
+        let customers = self.context.try_get_repository::<Customer<ObjectId>>()?;
+        let Some(mut customer) = customers.find("user_id", &Bson::ObjectId(id)).await? else {
+            return Err(anyhow::anyhow!("No customer found").code(400));
+        };
+
+        if change.link_id.is_some() {
+            customer.link_id = change.link_id;
         }
 
         customer.last_modified = Utc::now().timestamp_micros();

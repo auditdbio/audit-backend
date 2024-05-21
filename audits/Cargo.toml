@@ -23,6 +23,7 @@ async-trait = "0.1"
 common = {path = "../common"}
 mongodb-migrator = "0.1"
 dotenv = "0.15.0"
+rand = "0.8"
 
 
 

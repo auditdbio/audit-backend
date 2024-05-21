@@ -4,7 +4,7 @@ use utoipa::ToSchema;
 
 use crate::{
     repository::Entity,
-    services::{CUSTOMERS_SERVICE, PROTOCOL},
+    services::{API_PREFIX, CUSTOMERS_SERVICE, PROTOCOL},
 };
 
 use super::contacts::Contacts;
@@ -20,6 +20,8 @@ pub struct Customer<Id> {
     pub contacts: Contacts,
     pub tags: Vec<String>,
     pub last_modified: i64,
+    pub created_at: Option<i64>,
+    pub link_id: Option<String>,
 }
 
 impl Customer<String> {
@@ -34,6 +36,8 @@ impl Customer<String> {
             contacts: self.contacts,
             tags: self.tags,
             last_modified: self.last_modified,
+            created_at: self.created_at,
+            link_id: self.link_id,
         }
     }
 }
@@ -50,6 +54,8 @@ impl Customer<ObjectId> {
             contacts: self.contacts,
             tags: self.tags,
             last_modified: self.last_modified,
+            created_at: self.created_at,
+            link_id: self.link_id,
         }
     }
 }
@@ -71,9 +77,10 @@ impl From<Customer<ObjectId>> for Option<Document> {
         document.insert(
             "request_url",
             format!(
-                "{}://{}/api/customer/data",
+                "{}://{}/{}/customer/data",
                 PROTOCOL.as_str(),
-                CUSTOMERS_SERVICE.as_str()
+                CUSTOMERS_SERVICE.as_str(),
+                API_PREFIX.as_str(),
             ),
         );
         document.insert(
@@ -102,6 +109,7 @@ pub struct PublicCustomer {
     pub contacts: Contacts,
     pub kind: String,
     pub tags: Vec<String>,
+    pub link_id: Option<String>,
 }
 
 // impl From<Customer<ObjectId>> for PublicCustomer {

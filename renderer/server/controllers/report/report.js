@@ -5,6 +5,7 @@ import getHTML from '../../views/html.js'
 import createTOC from './utils/createTOC.js'
 import createPageLinkAnnotation from './utils/createPageLinkAnnotation.js'
 import addBackgroundToPages from './utils/addBackgroundToPage.js'
+import { FRONTEND, PROTOCOL } from "../../constants/reportLink.js"
 
 const pdfOptions = {
   format: 'A4',
@@ -34,7 +35,12 @@ export const generateReport = async (req, res, next) => {
 
     const { tableOfContentsWithCoords, tocPagesCounter } = await createTOC(project, pdfDoc, pdfBuffer)
     await addBackgroundToPages(pdfDoc)
-    await createPageLinkAnnotation(pdfDoc, tableOfContentsWithCoords, tocPagesCounter, project?.profile_link || "https://auditdb.io/")
+    await createPageLinkAnnotation(
+      pdfDoc,
+      tableOfContentsWithCoords,
+      tocPagesCounter,
+      project?.profile_link || `${PROTOCOL}://${FRONTEND}/disclaimer/`
+    )
 
     const pdfBytes = await pdfDoc.save()
 

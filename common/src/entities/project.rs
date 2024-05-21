@@ -6,7 +6,7 @@ use crate::{
     context::context_trait::GeneralContext,
     error,
     repository::Entity,
-    services::{CUSTOMERS_SERVICE, PROTOCOL},
+    services::{API_PREFIX, CUSTOMERS_SERVICE, PROTOCOL},
 };
 
 use super::contacts::Contacts;
@@ -29,6 +29,7 @@ pub struct Project<Id> {
     pub status: String,
     pub creator_contacts: Contacts,
     pub last_modified: i64,
+    pub created_at: Option<i64>,
     pub price: i64,
     #[serde(default)]
     pub auditors: Vec<Id>,
@@ -47,6 +48,7 @@ impl Project<String> {
             status: self.status,
             creator_contacts: self.creator_contacts,
             last_modified: self.last_modified,
+            created_at: self.created_at,
             price: self.price,
             auditors: self
                 .auditors
@@ -70,6 +72,7 @@ impl Project<ObjectId> {
             status: self.status,
             creator_contacts: self.creator_contacts,
             last_modified: self.last_modified,
+            created_at: self.created_at,
             price: self.price,
             auditors: self.auditors.into_iter().map(|id| id.to_hex()).collect(),
         }
@@ -95,6 +98,7 @@ pub struct PublicProject {
     pub creator_contacts: Contacts,
     pub kind: String,
     pub price: i64,
+    pub created_at: Option<i64>,
 }
 
 impl From<Project<ObjectId>> for Option<Document> {
@@ -112,9 +116,10 @@ impl From<Project<ObjectId>> for Option<Document> {
         document.insert(
             "request_url",
             format!(
-                "{}://{}/api/project/data",
+                "{}://{}/{}/project/data",
                 PROTOCOL.as_str(),
-                CUSTOMERS_SERVICE.as_str()
+                CUSTOMERS_SERVICE.as_str(),
+                API_PREFIX.as_str(),
             ),
         );
         document.insert("kind", "project");
@@ -128,9 +133,10 @@ pub async fn get_project(context: &GeneralContext, id: ObjectId) -> error::Resul
         .make_request::<PublicProject>()
         .auth(context.server_auth()) // TODO: think about private projects here
         .get(format!(
-            "{}://{}/api/project/{}",
+            "{}://{}/{}/project/{}",
             PROTOCOL.as_str(),
             CUSTOMERS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
             id,
         ))
         .send()

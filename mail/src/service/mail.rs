@@ -7,9 +7,13 @@ use common::{
     },
     error::{self, AddCode},
     repository::Entity,
-    services::{PROTOCOL, USERS_SERVICE},
+    services::{API_PREFIX, PROTOCOL, USERS_SERVICE},
 };
-use lettre::{transport::smtp::authentication::Credentials, Message, SmtpTransport, Transport};
+use lettre::{
+    message::{header, MultiPart, SinglePart},
+    transport::smtp::authentication::Credentials,
+    Message, SmtpTransport, Transport,
+};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
@@ -56,12 +60,53 @@ impl MailService {
 
         let sender_email = letter.sender.clone().unwrap_or(EMAIL_ADDRESS.to_string());
 
-        let Ok(email) = Message::builder()
+        /*
+                let m = Message::builder()
+                   .date(date)
+                   .from("NoBody <nobody@domain.tld>".parse().unwrap())
+                   .reply_to("Yuin <yuin@domain.tld>".parse().unwrap())
+                   .to("Hei <hei@domain.tld>".parse().unwrap())
+                   .subject("Happy new year")
+                   .multipart(
+                       MultiPart::related()
+                           .singlepart(
+                               SinglePart::builder()
+                                   .header(header::ContentType::TEXT_HTML)
+                                   .body(String::from(
+                                       "<p><b>Hello</b>, <i>world</i>! <img src=cid:123></p>",
+                                   )),
+                           )
+                           .singlepart(
+                               SinglePart::builder()
+                                   .header(header::ContentType::parse("image/png").unwrap())
+                                   .header(header::ContentDisposition::inline())
+                                   .header(header::ContentId::from(String::from("<123>")))
+                                   .body(img),
+                           ),
+                   )
+                   .unwrap();
+        */
+
+        let mail = Message::builder()
             .from(sender_email.parse().unwrap())
             .to(email)
             .subject(letter.subject)
-            .body(letter.message)
-        else {
+            .multipart(
+                MultiPart::related().singlepart(
+                    SinglePart::builder()
+                        .header(header::ContentType::TEXT_HTML)
+                        .body(String::from(letter.message)),
+                ),
+            );
+
+        /*
+        Message::builder()
+        .from(sender_email.parse().unwrap())
+        .to(email)
+        .subject(letter.subject)
+        .body(letter.message) */
+
+        let Ok(email) = mail else {
             return Err(anyhow::anyhow!("Error building email").code(500));
         };
         let mailer = SmtpTransport::relay("smtp.gmail.com")
@@ -122,9 +167,10 @@ impl MailService {
                 .make_request::<PublicUser>()
                 .auth(auth)
                 .get(format!(
-                    "{}://{}/api/user/{}",
+                    "{}://{}/{}/user/{}",
                     PROTOCOL.as_str(),
                     USERS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
                     recipient_id
                 ))
                 .send()

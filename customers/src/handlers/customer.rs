@@ -17,7 +17,7 @@ use serde_json::json;
 
 use crate::service::customer::{CreateCustomer, CustomerChange, CustomerService};
 
-#[post("/api/customer")]
+#[post("/customer")]
 pub async fn post_customer(
     context: GeneralContext,
     Json(data): web::Json<CreateCustomer>,
@@ -25,7 +25,7 @@ pub async fn post_customer(
     Ok(Json(CustomerService::new(context).create(data).await?))
 }
 
-#[get("/api/customer/{id}")]
+#[get("/customer/{id}")]
 pub async fn get_customer(
     context: GeneralContext,
     id: web::Path<String>,
@@ -38,7 +38,17 @@ pub async fn get_customer(
     }
 }
 
-#[get("/api/my_customer")]
+#[get("/customer_by_link_id/{link_id}")]
+pub async fn find_by_link_id(
+    context: GeneralContext,
+    link_id: web::Path<String>,
+) -> error::Result<Json<PublicCustomer>> {
+    Ok(Json(
+        CustomerService::new(context).find_by_link_id(link_id.into_inner()).await?
+    ))
+}
+
+#[get("/my_customer")]
 pub async fn my_customer(context: GeneralContext) -> error::Result<HttpResponse> {
     let res = CustomerService::new(context).my_customer().await?;
     if let Some(res) = res {
@@ -48,7 +58,7 @@ pub async fn my_customer(context: GeneralContext) -> error::Result<HttpResponse>
     }
 }
 
-#[patch("/api/my_customer")]
+#[patch("/my_customer")]
 pub async fn patch_customer(
     context: GeneralContext,
     Json(data): Json<CustomerChange>,
@@ -56,7 +66,16 @@ pub async fn patch_customer(
     Ok(Json(CustomerService::new(context).change(data).await?))
 }
 
-#[delete("/api/customer/{id}")]
+#[patch("/customer/{id}")]
+pub async fn patch_customer_by_id(
+    context: GeneralContext,
+    id: web::Path<String>,
+    Json(data): Json<CustomerChange>,
+) -> error::Result<Json<Customer<String>>> {
+    Ok(Json(CustomerService::new(context).change_by_id(id.parse()?, data).await?))
+}
+
+#[delete("/customer/{id}")]
 pub async fn delete_customer(
     context: GeneralContext,
     id: web::Path<String>,
@@ -66,7 +85,7 @@ pub async fn delete_customer(
     ))
 }
 
-#[get("/api/customer/{id}/project")]
+#[get("/customer/{id}/project")]
 pub async fn get_customer_projects(
     context: GeneralContext,
     id: web::Path<String>,

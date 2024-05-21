@@ -6,11 +6,11 @@ use actix_web::{
 use common::{context::GeneralContext, error};
 
 use crate::{
-    repositories::search::SearchRepo,
+    repositories::{elasticsearch::ElasticSearchResult, search::SearchRepo},
     service::search::{SearchInsertRequest, SearchQuery, SearchResult, SearchService},
 };
 
-#[post("/api/search/insert")]
+#[post("/search/insert")]
 pub async fn insert(
     Json(data): Json<SearchInsertRequest>,
     context: GeneralContext,
@@ -22,8 +22,8 @@ pub async fn insert(
     Ok(HttpResponse::Ok().finish())
 }
 
-#[get("/api/search")]
-pub async fn search(
+#[get("/search")]
+pub async fn mongo_search(
     query: web::Query<SearchQuery>,
     repo: web::Data<SearchRepo>,
     context: GeneralContext,
@@ -34,7 +34,19 @@ pub async fn search(
     Ok(Json(results))
 }
 
-#[delete("/api/search/{id}")]
+#[get("/search_new")]
+pub async fn search(
+    query: web::Query<SearchQuery>,
+    repo: web::Data<SearchRepo>,
+    context: GeneralContext,
+) -> error::Result<Json<ElasticSearchResult>> {
+    let results = SearchService::new(repo, context)
+        .elasitc_search(query.into_inner())
+        .await?;
+    Ok(Json(results))
+}
+
+#[delete("/search/{id}")]
 pub async fn delete(
     id: web::Path<String>,
     repo: web::Data<SearchRepo>,

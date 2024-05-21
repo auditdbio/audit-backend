@@ -6,7 +6,7 @@ use actix_web::{
     dev::{ServiceFactory, ServiceRequest, ServiceResponse},
     middleware, web, App,
 };
-use common::context::effectfull_context::ServiceState;
+use common::{context::effectfull_context::ServiceState, services::API_PREFIX};
 use handlers::{
     codes::{check_code, post_code},
     indexer::ping,
@@ -34,10 +34,13 @@ pub fn create_app(
         .wrap(cors)
         .wrap(middleware::Logger::default())
         .app_data(web::Data::new(state))
-        .service(send_mail)
-        .service(send_feedback)
-        .service(check_code)
-        .service(post_code)
-        .service(ping);
+        .service(
+            web::scope(&API_PREFIX)
+                .service(send_mail)
+                .service(send_feedback)
+                .service(check_code)
+                .service(post_code)
+                .service(ping),
+        );
     app
 }

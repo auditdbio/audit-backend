@@ -20,7 +20,7 @@ use common::{
         letter::CreateLetter,
     },
     error::{self, AddCode},
-    services::{FRONTEND, PROTOCOL, SEARCH_SERVICE},
+    services::{FRONTEND, PROTOCOL},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -36,6 +36,7 @@ pub struct CreateBadge {
     free_at: Option<String>,
     price_range: Option<PriceRange>,
     tags: Option<Vec<String>>,
+    link_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -82,8 +83,9 @@ impl BadgeService {
             return Err(anyhow::anyhow!("User already exists").code(400));
         };
 
+        let id = ObjectId::new();
         let badge = Badge {
-            user_id: ObjectId::new(),
+            user_id: id.clone(),
             avatar: badge.avatar.unwrap_or_default(),
             first_name: badge.first_name,
             last_name: badge.last_name,
@@ -92,8 +94,10 @@ impl BadgeService {
             contacts: badge.contacts,
             tags: badge.tags.unwrap_or_default(),
             last_modified: Utc::now().timestamp_micros(),
+            created_at: Some(Utc::now().timestamp_micros()),
             free_at: badge.free_at.unwrap_or_default(),
             price_range: badge.price_range.unwrap_or_default(),
+            link_id: badge.link_id.map(|id| id.to_lowercase()).or_else(|| Some(id.to_hex())),
         };
 
         let payload = BadgePayload {
@@ -270,8 +274,10 @@ impl BadgeService {
             contacts: badge.contacts,
             tags: badge.tags,
             last_modified: Utc::now().timestamp_micros(),
+            created_at: Some(Utc::now().timestamp_micros()),
             free_at: badge.free_at,
             price_range: badge.price_range,
+            link_id: badge.link_id,
         };
 
         if auditors

@@ -1,15 +1,18 @@
 use actix_web::{
     delete, get, patch, post,
-    web::{self, Json, Path},
+    web::{self, Json, Path, Query},
     HttpResponse,
 };
 
-use common::{context::GeneralContext, entities::project::PublicProject, error};
+use common::{
+    api::seartch::PaginationParams, context::GeneralContext, entities::project::PublicProject,
+    error,
+};
 use serde_json::json;
 
 use crate::service::project::{CreateProject, ProjectChange, ProjectService};
 
-#[post("/api/project")]
+#[post("/project")]
 pub async fn post_project(
     context: GeneralContext,
     Json(data): Json<CreateProject>,
@@ -17,7 +20,7 @@ pub async fn post_project(
     Ok(Json(ProjectService::new(context).create(data).await?))
 }
 
-#[get("/api/project/{id}")]
+#[get("/project/{id}")]
 pub async fn get_project(
     context: GeneralContext,
     id: web::Path<String>,
@@ -30,13 +33,18 @@ pub async fn get_project(
     }
 }
 
-#[get("/api/my_project")]
-pub async fn my_project(context: GeneralContext) -> error::Result<HttpResponse> {
-    let res = ProjectService::new(context).my_projects().await?;
+#[get("/my_project")]
+pub async fn my_project(
+    context: GeneralContext,
+    pagination: Query<PaginationParams>,
+) -> error::Result<HttpResponse> {
+    let res = ProjectService::new(context)
+        .my_projects(pagination.into_inner())
+        .await?;
     Ok(HttpResponse::Ok().json(res))
 }
 
-#[patch("/api/project/{id}")]
+#[patch("/project/{id}")]
 pub async fn patch_project(
     context: GeneralContext,
     id: web::Path<String>,
@@ -49,7 +57,7 @@ pub async fn patch_project(
     ))
 }
 
-#[delete("/api/customer/{id}")]
+#[delete("/project/{id}")]
 pub async fn delete_project(
     context: GeneralContext,
     id: web::Path<String>,
@@ -59,7 +67,7 @@ pub async fn delete_project(
     ))
 }
 
-#[post("/api/project/auditor/{id}/{user_id}")]
+#[post("/project/auditor/{id}/{user_id}")]
 pub async fn add_auditor(
     context: GeneralContext,
     ids: Path<(String, String)>,
@@ -71,7 +79,7 @@ pub async fn add_auditor(
     Ok(HttpResponse::Ok().finish())
 }
 
-#[delete("/api/project/auditor/{id}/{user_id}")]
+#[delete("/project/auditor/{id}/{user_id}")]
 pub async fn delete_auditor(
     context: GeneralContext,
     ids: Path<(String, String)>,
