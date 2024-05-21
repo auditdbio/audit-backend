@@ -15,6 +15,7 @@ use common::{
 };
 
 use serde_json::json;
+use common::entities::audit::PublicAuditEditHistory;
 
 use crate::service::audit_request::{RequestChange, RequestService};
 
@@ -85,5 +86,17 @@ pub async fn find_all_audit_request(
         RequestService::new(context)
             .find_all(role, id.parse()?)
             .await?,
+    ))
+}
+
+#[get("/audit_request/{id}/edit_history")]
+pub async fn get_request_edit_history(
+    context: GeneralContext,
+    id: web::Path<String>,
+) -> error::Result<Json<Vec<PublicAuditEditHistory>>> {
+    Ok(Json(
+        RequestService::new(context)
+            .get_request_edit_history(id.parse()?)
+            .await?
     ))
 }
