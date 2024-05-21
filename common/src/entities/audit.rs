@@ -9,7 +9,7 @@ use crate::{
         report::PublicReport,
     },
     entities::{auditor::ExtendedAuditor, customer::PublicCustomer, role::Role},
-    error,
+    error::{self, AddCode},
     context::GeneralContext,
     repository::Entity,
     services::{API_PREFIX, PROTOCOL, AUDITORS_SERVICE, CUSTOMERS_SERVICE, REPORT_SERVICE},
@@ -127,10 +127,10 @@ impl Audit<ObjectId> {
         }
     }
 
-    pub async fn resolve(&mut self, context: &GeneralContext) {
+    pub async fn resolve(&mut self, context: &GeneralContext) -> error::Result<()> {
         if self.report.is_none() {
             let report_response = context
-                .make_request::<()>()
+                .make_request::<PublicReport>()
                 .post(format!(
                     "{}://{}/{}/report/{}",
                     PROTOCOL.as_str(),
@@ -141,29 +141,30 @@ impl Audit<ObjectId> {
                 .auth(context.server_auth())
                 .send()
                 .await;
-                // .unwrap()
-                // .json::<PublicReport>()
-                // .await;
 
-            if let Err(err) = report_response {
-                println!("Error in report request: {}", err);
-                return;
+            if let Err(e) = report_response {
+                return Err(anyhow::anyhow!(format!("Error in report request: {}", e)).code(502));
             }
 
             let report_response = report_response.unwrap();
             if report_response.status().is_success() {
                 let public_report = report_response.json::<PublicReport>().await;
-                if let Err(err) = public_report {
-                    println!("Error in report response json: {}", err);
-                    return;
+                if let Err(e) = public_report {
+                    return Err(anyhow::anyhow!(format!("Error in report response json: {}", e)).code(404));
                 }
                 let public_report = public_report.unwrap();
                 self.report = Some(public_report.path.clone());
                 self.report_name = Some(public_report.path);
             } else {
-                println!("Report receiving error: {}", report_response.status());
+                return Err(
+                    anyhow::anyhow!(
+                        format!("Report receiving error: {}", report_response.status())
+                    ).code(502)
+                );
             }
         }
+
+        Ok(())
     }
 }
 
