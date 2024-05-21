@@ -67,37 +67,13 @@ impl ClocService {
             .unwrap();
 
         let mut scope = Scope::new(request.links);
-        // https://raw.githubusercontent.com/auditdbio/audit-web/942b43136ace347e69ecbd64fdda819f85775117/src/components/Chat/ImageMessage.jsx
-        // https://               github.com/auditdbio/audit-web/blob/942b43136ace347e69ecbd64fdda819f85775117/src/components/Chat/ImageMessage.jsx
 
         for link in &mut scope.links {
             process_link(link);
         }
 
-        // let users = self.context.try_get_repository::<User<ObjectId>>()?;
-        // let Some(user) = users.find("id", &Bson::ObjectId(user_id)).await? else {
-        //     return Err(anyhow::anyhow!("User not found").code(404));
-        // };
 
-        let mut access_token: Option<String> = None;
-        // if let Some(linked_accounts) = user.linked_accounts {
-        //     if let Some(github_account) = linked_accounts
-        //         .iter()
-        //         .find(|account| account.name == LinkedService::GitHub) {
-        //         if let Some(encrypted_token) = github_account.token.clone() {
-        //             access_token = Option::from(decrypt_github_token(encrypted_token).await?);
-        //         }
-        //     }
-        // }
-
-        // let (id, skiped, errors) = repo.download(user, scope.clone()).await?;
-        //
-        // let result = repo.count(id).await?;
-        // Ok(CountResult {
-        //     skiped,
-        //     errors,
-        //     result,
-        // })
+        let access_token: Option<String> = None;
 
         match repo.download(user_id, scope.clone(), access_token).await {
             Ok((id, skiped, errors)) => {
@@ -108,9 +84,7 @@ impl ClocService {
                     ),
                 }
             }
-            Err(e) => Err(
-                anyhow::anyhow!(format!("Error during download: {}", e)).code(502)
-            ),
+            Err(e) => Err(anyhow::anyhow!(format!("Error during download: {}", e)).code(502)),
         }
     }
 }
