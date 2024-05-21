@@ -856,6 +856,7 @@ dependencies = [
  "rand 0.8.5",
  "regex",
  "reqwest",
+ "rust-crypto",
  "serde",
  "serde_json",
  "type-map",

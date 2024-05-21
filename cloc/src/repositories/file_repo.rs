@@ -1,4 +1,5 @@
 use std::{fs, path::PathBuf, process::Output};
+use anyhow::Context;
 
 use common::{
     error,
@@ -8,6 +9,7 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tokio::process::Command;
+use common::entities::user::User;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct MetaEntry {
@@ -74,13 +76,14 @@ impl FileRepo {
 
     pub async fn download(
         &self,
-        user: ObjectId,
+        user_id: ObjectId,
         files: Scope,
+        token: Option<String>,
     ) -> error::Result<(ObjectId, Vec<String>, Vec<String>)> {
         let id = ObjectId::new();
         let entry = MetaEntry {
             id,
-            user,
+            user: user_id,
             links: files.links,
         };
 
@@ -91,46 +94,56 @@ impl FileRepo {
             Command::new("mkdir")
                 .arg(&id.to_hex())
                 .current_dir(&self.path),
-        )
-        .await;
+        ).await.context("Failed to create directory")?;
+
         let path = append_to_path(self.path.clone(), &id.to_hex());
         let mut errors = vec![];
         let mut skiped = vec![];
         // download files
         for file_link in entry.links {
-            if run_command(Command::new("wget").arg(&file_link).current_dir(&path))
+            let mut command = Command::new("wget");
+            command.current_dir(&path);
+            if let Some(token) = token.clone() {
+                command.arg("--header").arg(format!("Authorization: Bearer {}", token));
+            }
+            command.arg(&file_link);
+
+            if run_command(&mut command)
                 .await
                 .is_none()
             {
                 errors.push(file_link);
                 continue;
             }
-            let basename = String::from_utf8(
-                Command::new("file")
-                    .arg("--mime")
-                    .arg(file_link.clone())
-                    .output()
-                    .await
-                    .unwrap()
-                    .stdout,
-            )
-            .unwrap();
-            let html_check_output = String::from_utf8(
-                Command::new("file")
-                    .arg("--mime")
-                    .arg(basename)
-                    .current_dir(path.clone())
-                    .output()
-                    .await
-                    .unwrap()
-                    .stdout,
-            )
-            .unwrap();
 
-            if html_check_output.contains("html") {
-                skiped.push(file_link);
-                continue;
-            }
+            let file_name = file_link.split('/').last().unwrap();
+            let saved_file_path = path.join(file_name);
+
+            // let basename = String::from_utf8(
+            //     Command::new("file")
+            //         .arg("--mime")
+            //         .arg(saved_file_path)
+            //         .output()
+            //         .await
+            //         .context("Failed to get file mime type")?
+            //         .stdout,
+            // ).context("Failed to parse basename")?;
+            //
+            // let html_check_output = String::from_utf8(
+            //     Command::new("file")
+            //         .arg("--mime")
+            //         .arg(basename)
+            //         .current_dir(path.clone())
+            //         .output()
+            //         .await
+            //         .context("Failed to check file mime type")?
+            //         .stdout,
+            // ).context("Failed to parse HTML check output")?;
+            //
+            // if html_check_output.contains("html") {
+            //     skiped.push(file_link);
+            //     continue;
+            // }
         }
         Ok((id, skiped, errors))
     }

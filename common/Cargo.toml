@@ -27,6 +27,7 @@ log = "0.4.17"
 ureq = {version = "2.7.1", features = ["json"]}
 regex = "1.10.3"
 rand = "0.8.5"
+rust-crypto = "0.2.36"
 
 
 [dependencies.mongodb]
