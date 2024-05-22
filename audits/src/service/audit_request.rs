@@ -39,7 +39,7 @@ use common::entities::audit::PublicAuditEditHistory;
 pub struct RequestChange {
     description: Option<String>,
     time: Option<TimeRange>,
-    project_scope: Option<Vec<String>>,
+    scope: Option<Vec<String>>,
     tags: Option<Vec<String>>,
     price_range: Option<PriceRange>,
     price: Option<i64>,
@@ -392,9 +392,9 @@ impl RequestService {
             }
         }
 
-        if change.project_scope.is_some() {
-            if request.scope != change.project_scope {
-                request.scope = change.project_scope;
+        if change.scope.is_some() {
+            if request.scope != change.scope {
+                request.scope = change.scope;
                 is_history_changed = true;
             }
         }
