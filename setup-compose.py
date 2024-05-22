@@ -177,6 +177,7 @@ volumes:
   {config['volume_namespace']}-files:
   {config['volume_namespace']}-binaries:
   {config['volume_namespace']}-repo:
+  {config['volume_namespace']}-database:
 networks:
   {config['network_namespace']}-report:
   {config['network_namespace']}-database:
