@@ -39,7 +39,8 @@ use common::entities::audit::PublicAuditEditHistory;
 pub struct RequestChange {
     description: Option<String>,
     time: Option<TimeRange>,
-    project_scope: Option<Vec<String>>,
+    scope: Option<Vec<String>>,
+    tags: Option<Vec<String>>,
     price_range: Option<PriceRange>,
     price: Option<i64>,
     comment: Option<String>,
@@ -92,12 +93,16 @@ impl RequestService {
             );
         };
 
+        let project = get_project(&self.context, request.project_id.parse()?).await?;
+
         let mut request = AuditRequest {
             id: ObjectId::new(),
             customer_id,
             auditor_id,
             project_id: request.project_id.parse()?,
-            description: request.description,
+            description: project.description,
+            tags: Some(project.tags),
+            scope: Some(project.scope),
             time: request.time,
             price: request.price,
             last_modified: Utc::now().timestamp_micros(),
@@ -105,8 +110,6 @@ impl RequestService {
             chat_id: None,
             edit_history: Vec::new(),
         };
-
-        let project = get_project(&self.context, request.project_id).await?;
 
         let edit_history_item = AuditEditHistory {
             id: request.edit_history.len(),
@@ -116,8 +119,8 @@ impl RequestService {
             audit: serde_json::to_string(&json!({
                     "project_name": project.name,
                     "description": request.description,
-                    "scope": project.scope,
-                    "tags": project.tags,
+                    "scope": request.scope,
+                    "tags": request.tags,
                     "price": request.price,
                     "time": request.time,
                     "conclusion": "".to_string(),
@@ -389,6 +392,20 @@ impl RequestService {
             }
         }
 
+        if change.scope.is_some() {
+            if request.scope != change.scope {
+                request.scope = change.scope;
+                is_history_changed = true;
+            }
+        }
+
+        if change.tags.is_some() {
+            if request.tags != change.tags {
+                request.tags = change.tags;
+                is_history_changed = true;
+            }
+        }
+
         if let Some(time) = change.time {
             request.time = time;
             is_history_changed = true;
@@ -430,8 +447,8 @@ impl RequestService {
                 audit: serde_json::to_string(&json!({
                     "project_name": project.name,
                     "description": request.description,
-                    "scope": project.scope,
-                    "tags": project.tags,
+                    "scope": request.scope,
+                    "tags": request.tags,
                     "price": request.price,
                     "time": request.time,
                     "conclusion": "".to_string(),

@@ -106,6 +106,18 @@ impl PublicRequest {
             .await
             .map_err(|_| anyhow::anyhow!("Auditor {} not found", request.auditor_id))?;
 
+        let tags = if let Some(tags) = request.tags {
+            tags
+        } else {
+            project.tags
+        };
+
+        let project_scope = if let Some(scope) = request.scope {
+            scope
+        } else {
+            project.scope
+        };
+
         Ok(PublicRequest {
             id: request.id.to_hex(),
             customer_id: request.customer_id.to_hex(),
@@ -117,8 +129,8 @@ impl PublicRequest {
             time: request.time,
             project_name: project.name,
             avatar: auditor.avatar,
-            project_scope: project.scope,
-            tags: Some(project.tags),
+            project_scope,
+            tags: Some(tags),
             price: request.price,
             auditor_contacts: auditor.contacts,
             customer_contacts: project.creator_contacts,
