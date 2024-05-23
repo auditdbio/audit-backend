@@ -145,11 +145,13 @@ x-common-variables: &common-variables
   AUDITORS_SERVICE_URL: "${{AUDITORS_SERVICE_URL}}"
   AUDITS_SERVICE_URL: "${{AUDITS_SERVICE_URL}}"
   CUSTOMERS_SERVICE_URL: "${{CUSTOMERS_SERVICE_URL}}"
+  CHAT_SERVICE_URL: "${{CHAT_SERVICE_URL}}"
   FILES_SERVICE_URL: "${{FILES_SERVICE_URL}}"
   MAIL_SERVICE_URL: "${{MAIL_SERVICE_URL}}"
   SEARCH_SERVICE_URL: "${{SEARCH_SERVICE_URL}}"
   USERS_SERVICE_URL: "${{USERS_SERVICE_URL}}"
   RENDERER_SERVICE_URL: "${{RENDERER_SERVICE_URL}}"
+  REPORT_SERVICE_URL: "${{REPORT_SERVICE_URL}}"
   NOTIFICATIONS_SERVICE_URL: "${{NOTIFICATIONS_SERVICE_URL}}"
   EVENTS_SERVICE_URL: "${{EVENTS_SERVICE_URL}}"
   API_PREFIX: "${{API_PREFIX}}"
@@ -177,6 +179,7 @@ volumes:
   {config['volume_namespace']}-files:
   {config['volume_namespace']}-binaries:
   {config['volume_namespace']}-repo:
+  {config['volume_namespace']}-database:
 networks:
   {config['network_namespace']}-report:
   {config['network_namespace']}-database:
@@ -218,11 +221,13 @@ services = {
   "%AUDITORS_SERVICE_URL%": "auditors",
   "%AUDITS_SERVICE_URL%": "audits",
   "%CUSTOMERS_SERVICE_URL%": "customers",
+  "%CHAT_SERVICE_URL%": "chat",
   "%FILES_SERVICE_URL%": "files",
   "%MAIL_SERVICE_URL%": "mail",
   "%SEARCH_SERVICE_URL%": "search",
   "%USERS_SERVICE_URL%": "users",
   "%RENDERER_SERVICE_URL%": "renderer",
+  "%REPORT_SERVICE_URL%": "report",
   "%NOTIFICATIONS_SERVICE_URL%": "notification",
   "%EVENTS_SERVICE_URL%": "event",
   "%FRONTEND%": "frontend"

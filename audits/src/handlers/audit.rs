@@ -1,3 +1,4 @@
+use serde_json::json;
 use actix_web::{
     delete, get, patch, post,
     web::{self, Json, Query},
@@ -10,11 +11,13 @@ use common::{
         seartch::PaginationParams,
     },
     context::GeneralContext,
-    entities::{issue::ChangeIssue, role::Role},
+    entities::{
+        audit::{PublicAuditEditHistory, ChangeAuditHistory},
+        issue::ChangeIssue,
+        role::Role
+    },
     error,
 };
-
-use serde_json::json;
 
 use crate::service::{
     audit::{AuditService},
@@ -169,5 +172,30 @@ pub async fn get_public_audits(
         AuditService::new(context)
             .find_public(id.parse()?, role)
             .await?,
+    ))
+}
+
+#[get("/audit/{audit_id}/edit_history")]
+pub async fn get_audit_edit_history(
+    context: GeneralContext,
+    audit_id: web::Path<String>,
+) -> error::Result<Json<Vec<PublicAuditEditHistory>>> {
+    Ok(Json(
+        AuditService::new(context)
+            .get_audit_edit_history(audit_id.parse()?)
+            .await?
+    ))
+}
+
+#[patch("/audit/{audit_id}/edit_history/{history_id}")]
+pub async fn change_audit_edit_history(
+    context: GeneralContext,
+    params: web::Path<(String, usize)>,
+    Json(data): Json<ChangeAuditHistory>,
+) -> error::Result<Json<PublicAuditEditHistory>> {
+    Ok(Json(
+        AuditService::new(context)
+            .change_audit_edit_history(params.0.parse()?, params.1, data)
+            .await?
     ))
 }
