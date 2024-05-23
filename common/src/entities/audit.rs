@@ -129,31 +129,20 @@ impl Audit<ObjectId> {
 
     pub async fn resolve(&mut self, context: &GeneralContext) -> error::Result<()> {
         if self.report.is_none() {
-            log::info!("Report is none, starting to generate a new report for audit id: {}", self.id);
-            log::info!("Protocol: {}", PROTOCOL.as_str());
-            log::info!("Report service: {}", REPORT_SERVICE.as_str());
-            log::info!("API prefix: {}", API_PREFIX.as_str());
-            log::info!("Audit id: {}", self.id);
-
-            let url = format!(
-                "{}://{}/{}/report/{}",
-                PROTOCOL.as_str(),
-                REPORT_SERVICE.as_str(),
-                API_PREFIX.as_str(),
-                self.id,
-            );
-
-            log::info!("Sending request to URL: {}", url);
-
             let report_response = context
                 .make_request::<PublicReport>()
-                .post(url)
-                .auth(context.auth())
+                .post(format!(
+                    "{}://{}/{}/report/{}",
+                    PROTOCOL.as_str(),
+                    REPORT_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
+                    self.id,
+                ))
+                .auth(context.server_auth())
                 .send()
                 .await;
 
             if let Err(e) = report_response {
-                log::info!("Error in report request: {}", e);
                 return Err(anyhow::anyhow!(format!("Error in report request: {}", e)).code(502));
             }
 
