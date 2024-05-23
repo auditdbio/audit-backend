@@ -387,7 +387,7 @@ def main():
         return
 
     compose = create_docker_compose(config)
-    docker = create_docker_build(config["is_test_server"])
+    docker = create_docker_build(config.get("is_test_server"))
 
 
     with open("docker-compose.yml", "w") as f:
