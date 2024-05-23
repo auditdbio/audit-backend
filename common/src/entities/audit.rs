@@ -128,16 +128,19 @@ impl Audit<ObjectId> {
     }
 
     pub async fn resolve(&mut self, context: &GeneralContext) -> error::Result<()> {
-        log::info!("Entering resolve function for audit id: {}", self.id);
         if self.report.is_none() {
             log::info!("Report is none, starting to generate a new report for audit id: {}", self.id);
+            log::info!("Protocol: {}", PROTOCOL.as_str());
+            log::info!("Report service: {}", REPORT_SERVICE.as_str());
+            log::info!("API prefix: {}", API_PREFIX.as_str());
+            log::info!("Audit id: {}", self.id);
 
             let url = format!(
                 "{}://{}/{}/report/{}",
                 PROTOCOL.as_str(),
                 REPORT_SERVICE.as_str(),
                 API_PREFIX.as_str(),
-                self.id
+                self.id,
             );
 
             log::info!("Sending request to URL: {}", url);
