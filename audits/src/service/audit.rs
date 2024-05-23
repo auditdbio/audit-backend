@@ -335,7 +335,9 @@ impl AuditService {
                     }
                 }
                 AuditAction::Resolve => {
+                    log::info!("Action resolve");
                     if audit.status == AuditStatus::Started {
+                        log::info!("Check status {:?}", audit.status);
                         audit.status = AuditStatus::Resolved;
                         audit.resolve(&self.context).await?;
                     }
