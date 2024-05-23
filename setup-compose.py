@@ -362,7 +362,8 @@ def get_config():
         "container_namespace": os.getenv("CONTAINER_NAMESPACE"),
         "volume_namespace": os.getenv("VOLUME_NAMESPACE"),
         "network_namespace": os.getenv("NETWORK_NAMESPACE"),
-        "api_prefix": os.getenv("API_PREFIX")
+        "api_prefix": os.getenv("API_PREFIX"),
+        "is_test_server": os.getenv("IS_TEST_SERVER"),
     }
 
     if os.environ["PRESET"] is not None:
@@ -386,7 +387,7 @@ def main():
         return
 
     compose = create_docker_compose(config)
-    docker = create_docker_build(config)
+    docker = create_docker_build(config["is_test_server"])
 
 
     with open("docker-compose.yml", "w") as f:
