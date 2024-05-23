@@ -19,6 +19,7 @@ use common::{
     context::GeneralContext,
     entities::{
         audit_request::{AuditRequest, PriceRange, TimeRange},
+        audit::AuditEditHistory,
         auditor::ExtendedAuditor,
         letter::CreateLetter,
         project::get_project,
@@ -31,14 +32,18 @@ use common::{
 pub use common::api::requests::PublicRequest;
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
+use common::entities::audit::PublicAuditEditHistory;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RequestChange {
     description: Option<String>,
     time: Option<TimeRange>,
-    project_scope: Option<Vec<String>>,
+    scope: Option<Vec<String>>,
+    tags: Option<Vec<String>>,
     price_range: Option<PriceRange>,
     price: Option<i64>,
+    comment: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -88,18 +93,41 @@ impl RequestService {
             );
         };
 
+        let project = get_project(&self.context, request.project_id.parse()?).await?;
+
         let mut request = AuditRequest {
             id: ObjectId::new(),
             customer_id,
             auditor_id,
             project_id: request.project_id.parse()?,
-            description: request.description,
+            description: project.description,
+            tags: Some(project.tags),
+            scope: Some(project.scope),
             time: request.time,
             price: request.price,
             last_modified: Utc::now().timestamp_micros(),
             last_changer,
             chat_id: None,
+            edit_history: Vec::new(),
         };
+
+        let edit_history_item = AuditEditHistory {
+            id: request.edit_history.len(),
+            date: request.last_modified.clone(),
+            author: project.customer_id.clone(),
+            comment: None,
+            audit: serde_json::to_string(&json!({
+                    "project_name": project.name,
+                    "description": request.description,
+                    "scope": request.scope,
+                    "tags": request.tags,
+                    "price": request.price,
+                    "time": request.time,
+                    "conclusion": "".to_string(),
+                })).unwrap(),
+        };
+
+        request.edit_history.push(edit_history_item);
 
         let old_version_of_this_request = requests
             .find_many("project_id", &Bson::ObjectId(request.project_id))
@@ -108,8 +136,6 @@ impl RequestService {
             .filter(|r| r.customer_id == request.customer_id && r.auditor_id == request.auditor_id)
             .collect::<Vec<_>>()
             .pop();
-
-        let project = get_project(&self.context, request.project_id).await?;
 
         if let Some(old_version_of_this_request) = old_version_of_this_request {
             requests
@@ -212,8 +238,6 @@ impl RequestService {
             send_mail(&self.context, letter).await?;
         }
 
-
-
         let (event_receiver, receiver_role) = if last_changer == Role::Customer {
             (auditor_id, Role::Auditor)
         } else {
@@ -264,7 +288,7 @@ impl RequestService {
         Ok(public_request)
     }
 
-    pub async fn find(&self, id: ObjectId) -> error::Result<Option<PublicRequest>> {
+    async fn get_request(&self, id: ObjectId) -> error::Result<Option<AuditRequest<ObjectId>>> {
         let auth = self.context.auth();
 
         let requests = self
@@ -276,12 +300,21 @@ impl RequestService {
         };
 
         if !Read.get_access(&auth, &request) {
-            return Err(anyhow::anyhow!("User is not available to change this customer").code(400));
+            return Err(anyhow::anyhow!("User is not available to read this request").code(400));
         }
 
-        let public_request = PublicRequest::new(&self.context, request).await?;
+        Ok(Some(request))
+    }
 
-        Ok(Some(public_request))
+    pub async fn find(&self, id: ObjectId) -> error::Result<Option<PublicRequest>> {
+        let request = self.get_request(id).await?;
+
+        if let Some(request) = request {
+            let public_request = PublicRequest::new(&self.context, request).await?;
+            return Ok(Some(public_request));
+        }
+
+        Ok(None)
     }
 
     pub async fn my_request(
@@ -336,6 +369,7 @@ impl RequestService {
         change: RequestChange,
     ) -> error::Result<PublicRequest> {
         let auth = self.context.auth();
+        let user_id = auth.id().unwrap();
 
         let requests = self
             .context
@@ -346,27 +380,50 @@ impl RequestService {
         };
 
         if !Edit.get_access(&auth, &request) {
-            return Err(anyhow::anyhow!("User is not available to change this customer").code(400));
+            return Err(anyhow::anyhow!("User is not available to change this audit request").code(400));
         }
 
+        let mut is_history_changed = false;
+
         if let Some(description) = change.description {
-            request.description = description;
+            if request.description != description {
+                request.description = description;
+                is_history_changed = true;
+            }
+        }
+
+        if change.scope.is_some() {
+            if request.scope != change.scope {
+                request.scope = change.scope;
+                is_history_changed = true;
+            }
+        }
+
+        if change.tags.is_some() {
+            if request.tags != change.tags {
+                request.tags = change.tags;
+                is_history_changed = true;
+            }
         }
 
         if let Some(time) = change.time {
             request.time = time;
+            is_history_changed = true;
         }
 
         if let Some(price) = change.price {
-            request.price = price;
+            if request.price != price {
+                request.price = price;
+                is_history_changed = true;
+            }
         }
 
-        let last_changer_role = if auth.id() == Some(request.customer_id) {
+        let last_changer_role = if user_id == request.customer_id {
             Role::Customer
-        } else if auth.id() == Some(request.auditor_id) {
+        } else if user_id == request.auditor_id {
             Role::Auditor
         } else {
-            return Err(anyhow::anyhow!("User is not available to change this customer").code(400));
+            return Err(anyhow::anyhow!("User is not available to change this request").code(400));
         };
 
         let (receiver_id, receiver_role) = if last_changer_role == Role::Customer {
@@ -378,6 +435,28 @@ impl RequestService {
         request.last_changer = last_changer_role;
 
         request.last_modified = Utc::now().timestamp_micros();
+
+        if is_history_changed {
+            let project = get_project(&self.context, request.project_id).await?;
+
+            let edit_history_item = AuditEditHistory {
+                id: request.edit_history.len(),
+                date: request.last_modified.clone(),
+                author: user_id.to_hex(),
+                comment: change.comment,
+                audit: serde_json::to_string(&json!({
+                    "project_name": project.name,
+                    "description": request.description,
+                    "scope": request.scope,
+                    "tags": request.tags,
+                    "price": request.price,
+                    "time": request.time,
+                    "conclusion": "".to_string(),
+                })).unwrap(),
+            };
+
+            request.edit_history.push(edit_history_item);
+        }
 
         let public_request = PublicRequest::new(&self.context, request.clone()).await?;
 
@@ -419,7 +498,7 @@ impl RequestService {
 
         if !Edit.get_access(&auth, &request) {
             requests.insert(&request).await?;
-            return Err(anyhow::anyhow!("User is not available to delete this customer").code(400));
+            return Err(anyhow::anyhow!("User is not available to delete this request").code(400));
         }
 
         let current_role = if auth.id() == Some(request.customer_id) {
@@ -427,7 +506,7 @@ impl RequestService {
         } else if auth.id() == Some(request.auditor_id) {
             Role::Auditor
         } else {
-            return Err(anyhow::anyhow!("User is not available to change this customer").code(400));
+            return Err(anyhow::anyhow!("User is not available to delete this request").code(400));
         };
 
         let public_request = PublicRequest::new(&self.context, request.clone()).await?;
@@ -509,6 +588,29 @@ impl RequestService {
             .map(|r| r.stringify())
             .collect();
 
+        Ok(result)
+    }
+
+    pub async fn get_request_edit_history(
+        &self,
+        id: ObjectId,
+    ) -> error::Result<Vec<PublicAuditEditHistory>> {
+        let Some(request) = self.get_request(id).await? else {
+            return Err(anyhow::anyhow!("Audit request not found").code(404));
+        };
+
+        let mut result = vec![];
+
+        for history in request.edit_history {
+            let role = if history.author == request.auditor_id.to_hex() {
+                Role::Auditor
+            } else {
+                Role::Customer
+            };
+            result.push(PublicAuditEditHistory::new(&self.context, history, role).await?);
+        }
+
+        result.reverse();
         Ok(result)
     }
 }

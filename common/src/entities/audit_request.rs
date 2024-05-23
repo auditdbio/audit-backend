@@ -4,6 +4,7 @@ use utoipa::ToSchema;
 
 use crate::{
     api::chat::AuditMessageId,
+    entities::audit::AuditEditHistory,
     repository::Entity,
 };
 
@@ -29,6 +30,8 @@ pub struct AuditRequest<Id> {
     pub project_id: Id,
 
     pub description: String,
+    pub tags: Option<Vec<String>>,
+    pub scope: Option<Vec<String>>,
 
     pub price: i64,
     pub last_modified: i64,
@@ -36,6 +39,9 @@ pub struct AuditRequest<Id> {
     pub time: TimeRange,
 
     pub chat_id: Option<AuditMessageId>,
+
+    #[serde(default)]
+    pub edit_history: Vec<AuditEditHistory>,
 }
 
 impl AuditRequest<String> {
@@ -46,11 +52,14 @@ impl AuditRequest<String> {
             customer_id: self.customer_id.parse().unwrap(),
             project_id: self.project_id.parse().unwrap(),
             description: self.description,
+            tags: self.tags,
+            scope: self.scope,
             price: self.price,
             last_modified: self.last_modified,
             last_changer: self.last_changer,
             time: self.time,
             chat_id: self.chat_id,
+            edit_history: self.edit_history,
         }
     }
 }
@@ -63,11 +72,14 @@ impl AuditRequest<ObjectId> {
             customer_id: self.customer_id.to_hex(),
             project_id: self.project_id.to_hex(),
             description: self.description,
+            tags: self.tags,
+            scope: self.scope,
             price: self.price,
             last_modified: self.last_modified,
             last_changer: self.last_changer,
             time: self.time,
             chat_id: self.chat_id,
+            edit_history: self.edit_history,
         }
     }
 }

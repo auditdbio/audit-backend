@@ -2,6 +2,8 @@ use mongodb::bson::oid::ObjectId;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use rand::{distributions::Alphanumeric, Rng};
+use std::env::var;
+use crypto::{ aes, blockmodes, buffer::{self, ReadBuffer, WriteBuffer, BufferResult}};
 
 use crate::{
     auth::Auth,
@@ -140,4 +142,46 @@ pub async fn new_link_id(
 pub fn validate_name(name: &str) -> bool {
     let regex = Regex::new(r"^[A-Za-z0-9_-]+$").unwrap();
     regex.is_match(name)
+}
+
+pub async fn decrypt_github_token(encrypted_token: Vec<u8>) -> error::Result<String> {
+    let key = var("GITHUB_TOKEN_CRYPTO_KEY").unwrap();
+    let iv = var("GITHUB_TOKEN_CRYPTO_IV").unwrap();
+
+    let mut decryptor = aes::cbc_decryptor(
+        aes::KeySize::KeySize256,
+        key.as_bytes(),
+        iv.as_bytes(),
+        blockmodes::PkcsPadding,
+    );
+
+    let mut decrypted_data = Vec::<u8>::new();
+    let mut read_buffer = buffer::RefReadBuffer::new(&encrypted_token);
+    let mut buffer = [0; 4096];
+    let mut write_buffer = buffer::RefWriteBuffer::new(&mut buffer);
+
+    loop {
+        let result = match decryptor.decrypt(
+            &mut read_buffer,
+            &mut write_buffer,
+            true
+        ) {
+            Ok(value) => value,
+            _ => return Err(anyhow::anyhow!("Decryption error").code(500))
+        };
+
+        decrypted_data.extend(write_buffer
+            .take_read_buffer()
+            .take_remaining()
+            .iter()
+            .map(|&i| i)
+        );
+
+        match result {
+            BufferResult::BufferUnderflow => break,
+            BufferResult::BufferOverflow => {}
+        }
+    }
+
+    Ok(String::from_utf8_lossy(&decrypted_data).to_string())
 }
