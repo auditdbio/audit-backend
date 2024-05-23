@@ -366,11 +366,11 @@ def get_config():
         "is_test_server": os.getenv("IS_TEST_SERVER"),
     }
 
-    if os.environ["PRESET"] is not None:
+    if os.environ.get("PRESET") is not None:
         preset_config = preset[os.environ["PRESET"]]
         for key, value in config.items():
-            if preset_config[key] is not None and value is not None:
-              preset_config[key] = value
+            if preset_config.get(key) is not None and value is not None:
+                preset_config[key] = value
         return preset_config
     return config
 
