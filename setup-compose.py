@@ -325,6 +325,7 @@ preset = {
     "test": {
         "open_database": True,
         "with_proxy": True,
+        "is_test_server": True,
         "container_namespace": "test",
         "volume_namespace": "test",
         "network_namespace": "test",
