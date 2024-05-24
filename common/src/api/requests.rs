@@ -29,7 +29,8 @@ pub struct PublicRequest {
     pub avatar: String,
     pub project_scope: Vec<String>,
     pub tags: Option<Vec<String>>,
-    pub price: i64,
+    pub price: Option<i64>,
+    pub total_cost: Option<i64>,
     pub auditor_contacts: Contacts,
     pub customer_contacts: Contacts,
     pub last_changer: Role,
@@ -132,6 +133,7 @@ impl PublicRequest {
             project_scope,
             tags: Some(tags),
             price: request.price,
+            total_cost: request.total_cost,
             auditor_contacts: auditor.contacts,
             customer_contacts: project.creator_contacts,
             last_changer: request.last_changer,
@@ -164,7 +166,8 @@ pub struct CreateRequest {
     pub auditor_id: String,
     pub project_id: String,
 
-    pub price: i64,
+    pub price: Option<i64>,
+    pub total_cost: Option<i64>,
     pub description: String,
     pub time: TimeRange,
 }

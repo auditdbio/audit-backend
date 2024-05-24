@@ -200,6 +200,7 @@ impl Auth {
             status: project.status,
             creator_contacts: contacts,
             price: project.price,
+            total_cost: project.total_cost,
             kind: "project".to_string(),
             created_at: Some(Utc::now().timestamp_micros()),
         }

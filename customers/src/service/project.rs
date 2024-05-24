@@ -25,7 +25,8 @@ pub struct CreateProject {
     pub tags: Vec<String>,
     pub publish_options: PublishOptions,
     pub status: String,
-    pub price: i64,
+    pub price: Option<i64>,
+    pub total_cost: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -37,6 +38,7 @@ pub struct ProjectChange {
     pub publish_options: Option<PublishOptions>,
     pub status: Option<String>,
     pub price: Option<i64>,
+    pub total_cost: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -78,6 +80,12 @@ impl ProjectService {
                 }
             };
 
+        let price_per_line = if project.total_cost.is_none() {
+            project.price
+        } else {
+            None
+        };
+
         let project = Project {
             id: ObjectId::new(),
             customer_id: auth.id().ok_or(anyhow::anyhow!("No customer id found"))?,
@@ -88,7 +96,8 @@ impl ProjectService {
             publish_options: project.publish_options,
             status: project.status,
             creator_contacts,
-            price: project.price,
+            price: price_per_line,
+            total_cost: project.total_cost,
             last_modified: Utc::now().timestamp_micros(),
             created_at: Some(Utc::now().timestamp_micros()),
             auditors: Vec::new(),
@@ -204,7 +213,15 @@ impl ProjectService {
         }
 
         if let Some(price) = change.price {
-            project.price = price;
+            if change.total_cost.is_none() {
+                project.price = Some(price);
+            }
+        }
+
+        if let Some(total_cost) = change.total_cost {
+            if change.price.is_none() {
+                project.total_cost = Some(total_cost);
+            }
         }
 
         project.last_modified = Utc::now().timestamp_micros();
