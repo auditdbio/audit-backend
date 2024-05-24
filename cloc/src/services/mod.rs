@@ -1,7 +1,16 @@
 use std::{collections::HashMap, sync::Arc};
+use mongodb::bson::{Bson, oid::ObjectId};
 
 use crate::repositories::file_repo::{CountResult, FileRepo, Scope};
-use common::{context::GeneralContext, error::{self, AddCode}};
+use common::{
+    api::{
+        linked_accounts::LinkedService,
+        user::decrypt_github_token
+    },
+    context::GeneralContext,
+    error::{self, AddCode},
+    entities::user::User,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -51,40 +60,31 @@ impl ClocService {
     }
 
     pub async fn count(&self, request: ClocRequest) -> error::Result<CountResult> {
-        let user = self.context.auth().id().unwrap();
+        let user_id = self.context.auth().id().unwrap();
         let repo = self
             .context
             .get_repository_manual::<Arc<FileRepo>>()
             .unwrap();
+
         let mut scope = Scope::new(request.links);
-        // https://raw.githubusercontent.com/auditdbio/audit-web/942b43136ace347e69ecbd64fdda819f85775117/src/components/Chat/ImageMessage.jsx
-        // https://               github.com/auditdbio/audit-web/blob/942b43136ace347e69ecbd64fdda819f85775117/src/components/Chat/ImageMessage.jsx
 
         for link in &mut scope.links {
             process_link(link);
         }
 
-        // let (id, skiped, errors) = repo.download(user, scope.clone()).await?;
-        //
-        // let result = repo.count(id).await?;
-        // Ok(CountResult {
-        //     skiped,
-        //     errors,
-        //     result,
-        // })
 
-        match repo.download(user, scope.clone()).await {
+        let access_token: Option<String> = None;
+
+        match repo.download(user_id, scope.clone(), access_token).await {
             Ok((id, skiped, errors)) => {
                 match repo.count(id).await {
                     Ok(result) => Ok(CountResult { skiped, errors, result }),
                     Err(e) => Err(
-                        anyhow::anyhow!(format!("Error during count: {:?}", e)).code(502)
+                        anyhow::anyhow!(format!("Error during count: {}", e)).code(502)
                     ),
                 }
             }
-            Err(e) => Err(
-                anyhow::anyhow!(format!("Error during download: {:?}", e)).code(502)
-            ),
+            Err(e) => Err(anyhow::anyhow!(format!("Error during download: {}", e)).code(502)),
         }
     }
 }

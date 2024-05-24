@@ -30,6 +30,8 @@ pub struct AuditRequest<Id> {
     pub project_id: Id,
 
     pub description: String,
+    pub tags: Option<Vec<String>>,
+    pub scope: Option<Vec<String>>,
 
     pub price: Option<i64>,
     pub total_cost: Option<i64>,
@@ -51,6 +53,8 @@ impl AuditRequest<String> {
             customer_id: self.customer_id.parse().unwrap(),
             project_id: self.project_id.parse().unwrap(),
             description: self.description,
+            tags: self.tags,
+            scope: self.scope,
             price: self.price,
             total_cost: self.total_cost,
             last_modified: self.last_modified,
@@ -70,6 +74,8 @@ impl AuditRequest<ObjectId> {
             customer_id: self.customer_id.to_hex(),
             project_id: self.project_id.to_hex(),
             description: self.description,
+            tags: self.tags,
+            scope: self.scope,
             price: self.price,
             total_cost: self.total_cost,
             last_modified: self.last_modified,

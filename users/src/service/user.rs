@@ -7,10 +7,6 @@ use std::env::var;
 use actix_web::HttpResponse;
 use web3::signing::{keccak256, recover};
 
-extern crate crypto;
-use crypto::{ buffer, aes, blockmodes };
-use crypto::buffer::{ ReadBuffer, WriteBuffer, BufferResult };
-
 use common::{
     access_rules::{AccessRules, Edit, Read},
     api::{
@@ -23,6 +19,7 @@ use common::{
             GetGithubAccessToken, UpdateLinkedAccount,
             AddWallet,
         },
+        user::decrypt_github_token,
     },
     auth::Auth,
     context::GeneralContext,
@@ -613,46 +610,8 @@ impl UserService {
             .header("User-Agent", "auditdbio");
 
         let request = if let Some(encrypted_token) = access_token {
-            let key = var("GITHUB_TOKEN_CRYPTO_KEY").unwrap();
-            let iv = var("GITHUB_TOKEN_CRYPTO_IV").unwrap();
-
-            let mut decryptor = aes::cbc_decryptor(
-                aes::KeySize::KeySize256,
-                key.as_bytes(),
-                iv.as_bytes(),
-                blockmodes::PkcsPadding,
-            );
-
-            let mut decrypted_data = Vec::<u8>::new();
-            let mut read_buffer = buffer::RefReadBuffer::new(&encrypted_token);
-            let mut buffer = [0; 4096];
-            let mut write_buffer = buffer::RefWriteBuffer::new(&mut buffer);
-
-            loop {
-                let result = match decryptor.decrypt(
-                    &mut read_buffer,
-                    &mut write_buffer,
-                    true
-                ) {
-                    Ok(value) => value,
-                    _ => return Err(anyhow::anyhow!("Decryption error").code(500))
-                };
-
-
-                decrypted_data.extend(write_buffer
-                    .take_read_buffer()
-                    .take_remaining()
-                    .iter()
-                    .map(|&i| i)
-                );
-
-                match result {
-                    BufferResult::BufferUnderflow => break,
-                    BufferResult::BufferOverflow => {}
-                }
-            }
-
-            request.bearer_auth(String::from_utf8_lossy(&decrypted_data))
+            let decrypted_token = decrypt_github_token(encrypted_token).await?;
+            request.bearer_auth(decrypted_token)
         } else {
             request
         };

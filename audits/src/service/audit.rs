@@ -339,7 +339,7 @@ impl AuditService {
                 AuditAction::Resolve => {
                     if audit.status == AuditStatus::Started {
                         audit.status = AuditStatus::Resolved;
-                        audit.resolve(&self.context).await;
+                        audit.resolve(&self.context).await?;
                     }
                 }
             }

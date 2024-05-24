@@ -145,11 +145,13 @@ x-common-variables: &common-variables
   AUDITORS_SERVICE_URL: "${{AUDITORS_SERVICE_URL}}"
   AUDITS_SERVICE_URL: "${{AUDITS_SERVICE_URL}}"
   CUSTOMERS_SERVICE_URL: "${{CUSTOMERS_SERVICE_URL}}"
+  CHAT_SERVICE_URL: "${{CHAT_SERVICE_URL}}"
   FILES_SERVICE_URL: "${{FILES_SERVICE_URL}}"
   MAIL_SERVICE_URL: "${{MAIL_SERVICE_URL}}"
   SEARCH_SERVICE_URL: "${{SEARCH_SERVICE_URL}}"
   USERS_SERVICE_URL: "${{USERS_SERVICE_URL}}"
   RENDERER_SERVICE_URL: "${{RENDERER_SERVICE_URL}}"
+  REPORT_SERVICE_URL: "${{REPORT_SERVICE_URL}}"
   NOTIFICATIONS_SERVICE_URL: "${{NOTIFICATIONS_SERVICE_URL}}"
   EVENTS_SERVICE_URL: "${{EVENTS_SERVICE_URL}}"
   API_PREFIX: "${{API_PREFIX}}"
@@ -177,6 +179,7 @@ volumes:
   {config['volume_namespace']}-files:
   {config['volume_namespace']}-binaries:
   {config['volume_namespace']}-repo:
+  {config['volume_namespace']}-database:
 networks:
   {config['network_namespace']}-report:
   {config['network_namespace']}-database:
@@ -218,11 +221,13 @@ services = {
   "%AUDITORS_SERVICE_URL%": "auditors",
   "%AUDITS_SERVICE_URL%": "audits",
   "%CUSTOMERS_SERVICE_URL%": "customers",
+  "%CHAT_SERVICE_URL%": "chat",
   "%FILES_SERVICE_URL%": "files",
   "%MAIL_SERVICE_URL%": "mail",
   "%SEARCH_SERVICE_URL%": "search",
   "%USERS_SERVICE_URL%": "users",
   "%RENDERER_SERVICE_URL%": "renderer",
+  "%REPORT_SERVICE_URL%": "report",
   "%NOTIFICATIONS_SERVICE_URL%": "notification",
   "%EVENTS_SERVICE_URL%": "event",
   "%FRONTEND%": "frontend"
@@ -320,6 +325,7 @@ preset = {
     "test": {
         "open_database": True,
         "with_proxy": True,
+        "is_test_server": True,
         "container_namespace": "test",
         "volume_namespace": "test",
         "network_namespace": "test",
@@ -357,14 +363,15 @@ def get_config():
         "container_namespace": os.getenv("CONTAINER_NAMESPACE"),
         "volume_namespace": os.getenv("VOLUME_NAMESPACE"),
         "network_namespace": os.getenv("NETWORK_NAMESPACE"),
-        "api_prefix": os.getenv("API_PREFIX")
+        "api_prefix": os.getenv("API_PREFIX"),
+        "is_test_server": os.getenv("IS_TEST_SERVER"),
     }
 
-    if os.environ["PRESET"] is not None:
+    if os.environ.get("PRESET") is not None:
         preset_config = preset[os.environ["PRESET"]]
         for key, value in config.items():
-            if preset_config[key] is not None and value is not None:
-              preset_config[key] = value
+            if preset_config.get(key) is not None and value is not None:
+                preset_config[key] = value
         return preset_config
     return config
 
@@ -381,7 +388,7 @@ def main():
         return
 
     compose = create_docker_compose(config)
-    docker = create_docker_build(config)
+    docker = create_docker_build(config.get("is_test_server"))
 
 
     with open("docker-compose.yml", "w") as f:
