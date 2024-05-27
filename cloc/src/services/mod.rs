@@ -72,10 +72,7 @@ impl ClocService {
             process_link(link);
         }
 
-
-        let access_token: Option<String> = None;
-
-        match repo.download(user_id, scope.clone(), access_token).await {
+        match repo.download(user_id, scope.clone()).await {
             Ok((id, skiped, errors)) => {
                 match repo.count(id).await {
                     Ok(result) => Ok(CountResult { skiped, errors, result }),

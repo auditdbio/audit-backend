@@ -78,7 +78,6 @@ impl FileRepo {
         &self,
         user_id: ObjectId,
         files: Scope,
-        token: Option<String>,
     ) -> error::Result<(ObjectId, Vec<String>, Vec<String>)> {
         let id = ObjectId::new();
         let entry = MetaEntry {
@@ -101,14 +100,7 @@ impl FileRepo {
         let mut skiped = vec![];
         // download files
         for file_link in entry.links {
-            let mut command = Command::new("wget");
-            command.current_dir(&path);
-            if let Some(token) = token.clone() {
-                command.arg("--header").arg(format!("Authorization: Bearer {}", token));
-            }
-            command.arg(&file_link);
-
-            if run_command(&mut command)
+            if run_command(Command::new("wget").arg(&file_link).current_dir(&path))
                 .await
                 .is_none()
             {
