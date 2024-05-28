@@ -419,16 +419,18 @@ impl RequestService {
             is_history_changed = true;
         }
 
-        if let Some(price) = change.price {
-            if request.price != Some(price) && change.total_cost.is_none() {
-                request.price = Some(price);
+        if change.total_cost.is_some() {
+            if request.total_cost != change.total_cost {
+                request.total_cost = change.total_cost;
+                request.price = None;
                 is_history_changed = true;
             }
         }
 
-        if let Some(total_cost) = change.total_cost {
-            if request.total_cost != Some(total_cost) && change.price.is_none() {
-                request.total_cost = Some(total_cost);
+        if change.price.is_some() && change.total_cost.is_none() {
+            if request.price != change.price {
+                request.price = change.price;
+                request.total_cost = None;
                 is_history_changed = true;
             }
         }
