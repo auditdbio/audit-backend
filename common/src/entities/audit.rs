@@ -25,6 +25,8 @@ pub enum PublicAuditStatus {
     InProgress,
     #[serde(rename = "Issues workflow", alias = "IssuesWorkflow")]
     IssuesWorkflow,
+    #[serde(rename = "Approval needed", alias = "ApprovalNeeded")]
+    ApprovalNeeded,
     #[serde(rename = "Ready for resolve", alias = "Resolved")]
     ReadyForResolve,
     #[serde(rename = "Resolved", alias = "Resolved")]
@@ -183,6 +185,8 @@ pub struct AuditEditHistory {
     pub date: i64,
     pub author: String,
     pub comment: Option<String>,
+    #[serde(default)]
+    pub is_approved: bool,
     pub audit: String,
 }
 
@@ -200,6 +204,7 @@ pub struct PublicAuditEditHistory {
     pub date: i64,
     pub author: EditHistoryAuthor,
     pub comment: Option<String>,
+    pub is_approved: bool,
     pub audit: String,
 }
 
@@ -260,6 +265,7 @@ impl PublicAuditEditHistory {
             date: history.date,
             author,
             comment: history.comment,
+            is_approved: history.is_approved,
             audit: history.audit,
         })
     }
@@ -268,4 +274,5 @@ impl PublicAuditEditHistory {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct ChangeAuditHistory {
     pub comment: Option<String>,
+    pub is_approved: Option<bool>,
 }

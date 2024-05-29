@@ -284,7 +284,7 @@ impl AuditService {
         }
 
         if audit.status != AuditStatus::Resolved || audit.no_customer {
-            if let Some(scope) = change.scope {
+            if let Some(scope) = change.scope.clone() {
                 if audit.scope != scope {
                     audit.scope = scope;
                     is_history_changed = true;
@@ -299,6 +299,18 @@ impl AuditService {
             if let Some(tags) = change.tags {
                 if audit.tags != tags {
                     audit.tags = tags;
+                    is_history_changed = true;
+                }
+            }
+            if change.total_cost.is_some() {
+                if audit.total_cost != change.total_cost {
+                    audit.total_cost = change.total_cost;
+                    is_history_changed = true;
+                }
+            }
+            if change.price.is_some() && change.total_cost.is_none() {
+                if audit.price != change.price {
+                    audit.price = change.price;
                     is_history_changed = true;
                 }
             }
@@ -329,6 +341,15 @@ impl AuditService {
             audit.report_name = Some(report_name.clone());
         }
 
+        let is_last_history_approved = if audit.edit_history.is_empty() {
+            true
+        } else {
+            audit
+                .edit_history
+                .last()
+                .map_or(false, |last| last.is_approved)
+        };
+
         if let Some(ref action) = change.action {
             match action {
                 AuditAction::Start => {
@@ -337,7 +358,9 @@ impl AuditService {
                     }
                 }
                 AuditAction::Resolve => {
-                    if audit.status == AuditStatus::Started {
+                    if !is_last_history_approved {
+                        return Err(anyhow::anyhow!("Customer audit approval required").code(404));
+                    } else if audit.status == AuditStatus::Started {
                         audit.status = AuditStatus::Resolved;
                         audit.resolve(&self.context).await?;
                     }
@@ -347,12 +370,37 @@ impl AuditService {
 
         audit.last_modified = Utc::now().timestamp_micros();
 
+        let (
+            event_receiver,
+            receiver_role,
+            last_changer_role,
+        ) = if user_id == audit.customer_id {
+            (audit.auditor_id, Role::Auditor, Role::Customer)
+        } else {
+            (audit.customer_id, Role::Customer, Role::Auditor)
+        };
+
         if is_history_changed {
+            let mut is_approved = is_last_history_approved
+                && change.price.is_none()
+                && change.total_cost.is_none()
+                && change.scope.is_none();
+
+            if last_changer_role == Role::Customer
+                && (change.price.is_some() || change.total_cost.is_some() || change.scope.is_some()) {
+                is_approved = true;
+            }
+
+            if is_approved {
+                audit.edit_history.iter_mut().for_each(|h| h.is_approved = false);
+            }
+
             let edit_history_item = AuditEditHistory {
                 id: audit.edit_history.len(),
                 date: audit.last_modified.clone(),
                 author: user_id.to_hex(),
                 comment: change.comment,
+                is_approved,
                 audit: serde_json::to_string(&json!({
                     "project_name": audit.project_name,
                     "description": audit.description,
@@ -367,16 +415,6 @@ impl AuditService {
 
             audit.edit_history.push(edit_history_item);
         }
-
-        let (
-            event_receiver,
-            receiver_role,
-            last_changer_role,
-        ) = if user_id == audit.customer_id {
-            (audit.auditor_id, Role::Auditor, Role::Customer)
-        } else {
-            (audit.customer_id, Role::Customer, Role::Auditor)
-        };
 
         let public_audit = PublicAudit::new(&self.context, audit.clone()).await?;
 
@@ -1008,6 +1046,28 @@ impl AuditService {
                 history.comment = Some(comment);
             } else {
                 return Err(anyhow::anyhow!("Only the author of the edit can change a comment").code(403))
+            }
+        }
+
+        if let Some(approved) = change.is_approved {
+            if approved {
+                let is_last = audit
+                    .edit_history
+                    .last()
+                    .map_or(false, |last| last.id == history_id);
+
+                if user_id == audit.customer_id {
+                    if is_last {
+                        audit.edit_history.iter_mut().for_each(|h| h.is_approved = false);
+                        history.is_approved = true;
+                    } else {
+                        let mut change: AuditChange = serde_json::from_str(&history.audit).unwrap();
+                        change.conclusion = None;
+                        self.change(audit_id, change).await?;
+                    }
+                } else {
+                    return Err(anyhow::anyhow!("Only the customer can approve the edit").code(403))
+                }
             }
         }
 

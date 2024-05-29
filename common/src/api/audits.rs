@@ -35,6 +35,8 @@ pub struct AuditChange {
     pub description: Option<String>,
     pub scope: Option<Vec<String>>,
     pub tags: Option<Vec<String>>,
+    pub price: Option<i64>,
+    pub total_cost: Option<i64>,
     pub report_name: Option<String>,
     pub report: Option<String>,
     pub time: Option<TimeRange>,
@@ -159,11 +161,22 @@ impl PublicAudit {
             ),
         };
 
+        let is_last_history_approved = if audit.edit_history.is_empty() {
+            true
+        } else {
+            audit
+                .edit_history
+                .last()
+                .map_or(false, |last| last.is_approved)
+        };
+
         let status = match audit.status {
             AuditStatus::Waiting => PublicAuditStatus::WaitingForAudit,
             AuditStatus::Started => {
-                if audit.report.is_some() {
-                    PublicAuditStatus::ReadyForResolve
+                // else if audit.report.is_some() {
+                //     PublicAuditStatus::ReadyForResolve
+                if !is_last_history_approved {
+                    PublicAuditStatus::ApprovalNeeded
                 } else if audit.issues.is_empty() {
                     PublicAuditStatus::InProgress
                 } else if audit.issues.iter().all(|issue| issue.is_resolved()) {

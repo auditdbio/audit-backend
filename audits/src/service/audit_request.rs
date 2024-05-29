@@ -1,4 +1,8 @@
 use chrono::Utc;
+use mongodb::bson::{oid::ObjectId, Bson};
+use serde::{Deserialize, Serialize};
+use serde_json::json;
+
 use common::{
     access_rules::{AccessRules, Edit, Read},
     api::{
@@ -19,7 +23,7 @@ use common::{
     context::GeneralContext,
     entities::{
         audit_request::{AuditRequest, TimeRange},
-        audit::AuditEditHistory,
+        audit::{AuditEditHistory, PublicAuditEditHistory},
         auditor::ExtendedAuditor,
         letter::CreateLetter,
         project::get_project,
@@ -30,10 +34,6 @@ use common::{
 };
 
 pub use common::api::requests::PublicRequest;
-use mongodb::bson::{oid::ObjectId, Bson};
-use serde::{Deserialize, Serialize};
-use serde_json::json;
-use common::entities::audit::PublicAuditEditHistory;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RequestChange {
@@ -123,6 +123,7 @@ impl RequestService {
             date: request.last_modified.clone(),
             author: project.customer_id.clone(),
             comment: None,
+            is_approved: true,
             audit: serde_json::to_string(&json!({
                     "project_name": project.name,
                     "description": request.description,
@@ -419,16 +420,16 @@ impl RequestService {
             is_history_changed = true;
         }
 
-        if let Some(price) = change.price {
-            if request.price != Some(price) && change.total_cost.is_none() {
-                request.price = Some(price);
+        if change.total_cost.is_some() {
+            if request.total_cost != change.total_cost {
+                request.total_cost = change.total_cost;
                 is_history_changed = true;
             }
         }
 
-        if let Some(total_cost) = change.total_cost {
-            if request.total_cost != Some(total_cost) && change.price.is_none() {
-                request.total_cost = Some(total_cost);
+        if change.price.is_some() && change.total_cost.is_none() {
+            if request.price != change.price {
+                request.price = change.price;
                 is_history_changed = true;
             }
         }
@@ -454,11 +455,14 @@ impl RequestService {
         if is_history_changed {
             let project = get_project(&self.context, request.project_id).await?;
 
+            request.edit_history.iter_mut().for_each(|h| h.is_approved = false);
+
             let edit_history_item = AuditEditHistory {
                 id: request.edit_history.len(),
                 date: request.last_modified.clone(),
                 author: user_id.to_hex(),
                 comment: change.comment,
+                is_approved: true,
                 audit: serde_json::to_string(&json!({
                     "project_name": project.name,
                     "description": request.description,
