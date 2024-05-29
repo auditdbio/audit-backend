@@ -212,16 +212,14 @@ impl ProjectService {
             project.status = status;
         }
 
-        if let Some(price) = change.price {
-            if change.total_cost.is_none() {
-                project.price = Some(price);
-            }
+        if change.total_cost.is_some() {
+            project.total_cost = change.total_cost;
+            project.price = None;
         }
 
-        if let Some(total_cost) = change.total_cost {
-            if change.price.is_none() {
-                project.total_cost = Some(total_cost);
-            }
+        if change.price.is_some() && change.total_cost.is_none() {
+            project.price = change.price;
+            project.total_cost = None;
         }
 
         project.last_modified = Utc::now().timestamp_micros();

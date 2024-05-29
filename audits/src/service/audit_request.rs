@@ -423,6 +423,7 @@ impl RequestService {
         if change.total_cost.is_some() {
             if request.total_cost != change.total_cost {
                 request.total_cost = change.total_cost;
+                request.price = None;
                 is_history_changed = true;
             }
         }
@@ -430,6 +431,7 @@ impl RequestService {
         if change.price.is_some() && change.total_cost.is_none() {
             if request.price != change.price {
                 request.price = change.price;
+                request.total_cost = None;
                 is_history_changed = true;
             }
         }
