@@ -400,6 +400,9 @@ impl AuditService {
                 approved_by.push(audit.auditor_id.to_hex());
                 approved_by.push(audit.customer_id.to_hex());
             } else {
+                for h in audit.edit_history.iter_mut() {
+                    h.approved.retain(|id| id != &user_id.to_hex());
+                }
                 approved_by.push(user_id.to_hex());
             }
 
