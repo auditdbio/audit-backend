@@ -269,6 +269,8 @@ impl AuditService {
     }
 
     pub async fn change(&self, id: ObjectId, change: AuditChange) -> error::Result<PublicAudit> {
+        log::info!("audit change func run");
+
         let auth = self.context.auth();
         let user_id = auth.id().unwrap();
 
@@ -1074,12 +1076,18 @@ impl AuditService {
                         .last()
                         .map_or(false, |last| last.id == history_id);
 
+                    log::info!("Is last: {}", is_last);
+                    log::info!("Contain auditor: {}", history.approved.contains(&audit.auditor_id.to_hex()));
+                    log::info!("Contain customer: {}", history.approved.contains(&audit.customer_id.to_hex()));
+
                     if !is_last
                        && history.approved.contains(&audit.auditor_id.to_hex())
                        && history.approved.contains(&audit.customer_id.to_hex()) {
-                        let mut change: AuditChange = serde_json::from_str(&history.audit).unwrap();
-                        change.conclusion = None;
-                        self.change(audit_id, change).await?;
+                        let mut audit_change: AuditChange = serde_json::from_str(&history.audit).unwrap();
+                        log::info!("audit_change: {:?}", audit_change);
+
+                        audit_change.conclusion = None;
+                        self.change(audit_id, audit_change).await?;
                     }
                 }
             }
