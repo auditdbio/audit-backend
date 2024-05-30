@@ -161,13 +161,16 @@ impl PublicAudit {
             ),
         };
 
-        let is_last_history_approved = if audit.edit_history.is_empty() {
+        let is_audit_approved = if audit.edit_history.is_empty() {
             true
         } else {
             audit
                 .edit_history
                 .last()
-                .map_or(false, |last| last.is_approved)
+                .map_or(false, |last| {
+                    last.approved.contains(&audit.auditor_id.to_hex())
+                    && last.approved.contains(&audit.customer_id.to_hex())
+                })
         };
 
         let status = match audit.status {
@@ -175,7 +178,7 @@ impl PublicAudit {
             AuditStatus::Started => {
                 // else if audit.report.is_some() {
                 //     PublicAuditStatus::ReadyForResolve
-                if !is_last_history_approved {
+                if !is_audit_approved {
                     PublicAuditStatus::ApprovalNeeded
                 } else if audit.issues.is_empty() {
                     PublicAuditStatus::InProgress

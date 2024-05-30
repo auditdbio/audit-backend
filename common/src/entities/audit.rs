@@ -186,7 +186,7 @@ pub struct AuditEditHistory {
     pub author: String,
     pub comment: Option<String>,
     #[serde(default)]
-    pub is_approved: bool,
+    pub approved: Vec<String>,
     pub audit: String,
 }
 
@@ -204,7 +204,7 @@ pub struct PublicAuditEditHistory {
     pub date: i64,
     pub author: EditHistoryAuthor,
     pub comment: Option<String>,
-    pub is_approved: bool,
+    pub approved: Vec<String>,
     pub audit: String,
 }
 
@@ -265,7 +265,7 @@ impl PublicAuditEditHistory {
             date: history.date,
             author,
             comment: history.comment,
-            is_approved: history.is_approved,
+            approved: history.approved,
             audit: history.audit,
         })
     }

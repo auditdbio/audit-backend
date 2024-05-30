@@ -123,7 +123,7 @@ impl RequestService {
             date: request.last_modified.clone(),
             author: project.customer_id.clone(),
             comment: None,
-            is_approved: true,
+            approved: vec![],
             audit: serde_json::to_string(&json!({
                     "project_name": project.name,
                     "description": request.description,
@@ -457,14 +457,12 @@ impl RequestService {
         if is_history_changed {
             let project = get_project(&self.context, request.project_id).await?;
 
-            request.edit_history.iter_mut().for_each(|h| h.is_approved = false);
-
             let edit_history_item = AuditEditHistory {
                 id: request.edit_history.len(),
                 date: request.last_modified.clone(),
                 author: user_id.to_hex(),
                 comment: change.comment,
-                is_approved: true,
+                approved: vec![],
                 audit: serde_json::to_string(&json!({
                     "project_name": project.name,
                     "description": request.description,
