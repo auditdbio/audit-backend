@@ -1087,6 +1087,16 @@ impl AuditService {
                         };
                         history.approved = vec![];
                         audit.edit_history.push(new_history_item);
+
+                        let mut audit_change: AuditChange = serde_json::from_str(&history.audit).unwrap();
+                        let updated_audit = self.change(audit_id, audit_change).await?;
+                        audit.project_name = updated_audit.project_name;
+                        audit.description = updated_audit.description;
+                        audit.scope = updated_audit.scope;
+                        audit.tags = updated_audit.tags;
+                        audit.price = updated_audit.price;
+                        audit.total_cost = updated_audit.total_cost;
+                        audit.time = updated_audit.time;
                     }
                 }
             }

@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     api::{
+        audits::PublicAudit,
         chat::AuditMessageId,
         report::PublicReport,
     },
