@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::hash::Hash;
 
 use mongodb::bson::oid::ObjectId;
@@ -5,7 +6,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     api::{
-        audits::PublicAudit,
         chat::AuditMessageId,
         report::PublicReport,
     },
@@ -71,6 +71,8 @@ pub struct Audit<Id: Eq + Hash> {
 
     #[serde(default)]
     pub edit_history: Vec<AuditEditHistory>,
+    #[serde(default)]
+    pub approved_by: HashMap<String, usize>,
 
     #[serde(default)]
     pub no_customer: bool,
@@ -102,6 +104,7 @@ impl Audit<String> {
             chat_id: self.chat_id,
             conclusion: self.conclusion,
             edit_history: self.edit_history,
+            approved_by: self.approved_by,
         }
     }
 }
@@ -130,6 +133,7 @@ impl Audit<ObjectId> {
             chat_id: self.chat_id,
             conclusion: self.conclusion,
             edit_history: self.edit_history,
+            approved_by: self.approved_by,
         }
     }
 
@@ -186,8 +190,6 @@ pub struct AuditEditHistory {
     pub date: i64,
     pub author: String,
     pub comment: Option<String>,
-    #[serde(default)]
-    pub approved: Vec<String>,
     pub audit: String,
 }
 
@@ -205,7 +207,6 @@ pub struct PublicAuditEditHistory {
     pub date: i64,
     pub author: EditHistoryAuthor,
     pub comment: Option<String>,
-    pub approved: Vec<String>,
     pub audit: String,
 }
 
@@ -266,10 +267,15 @@ impl PublicAuditEditHistory {
             date: history.date,
             author,
             comment: history.comment,
-            approved: history.approved,
             audit: history.audit,
         })
     }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct EditHistoryResponse {
+    pub edit_history: Vec<PublicAuditEditHistory>,
+    pub approved_by: HashMap<String, usize>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]

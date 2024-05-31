@@ -12,7 +12,7 @@ use common::{
     },
     context::GeneralContext,
     entities::{
-        audit::{PublicAuditEditHistory, ChangeAuditHistory},
+        audit::{PublicAuditEditHistory, ChangeAuditHistory, EditHistoryResponse},
         issue::ChangeIssue,
         role::Role
     },
@@ -179,7 +179,7 @@ pub async fn get_public_audits(
 pub async fn get_audit_edit_history(
     context: GeneralContext,
     audit_id: web::Path<String>,
-) -> error::Result<Json<Vec<PublicAuditEditHistory>>> {
+) -> error::Result<Json<EditHistoryResponse>> {
     Ok(Json(
         AuditService::new(context)
             .get_audit_edit_history(audit_id.parse()?)

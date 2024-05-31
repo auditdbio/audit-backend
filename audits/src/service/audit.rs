@@ -12,7 +12,7 @@ use common::{
         chat::{
             send_message, create_audit_message,
             delete_message, AuditMessageStatus,
-            CreateAuditMessage, AuditMessageId
+            CreateAuditMessage, AuditMessageId,
         },
         events::{post_event, EventPayload, PublicEvent},
         issue::PublicIssue,
@@ -21,7 +21,11 @@ use common::{
     },
     context::GeneralContext,
     entities::{
-        audit::{Audit, AuditStatus, AuditEditHistory, PublicAuditEditHistory, ChangeAuditHistory},
+        audit::{
+            Audit, AuditStatus,
+            AuditEditHistory, PublicAuditEditHistory,
+            ChangeAuditHistory, EditHistoryResponse,
+        },
         audit_request::{AuditRequest, TimeRange},
         issue::{severity_to_integer, ChangeIssue, Event, EventKind, Issue, Status, Action},
         project::get_project,
@@ -84,6 +88,7 @@ impl AuditService {
             chat_id: None,
             conclusion: None,
             edit_history: Vec::new(),
+            approved_by: HashMap::new(),
         };
 
         let requests = self
@@ -93,12 +98,12 @@ impl AuditService {
         if let Some(request) = requests
             .delete("id", &request.id.parse()?)
             .await? {
-            let mut edit_history = request.edit_history;
-            if let Some(last) = edit_history.last_mut() {
-                last.approved.push(auditor_id.to_hex());
-                last.approved.push(customer_id.to_hex());
+            let edit_history = request.edit_history;
+            audit.edit_history = edit_history.clone();
+            if let Some(last) = edit_history.last() {
+                audit.approved_by.insert(audit.customer_id.to_hex(), last.id);
+                audit.approved_by.insert(audit.auditor_id.to_hex(), last.id);
             }
-            audit.edit_history = edit_history;
 
             if let Some(chat_id) = request.chat_id {
                 delete_message(chat_id.chat_id, chat_id.message_id, auth.clone())?
@@ -181,6 +186,7 @@ impl AuditService {
             chat_id: None,
             conclusion: request.conclusion,
             edit_history: Vec::new(),
+            approved_by: HashMap::new(),
         };
 
         if !Edit.get_access(&auth, &audit) {
@@ -346,16 +352,11 @@ impl AuditService {
             audit.report_name = Some(report_name.clone());
         }
 
-        let is_audit_approved = if audit.edit_history.is_empty() {
+        let is_audit_approved = if audit.edit_history.is_empty() || audit.approved_by.is_empty() {
             true
         } else {
-            audit
-                .edit_history
-                .last()
-                .map_or(false, |last| {
-                    last.approved.contains(&audit.auditor_id.to_hex())
-                    && last.approved.contains(&audit.customer_id.to_hex())
-                })
+            let first = audit.approved_by.values().next().unwrap();
+            audit.approved_by.values().all(|v| v == first)
         };
 
         if let Some(ref action) = change.action {
@@ -389,29 +390,11 @@ impl AuditService {
         };
 
         if is_history_changed {
-            let is_approved = is_audit_approved
-                && change.price.is_none()
-                && change.total_cost.is_none()
-                && change.scope.is_none();
-
-            let mut approved_by = vec![];
-            if is_approved {
-                audit.edit_history.iter_mut().for_each(|h| h.approved = vec![]);
-                approved_by.push(audit.auditor_id.to_hex());
-                approved_by.push(audit.customer_id.to_hex());
-            } else {
-                for h in audit.edit_history.iter_mut() {
-                    h.approved.retain(|id| id != &user_id.to_hex());
-                }
-                approved_by.push(user_id.to_hex());
-            }
-
             let edit_history_item = AuditEditHistory {
                 id: audit.edit_history.len(),
                 date: audit.last_modified.clone(),
                 author: user_id.to_hex(),
                 comment: change.comment,
-                approved: approved_by,
                 audit: serde_json::to_string(&json!({
                     "project_name": audit.project_name,
                     "description": audit.description,
@@ -424,7 +407,19 @@ impl AuditService {
                 })).unwrap(),
             };
 
-            audit.edit_history.push(edit_history_item);
+            audit.edit_history.push(edit_history_item.clone());
+
+            let is_approved = is_audit_approved
+                && change.price.is_none()
+                && change.total_cost.is_none()
+                && change.scope.is_none();
+
+            if is_approved {
+                audit.approved_by.insert(audit.auditor_id.to_hex(), edit_history_item.id.clone());
+                audit.approved_by.insert(audit.customer_id.to_hex(), edit_history_item.id);
+            } else {
+                audit.approved_by.insert(user_id.to_hex(), edit_history_item.id);
+            }
         }
 
         let public_audit = PublicAudit::new(&self.context, audit.clone()).await?;
@@ -1010,7 +1005,7 @@ impl AuditService {
     pub async fn get_audit_edit_history(
         &self,
         id: ObjectId,
-    ) -> error::Result<Vec<PublicAuditEditHistory>> {
+    ) -> error::Result<EditHistoryResponse> {
         let Some(audit) = self.get_audit(id).await? else {
             return Err(anyhow::anyhow!("Audit not found").code(404));
         };
@@ -1027,7 +1022,10 @@ impl AuditService {
         }
 
         result.reverse();
-        Ok(result)
+        Ok(EditHistoryResponse {
+            edit_history: result,
+            approved_by: audit.approved_by,
+        })
     }
 
     pub async fn change_audit_edit_history(
@@ -1062,42 +1060,37 @@ impl AuditService {
 
         if let Some(is_approved) = change.is_approved {
             if is_approved {
-                if !history.approved.contains(&user_id.to_hex()) {
-                    history.approved.push(user_id.to_hex());
+                audit.approved_by.insert(user_id.to_hex(), history_id);
 
-                    for h in audit.edit_history.iter_mut() {
-                        h.approved.retain(|id| id != &user_id.to_hex());
-                    }
+                let is_last = audit
+                    .edit_history
+                    .last()
+                    .map_or(false, |last| last.id == history_id);
 
-                    let is_last = audit
-                        .edit_history
-                        .last()
-                        .map_or(false, |last| last.id == history_id);
+                let is_approve_equal = {
+                    let first = audit.approved_by.values().next().unwrap();
+                    audit.approved_by.values().all(|v| v == first)
+                };
 
-                    if !is_last
-                       && history.approved.contains(&audit.auditor_id.to_hex())
-                       && history.approved.contains(&audit.customer_id.to_hex()) {
-                        let new_history_item = AuditEditHistory {
-                            id: audit.edit_history.len(),
-                            date: Utc::now().timestamp_micros(),
-                            author: user_id.to_hex(),
-                            comment: None,
-                            approved: history.approved.clone(),
-                            audit: history.audit.clone(),
-                        };
-                        history.approved = vec![];
-                        audit.edit_history.push(new_history_item);
+                if !is_last && is_approve_equal {
+                    let new_history_item = AuditEditHistory {
+                        id: audit.edit_history.len(),
+                        date: Utc::now().timestamp_micros(),
+                        author: user_id.to_hex(),
+                        comment: None,
+                        audit: history.audit.clone(),
+                    };
+                    audit.edit_history.push(new_history_item);
 
-                        let mut audit_change: AuditChange = serde_json::from_str(&history.audit).unwrap();
-                        let updated_audit = self.change(audit_id, audit_change).await?;
-                        audit.project_name = updated_audit.project_name;
-                        audit.description = updated_audit.description;
-                        audit.scope = updated_audit.scope;
-                        audit.tags = updated_audit.tags;
-                        audit.price = updated_audit.price;
-                        audit.total_cost = updated_audit.total_cost;
-                        audit.time = updated_audit.time;
-                    }
+                    let audit_change: AuditChange = serde_json::from_str(&history.audit).unwrap();
+                    let updated_audit = self.change(audit_id, audit_change).await?;
+                    audit.project_name = updated_audit.project_name;
+                    audit.description = updated_audit.description;
+                    audit.scope = updated_audit.scope;
+                    audit.tags = updated_audit.tags;
+                    audit.price = updated_audit.price;
+                    audit.total_cost = updated_audit.total_cost;
+                    audit.time = updated_audit.time;
                 }
             }
         }

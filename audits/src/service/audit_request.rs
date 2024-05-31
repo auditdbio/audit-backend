@@ -123,7 +123,6 @@ impl RequestService {
             date: request.last_modified.clone(),
             author: project.customer_id.clone(),
             comment: None,
-            approved: vec![],
             audit: serde_json::to_string(&json!({
                     "project_name": project.name,
                     "description": request.description,
@@ -462,7 +461,6 @@ impl RequestService {
                 date: request.last_modified.clone(),
                 author: user_id.to_hex(),
                 comment: change.comment,
-                approved: vec![],
                 audit: serde_json::to_string(&json!({
                     "project_name": project.name,
                     "description": request.description,

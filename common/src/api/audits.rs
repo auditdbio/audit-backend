@@ -161,16 +161,11 @@ impl PublicAudit {
             ),
         };
 
-        let is_audit_approved = if audit.edit_history.is_empty() {
+        let is_audit_approved = if audit.edit_history.is_empty() || audit.approved_by.is_empty() {
             true
         } else {
-            audit
-                .edit_history
-                .last()
-                .map_or(false, |last| {
-                    last.approved.contains(&audit.auditor_id.to_hex())
-                    && last.approved.contains(&audit.customer_id.to_hex())
-                })
+            let first = audit.approved_by.values().next().unwrap();
+            audit.approved_by.values().all(|v| v == first)
         };
 
         let status = match audit.status {
