@@ -89,6 +89,10 @@ impl AuditService {
             conclusion: None,
             edit_history: Vec::new(),
             approved_by: HashMap::new(),
+            unread_edits: HashMap::from_iter(vec![
+                (customer_id.to_hex(), 0),
+                (auditor_id.to_hex(), 0)
+            ]),
         };
 
         let requests = self
@@ -101,8 +105,8 @@ impl AuditService {
             let edit_history = request.edit_history;
             audit.edit_history = edit_history.clone();
             if let Some(last) = edit_history.last() {
-                audit.approved_by.insert(audit.customer_id.to_hex(), last.id);
-                audit.approved_by.insert(audit.auditor_id.to_hex(), last.id);
+                audit.approved_by.insert(customer_id.to_hex(), last.id);
+                audit.approved_by.insert(auditor_id.to_hex(), last.id);
             }
 
             if let Some(chat_id) = request.chat_id {
@@ -187,6 +191,7 @@ impl AuditService {
             conclusion: request.conclusion,
             edit_history: Vec::new(),
             approved_by: HashMap::new(),
+            unread_edits: HashMap::new(),
         };
 
         if !Edit.get_access(&auth, &audit) {
@@ -420,6 +425,9 @@ impl AuditService {
             } else {
                 audit.approved_by.insert(user_id.to_hex(), edit_history_item.id);
             }
+
+            *audit.unread_edits.entry(event_receiver.to_hex()).or_insert(0) += 1;
+            audit.unread_edits.insert(user_id.to_hex(), 0);
         }
 
         let public_audit = PublicAudit::new(&self.context, audit.clone()).await?;
@@ -1114,5 +1122,26 @@ impl AuditService {
         };
 
         Ok(PublicAuditEditHistory::new(&self.context, history, role).await?)
+    }
+
+    pub async fn unread_edits(
+        &self,
+        audit_id: ObjectId,
+        unread: usize,
+    ) -> error::Result<()> {
+        let auth = self.context.auth();
+        let user_id = auth.id().unwrap();
+
+        let Some(mut audit) = self.get_audit(audit_id).await? else {
+            return Err(anyhow::anyhow!("Audit not found").code(404));
+        };
+
+        audit.unread_edits.insert(user_id.to_hex(), unread);
+
+        let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
+        audits.delete("_id", &audit_id).await?;
+        audits.insert(&audit).await?;
+
+        Ok(())
     }
 }
