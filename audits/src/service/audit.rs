@@ -1033,6 +1033,7 @@ impl AuditService {
         Ok(EditHistoryResponse {
             edit_history: result,
             approved_by: audit.approved_by,
+            unread: audit.unread_edits,
         })
     }
 

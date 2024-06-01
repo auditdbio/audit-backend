@@ -280,6 +280,7 @@ impl PublicAuditEditHistory {
 pub struct EditHistoryResponse {
     pub edit_history: Vec<PublicAuditEditHistory>,
     pub approved_by: HashMap<String, usize>,
+    pub unread: HashMap<String, usize>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
