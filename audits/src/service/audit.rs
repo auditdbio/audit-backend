@@ -1080,7 +1080,11 @@ impl AuditService {
                         comment: None,
                         audit: history.audit.clone(),
                     };
-                    audit.edit_history.push(new_history_item);
+                    audit.edit_history.push(new_history_item.clone());
+
+                    for item in audit.approved_by.values_mut() {
+                        *item = new_history_item.id.clone();
+                    }
 
                     let audit_change: AuditChange = serde_json::from_str(&history.audit).unwrap();
                     let updated_audit = self.change(audit_id, audit_change).await?;
