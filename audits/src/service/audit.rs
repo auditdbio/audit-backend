@@ -294,6 +294,7 @@ impl AuditService {
         }
 
         let mut is_history_changed = false;
+        let mut is_approve_needed = false;
 
         if let Some(public) = change.public {
             audit.public = public;
@@ -304,6 +305,7 @@ impl AuditService {
                 if audit.scope != scope {
                     audit.scope = scope;
                     is_history_changed = true;
+                    is_approve_needed = true;
                 }
             }
             if let Some(description) = change.description {
@@ -323,6 +325,7 @@ impl AuditService {
                     audit.total_cost = change.total_cost;
                     audit.price = None;
                     is_history_changed = true;
+                    is_approve_needed = true;
                 }
             }
             if change.price.is_some() && change.total_cost.is_none() {
@@ -330,6 +333,7 @@ impl AuditService {
                     audit.price = change.price;
                     audit.total_cost = None;
                     is_history_changed = true;
+                    is_approve_needed = true;
                 }
             }
             if let Some(conclusion) = change.conclusion {
@@ -416,12 +420,7 @@ impl AuditService {
 
             audit.edit_history.push(edit_history_item.clone());
 
-            let is_approved = is_audit_approved
-                && change.price.is_none()
-                && change.total_cost.is_none()
-                && change.scope.is_none();
-
-            if is_approved {
+            if is_audit_approved && !is_approve_needed {
                 audit.approved_by.insert(audit.auditor_id.to_hex(), edit_history_item.id.clone());
                 audit.approved_by.insert(audit.customer_id.to_hex(), edit_history_item.id.clone());
             } else {
