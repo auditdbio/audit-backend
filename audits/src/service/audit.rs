@@ -321,12 +321,14 @@ impl AuditService {
             if change.total_cost.is_some() {
                 if audit.total_cost != change.total_cost {
                     audit.total_cost = change.total_cost;
+                    audit.price = None;
                     is_history_changed = true;
                 }
             }
             if change.price.is_some() && change.total_cost.is_none() {
                 if audit.price != change.price {
                     audit.price = change.price;
+                    audit.total_cost = None;
                     is_history_changed = true;
                 }
             }
