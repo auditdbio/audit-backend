@@ -200,13 +200,13 @@ pub async fn change_audit_edit_history(
     ))
 }
 
-#[patch("/audit/{audit_id}/unread/{unread}")]
+#[patch("/audit/{audit_id}/read/{history_id}")]
 pub async fn audit_unread_edits(
     context: GeneralContext,
     params: Path<(String, usize)>,
 ) -> error::Result<HttpResponse> {
     AuditService::new(context)
-        .unread_edits(params.0.parse()?, params.1)
+        .read_edits(params.0.parse()?, params.1)
         .await?;
     Ok(HttpResponse::Ok().finish())
 }
