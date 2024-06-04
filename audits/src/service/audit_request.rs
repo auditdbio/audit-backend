@@ -18,7 +18,7 @@ use common::{
     },
     context::GeneralContext,
     entities::{
-        audit_request::{AuditRequest, PriceRange, TimeRange},
+        audit_request::{AuditRequest, TimeRange},
         audit::AuditEditHistory,
         auditor::ExtendedAuditor,
         letter::CreateLetter,
@@ -41,8 +41,8 @@ pub struct RequestChange {
     time: Option<TimeRange>,
     scope: Option<Vec<String>>,
     tags: Option<Vec<String>>,
-    price_range: Option<PriceRange>,
     price: Option<i64>,
+    total_cost: Option<i64>,
     comment: Option<String>,
 }
 
@@ -93,6 +93,12 @@ impl RequestService {
             );
         };
 
+        let price_per_line = if request.total_cost.is_none() {
+            request.price
+        } else {
+            None
+        };
+
         let project = get_project(&self.context, request.project_id.parse()?).await?;
 
         let mut request = AuditRequest {
@@ -104,7 +110,8 @@ impl RequestService {
             tags: Some(project.tags),
             scope: Some(project.scope),
             time: request.time,
-            price: request.price,
+            price: price_per_line,
+            total_cost: request.total_cost,
             last_modified: Utc::now().timestamp_micros(),
             last_changer,
             chat_id: None,
@@ -122,6 +129,7 @@ impl RequestService {
                     "scope": request.scope,
                     "tags": request.tags,
                     "price": request.price,
+                    "total_cost": request.total_cost,
                     "time": request.time,
                     "conclusion": "".to_string(),
                 })).unwrap(),
@@ -411,9 +419,18 @@ impl RequestService {
             is_history_changed = true;
         }
 
-        if let Some(price) = change.price {
-            if request.price != price {
-                request.price = price;
+        if change.total_cost.is_some() {
+            if request.total_cost != change.total_cost {
+                request.total_cost = change.total_cost;
+                request.price = None;
+                is_history_changed = true;
+            }
+        }
+
+        if change.price.is_some() && change.total_cost.is_none() {
+            if request.price != change.price {
+                request.price = change.price;
+                request.total_cost = None;
                 is_history_changed = true;
             }
         }
@@ -450,6 +467,7 @@ impl RequestService {
                     "scope": request.scope,
                     "tags": request.tags,
                     "price": request.price,
+                    "total_cost": request.total_cost,
                     "time": request.time,
                     "conclusion": "".to_string(),
                 })).unwrap(),

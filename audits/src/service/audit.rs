@@ -21,7 +21,7 @@ use common::{
     },
     context::GeneralContext,
     entities::{
-        audit::{Audit, AuditStatus, AuditEditHistory, PublicAuditEditHistory, ChangeAuditHistory},
+        audit::{Audit, AuditStatus, AuditEditHistory, PublicAuditEditHistory, ChangeAuditHistory, ReportType},
         audit_request::{AuditRequest, TimeRange},
         issue::{severity_to_integer, ChangeIssue, Event, EventKind, Issue, Status, Action},
         project::get_project,
@@ -73,9 +73,11 @@ impl AuditService {
             scope: request.project_scope,
             tags,
             price: request.price,
+            total_cost: request.total_cost,
             last_modified: Utc::now().timestamp_micros(),
             report: None,
             report_name: None,
+            report_type: None,
             time: request.time,
             issues: Vec::new(),
             public: false,
@@ -163,10 +165,12 @@ impl AuditService {
             status: request.status,
             scope: request.scope,
             tags: request.tags,
-            price: 0,
+            price: None,
+            total_cost: None,
             last_modified: Utc::now().timestamp_micros(),
             report: None,
             report_name: None,
+            report_type: None,
             time,
             public: false,
             no_customer: true,
@@ -321,6 +325,7 @@ impl AuditService {
 
         if let Some(ref report) = change.report {
             audit.report = Some(report.clone());
+            audit.report_type = Some(change.report_type.unwrap_or(ReportType::Custom));
         }
 
         if let Some(ref report_name) = change.report_name {
@@ -357,6 +362,7 @@ impl AuditService {
                     "scope": audit.scope,
                     "tags": audit.tags,
                     "price": audit.price,
+                    "total_cost": audit.total_cost,
                     "time": audit.time,
                     "conclusion": audit.conclusion,
                 })).unwrap(),
