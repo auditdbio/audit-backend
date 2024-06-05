@@ -109,6 +109,8 @@ impl FileRepo {
             // }
 
             let result = if file_link.starts_with("raw.githubusercontent.com") {
+                log::info!("starts with raw");
+
                 let proxy_url = format!(
                     "{}://{}/{}/github_files/{}",
                     PROTOCOL.as_str(),
@@ -116,6 +118,8 @@ impl FileRepo {
                     API_PREFIX.as_str(),
                     file_link
                 );
+                log::info!("proxy url: {}", proxy_url);
+
                 run_command(Command::new("wget").arg(&proxy_url).current_dir(&path)).await
             } else {
                 run_command(Command::new("wget").arg(&file_link).current_dir(&path)).await

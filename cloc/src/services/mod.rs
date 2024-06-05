@@ -46,6 +46,8 @@ fn process_link(link: &mut String) {
         if let Some(index) = link.find("://") {
             *link = link[(index + 3)..].to_string();
         }
+
+        log::info!("changed file link: {}", link);
     }
 }
 
