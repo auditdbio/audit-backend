@@ -81,7 +81,7 @@ pub struct Audit<Id: Eq + Hash> {
     #[serde(default)]
     pub approved_by: HashMap<String, usize>,
     #[serde(default)]
-    pub unwatched_edits: HashMap<String, Vec<usize>>,
+    pub unread_edits: HashMap<String, usize>,
 
     #[serde(default)]
     pub no_customer: bool,
@@ -115,7 +115,7 @@ impl Audit<String> {
             conclusion: self.conclusion,
             edit_history: self.edit_history,
             approved_by: self.approved_by,
-            unwatched_edits: self.unwatched_edits,
+            unread_edits: self.unread_edits,
         }
     }
 }
@@ -146,7 +146,7 @@ impl Audit<ObjectId> {
             conclusion: self.conclusion,
             edit_history: self.edit_history,
             approved_by: self.approved_by,
-            unwatched_edits: self.unwatched_edits,
+            unread_edits: self.unread_edits,
         }
     }
 
@@ -290,7 +290,7 @@ impl PublicAuditEditHistory {
 pub struct EditHistoryResponse {
     pub edit_history: Vec<PublicAuditEditHistory>,
     pub approved_by: HashMap<String, usize>,
-    pub unread: HashMap<String, Vec<usize>>,
+    pub unread: HashMap<String, usize>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
