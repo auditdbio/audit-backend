@@ -8,6 +8,7 @@ use tokio::process::Command;
 use common::{
     error,
     repository::{mongo_repository::MongoRepository, Entity, Repository},
+    services::{API_PREFIX, USERS_SERVICE, PROTOCOL},
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -99,12 +100,29 @@ impl FileRepo {
         let mut skiped = vec![];
         // download files
         for file_link in entry.links {
-            if run_command(Command::new("wget").arg(&file_link).current_dir(&path))
-                .await
-                .is_none()
-            {
-                errors.push(file_link);
-                continue;
+            // if run_command(Command::new("wget").arg(&file_link).current_dir(&path))
+            //     .await
+            //     .is_none()
+            // {
+            //     errors.push(file_link);
+            //     continue;
+            // }
+
+            let result = if file_link.starts_with("raw.githubusercontent.com") {
+                let proxy_url = format!(
+                    "{}://{}/{}/github_files/{}",
+                    PROTOCOL.as_str(),
+                    USERS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
+                    file_link
+                );
+                run_command(Command::new("wget").arg(&proxy_url).current_dir(&path)).await
+            } else {
+                run_command(Command::new("wget").arg(&file_link).current_dir(&path)).await
+            };
+
+            if result.is_none() {
+                errors.push(file_link.clone());
             }
 
             let file_name = file_link.split('/').last().unwrap();

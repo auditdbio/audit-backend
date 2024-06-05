@@ -677,6 +677,6 @@ impl UserService {
             return Ok(response)
         }
 
-        Err(anyhow::anyhow!("Only for GitHub files").code(404))
+        Err(anyhow::anyhow!("Only for GitHub raw").code(404))
     }
 }
