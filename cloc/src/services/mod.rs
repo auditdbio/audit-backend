@@ -1,15 +1,9 @@
 use std::{collections::HashMap, sync::Arc};
-use mongodb::bson::{Bson, oid::ObjectId};
 
 use crate::repositories::file_repo::{CountResult, FileRepo, Scope};
 use common::{
-    api::{
-        linked_accounts::LinkedService,
-        user::decrypt_github_token
-    },
     context::GeneralContext,
     error::{self, AddCode},
-    entities::user::User,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

@@ -122,3 +122,12 @@ pub async fn proxy_github_api(
 ) -> error::Result<HttpResponse> {
     Ok(UserService::new(context).proxy_github_api(path.into_inner(), query.into_inner()).await?)
 }
+
+#[get("/github_files/{path:.*}")]
+pub async fn proxy_github_files(
+    context: GeneralContext,
+    path: Path<String>,
+    query: Query<Vec<(String, String)>>,
+) -> error::Result<HttpResponse> {
+    Ok(UserService::new(context).proxy_github_files(path.into_inner(), query.into_inner()).await?)
+}

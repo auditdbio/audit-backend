@@ -2,11 +2,13 @@ use mongodb::bson::oid::ObjectId;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use rand::{distributions::Alphanumeric, Rng};
+use reqwest::{header, Client, RequestBuilder};
 use std::env::var;
 use crypto::{ aes, blockmodes, buffer::{self, ReadBuffer, WriteBuffer, BufferResult}};
 
 use crate::{
     auth::Auth,
+    api::linked_accounts::LinkedService,
     context::GeneralContext,
     entities::{
         auditor::ExtendedAuditor,
@@ -184,4 +186,48 @@ pub async fn decrypt_github_token(encrypted_token: Vec<u8>) -> error::Result<Str
     }
 
     Ok(String::from_utf8_lossy(&decrypted_data).to_string())
+}
+
+pub fn get_access_token(user: User<ObjectId>) -> (Option<Vec<u8>>, Option<String>) {
+    let mut access_token: Option<Vec<u8>> = None;
+    let mut github_account_id: Option<String> = None;
+
+    if let Some(linked_accounts) = user.linked_accounts {
+        if let Some(github_account) = linked_accounts
+            .iter()
+            .find(|account| account.name == LinkedService::GitHub) {
+            access_token = github_account.token.clone();
+            github_account_id = Some(github_account.id.clone());
+        }
+    }
+
+    (access_token, github_account_id)
+}
+
+pub async fn create_request_with_token(
+    url: String,
+    query: Vec<(String, String)>,
+    access_token: Option<Vec<u8>>
+) -> error::Result<RequestBuilder> {
+    let client = Client::new();
+
+    let request = client
+        .get(url)
+        .header(header::ACCEPT, "application/json")
+        .header("User-Agent", "auditdbio");
+
+    let request = if let Some(encrypted_token) = access_token {
+        let decrypted_token = decrypt_github_token(encrypted_token).await?;
+        request.bearer_auth(decrypted_token)
+    } else {
+        request
+    };
+
+    let request = if !query.is_empty() {
+        request.query(&query)
+    } else {
+        request
+    };
+
+    Ok(request)
 }
