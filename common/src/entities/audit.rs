@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::hash::Hash;
 
 use mongodb::bson::oid::ObjectId;
@@ -25,6 +26,8 @@ pub enum PublicAuditStatus {
     InProgress,
     #[serde(rename = "Issues workflow", alias = "IssuesWorkflow")]
     IssuesWorkflow,
+    #[serde(rename = "Approval needed", alias = "ApprovalNeeded")]
+    ApprovalNeeded,
     #[serde(rename = "Ready for resolve", alias = "Resolved")]
     ReadyForResolve,
     #[serde(rename = "Resolved", alias = "Resolved")]
@@ -75,6 +78,10 @@ pub struct Audit<Id: Eq + Hash> {
 
     #[serde(default)]
     pub edit_history: Vec<AuditEditHistory>,
+    #[serde(default)]
+    pub approved_by: HashMap<String, usize>,
+    #[serde(default)]
+    pub unwatched_edits: HashMap<String, Vec<usize>>,
 
     #[serde(default)]
     pub no_customer: bool,
@@ -107,6 +114,8 @@ impl Audit<String> {
             chat_id: self.chat_id,
             conclusion: self.conclusion,
             edit_history: self.edit_history,
+            approved_by: self.approved_by,
+            unwatched_edits: self.unwatched_edits,
         }
     }
 }
@@ -136,6 +145,8 @@ impl Audit<ObjectId> {
             chat_id: self.chat_id,
             conclusion: self.conclusion,
             edit_history: self.edit_history,
+            approved_by: self.approved_by,
+            unwatched_edits: self.unwatched_edits,
         }
     }
 
@@ -276,6 +287,14 @@ impl PublicAuditEditHistory {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct EditHistoryResponse {
+    pub edit_history: Vec<PublicAuditEditHistory>,
+    pub approved_by: HashMap<String, usize>,
+    pub unread: HashMap<String, Vec<usize>>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct ChangeAuditHistory {
     pub comment: Option<String>,
+    pub is_approved: Option<bool>,
 }

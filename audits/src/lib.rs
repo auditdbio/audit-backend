@@ -61,7 +61,8 @@ pub fn create_app(
                 .service(get_public_audits)
                 .service(find_all_audit_request)
                 .service(post_no_customer_audit)
-                .service(get_audit_edit_history),
+                .service(get_audit_edit_history)
+                .service(audit_unread_edits),
         );
 
     app

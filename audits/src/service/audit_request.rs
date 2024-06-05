@@ -1,4 +1,8 @@
 use chrono::Utc;
+use mongodb::bson::{oid::ObjectId, Bson};
+use serde::{Deserialize, Serialize};
+use serde_json::json;
+
 use common::{
     access_rules::{AccessRules, Edit, Read},
     api::{
@@ -19,7 +23,7 @@ use common::{
     context::GeneralContext,
     entities::{
         audit_request::{AuditRequest, TimeRange},
-        audit::AuditEditHistory,
+        audit::{AuditEditHistory, PublicAuditEditHistory},
         auditor::ExtendedAuditor,
         letter::CreateLetter,
         project::get_project,
@@ -30,10 +34,6 @@ use common::{
 };
 
 pub use common::api::requests::PublicRequest;
-use mongodb::bson::{oid::ObjectId, Bson};
-use serde::{Deserialize, Serialize};
-use serde_json::json;
-use common::entities::audit::PublicAuditEditHistory;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RequestChange {

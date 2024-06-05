@@ -1,7 +1,7 @@
 use serde_json::json;
 use actix_web::{
     delete, get, patch, post,
-    web::{self, Json, Query},
+    web::{Json, Query, Path},
     HttpResponse,
 };
 
@@ -12,7 +12,7 @@ use common::{
     },
     context::GeneralContext,
     entities::{
-        audit::{PublicAuditEditHistory, ChangeAuditHistory},
+        audit::{PublicAuditEditHistory, ChangeAuditHistory, EditHistoryResponse},
         issue::ChangeIssue,
         role::Role
     },
@@ -27,7 +27,7 @@ use crate::service::{
 #[post("/audit")]
 pub async fn post_audit(
     context: GeneralContext,
-    Json(data): web::Json<PublicRequest>,
+    Json(data): Json<PublicRequest>,
 ) -> error::Result<Json<PublicAudit>> {
     Ok(Json(AuditService::new(context).create(data).await?))
 }
@@ -45,7 +45,7 @@ pub async fn post_no_customer_audit(
 #[get("/audit/{id}")]
 pub async fn get_audit(
     context: GeneralContext,
-    id: web::Path<String>,
+    id: Path<String>,
 ) -> error::Result<HttpResponse> {
     let res = AuditService::new(context).find(id.parse()?).await?;
     if let Some(res) = res {
@@ -58,7 +58,7 @@ pub async fn get_audit(
 #[get("/my_audit/{role}")]
 pub async fn get_my_audit(
     context: GeneralContext,
-    role: web::Path<Role>,
+    role: Path<Role>,
     pagination: Query<PaginationParams>,
 ) -> error::Result<Json<Vec<PublicAudit>>> {
     Ok(Json(
@@ -71,7 +71,7 @@ pub async fn get_my_audit(
 #[patch("/audit/{id}")]
 pub async fn patch_audit(
     context: GeneralContext,
-    id: web::Path<String>,
+    id: Path<String>,
     Json(data): Json<AuditChange>,
 ) -> error::Result<Json<PublicAudit>> {
     Ok(Json(
@@ -82,7 +82,7 @@ pub async fn patch_audit(
 #[delete("/audit/{id}")]
 pub async fn delete_audit(
     context: GeneralContext,
-    id: web::Path<String>,
+    id: Path<String>,
 ) -> error::Result<Json<PublicAudit>> {
     Ok(Json(AuditService::new(context).delete(id.parse()?).await?))
 }
@@ -90,7 +90,7 @@ pub async fn delete_audit(
 #[post("/audit/{id}/issue")]
 pub async fn post_audit_issue(
     context: GeneralContext,
-    id: web::Path<String>,
+    id: Path<String>,
     Json(data): Json<CreateIssue>,
 ) -> error::Result<HttpResponse> {
     let result = AuditService::new(context)
@@ -102,7 +102,7 @@ pub async fn post_audit_issue(
 #[patch("/audit/{id}/issue/{issue_id}")]
 pub async fn patch_audit_issue(
     context: GeneralContext,
-    id: web::Path<(String, usize)>,
+    id: Path<(String, usize)>,
     Json(data): Json<ChangeIssue>,
 ) -> error::Result<HttpResponse> {
     let result = AuditService::new(context)
@@ -114,7 +114,7 @@ pub async fn patch_audit_issue(
 #[get("/audit/{id}/issue")]
 pub async fn get_audit_issue(
     context: GeneralContext,
-    id: web::Path<String>,
+    id: Path<String>,
 ) -> error::Result<HttpResponse> {
     let result = AuditService::new(context).get_issues(id.parse()?).await?;
     Ok(HttpResponse::Ok().json(result))
@@ -123,7 +123,7 @@ pub async fn get_audit_issue(
 #[get("/audit/{id}/issue/{issue_id}")]
 pub async fn get_audit_issue_by_id(
     context: GeneralContext,
-    id: web::Path<(String, usize)>,
+    id: Path<(String, usize)>,
 ) -> error::Result<HttpResponse> {
     let result = AuditService::new(context)
         .get_issue_by_id(id.0.parse()?, id.1)
@@ -134,7 +134,7 @@ pub async fn get_audit_issue_by_id(
 #[delete("/audit/{id}/issue/{issue_id}")]
 pub async fn delete_audit_issue(
     context: GeneralContext,
-    id: web::Path<(String, usize)>,
+    id: Path<(String, usize)>,
 ) -> error::Result<HttpResponse> {
     let result = AuditService::new(context)
         .delete_issue(id.0.parse()?, id.1)
@@ -145,7 +145,7 @@ pub async fn delete_audit_issue(
 #[patch("/audit/{id}/disclose_all")]
 pub async fn patch_audit_disclose_all(
     context: GeneralContext,
-    id: web::Path<String>,
+    id: Path<String>,
 ) -> error::Result<HttpResponse> {
     let result = AuditService::new(context).disclose_all(id.parse()?).await?;
     Ok(HttpResponse::Ok().json(result))
@@ -154,7 +154,7 @@ pub async fn patch_audit_disclose_all(
 #[patch("/audit/{id}/{issue_id}/read/{read}")]
 pub async fn patch_audit_issue_read(
     context: GeneralContext,
-    id: web::Path<(String, usize, u64)>,
+    id: Path<(String, usize, u64)>,
 ) -> error::Result<HttpResponse> {
     AuditService::new(context)
         .read_events(id.0.parse()?, id.1, id.2)
@@ -165,7 +165,7 @@ pub async fn patch_audit_issue_read(
 #[get("/public_audits/{id}/{role}")]
 pub async fn get_public_audits(
     context: GeneralContext,
-    path: web::Path<(String, String)>,
+    path: Path<(String, String)>,
 ) -> error::Result<Json<Vec<PublicAudit>>> {
     let (id, role) = path.into_inner();
     Ok(Json(
@@ -178,8 +178,8 @@ pub async fn get_public_audits(
 #[get("/audit/{audit_id}/edit_history")]
 pub async fn get_audit_edit_history(
     context: GeneralContext,
-    audit_id: web::Path<String>,
-) -> error::Result<Json<Vec<PublicAuditEditHistory>>> {
+    audit_id: Path<String>,
+) -> error::Result<Json<EditHistoryResponse>> {
     Ok(Json(
         AuditService::new(context)
             .get_audit_edit_history(audit_id.parse()?)
@@ -190,7 +190,7 @@ pub async fn get_audit_edit_history(
 #[patch("/audit/{audit_id}/edit_history/{history_id}")]
 pub async fn change_audit_edit_history(
     context: GeneralContext,
-    params: web::Path<(String, usize)>,
+    params: Path<(String, usize)>,
     Json(data): Json<ChangeAuditHistory>,
 ) -> error::Result<Json<PublicAuditEditHistory>> {
     Ok(Json(
@@ -198,4 +198,15 @@ pub async fn change_audit_edit_history(
             .change_audit_edit_history(params.0.parse()?, params.1, data)
             .await?
     ))
+}
+
+#[patch("/audit/{audit_id}/read/{history_id}")]
+pub async fn audit_unread_edits(
+    context: GeneralContext,
+    params: Path<(String, usize)>,
+) -> error::Result<HttpResponse> {
+    AuditService::new(context)
+        .read_edits(params.0.parse()?, params.1)
+        .await?;
+    Ok(HttpResponse::Ok().finish())
 }
