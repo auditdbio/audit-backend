@@ -646,8 +646,6 @@ impl UserService {
         path: String,
         query: Vec<(String, String)>
     ) -> error::Result<HttpResponse> {
-        log::info!("proxy_github_files RUN");
-
         if path.starts_with("raw.githubusercontent.com") {
             let auth = self.context.auth();
             let id = auth.id().unwrap();

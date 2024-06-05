@@ -46,8 +46,6 @@ fn process_link(link: &mut String) {
         if let Some(index) = link.find("://") {
             *link = link[(index + 3)..].to_string();
         }
-
-        log::info!("changed file link: {}", link);
     }
 }
 
@@ -61,7 +59,9 @@ impl ClocService {
     }
 
     pub async fn count(&self, request: ClocRequest) -> error::Result<CountResult> {
-        let user_id = self.context.auth().id().unwrap();
+        let auth = self.context.auth();
+        let user_id = auth.id().unwrap();
+
         let repo = self
             .context
             .get_repository_manual::<Arc<FileRepo>>()
@@ -73,7 +73,7 @@ impl ClocService {
             process_link(link);
         }
 
-        match repo.download(user_id, scope.clone()).await {
+        match repo.download(user_id, scope.clone(), auth).await {
             Ok((id, skiped, errors)) => {
                 match repo.count(id).await {
                     Ok(result) => Ok(CountResult { skiped, errors, result }),

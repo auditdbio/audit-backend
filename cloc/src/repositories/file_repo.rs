@@ -6,6 +6,7 @@ use serde_json::Value;
 use tokio::process::Command;
 
 use common::{
+    auth::Auth,
     error,
     repository::{mongo_repository::MongoRepository, Entity, Repository},
     services::{API_PREFIX, USERS_SERVICE, PROTOCOL},
@@ -78,6 +79,7 @@ impl FileRepo {
         &self,
         user_id: ObjectId,
         files: Scope,
+        auth: Auth,
     ) -> error::Result<(ObjectId, Vec<String>, Vec<String>)> {
         let id = ObjectId::new();
         let entry = MetaEntry {
@@ -108,9 +110,9 @@ impl FileRepo {
             //     continue;
             // }
 
-            let result = if file_link.starts_with("raw.githubusercontent.com") {
-                log::info!("starts with raw");
-
+            let mut command = Command::new("wget");
+            command.current_dir(&path);
+            if file_link.starts_with("raw.githubusercontent.com") {
                 let proxy_url = format!(
                     "{}://{}/{}/github_files/{}",
                     PROTOCOL.as_str(),
@@ -118,14 +120,16 @@ impl FileRepo {
                     API_PREFIX.as_str(),
                     file_link
                 );
-                log::info!("proxy url: {}", proxy_url);
-
-                run_command(Command::new("wget").arg(&proxy_url).current_dir(&path)).await
+                command.arg(&proxy_url);
+                command.arg("--header").arg(format!("Authorization: Bearer {}", auth.to_token()?));
             } else {
-                run_command(Command::new("wget").arg(&file_link).current_dir(&path)).await
+                command.arg(&file_link);
             };
 
-            if result.is_none() {
+            if run_command(&mut command)
+                .await
+                .is_none()
+            {
                 errors.push(file_link.clone());
             }
 
