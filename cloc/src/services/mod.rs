@@ -42,10 +42,6 @@ fn process_link(link: &mut String) {
         *link = link
             .replacen("github.com", "raw.githubusercontent.com", 1)
             .replacen("blob/", "", 1);
-
-        if let Some(index) = link.find("://") {
-            *link = link[(index + 3)..].to_string();
-        }
     }
 }
 
