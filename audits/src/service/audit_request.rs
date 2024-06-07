@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use chrono::Utc;
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -23,7 +24,7 @@ use common::{
     context::GeneralContext,
     entities::{
         audit_request::{AuditRequest, TimeRange},
-        audit::{AuditEditHistory, PublicAuditEditHistory},
+        audit::{AuditEditHistory, PublicAuditEditHistory, EditHistoryResponse},
         auditor::ExtendedAuditor,
         letter::CreateLetter,
         project::get_project,
@@ -116,6 +117,7 @@ impl RequestService {
             last_changer,
             chat_id: None,
             edit_history: Vec::new(),
+            unread_edits: HashMap::new(),
         };
 
         let edit_history_item = AuditEditHistory {
@@ -474,6 +476,9 @@ impl RequestService {
             };
 
             request.edit_history.push(edit_history_item);
+
+            *request.unread_edits.entry(receiver_id.to_hex()).or_insert(0) += 1;
+            request.unread_edits.insert(user_id.to_hex(), 0);
         }
 
         let public_request = PublicRequest::new(&self.context, request.clone()).await?;
@@ -612,7 +617,7 @@ impl RequestService {
     pub async fn get_request_edit_history(
         &self,
         id: ObjectId,
-    ) -> error::Result<Vec<PublicAuditEditHistory>> {
+    ) -> error::Result<EditHistoryResponse> {
         let Some(request) = self.get_request(id).await? else {
             return Err(anyhow::anyhow!("Audit request not found").code(404));
         };
@@ -629,6 +634,35 @@ impl RequestService {
         }
 
         result.reverse();
-        Ok(result)
+
+        Ok(EditHistoryResponse {
+            edit_history: result,
+            approved_by: HashMap::new(),
+            unread: request.unread_edits,
+        })
+    }
+
+    pub async fn unread_edits(
+        &self,
+        request_id: ObjectId,
+        unread: usize,
+    ) -> error::Result<()> {
+        let auth = self.context.auth();
+        let user_id = auth.id().unwrap();
+
+        let Some(mut request) = self.get_request(request_id).await? else {
+            return Err(anyhow::anyhow!("Audit request not found").code(404));
+        };
+
+        request.unread_edits.insert(user_id.to_hex(), unread);
+
+        let requests = self
+            .context
+            .try_get_repository::<AuditRequest<ObjectId>>()?;
+
+        requests.delete("_id", &request_id).await?;
+        requests.insert(&request).await?;
+
+        Ok(())
     }
 }
