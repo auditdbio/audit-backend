@@ -108,6 +108,7 @@ pub struct PublicAudit {
     pub customer_contacts: Contacts,
     pub tags: Vec<String>,
     pub last_modified: i64,
+    pub resolved_at: Option<i64>,
     pub report: Option<String>,
     pub report_name: Option<String>,
     pub time: TimeRange,
@@ -125,6 +126,7 @@ impl PublicAudit {
         audit: Audit<ObjectId>,
     ) -> error::Result<PublicAudit> {
         let auth = context.auth();
+
         let auditor = context
             .make_request::<PublicAuditor>()
             .get(format!(
@@ -214,6 +216,7 @@ impl PublicAudit {
             customer_contacts,
             tags: audit.tags,
             last_modified: audit.last_modified,
+            resolved_at: audit.resolved_at,
             report: audit.report,
             report_name: audit.report_name,
             time: audit.time,

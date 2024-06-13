@@ -44,6 +44,7 @@ pub enum Service {
     Telemetry,
     Event,
     Report,
+    Rating,
     Chat,
 }
 
@@ -207,7 +208,13 @@ impl Auth {
     }
 
     pub fn public_issue(&self, issue: Issue<ObjectId>) -> PublicIssue {
-        let id = self.id().unwrap();
+        let id = self.id();
+
+        let read = if id.is_some() {
+            *issue.read.get(&id.unwrap().to_hex()).unwrap_or(&0)
+        } else {
+            0
+        };
 
         PublicIssue {
             id: issue.id,
@@ -221,7 +228,7 @@ impl Auth {
             feedback: issue.feedback,
             events: Event::to_string_map(issue.events),
             last_modified: issue.last_modified,
-            read: *issue.read.get(&id.to_hex()).unwrap_or(&0),
+            read,
         }
     }
 }

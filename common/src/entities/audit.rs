@@ -65,6 +65,7 @@ pub struct Audit<Id: Eq + Hash> {
     pub total_cost: Option<i64>,
 
     pub last_modified: i64,
+    pub resolved_at: Option<i64>,
     pub report: Option<String>,
     pub report_name: Option<String>,
     pub report_type: Option<ReportType>,
@@ -97,6 +98,7 @@ impl Audit<String> {
             price: self.price,
             total_cost: self.total_cost,
             last_modified: self.last_modified,
+            resolved_at: self.resolved_at,
             report: self.report,
             report_name: self.report_name,
             report_type: self.report_type,
@@ -126,6 +128,7 @@ impl Audit<ObjectId> {
             price: self.price,
             total_cost: self.total_cost,
             last_modified: self.last_modified,
+            resolved_at: self.resolved_at,
             report: self.report,
             report_name: self.report_name,
             report_type: self.report_type,

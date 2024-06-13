@@ -1,6 +1,6 @@
 use common::{
     api::{
-        audits::{AuditChange, PublicAudit},
+        audits::{AuditChange, PublicAudit, request_audit},
         issue::PublicIssue,
         report::PublicReport,
     },
@@ -381,18 +381,3 @@ pub async fn create_report(
 
     Ok(PublicReport { path })
 }
-
-/*
-
-{
-    "auditor_name": "Aleksander Masloww",
-    "auditor_email": "maslow@gmail.com",
-    "project_name": "THIS IS PROJECT NAME",
-    "scope": [
-        "https://google.com",
-        "https://github.com"
-    ],
-    "markdown": "# header1\n---\n## header2\n---\n* **bold**\n* *italic*\n"
-}
-
-*/
