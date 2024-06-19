@@ -13,4 +13,5 @@ cp /app/target/release/report /data/binaries/report_binary
 cp /app/target/release/chat /data/binaries/chat_binary
 cp /app/target/release/telemetry /data/binaries/telemetry_binary
 cp /app/target/release/cloc /data/binaries/cloc_binary
+cp /app/target/release/rating /data/binaries/rating_binary
 
