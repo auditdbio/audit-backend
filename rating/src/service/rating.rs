@@ -55,12 +55,13 @@ impl RatingService {
         role: Role,
         force_update: bool,
     ) -> error::Result<Rating<ObjectId>> {
+        log::info!("find or create start");
         let ratings = self.context.try_get_repository::<Rating<ObjectId>>()?;
-
+        log::info!("try_get_repository success ");
         let rating = ratings
             .find("user_id", &Bson::ObjectId(user_id.clone()))
             .await?;
-
+        log::info!("find rating success ");
         if rating.is_some() {
             let rating = rating.unwrap();
             let role_rating = if role == Role::Auditor {
@@ -92,6 +93,7 @@ impl RatingService {
     }
 
     pub async fn get_user_rating(&self, user_id: ObjectId, role: Role) -> error::Result<SummaryResponse> {
+        log::info!("get user rating start");
         let rating = self.find_or_create(user_id, role, false).await?;
         let summary = if role == Role::Auditor {
             rating.auditor.summary
@@ -134,6 +136,9 @@ impl RatingService {
             .unwrap()
             .json::<PublicAudit>()
             .await?;
+
+        log::info!("{:?}", audit);
+        log::info!("AUDIT STATUS: {:?}", audit.status);
 
         if audit.status != PublicAuditStatus::Resolved {
             return Err(anyhow::anyhow!("Audit must be resolved").code(403));
