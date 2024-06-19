@@ -5,42 +5,47 @@ use actix_web::{
 
 use common::{
     context::GeneralContext,
-    entities::rating::UserFeedback,
+    entities::{
+        rating::UserFeedback,
+        role::Role,
+    },
     error,
 };
-
 use crate::service::rating::{
     CreateFeedback, RatingDetailsResponse,
     RatingService, SummaryResponse,
 };
 
-#[get("/rating/auditor/{auditor_id}/")]
-pub async fn get_auditor_rating(
+#[get("/rating/{role}/{user_id}/")]
+pub async fn get_user_rating(
     context: GeneralContext,
-    auditor_id: Path<String>,
+    path: Path<(String, Role)>,
 ) -> error::Result<Json<SummaryResponse>> {
+    let (user_id, role) = path.into_inner();
     Ok(Json(
-        RatingService::new(context).get_auditor_rating(auditor_id.parse()?).await?
+        RatingService::new(context).get_user_rating(user_id.parse()?, role).await?
     ))
 }
 
-#[get("/rating/auditor/{auditor_id}/details")]
-pub async fn get_auditor_rating_details(
+#[get("/rating/{role}/{user_id}/details")]
+pub async fn get_user_rating_details(
     context: GeneralContext,
-    auditor_id: Path<String>,
+    path: Path<(String, Role)>,
 ) -> error::Result<Json<RatingDetailsResponse>> {
+    let (user_id, role) = path.into_inner();
     Ok(Json(
-        RatingService::new(context).get_auditor_rating_details(auditor_id.parse()?).await?
+        RatingService::new(context).get_user_rating_details(user_id.parse()?, role).await?
     ))
 }
 
-#[patch("/rating/recalculate/auditor/{auditor_id}")]
+#[patch("/rating/recalculate/{role}/{user_id}")]
 pub async fn recalculate_rating(
     context: GeneralContext,
-    auditor_id: Path<String>,
+    path: Path<(String, Role)>,
 ) -> error::Result<Json<RatingDetailsResponse>> {
+    let (user_id, role) = path.into_inner();
     Ok(Json(
-        RatingService::new(context).recalculate_rating(auditor_id.parse()?).await?
+        RatingService::new(context).recalculate_rating(user_id.parse()?, role).await?
     ))
 }
 

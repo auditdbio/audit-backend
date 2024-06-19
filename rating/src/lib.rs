@@ -34,8 +34,9 @@ pub fn create_app(
         .app_data(web::Data::new(state))
         .service(
             web::scope(&API_PREFIX)
-                .service(get_auditor_rating)
-                .service(get_auditor_rating_details)
+                .service(get_user_rating)
+                .service(get_user_rating_details)
                 .service(recalculate_rating)
+                .service(send_feedback)
         )
 }

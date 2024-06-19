@@ -18,38 +18,37 @@ use crate::{
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Rating<Id> {
     pub id: Id,
-    pub auditor_id: Id,
-    pub last_update: i64,
-    pub summary: u8,
-    pub user_feedbacks: Vec<UserFeedback<Id>>,
-    pub total_completed_audits: Vec<CompletedAuditInfo<Id>>,
+    pub user_id: Id,
+    pub auditor: RoleRating<Id>,
+    pub customer: RoleRating<Id>,
 }
 
 impl Rating<ObjectId> {
     pub fn stringify(self) -> Rating<String> {
         Rating {
             id: self.id.to_hex(),
-            auditor_id: self.auditor_id.to_hex(),
-            last_update: self.last_update,
-            summary: self.summary,
-            user_feedbacks: UserFeedback::stringify_map(self.user_feedbacks),
-            total_completed_audits: CompletedAuditInfo::stringify_map(self.total_completed_audits),
+            user_id: self.user_id.to_hex(),
+            auditor: self.auditor.stringify(),
+            customer: self.customer.stringify(),
         }
     }
 
     pub async fn calculate(
-        &mut self,
+        &self,
         context: &GeneralContext,
-        auditor_id: ObjectId
+        role: Role,
     ) -> error::Result<Rating<ObjectId>> {
+        let mut rating = self.clone();
+
         let audits = context
             .make_request::<Vec<PublicAudit>>()
             .get(format!(
-                "{}://{}/{}/public_audits/{}/auditor",
+                "{}://{}/{}/public_audits/{}/{}",
                 PROTOCOL.as_str(),
                 AUDITS_SERVICE.as_str(),
                 API_PREFIX.as_str(),
-                auditor_id,
+                rating.user_id,
+                serde_json::to_string(&role).unwrap(),
             ))
             .auth(context.server_auth())
             .send()
@@ -57,31 +56,119 @@ impl Rating<ObjectId> {
             .json::<Vec<PublicAudit>>()
             .await?;
 
-        self.total_completed_audits = audits
+        let user = get_by_id(
+            &context,
+            context.server_auth(),
+            rating.user_id,
+        ).await?;
+
+
+        // Rating calculation:
+        const IDENTITY_POINT: f32 = 5.0;
+        const COMPLETED_IN_TIME_MAX_POINTS: f32 = 15.0;
+        const LAST_COMPLETED_AUDITS_MULTIPLIER: f32 = 1.5;
+        const USER_RATING_MULTIPLIER: f32 = 12.0;
+
+        let identity_points = user
+            .linked_accounts
+            .as_ref()
+            .map_or(0.0, |a| a.len().min(2) as f32) * IDENTITY_POINT;
+
+        let total_completed_audits = audits
             .into_iter()
             .filter(|a| a.status == PublicAuditStatus::Resolved && a.resolved_at.is_some())
             .map(|a| CompletedAuditInfo {
                 audit_id: a.id.parse().unwrap(),
-                // project_name: a.project_name,
+                project_name: a.project_name,
                 completed_at: a.resolved_at.unwrap(),
                 time: a.time,
             })
             .collect::<Vec<CompletedAuditInfo<ObjectId>>>();
 
-        let user = get_by_id(
-            &context,
-            context.server_auth(),
-            auditor_id,
-        ).await?;
+        let completed_in_time_audits = total_completed_audits
+            .clone()
+            .into_iter()
+            .filter(|a| a.completed_at <= a.time.to)
+            .collect::<Vec<CompletedAuditInfo<ObjectId>>>();
 
-        let _identity = user.linked_accounts.as_ref().map_or(0, Vec::len);
+        let completed_in_time_points = (
+            completed_in_time_audits.len() as f32 / total_completed_audits.len() as f32
+        ) * COMPLETED_IN_TIME_MAX_POINTS;
 
+        let last_completed_audits = total_completed_audits
+            .iter()
+            .rev()
+            .take(10)
+            .cloned()
+            .collect::<Vec<CompletedAuditInfo<ObjectId>>>();
 
-        // TODO CALC FUNC
+        let time_now = Utc::now().timestamp_micros();
+        let micros_in_a_year = 365.25 * 24.0 * 60.0 * 60.0 * 1_000_000.0;
 
-        self.last_update = Utc::now().timestamp_micros();
+        let mut last_completed_audits_points: f32 = 0.0;
+        for audit in last_completed_audits {
+            let duration: f32 = (time_now - audit.completed_at) as f32;
+            let years_passed = (duration / micros_in_a_year).ceil();
+            let point = if years_passed < 2.0 {
+                1.0
+            } else {
+                (1.0 - (years_passed - 2.0) * 0.1).max(0.1)
+            };
+            last_completed_audits_points += point;
+        }
+        last_completed_audits_points *= LAST_COMPLETED_AUDITS_MULTIPLIER;
 
-        Ok(self.clone())
+        let user_feedbacks = match role {
+            Role::Auditor => rating.clone().auditor.user_feedbacks,
+            Role::Customer => rating.clone().customer.user_feedbacks,
+        };
+
+        let mut feedback_points: f32 = 0.0;
+        for feedback in user_feedbacks.clone() {
+            let mut sum = 0;
+            let mut quantity = 0;
+            if let Some(quality_of_work) = feedback.rating.quality_of_work {
+                sum += quality_of_work.as_i32();
+                quantity += 1;
+            }
+            if let Some(time_management) = feedback.rating.time_management {
+                sum += time_management.as_i32();
+                quantity += 1;
+            }
+            if let Some(collaboration) = feedback.rating.collaboration {
+                sum += collaboration.as_i32();
+                quantity += 1;
+            }
+
+            let duration: f32 = (time_now - feedback.created_at) as f32;
+            let years_passed = (duration / micros_in_a_year).ceil();
+            let mut point = sum as f32 / quantity as f32;
+
+            if years_passed > 2.0 {
+                point = (point - (years_passed - 2.0) * 0.1).max(0.1)
+            }
+
+            feedback_points += point;
+        }
+
+        feedback_points = feedback_points / user_feedbacks.len() as f32 * USER_RATING_MULTIPLIER;
+
+        let summary = identity_points + completed_in_time_points + last_completed_audits_points + feedback_points;
+
+        match role {
+            Role::Auditor => {
+                rating.auditor.total_completed_audits = total_completed_audits;
+                rating.auditor.last_update = Utc::now().timestamp_micros();
+                rating.auditor.summary = summary;
+            },
+            Role::Customer => {
+                rating.customer.total_completed_audits = total_completed_audits;
+                rating.customer.last_update = Utc::now().timestamp_micros();
+                rating.customer.summary = summary;
+            }
+        }
+
+        Ok(rating)
     }
 }
 
@@ -89,11 +176,9 @@ impl Rating<String> {
     pub fn parse(self) -> Rating<ObjectId> {
         Rating {
             id: self.id.parse().unwrap(),
-            auditor_id: self.auditor_id.parse().unwrap(),
-            last_update: self.last_update,
-            summary: self.summary,
-            user_feedbacks: UserFeedback::parse_map(self.user_feedbacks),
-            total_completed_audits: CompletedAuditInfo::parse_map(self.total_completed_audits),
+            user_id: self.user_id.parse().unwrap(),
+            auditor: self.auditor.parse(),
+            customer: self.customer.parse(),
         }
     }
 }
@@ -106,9 +191,40 @@ impl Entity for Rating<ObjectId> {
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct RoleRating<Id> {
+    pub last_update: i64,
+    pub summary: f32,
+    pub user_feedbacks: Vec<UserFeedback<Id>>,
+    pub total_completed_audits: Vec<CompletedAuditInfo<Id>>,
+}
+
+impl RoleRating<String> {
+    pub fn parse(self) -> RoleRating<ObjectId> {
+        RoleRating {
+            last_update: self.last_update,
+            summary: self.summary,
+            user_feedbacks: UserFeedback::parse_map(self.user_feedbacks),
+            total_completed_audits: CompletedAuditInfo::parse_map(self.total_completed_audits),
+        }
+    }
+}
+
+impl RoleRating<ObjectId> {
+    pub fn stringify(self) -> RoleRating<String> {
+        RoleRating {
+            last_update: self.last_update,
+            summary: self.summary,
+            user_feedbacks: UserFeedback::stringify_map(self.user_feedbacks),
+            total_completed_audits: CompletedAuditInfo::stringify_map(self.total_completed_audits),
+        }
+    }
+}
+
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CompletedAuditInfo<Id> {
     pub audit_id: Id,
-    // pub project_name: String,
+    pub project_name: String,
     pub completed_at: i64,
     pub time: TimeRange,
 }
@@ -117,7 +233,7 @@ impl CompletedAuditInfo<String> {
     pub fn parse(self) -> CompletedAuditInfo<ObjectId> {
         CompletedAuditInfo {
             audit_id: self.audit_id.parse().unwrap(),
-            // project_name: self.project_name,
+            project_name: self.project_name,
             completed_at: self.completed_at,
             time: self.time,
         }
@@ -132,7 +248,7 @@ impl CompletedAuditInfo<ObjectId> {
     pub fn stringify(self) -> CompletedAuditInfo<String> {
         CompletedAuditInfo {
             audit_id: self.audit_id.to_hex(),
-            // project_name: self.project_name,
+            project_name: self.project_name,
             completed_at: self.completed_at,
             time: self.time,
         }
@@ -145,10 +261,27 @@ impl CompletedAuditInfo<ObjectId> {
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct FeedbackStars(u8);
+
+impl FeedbackStars {
+    pub fn new(value: Option<u8>) -> Result<Option<Self>, &'static str> {
+        match value {
+            Some(v) if (0..=5).contains(&v) => Ok(Some(FeedbackStars(v))),
+            Some(_) => Err("Value must be between 0 and 5"),
+            None => Ok(None),
+        }
+    }
+
+    pub fn as_i32(&self) -> i32 {
+        self.0 as i32
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct UserFeedbackRating {
-    pub quality_of_work: u8,
-    pub time_management: Option<u8>,
-    pub collaboration: Option<u8>,
+    pub quality_of_work: Option<FeedbackStars>,
+    pub time_management: Option<FeedbackStars>,
+    pub collaboration: Option<FeedbackStars>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
