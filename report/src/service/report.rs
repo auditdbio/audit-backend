@@ -1,6 +1,6 @@
 use common::{
     api::{
-        audits::{AuditChange, PublicAudit, request_audit},
+        audits::{AuditChange, PublicAudit},
         issue::PublicIssue,
         report::PublicReport,
     },
