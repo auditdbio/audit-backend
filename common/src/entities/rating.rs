@@ -188,7 +188,7 @@ impl Rating<ObjectId> {
 
         context
             .make_request::<()>()
-            .get(patch_url)
+            .patch(patch_url)
             .auth(context.server_auth())
             .send()
             .await?;
