@@ -107,6 +107,7 @@ impl Auth {
             tags: customer.tags,
             kind: "customer".to_string(),
             link_id: customer.link_id,
+            rating: customer.rating,
         }
     }
 
@@ -139,6 +140,7 @@ impl Auth {
             tags: auditor.tags,
             kind: "auditor".to_string(),
             link_id: auditor.link_id,
+            rating: auditor.rating,
         }
     }
 

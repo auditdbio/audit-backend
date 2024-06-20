@@ -278,6 +278,7 @@ impl BadgeService {
             free_at: badge.free_at,
             price_range: badge.price_range,
             link_id: badge.link_id,
+            rating: None,
         };
 
         if auditors

@@ -30,7 +30,6 @@ impl RatingService {
     }
 
     async fn create(&self, user_id: ObjectId, role: Role) -> error::Result<Rating<ObjectId>> {
-        log::info!("rating create start");
         let role_rating = RoleRating {
             last_update: Utc::now().timestamp_micros(),
             summary: 0.0,
@@ -45,11 +44,7 @@ impl RatingService {
             customer: role_rating,
         };
 
-        log::info!("RATING: {:?}", rating);
-
         let rating = rating.calculate(&self.context, role).await?;
-
-        log::info!("rating create success");
 
         Ok(rating)
     }
@@ -65,9 +60,7 @@ impl RatingService {
             .find("user_id", &Bson::ObjectId(user_id.clone()))
             .await?;
 
-        log::info!("find rating success ");
         if rating.is_some() {
-            log::info!("rating in some");
             let rating = rating.unwrap();
             let role_rating = if role == Role::Auditor {
                 rating.auditor.clone()
@@ -181,7 +174,16 @@ impl RatingService {
             &mut rating.customer
         };
 
-        role_rating.user_feedbacks.push(create_feedback.clone());
+        if let Some(existing_feedback) = role_rating
+            .user_feedbacks
+            .iter_mut()
+            .find(|fb| {
+            fb.audit_id == create_feedback.audit_id && fb.from.user_id == create_feedback.from.user_id
+        }) {
+            *existing_feedback = create_feedback.clone();
+        } else {
+            role_rating.user_feedbacks.push(create_feedback.clone());
+        }
 
         let rating = rating.calculate(&self.context, receiver_role).await?;
 

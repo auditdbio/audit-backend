@@ -12,7 +12,7 @@ use crate::{
     },
     error,
     repository::Entity,
-    services::{AUDITS_SERVICE, API_PREFIX, PROTOCOL},
+    services::{AUDITS_SERVICE, AUDITORS_SERVICE, API_PREFIX, CUSTOMERS_SERVICE, PROTOCOL},
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -40,38 +40,27 @@ impl Rating<ObjectId> {
     ) -> error::Result<Rating<ObjectId>> {
         let mut rating = self.clone();
 
-        log::info!("rating CALCULATE start");
-
-        let audits_url = format!(
-            "{}://{}/{}/public_audits/{}/{}",
-            PROTOCOL.as_str(),
-            AUDITS_SERVICE.as_str(),
-            API_PREFIX.as_str(),
-            rating.user_id,
-            role.stringify(),
-        );
-
-        log::info!("audits url {}", audits_url);
-
         let audits = context
             .make_request::<Vec<PublicAudit>>()
-            .get(audits_url)
+            .get(format!(
+                "{}://{}/{}/public_audits/{}/{}",
+                PROTOCOL.as_str(),
+                AUDITS_SERVICE.as_str(),
+                API_PREFIX.as_str(),
+                rating.user_id,
+                role.stringify(),
+            ))
             .auth(context.server_auth())
             .send()
             .await?
             .json::<Vec<PublicAudit>>()
             .await?;
 
-        log::info!("Audits request success");
-
         let user = get_by_id(
             &context,
             context.server_auth(),
             rating.user_id,
         ).await?;
-
-        log::info!("Get user success");
-        log::info!("USER: {:?}", user);
 
 
         // Rating calculation:
@@ -87,11 +76,11 @@ impl Rating<ObjectId> {
 
         let total_completed_audits = audits
             .into_iter()
-            .filter(|a| a.status == PublicAuditStatus::Resolved && a.resolved_at.is_some())
+            .filter(|a| a.status == PublicAuditStatus::Resolved)
             .map(|a| CompletedAuditInfo {
                 audit_id: a.id.parse().unwrap(),
                 project_name: a.project_name,
-                completed_at: a.resolved_at.unwrap(),
+                completed_at: a.resolved_at.unwrap_or(a.time.to.clone()),
                 time: a.time,
             })
             .collect::<Vec<CompletedAuditInfo<ObjectId>>>();
@@ -99,7 +88,7 @@ impl Rating<ObjectId> {
         let completed_in_time_audits = total_completed_audits
             .clone()
             .into_iter()
-            .filter(|a| a.completed_at <= a.time.to)
+            .filter(|a| a.completed_at < a.time.to)
             .collect::<Vec<CompletedAuditInfo<ObjectId>>>();
 
         let completed_in_time_points = (
@@ -166,20 +155,43 @@ impl Rating<ObjectId> {
 
         let summary = identity_points + completed_in_time_points + last_completed_audits_points + feedback_points;
 
+        let patch_url: String;
+
         match role {
             Role::Auditor => {
                 rating.auditor.total_completed_audits = total_completed_audits;
                 rating.auditor.last_update = Utc::now().timestamp_micros();
                 rating.auditor.summary = summary;
+
+                patch_url = format!(
+                    "{}://{}/{}/customer/{}",
+                    PROTOCOL.as_str(),
+                    CUSTOMERS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
+                    rating.user_id,
+                )
             },
             Role::Customer => {
                 rating.customer.total_completed_audits = total_completed_audits;
                 rating.customer.last_update = Utc::now().timestamp_micros();
                 rating.customer.summary = summary;
+
+                patch_url = format!(
+                    "{}://{}/{}/auditor/{}",
+                    PROTOCOL.as_str(),
+                    AUDITORS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
+                    rating.user_id,
+                )
             }
         }
 
-        log::info!("rating calc success");
+        context
+            .make_request::<()>()
+            .get(patch_url)
+            .auth(context.server_auth())
+            .send()
+            .await?;
 
         Ok(rating)
     }
