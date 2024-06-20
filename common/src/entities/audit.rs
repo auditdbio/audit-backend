@@ -25,7 +25,7 @@ pub enum PublicAuditStatus {
     InProgress,
     #[serde(rename = "Issues workflow", alias = "IssuesWorkflow")]
     IssuesWorkflow,
-    #[serde(rename = "Ready for resolve", alias = "Resolved")]
+    #[serde(rename = "Ready for resolve", alias = "ReadyForResolve")]
     ReadyForResolve,
     #[serde(rename = "Resolved", alias = "Resolved")]
     Resolved,

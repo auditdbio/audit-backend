@@ -40,6 +40,8 @@ impl Rating<ObjectId> {
     ) -> error::Result<Rating<ObjectId>> {
         let mut rating = self.clone();
 
+        log::info!("rating CALCULATE start");
+
         let audits = context
             .make_request::<Vec<PublicAudit>>()
             .get(format!(
@@ -56,11 +58,16 @@ impl Rating<ObjectId> {
             .json::<Vec<PublicAudit>>()
             .await?;
 
+        log::info!("Audits request success");
+
         let user = get_by_id(
             &context,
             context.server_auth(),
             rating.user_id,
         ).await?;
+
+        log::info!("Get user success");
+        log::info!("USER: {:?}", user);
 
 
         // Rating calculation:
@@ -167,6 +174,8 @@ impl Rating<ObjectId> {
                 rating.customer.summary = summary;
             }
         }
+
+        log::info!("rating calc success");
 
         Ok(rating)
     }
