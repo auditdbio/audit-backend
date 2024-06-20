@@ -42,16 +42,20 @@ impl Rating<ObjectId> {
 
         log::info!("rating CALCULATE start");
 
+        let audits_url = format!(
+            "{}://{}/{}/public_audits/{}/{}",
+            PROTOCOL.as_str(),
+            AUDITS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
+            rating.user_id,
+            role.stringify(),
+        );
+
+        log::info!("audits url {}", audits_url);
+
         let audits = context
             .make_request::<Vec<PublicAudit>>()
-            .get(format!(
-                "{}://{}/{}/public_audits/{}/{}",
-                PROTOCOL.as_str(),
-                AUDITS_SERVICE.as_str(),
-                API_PREFIX.as_str(),
-                rating.user_id,
-                serde_json::to_string(&role).unwrap(),
-            ))
+            .get(audits_url)
             .auth(context.server_auth())
             .send()
             .await?
