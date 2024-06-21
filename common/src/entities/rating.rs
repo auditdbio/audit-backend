@@ -1,6 +1,7 @@
 use chrono::Utc;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 
 use crate::{
     api::{audits::PublicAudit, user::get_by_id},
@@ -161,7 +162,7 @@ impl Rating<ObjectId> {
             Role::Auditor => {
                 rating.auditor.total_completed_audits = total_completed_audits;
                 rating.auditor.last_update = Utc::now().timestamp_micros();
-                rating.auditor.summary = summary;
+                rating.auditor.summary = summary.clone();
 
                 patch_url = format!(
                     "{}://{}/{}/auditor/{}",
@@ -174,7 +175,7 @@ impl Rating<ObjectId> {
             Role::Customer => {
                 rating.customer.total_completed_audits = total_completed_audits;
                 rating.customer.last_update = Utc::now().timestamp_micros();
-                rating.customer.summary = summary;
+                rating.customer.summary = summary.clone();
 
                 patch_url = format!(
                     "{}://{}/{}/customer/{}",
@@ -187,9 +188,12 @@ impl Rating<ObjectId> {
         }
 
         context
-            .make_request::<()>()
+            .make_request()
             .patch(patch_url)
             .auth(context.server_auth())
+            .json(&json!({
+                "rating": summary
+            }))
             .send()
             .await?;
 
