@@ -12,7 +12,7 @@ use common::{
         chat::{
             send_message, create_audit_message,
             delete_message, AuditMessageStatus,
-            CreateAuditMessage, AuditMessageId
+            CreateAuditMessage, AuditMessageId,
         },
         events::{post_event, EventPayload, PublicEvent},
         issue::PublicIssue,
@@ -21,7 +21,11 @@ use common::{
     },
     context::GeneralContext,
     entities::{
-        audit::{Audit, AuditStatus, AuditEditHistory, PublicAuditEditHistory, ChangeAuditHistory, ReportType},
+        audit::{
+            Audit, AuditStatus, ReportType,
+            AuditEditHistory, PublicAuditEditHistory,
+            ChangeAuditHistory, EditHistoryResponse,
+        },
         audit_request::{AuditRequest, TimeRange},
         issue::{severity_to_integer, ChangeIssue, Event, EventKind, Issue, Status, Action},
         project::get_project,
@@ -53,8 +57,8 @@ impl AuditService {
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
         let user_id = auth.id().unwrap();
-        let auditor_id = request.auditor_id.parse()?;
-        let customer_id = request.customer_id.parse()?;
+        let auditor_id: ObjectId = request.auditor_id.parse()?;
+        let customer_id: ObjectId = request.customer_id.parse()?;
 
         let tags = if let Some(request_tags) = request.tags {
             request_tags
@@ -86,6 +90,11 @@ impl AuditService {
             chat_id: None,
             conclusion: None,
             edit_history: Vec::new(),
+            approved_by: HashMap::new(),
+            unread_edits: HashMap::from_iter(vec![
+                (customer_id.to_hex(), 0),
+                (auditor_id.to_hex(), 0)
+            ]),
         };
 
         let requests = self
@@ -95,7 +104,12 @@ impl AuditService {
         if let Some(request) = requests
             .delete("id", &request.id.parse()?)
             .await? {
-            audit.edit_history = request.edit_history;
+            let edit_history = request.edit_history;
+            audit.edit_history = edit_history.clone();
+            if let Some(last) = edit_history.last() {
+                audit.approved_by.insert(customer_id.to_hex(), last.id);
+                audit.approved_by.insert(auditor_id.to_hex(), last.id);
+            }
 
             if let Some(chat_id) = request.chat_id {
                 delete_message(chat_id.chat_id, chat_id.message_id, auth.clone())?
@@ -180,6 +194,8 @@ impl AuditService {
             chat_id: None,
             conclusion: request.conclusion,
             edit_history: Vec::new(),
+            approved_by: HashMap::new(),
+            unread_edits: HashMap::new(),
         };
 
         if !Edit.get_access(&auth, &audit) {
@@ -282,16 +298,18 @@ impl AuditService {
         }
 
         let mut is_history_changed = false;
+        let mut is_approve_needed = false;
 
         if let Some(public) = change.public {
             audit.public = public;
         }
 
         if audit.status != AuditStatus::Resolved || audit.no_customer {
-            if let Some(scope) = change.scope {
+            if let Some(scope) = change.scope.clone() {
                 if audit.scope != scope {
                     audit.scope = scope;
                     is_history_changed = true;
+                    is_approve_needed = true;
                 }
             }
             if let Some(description) = change.description {
@@ -304,6 +322,22 @@ impl AuditService {
                 if audit.tags != tags {
                     audit.tags = tags;
                     is_history_changed = true;
+                }
+            }
+            if change.total_cost.is_some() {
+                if audit.total_cost != change.total_cost {
+                    audit.total_cost = change.total_cost;
+                    audit.price = None;
+                    is_history_changed = true;
+                    is_approve_needed = true;
+                }
+            }
+            if change.price.is_some() && change.total_cost.is_none() {
+                if audit.price != change.price {
+                    audit.price = change.price;
+                    audit.total_cost = None;
+                    is_history_changed = true;
+                    is_approve_needed = true;
                 }
             }
             if let Some(conclusion) = change.conclusion {
@@ -334,6 +368,13 @@ impl AuditService {
             audit.report_name = Some(report_name.clone());
         }
 
+        let is_audit_approved = if audit.edit_history.is_empty() || audit.approved_by.is_empty() {
+            true
+        } else {
+            let first = audit.approved_by.values().next().unwrap();
+            audit.approved_by.values().all(|v| v == first)
+        };
+
         if let Some(ref action) = change.action {
             match action {
                 AuditAction::Start => {
@@ -342,7 +383,9 @@ impl AuditService {
                     }
                 }
                 AuditAction::Resolve => {
-                    if audit.status == AuditStatus::Started {
+                    if !is_audit_approved {
+                        return Err(anyhow::anyhow!("Audit approval is required from all participants").code(404));
+                    } else if audit.status == AuditStatus::Started {
                         audit.status = AuditStatus::Resolved;
                         audit.resolved_at = Some(Utc::now().timestamp_micros());
                         audit.resolve(&self.context).await?;
@@ -352,6 +395,16 @@ impl AuditService {
         }
 
         audit.last_modified = Utc::now().timestamp_micros();
+
+        let (
+            event_receiver,
+            receiver_role,
+            last_changer_role,
+        ) = if user_id == audit.customer_id {
+            (audit.auditor_id, Role::Auditor, Role::Customer)
+        } else {
+            (audit.customer_id, Role::Customer, Role::Auditor)
+        };
 
         if is_history_changed {
             let edit_history_item = AuditEditHistory {
@@ -371,18 +424,18 @@ impl AuditService {
                 })).unwrap(),
             };
 
-            audit.edit_history.push(edit_history_item);
-        }
+            audit.edit_history.push(edit_history_item.clone());
 
-        let (
-            event_receiver,
-            receiver_role,
-            last_changer_role,
-        ) = if user_id == audit.customer_id {
-            (audit.auditor_id, Role::Auditor, Role::Customer)
-        } else {
-            (audit.customer_id, Role::Customer, Role::Auditor)
-        };
+            if is_audit_approved && !is_approve_needed {
+                audit.approved_by.insert(audit.auditor_id.to_hex(), edit_history_item.id.clone());
+                audit.approved_by.insert(audit.customer_id.to_hex(), edit_history_item.id.clone());
+            } else {
+                audit.approved_by.insert(user_id.to_hex(), edit_history_item.id.clone());
+            }
+
+            *audit.unread_edits.entry(event_receiver.to_hex()).or_insert(0) += 1;
+            audit.unread_edits.insert(user_id.to_hex(), 0);
+        }
 
         let public_audit = PublicAudit::new(&self.context, audit.clone()).await?;
 
@@ -967,7 +1020,7 @@ impl AuditService {
     pub async fn get_audit_edit_history(
         &self,
         id: ObjectId,
-    ) -> error::Result<Vec<PublicAuditEditHistory>> {
+    ) -> error::Result<EditHistoryResponse> {
         let Some(audit) = self.get_audit(id).await? else {
             return Err(anyhow::anyhow!("Audit not found").code(404));
         };
@@ -984,7 +1037,11 @@ impl AuditService {
         }
 
         result.reverse();
-        Ok(result)
+        Ok(EditHistoryResponse {
+            edit_history: result,
+            approved_by: audit.approved_by,
+            unread: audit.unread_edits,
+        })
     }
 
     pub async fn change_audit_edit_history(
@@ -1017,6 +1074,47 @@ impl AuditService {
             }
         }
 
+        if let Some(is_approved) = change.is_approved {
+            if is_approved {
+                audit.approved_by.insert(user_id.to_hex(), history_id);
+
+                let is_last = audit
+                    .edit_history
+                    .last()
+                    .map_or(false, |last| last.id == history_id);
+
+                let is_approve_equal = {
+                    let first = audit.approved_by.values().next().unwrap();
+                    audit.approved_by.values().all(|v| v == first)
+                };
+
+                if !is_last && is_approve_equal {
+                    let new_history_item = AuditEditHistory {
+                        id: audit.edit_history.len(),
+                        date: Utc::now().timestamp_micros(),
+                        author: user_id.to_hex(),
+                        comment: None,
+                        audit: history.audit.clone(),
+                    };
+                    audit.edit_history.push(new_history_item.clone());
+
+                    for item in audit.approved_by.values_mut() {
+                        *item = new_history_item.id.clone();
+                    }
+
+                    let audit_change: AuditChange = serde_json::from_str(&history.audit).unwrap();
+                    let updated_audit = self.change(audit_id, audit_change).await?;
+                    audit.project_name = updated_audit.project_name;
+                    audit.description = updated_audit.description;
+                    audit.scope = updated_audit.scope;
+                    audit.tags = updated_audit.tags;
+                    audit.price = updated_audit.price;
+                    audit.total_cost = updated_audit.total_cost;
+                    audit.time = updated_audit.time;
+                }
+            }
+        }
+
         if let Some(idx) = audit.edit_history.iter().position(|h| h.id == history_id) {
             audit.edit_history[idx] = history.clone();
         }
@@ -1032,5 +1130,26 @@ impl AuditService {
         };
 
         Ok(PublicAuditEditHistory::new(&self.context, history, role).await?)
+    }
+
+    pub async fn unread_edits(
+        &self,
+        audit_id: ObjectId,
+        unread: usize,
+    ) -> error::Result<()> {
+        let auth = self.context.auth();
+        let user_id = auth.id().unwrap();
+
+        let Some(mut audit) = self.get_audit(audit_id).await? else {
+            return Err(anyhow::anyhow!("Audit not found").code(404));
+        };
+
+        audit.unread_edits.insert(user_id.to_hex(), unread);
+
+        let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
+        audits.delete("_id", &audit_id).await?;
+        audits.insert(&audit).await?;
+
+        Ok(())
     }
 }
