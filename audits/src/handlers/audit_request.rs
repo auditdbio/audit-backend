@@ -10,12 +10,15 @@ use common::{
         seartch::PaginationParams,
     },
     context::GeneralContext,
-    entities::{audit_request::AuditRequest, role::Role},
+    entities::{
+        audit::EditHistoryResponse,
+        audit_request::AuditRequest,
+        role::Role
+    },
     error,
 };
 
 use serde_json::json;
-use common::entities::audit::PublicAuditEditHistory;
 
 use crate::service::audit_request::{RequestChange, RequestService};
 
@@ -93,10 +96,21 @@ pub async fn find_all_audit_request(
 pub async fn get_request_edit_history(
     context: GeneralContext,
     id: web::Path<String>,
-) -> error::Result<Json<Vec<PublicAuditEditHistory>>> {
+) -> error::Result<Json<EditHistoryResponse>> {
     Ok(Json(
         RequestService::new(context)
             .get_request_edit_history(id.parse()?)
             .await?
     ))
+}
+
+#[patch("/audit_request/{request_id}/unread/{unread}")]
+pub async fn request_unread_edits(
+    context: GeneralContext,
+    params: web::Path<(String, usize)>,
+) -> error::Result<HttpResponse> {
+    RequestService::new(context)
+        .unread_edits(params.0.parse()?, params.1)
+        .await?;
+    Ok(HttpResponse::Ok().finish())
 }
