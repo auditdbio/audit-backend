@@ -164,7 +164,7 @@ impl Rating<ObjectId> {
                 rating.auditor.summary = summary;
 
                 patch_url = format!(
-                    "{}://{}/{}/customer/{}",
+                    "{}://{}/{}/auditor/{}",
                     PROTOCOL.as_str(),
                     CUSTOMERS_SERVICE.as_str(),
                     API_PREFIX.as_str(),
@@ -177,7 +177,7 @@ impl Rating<ObjectId> {
                 rating.customer.summary = summary;
 
                 patch_url = format!(
-                    "{}://{}/{}/auditor/{}",
+                    "{}://{}/{}/customer/{}",
                     PROTOCOL.as_str(),
                     AUDITORS_SERVICE.as_str(),
                     API_PREFIX.as_str(),
