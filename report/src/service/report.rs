@@ -6,7 +6,10 @@ use common::{
     },
     auth::{Auth, Service},
     context::GeneralContext,
-    entities::issue::Status,
+    entities::{
+        audit::ReportType,
+        issue::Status,
+    },
     services::{API_PREFIX, FILES_SERVICE, FRONTEND, PROTOCOL, RENDERER_SERVICE, USERS_SERVICE},
 };
 use reqwest::multipart::{Form, Part};
@@ -356,6 +359,7 @@ pub async fn create_report(
         let audit_change = AuditChange {
             report: Some(path.clone()),
             report_name: Some(format!("{} report.pdf", audit.project_name)),
+            report_type: Some(ReportType::Generated),
             ..AuditChange::default()
         };
 

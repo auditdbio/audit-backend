@@ -22,7 +22,7 @@ use common::{
     context::GeneralContext,
     entities::{
         audit::{
-            Audit, AuditStatus,
+            Audit, AuditStatus, ReportType,
             AuditEditHistory, PublicAuditEditHistory,
             ChangeAuditHistory, EditHistoryResponse,
         },
@@ -81,6 +81,7 @@ impl AuditService {
             last_modified: Utc::now().timestamp_micros(),
             report: None,
             report_name: None,
+            report_type: None,
             time: request.time,
             issues: Vec::new(),
             public: false,
@@ -183,6 +184,7 @@ impl AuditService {
             last_modified: Utc::now().timestamp_micros(),
             report: None,
             report_name: None,
+            report_type: None,
             time,
             public: false,
             no_customer: true,
@@ -357,6 +359,7 @@ impl AuditService {
 
         if let Some(ref report) = change.report {
             audit.report = Some(report.clone());
+            audit.report_type = Some(change.report_type.unwrap_or(ReportType::Custom));
         }
 
         if let Some(ref report_name) = change.report_name {

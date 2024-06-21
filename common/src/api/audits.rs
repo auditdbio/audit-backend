@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use crate::{
     context::GeneralContext,
     entities::{
-        audit::{Audit, AuditStatus, PublicAuditStatus},
+        audit::{Audit, AuditStatus, PublicAuditStatus, ReportType},
         audit_request::TimeRange,
         auditor::{ExtendedAuditor, PublicAuditor},
         contacts::Contacts,
@@ -38,6 +38,7 @@ pub struct AuditChange {
     pub price: Option<i64>,
     pub total_cost: Option<i64>,
     pub report_name: Option<String>,
+    pub report_type: Option<ReportType>,
     pub report: Option<String>,
     pub time: Option<TimeRange>,
     pub start_audit: Option<bool>,

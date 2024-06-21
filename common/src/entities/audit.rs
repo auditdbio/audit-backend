@@ -42,6 +42,12 @@ pub enum AuditStatus {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum ReportType {
+    Generated,
+    Custom,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Audit<Id: Eq + Hash> {
     #[serde(rename = "_id")]
     pub id: Id,
@@ -64,6 +70,7 @@ pub struct Audit<Id: Eq + Hash> {
     pub last_modified: i64,
     pub report: Option<String>,
     pub report_name: Option<String>,
+    pub report_type: Option<ReportType>,
     pub time: TimeRange,
 
     #[serde(default)]
@@ -99,6 +106,7 @@ impl Audit<String> {
             last_modified: self.last_modified,
             report: self.report,
             report_name: self.report_name,
+            report_type: self.report_type,
             time: self.time,
             issues: Issue::parse_map(self.issues),
             public: self.public,
@@ -129,6 +137,7 @@ impl Audit<ObjectId> {
             last_modified: self.last_modified,
             report: self.report,
             report_name: self.report_name,
+            report_type: self.report_type,
             time: self.time,
             issues: Issue::to_string_map(self.issues),
             public: self.public,
@@ -142,7 +151,7 @@ impl Audit<ObjectId> {
     }
 
     pub async fn resolve(&mut self, context: &GeneralContext) -> error::Result<()> {
-        if self.report.is_none() {
+        if self.report_type.is_none() || self.report_type.clone().unwrap() == ReportType::Generated {
             let report_response = context
                 .make_request::<PublicReport>()
                 .post(format!(
@@ -169,6 +178,7 @@ impl Audit<ObjectId> {
                 let public_report = public_report.unwrap();
                 self.report = Some(public_report.path.clone());
                 self.report_name = Some(public_report.path);
+                self.report_type = Some(ReportType::Generated);
             } else {
                 return Err(
                     anyhow::anyhow!(
