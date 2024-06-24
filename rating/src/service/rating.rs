@@ -193,6 +193,35 @@ impl RatingService {
 
         Ok(create_feedback.stringify())
     }
+
+    pub async fn get_feedback(
+        &self,
+        receiver_id: ObjectId,
+        audit_id: ObjectId,
+        role: Role,
+    ) -> error::Result<UserFeedback<String>> {
+        let _auth = self.context.auth();
+
+        let rating = self.find_or_create(
+            receiver_id,
+            role,
+            false
+        ).await?;
+
+        let feedbacks = if role == Role::Auditor {
+            rating.auditor.user_feedbacks
+        } else {
+            rating.customer.user_feedbacks
+        };
+
+        if let Some(feedback) = feedbacks
+            .iter()
+            .find(|fb| fb.audit_id == audit_id) {
+            Ok(feedback.clone().stringify())
+        } else {
+            Err(anyhow::anyhow!("Feedback not found").code(404))
+        }
+    }
 }
 
 

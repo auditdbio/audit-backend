@@ -38,5 +38,6 @@ pub fn create_app(
                 .service(get_user_rating_details)
                 .service(recalculate_rating)
                 .service(send_feedback)
+                .service(get_feedback)
         )
 }

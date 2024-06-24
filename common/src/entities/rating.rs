@@ -77,7 +77,7 @@ impl Rating<ObjectId> {
 
         let total_completed_audits = audits
             .into_iter()
-            .filter(|a| a.status == PublicAuditStatus::Resolved)
+            .filter(|a| a.status == PublicAuditStatus::Resolved && !a.no_customer)
             .map(|a| CompletedAuditInfo {
                 audit_id: a.id.parse().unwrap(),
                 project_name: a.project_name,
@@ -125,34 +125,37 @@ impl Rating<ObjectId> {
         };
 
         let mut feedback_points: f32 = 0.0;
-        for feedback in user_feedbacks.clone() {
-            let mut sum = 0;
-            let mut quantity = 0;
-            if let Some(quality_of_work) = feedback.rating.quality_of_work {
-                sum += quality_of_work.as_i32();
-                quantity += 1;
-            }
-            if let Some(time_management) = feedback.rating.time_management {
-                sum += time_management.as_i32();
-                quantity += 1;
-            }
-            if let Some(collaboration) = feedback.rating.collaboration {
-                sum += collaboration.as_i32();
-                quantity += 1;
+
+        if !user_feedbacks.is_empty() {
+            for feedback in user_feedbacks.clone() {
+                let mut sum = 0;
+                let mut quantity = 0;
+                if let Some(quality_of_work) = feedback.rating.quality_of_work {
+                    sum += quality_of_work.as_i32();
+                    quantity += 1;
+                }
+                if let Some(time_management) = feedback.rating.time_management {
+                    sum += time_management.as_i32();
+                    quantity += 1;
+                }
+                if let Some(collaboration) = feedback.rating.collaboration {
+                    sum += collaboration.as_i32();
+                    quantity += 1;
+                }
+
+                let duration: f32 = (time_now - feedback.created_at) as f32;
+                let years_passed = (duration / micros_in_a_year).ceil();
+                let mut point = sum as f32 / quantity as f32;
+
+                if years_passed > 2.0 {
+                    point = (point - (years_passed - 2.0) * 0.1).max(0.1)
+                }
+
+                feedback_points += point;
             }
 
-            let duration: f32 = (time_now - feedback.created_at) as f32;
-            let years_passed = (duration / micros_in_a_year).ceil();
-            let mut point = sum as f32 / quantity as f32;
-
-            if years_passed > 2.0 {
-                point = (point - (years_passed - 2.0) * 0.1).max(0.1)
-            }
-
-            feedback_points += point;
+            feedback_points = feedback_points / user_feedbacks.len() as f32 * USER_RATING_MULTIPLIER;
         }
-
-        feedback_points = feedback_points / user_feedbacks.len() as f32 * USER_RATING_MULTIPLIER;
 
         let summary = identity_points + completed_in_time_points + last_completed_audits_points + feedback_points;
 

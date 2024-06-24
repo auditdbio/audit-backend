@@ -50,11 +50,26 @@ pub async fn recalculate_rating(
 }
 
 #[post("/rating/send_feedback")]
-pub async fn send_feedback (
+pub async fn send_feedback(
     context: GeneralContext,
     Json(feedback): Json<CreateFeedback>,
 ) -> error::Result<Json<UserFeedback<String>>> {
     Ok(Json(
         RatingService::new(context).send_feedback(feedback).await?
+    ))
+}
+
+#[get("/rating/feedback/{role}/{receiver_id}/{audit_id}")]
+pub async fn get_feedback(
+    context: GeneralContext,
+    path: Path<(Role, String, String)>,
+) -> error::Result<Json<UserFeedback<String>>> {
+    let (role, receiver_id, audit_id) = path.into_inner();
+    Ok(Json(
+        RatingService::new(context).get_feedback(
+            receiver_id.parse()?,
+            audit_id.parse()?,
+            role,
+        ).await?
     ))
 }
