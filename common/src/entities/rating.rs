@@ -92,9 +92,11 @@ impl Rating<ObjectId> {
             .filter(|a| a.completed_at < a.time.to)
             .collect::<Vec<CompletedAuditInfo<ObjectId>>>();
 
-        let completed_in_time_points = (
-            completed_in_time_audits.len() as f32 / total_completed_audits.len() as f32
-        ) * COMPLETED_IN_TIME_MAX_POINTS;
+        let completed_in_time_points = if total_completed_audits.is_empty() {
+            0.0
+        } else {
+            (completed_in_time_audits.len() as f32 / total_completed_audits.len() as f32) * COMPLETED_IN_TIME_MAX_POINTS
+        };
 
         let last_completed_audits = total_completed_audits
             .iter()
@@ -157,7 +159,8 @@ impl Rating<ObjectId> {
             feedback_points = feedback_points / user_feedbacks.len() as f32 * USER_RATING_MULTIPLIER;
         }
 
-        let summary = identity_points + completed_in_time_points + last_completed_audits_points + feedback_points;
+        let mut summary = identity_points + completed_in_time_points + last_completed_audits_points + feedback_points;
+        summary = (summary * 100.0).round() / 100.0;
 
         let patch_url: String;
 
