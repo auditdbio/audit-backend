@@ -1,15 +1,9 @@
 use std::{collections::HashMap, sync::Arc};
-use mongodb::bson::{Bson, oid::ObjectId};
 
 use crate::repositories::file_repo::{CountResult, FileRepo, Scope};
 use common::{
-    api::{
-        linked_accounts::LinkedService,
-        user::decrypt_github_token
-    },
     context::GeneralContext,
     error::{self, AddCode},
-    entities::user::User,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -45,8 +39,9 @@ impl ClocCount {
 
 fn process_link(link: &mut String) {
     if link.starts_with("https://github.com") || link.starts_with("http://github.com") {
-        *link = link.replacen("github.com", "raw.githubusercontent.com", 1);
-        *link = link.replacen("blob/", "", 1);
+        *link = link
+            .replacen("github.com", "raw.githubusercontent.com", 1)
+            .replacen("blob/", "", 1);
     }
 }
 
@@ -60,7 +55,9 @@ impl ClocService {
     }
 
     pub async fn count(&self, request: ClocRequest) -> error::Result<CountResult> {
-        let user_id = self.context.auth().id().unwrap();
+        let auth = self.context.auth();
+        let user_id = auth.id().unwrap();
+
         let repo = self
             .context
             .get_repository_manual::<Arc<FileRepo>>()
@@ -72,10 +69,7 @@ impl ClocService {
             process_link(link);
         }
 
-
-        let access_token: Option<String> = None;
-
-        match repo.download(user_id, scope.clone(), access_token).await {
+        match repo.download(user_id, scope.clone(), auth).await {
             Ok((id, skiped, errors)) => {
                 match repo.count(id).await {
                     Ok(result) => Ok(CountResult { skiped, errors, result }),
