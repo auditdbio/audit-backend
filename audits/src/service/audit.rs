@@ -25,6 +25,7 @@ use common::{
             Audit, AuditStatus, ReportType,
             AuditEditHistory, PublicAuditEditHistory,
             ChangeAuditHistory, EditHistoryResponse,
+            ReportType,
         },
         audit_request::{AuditRequest, TimeRange},
         issue::{severity_to_integer, ChangeIssue, Event, EventKind, Issue, Status, Action},
