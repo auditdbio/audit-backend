@@ -81,7 +81,7 @@ impl Rating<ObjectId> {
             .map(|a| CompletedAuditInfo {
                 audit_id: a.id.parse().unwrap(),
                 project_name: a.project_name,
-                completed_at: a.resolved_at.unwrap_or(a.time.to.clone()),
+                completed_at: a.resolved_at.unwrap_or(a.time.to.clone() * 1000),
                 time: a.time,
             })
             .collect::<Vec<CompletedAuditInfo<ObjectId>>>();
@@ -89,7 +89,7 @@ impl Rating<ObjectId> {
         let completed_in_time_audits = total_completed_audits
             .clone()
             .into_iter()
-            .filter(|a| a.completed_at < a.time.to)
+            .filter(|a| a.completed_at < a.time.to * 1000)
             .collect::<Vec<CompletedAuditInfo<ObjectId>>>();
 
         let completed_in_time_points = if total_completed_audits.is_empty() {
@@ -106,12 +106,12 @@ impl Rating<ObjectId> {
             .collect::<Vec<CompletedAuditInfo<ObjectId>>>();
 
         let time_now = Utc::now().timestamp_micros();
-        let micros_in_a_year = 365.25 * 24.0 * 60.0 * 60.0 * 1_000_000.0;
+        const MICROS_IN_A_YEAR: f32 = 365.25 * 24.0 * 60.0 * 60.0 * 1_000_000.0;
 
         let mut last_completed_audits_points: f32 = 0.0;
         for audit in last_completed_audits {
             let duration: f32 = (time_now - audit.completed_at) as f32;
-            let years_passed = (duration / micros_in_a_year).ceil();
+            let years_passed = (duration / MICROS_IN_A_YEAR).ceil();
             let point = if years_passed < 2.0 {
                 1.0
             } else {
@@ -146,7 +146,7 @@ impl Rating<ObjectId> {
                 }
 
                 let duration: f32 = (time_now - feedback.created_at) as f32;
-                let years_passed = (duration / micros_in_a_year).ceil();
+                let years_passed = (duration / MICROS_IN_A_YEAR).ceil();
                 let mut point = sum as f32 / quantity as f32;
 
                 if years_passed > 2.0 {
@@ -160,7 +160,7 @@ impl Rating<ObjectId> {
         }
 
         let mut summary = identity_points + completed_in_time_points + last_completed_audits_points + feedback_points;
-        summary = (summary * 100.0).round() / 100.0;
+        summary = (summary * 10.0).round() / 10.0;
 
         let patch_url: String;
 
