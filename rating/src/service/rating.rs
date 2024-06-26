@@ -33,6 +33,7 @@ impl RatingService {
         let role_rating = RoleRating {
             last_update: Utc::now().timestamp_micros(),
             summary: 0.0,
+            rating_details: None,
             user_feedbacks: vec![],
             total_completed_audits: vec![],
         };
@@ -248,6 +249,7 @@ pub struct RatingDetailsResponse {
     pub role: Role,
     pub last_update: i64,
     pub summary: f32,
+    pub rating_details: Option<String>,
     pub user_feedbacks: Vec<UserFeedback<String>>,
     pub total_completed_audits: usize,
     pub completed_last_ninety_days: Vec<CompletedAuditInfo<String>>,
@@ -278,6 +280,7 @@ impl RatingDetailsResponse {
             role,
             last_update: role_rating.last_update,
             summary: role_rating.summary,
+            rating_details: role_rating.rating_details,
             user_feedbacks: role_rating.user_feedbacks,
             total_completed_audits: role_rating.total_completed_audits.len(),
             completed_last_ninety_days,

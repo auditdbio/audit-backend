@@ -66,9 +66,13 @@ impl Rating<ObjectId> {
 
         // Rating calculation:
         const IDENTITY_POINT: f32 = 5.0;
-        const COMPLETED_IN_TIME_MAX_POINTS: f32 = 15.0;
         const LAST_COMPLETED_AUDITS_MULTIPLIER: f32 = 1.5;
-        const USER_RATING_MULTIPLIER: f32 = 12.0;
+        const FEEDBACK_MULTIPLIER: f32 = 12.0;
+
+        const COMPLETED_IN_TIME_MAX_POINTS: u8 = 15;
+        const LAST_COMPLETED_MAX_POINTS: u8 = 15;
+        const IDENTITY_MAX_POINTS: u8 = 10;
+        const FEEDBACK_MAX_POINTS: u8 = 60;
 
         let identity_points = user
             .linked_accounts
@@ -95,7 +99,7 @@ impl Rating<ObjectId> {
         let completed_in_time_points = if total_completed_audits.is_empty() {
             0.0
         } else {
-            (completed_in_time_audits.len() as f32 / total_completed_audits.len() as f32) * COMPLETED_IN_TIME_MAX_POINTS
+            (completed_in_time_audits.len() as f32 / total_completed_audits.len() as f32) * COMPLETED_IN_TIME_MAX_POINTS as f32
         };
 
         let last_completed_audits = total_completed_audits
@@ -156,11 +160,30 @@ impl Rating<ObjectId> {
                 feedback_points += point;
             }
 
-            feedback_points = feedback_points / user_feedbacks.len() as f32 * USER_RATING_MULTIPLIER;
+            feedback_points = feedback_points / user_feedbacks.len() as f32 * FEEDBACK_MULTIPLIER;
         }
 
         let mut summary = identity_points + completed_in_time_points + last_completed_audits_points + feedback_points;
-        summary = (summary * 10.0).round() / 10.0;
+        summary = (summary * 10.0).trunc() / 10.0;
+
+        let rating_details = serde_json::to_string(&json!({
+            "Identity points": format!("{} out of {}", identity_points, IDENTITY_MAX_POINTS),
+            "Completed in time points": format!(
+                "{} out of {}",
+                (completed_in_time_points * 10.0).trunc() / 10.0,
+                COMPLETED_IN_TIME_MAX_POINTS,
+            ),
+            "Last completed audits points": format!(
+                "{} out of {}",
+                (last_completed_audits_points * 10.0).trunc() / 10.0,
+                LAST_COMPLETED_MAX_POINTS,
+            ),
+            "Feedback points": format!(
+                "{} out of {}",
+                (feedback_points * 10.0).trunc() / 10.0,
+                FEEDBACK_MAX_POINTS,
+            ),
+        })).unwrap();
 
         let patch_url: String;
 
@@ -169,6 +192,7 @@ impl Rating<ObjectId> {
                 rating.auditor.total_completed_audits = total_completed_audits;
                 rating.auditor.last_update = Utc::now().timestamp_micros();
                 rating.auditor.summary = summary.clone();
+                rating.auditor.rating_details = Some(rating_details);
 
                 patch_url = format!(
                     "{}://{}/{}/auditor/{}",
@@ -182,6 +206,7 @@ impl Rating<ObjectId> {
                 rating.customer.total_completed_audits = total_completed_audits;
                 rating.customer.last_update = Utc::now().timestamp_micros();
                 rating.customer.summary = summary.clone();
+                rating.customer.rating_details = Some(rating_details);
 
                 patch_url = format!(
                     "{}://{}/{}/customer/{}",
@@ -229,6 +254,7 @@ impl Entity for Rating<ObjectId> {
 pub struct RoleRating<Id> {
     pub last_update: i64,
     pub summary: f32,
+    pub rating_details: Option<String>,
     pub user_feedbacks: Vec<UserFeedback<Id>>,
     pub total_completed_audits: Vec<CompletedAuditInfo<Id>>,
 }
@@ -238,6 +264,7 @@ impl RoleRating<String> {
         RoleRating {
             last_update: self.last_update,
             summary: self.summary,
+            rating_details: self.rating_details,
             user_feedbacks: UserFeedback::parse_map(self.user_feedbacks),
             total_completed_audits: CompletedAuditInfo::parse_map(self.total_completed_audits),
         }
@@ -249,6 +276,7 @@ impl RoleRating<ObjectId> {
         RoleRating {
             last_update: self.last_update,
             summary: self.summary,
+            rating_details: self.rating_details,
             user_feedbacks: UserFeedback::stringify_map(self.user_feedbacks),
             total_completed_audits: CompletedAuditInfo::stringify_map(self.total_completed_audits),
         }
