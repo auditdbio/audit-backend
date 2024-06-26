@@ -22,7 +22,7 @@ use common::{
     context::GeneralContext,
     entities::{
         audit::{
-            Audit, AuditStatus, ReportType,
+            Audit, AuditStatus,
             AuditEditHistory, PublicAuditEditHistory,
             ChangeAuditHistory, EditHistoryResponse,
             ReportType,
