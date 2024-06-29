@@ -1,9 +1,10 @@
 use async_trait::async_trait;
 use futures::StreamExt;
 use mongodb::{
-    bson::{doc, oid::ObjectId, Bson},
+    bson::{doc, oid::ObjectId, Bson, to_document},
     options::FindOptions,
 };
+use mongodb::bson::Document;
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::error;
@@ -52,6 +53,14 @@ where
         let result = self
             .collection
             .find_one_and_delete(doc! {field: item}, None)
+            .await?;
+        Ok(result)
+    }
+
+    async fn update_one(&self, old: Document, update: &T) -> error::Result<Option<T>> {
+        let result = self
+            .collection
+            .find_one_and_update(old, doc! {"$set": to_document(update)?}, None)
             .await?;
         Ok(result)
     }

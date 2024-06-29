@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use chrono::Utc;
 use rand::Rng;
-use mongodb::bson::{oid::ObjectId, Bson};
+use mongodb::bson::{oid::ObjectId, Bson, doc};
 
 use common::{
     access_rules::{AccessRules, Edit, Read},
@@ -22,7 +22,7 @@ use common::{
     context::GeneralContext,
     entities::{
         audit::{
-            Audit, AuditStatus, ReportType,
+            Audit, AuditStatus,
             AuditEditHistory, PublicAuditEditHistory,
             ChangeAuditHistory, EditHistoryResponse,
             ReportType,
@@ -445,8 +445,9 @@ impl AuditService {
         post_event(&self.context, event, self.context.server_auth()).await?;
 
         if change.report.is_some() && audit.status != AuditStatus::Resolved {
-            audits.delete("_id", &id).await?;
-            audits.insert(&audit).await?;
+            // audits.delete("_id", &id).await?;
+            // audits.insert(&audit).await?;
+            audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
             return Ok(public_audit)
         }
 
@@ -473,8 +474,9 @@ impl AuditService {
             });
         }
 
-        audits.delete("_id", &id).await?;
-        audits.insert(&audit).await?;
+        // audits.delete("_id", &id).await?;
+        // audits.insert(&audit).await?;
+        audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
 
         Ok(public_audit)
     }
@@ -545,15 +547,15 @@ impl AuditService {
 
         audit.issues.push(issue.clone());
 
-        let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
-
-        audits.delete("_id", &audit_id).await?;
-
         audit.issues.sort_by(|a, b| {
             severity_to_integer(&a.severity).cmp(&severity_to_integer(&b.severity))
         });
 
-        audits.insert(&audit).await?;
+        let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
+
+        // audits.delete("_id", &audit_id).await?;
+        // audits.insert(&audit).await?;
+        audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
 
         if audit.no_customer {
             return Ok(auth.public_issue(issue));
@@ -810,17 +812,17 @@ impl AuditService {
             audit.issues[idx] = issue.clone();
         }
 
-        let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
-
-        audits.delete("_id", &audit_id).await?;
-
         if change.severity.is_some() {
             audit.issues.sort_by(|a, b| {
                 severity_to_integer(&a.severity).cmp(&severity_to_integer(&b.severity))
             });
         }
 
-        audits.insert(&audit).await?;
+        let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
+
+        // audits.delete("_id", &audit_id).await?;
+        // audits.insert(&audit).await?;
+        audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
 
         let public_issue = auth.public_issue(issue);
 
@@ -858,8 +860,10 @@ impl AuditService {
             });
 
             let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
-            audits.delete("_id", &audit_id).await?;
-            audits.insert(&audit).await?;
+
+            // audits.delete("_id", &audit_id).await?;
+            // audits.insert(&audit).await?;
+            audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
 
             let issues = audit.issues;
 
@@ -952,8 +956,11 @@ impl AuditService {
         audit.issues.retain(|issue| issue.id != issue_id);
 
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
-        audits.delete("_id", &audit_id).await?;
-        audits.insert(&audit).await?;
+
+        // audits.delete("_id", &audit_id).await?;
+        // audits.insert(&audit).await?;
+        audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
+
         let public_issue = auth.public_issue(issue);
 
         Ok(public_issue)
@@ -981,9 +988,9 @@ impl AuditService {
 
             let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
-            audits.delete("_id", &audit_id).await?;
-
-            audits.insert(&audit).await?;
+            // audits.delete("_id", &audit_id).await?;
+            // audits.insert(&audit).await?;
+            audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
 
             return Ok(());
         }
@@ -1118,8 +1125,10 @@ impl AuditService {
         }
 
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
-        audits.delete("_id", &audit_id).await?;
-        audits.insert(&audit).await?;
+
+        // audits.delete("_id", &audit_id).await?;
+        // audits.insert(&audit).await?;
+        audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
 
         let role = if history.author == audit.auditor_id.to_hex() {
             Role::Auditor
@@ -1145,8 +1154,10 @@ impl AuditService {
         audit.unread_edits.insert(user_id.to_hex(), unread);
 
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
-        audits.delete("_id", &audit_id).await?;
-        audits.insert(&audit).await?;
+
+        // audits.delete("_id", &audit_id).await?;
+        // audits.insert(&audit).await?;
+        audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
 
         Ok(())
     }

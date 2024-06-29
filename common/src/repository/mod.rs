@@ -5,7 +5,7 @@ pub mod test_repository;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use mongodb::bson::{oid::ObjectId, Bson};
+use mongodb::bson::{oid::ObjectId, Bson, Document};
 
 use crate::error;
 
@@ -18,6 +18,7 @@ pub trait Repository<T> {
     async fn insert(&self, item: &T) -> error::Result<bool>;
     async fn find(&self, field: &str, value: &Bson) -> error::Result<Option<T>>;
     async fn delete(&self, field: &str, item: &ObjectId) -> error::Result<Option<T>>;
+    async fn update_one(&self, old: Document, update: &T) -> error::Result<Option<T>>;
     async fn find_many(&self, field: &str, value: &Bson) -> error::Result<Vec<T>>;
     async fn find_many_limit(
         &self,
