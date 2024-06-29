@@ -139,6 +139,10 @@ impl RatingService {
             return Err(anyhow::anyhow!("Audit must be resolved").code(403));
         }
 
+        if audit.no_customer {
+            return Err(anyhow::anyhow!("Not available for audits without a customer").code(403));
+        }
+
         let (current_role, receiver_role, receiver_id) = if user_id.to_hex() == audit.auditor_id {
             (Role::Auditor, Role::Customer, audit.customer_id)
         } else if user_id.to_hex() == audit.customer_id {
