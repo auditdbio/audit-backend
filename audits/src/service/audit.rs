@@ -392,7 +392,7 @@ impl AuditService {
             }
         }
 
-        audit.last_modified = Utc::now().timestamp_micros();
+        // audit.last_modified = Utc::now().timestamp_micros();
 
         let (
             event_receiver,
@@ -407,7 +407,7 @@ impl AuditService {
         if is_history_changed {
             let edit_history_item = AuditEditHistory {
                 id: audit.edit_history.len(),
-                date: audit.last_modified.clone(),
+                date: Utc::now().timestamp_micros(),
                 author: user_id.to_hex(),
                 comment: change.comment,
                 audit: serde_json::to_string(&json!({
@@ -541,7 +541,7 @@ impl AuditService {
             links: issue.links,
             include: true,
             feedback: String::new(),
-            last_modified: Utc::now().timestamp(),
+            last_modified: Utc::now().timestamp_micros(),
             read: HashMap::new(),
         };
 
@@ -586,7 +586,7 @@ impl AuditService {
         message: String,
     ) {
         let event = Event {
-            timestamp: Utc::now().timestamp(),
+            timestamp: Utc::now().timestamp_micros(),
             user: context.auth().id().unwrap(),
             kind,
             message,
@@ -768,7 +768,7 @@ impl AuditService {
 
                 for create_event in events {
                     let event = Event {
-                        timestamp: Utc::now().timestamp(),
+                        timestamp: Utc::now().timestamp_micros(),
                         user: self.context.auth().id().unwrap(),
                         kind: create_event.kind,
                         message: create_event.message,
@@ -806,7 +806,7 @@ impl AuditService {
             }
         }
 
-        issue.last_modified = Utc::now().timestamp();
+        issue.last_modified = Utc::now().timestamp_micros();
 
         if let Some(idx) = audit.issues.iter().position(|issue| issue.id == issue_id) {
             audit.issues[idx] = issue.clone();
@@ -855,7 +855,7 @@ impl AuditService {
             audit.issues.iter_mut().for_each(|issue| {
                 if issue.status == Status::Draft {
                     issue.status = Status::InProgress;
-                    issue.last_modified = Utc::now().timestamp();
+                    issue.last_modified = Utc::now().timestamp_micros();
                 }
             });
 

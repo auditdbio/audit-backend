@@ -106,7 +106,7 @@ impl FileService {
 
         let meta = Metadata {
             id: ObjectId::new(),
-            last_modified: chrono::Utc::now().timestamp(),
+            last_modified: chrono::Utc::now().timestamp_micros(),
             path,
             extension,
             private,

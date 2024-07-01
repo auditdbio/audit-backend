@@ -33,3 +33,23 @@ pub trait Repository<T> {
 }
 
 pub type RepositoryObject<T> = Arc<dyn Repository<T> + Send + Sync + 'static>;
+
+pub trait HasLastModified {
+    fn last_modified(&self) -> i64;
+    fn set_last_modified(&mut self, timestamp: i64);
+}
+
+#[macro_export]
+macro_rules! impl_has_last_modified {
+    ($struct_name:path) => {
+        impl HasLastModified for $struct_name {
+            fn last_modified(&self) -> i64 {
+                self.last_modified
+            }
+
+            fn set_last_modified(&mut self, timestamp: i64) {
+                self.last_modified = timestamp;
+            }
+        }
+    };
+}

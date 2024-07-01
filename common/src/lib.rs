@@ -10,5 +10,5 @@ pub mod services;
 pub mod verification;
 
 pub fn default_timestamp() -> i64 {
-    chrono::Utc::now().timestamp()
+    chrono::Utc::now().timestamp_micros()
 }

@@ -1,4 +1,4 @@
-use common::repository::Entity;
+use common::{default_timestamp, repository::Entity};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
@@ -10,6 +10,8 @@ lazy_static::lazy_static! {
 pub struct WaitingListElement {
     id: ObjectId,
     email: String,
+    #[serde(default = "default_timestamp")]
+    pub last_modified: i64,
 }
 
 impl Entity for WaitingListElement {

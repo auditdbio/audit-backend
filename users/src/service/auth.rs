@@ -1,6 +1,7 @@
 use actix_web::HttpRequest;
 use chrono::Utc;
 use common::{
+    default_timestamp,
     access_rules::AccessRules,
     api::{
         self,
@@ -58,6 +59,8 @@ pub struct Link {
     pub user: User<ObjectId>,
     pub code: String,
     pub secret: Option<String>,
+    #[serde(default = "default_timestamp")]
+    pub last_modified: i64,
 }
 
 impl Entity for Link {
@@ -70,6 +73,8 @@ impl Entity for Link {
 pub struct Code {
     pub code: String,
     pub user: ObjectId,
+    #[serde(default = "default_timestamp")]
+    pub last_modified: i64,
 }
 
 impl Entity for Code {
@@ -243,6 +248,7 @@ impl AuthService {
             user: new_user,
             code: code.clone(),
             secret: user.secret,
+            last_modified: Utc::now().timestamp_micros(),
         };
 
         if verify_email {
@@ -550,6 +556,7 @@ impl AuthService {
         let code = Code {
             code: code.clone(),
             user: user.id,
+            last_modified: Utc::now().timestamp_micros(),
         };
 
         let codes = self.context.try_get_repository::<Code>()?;

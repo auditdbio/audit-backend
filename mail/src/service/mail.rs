@@ -1,4 +1,6 @@
+use chrono::Utc;
 use common::{
+    default_timestamp,
     access_rules::{AccessRules, SendMail},
     context::GeneralContext,
     entities::{
@@ -30,6 +32,8 @@ pub struct Feedback {
     pub company: String,
     pub email: String,
     pub message: String,
+    #[serde(default = "default_timestamp")]
+    pub last_modified: i64,
 }
 
 impl Entity for Feedback {
@@ -134,6 +138,7 @@ impl MailService {
                 feedback.name, feedback.email, feedback.company
             ),
             sender: Some(feedback.email.clone()),
+            last_modified: Utc::now().timestamp_micros(),
         };
 
         self.send_email(letter).await?;
@@ -144,6 +149,7 @@ impl MailService {
             company: feedback.company,
             email: feedback.email,
             message: feedback.message,
+            last_modified: Utc::now().timestamp_micros(),
         };
 
         feedbacks.insert(&feedback).await?;
@@ -198,6 +204,7 @@ impl MailService {
             email: letter.email,
             message,
             sender: Some(EMAIL_ADDRESS.to_string()),
+            last_modified: Utc::now().timestamp_micros(),
         };
 
         letters.insert(&letter).await?;

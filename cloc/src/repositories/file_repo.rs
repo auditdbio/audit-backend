@@ -1,11 +1,13 @@
 use std::{fs, path::PathBuf, process::Output};
 use anyhow::Context;
+use chrono::Utc;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tokio::process::Command;
 
 use common::{
+    default_timestamp,
     auth::Auth,
     error,
     repository::{mongo_repository::MongoRepository, Entity, Repository},
@@ -18,6 +20,8 @@ pub struct MetaEntry {
     id: ObjectId,
     user: ObjectId,
     links: Vec<String>,
+    #[serde(default = "default_timestamp")]
+    last_modified: i64,
 }
 
 impl Entity for MetaEntry {
@@ -86,6 +90,7 @@ impl FileRepo {
             id,
             user: user_id,
             links: files.links,
+            last_modified: Utc::now().timestamp_micros(),
         };
 
         // save scope and author in meta

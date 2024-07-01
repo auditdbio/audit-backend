@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use chrono::Utc;
 use futures::StreamExt;
 use mongodb::{
     bson::{doc, oid::ObjectId, Bson, to_document},
@@ -8,6 +9,7 @@ use mongodb::bson::Document;
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::error;
+use crate::repository::HasLastModified;
 
 use super::{Entity, Repository};
 
@@ -29,7 +31,7 @@ impl<T> MongoRepository<T> {
 #[async_trait]
 impl<T> Repository<T> for MongoRepository<T>
 where
-    T: Entity + Serialize + DeserializeOwned + Unpin + Clone + Send + Sync,
+    T: Entity + Serialize + DeserializeOwned + Unpin + Clone + Send + Sync + HasLastModified,
 {
     async fn insert(&self, item: &T) -> error::Result<bool> {
         let result = self
@@ -57,7 +59,10 @@ where
         Ok(result)
     }
 
-    async fn update_one(&self, old: Document, update: &T) -> error::Result<Option<T>> {
+    async fn update_one(&self, mut old: Document, update: &T) -> error::Result<Option<T>> {
+        old.insert("last_modified", update.last_modified());
+        update.clone().set_last_modified(Utc::now().timestamp_micros());
+
         let result = self
             .collection
             .find_one_and_update(old, doc! {"$set": to_document(update)?}, None)

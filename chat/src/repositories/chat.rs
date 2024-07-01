@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::services::chat::{Message};
 use common::{
+    default_timestamp,
     api::chat::{ChatId, PublicChat, PublicReadId},
     error,
     repository::{Entity, Repository, mongo_repository::MongoRepository}
@@ -45,6 +46,8 @@ pub struct Messages {
     #[serde(rename = "_id")]
     id: ObjectId,
     messages: Vec<Message>,
+    #[serde(default = "default_timestamp")]
+    last_modified: i64,
 }
 
 impl Entity for Messages {
@@ -243,6 +246,7 @@ impl ChatRepository {
         let messages = Messages {
             id: message.chat,
             messages: vec![],
+            last_modified: Utc::now().timestamp_micros(),
         };
 
         self.messages.insert(&messages).await?;
