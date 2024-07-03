@@ -1,4 +1,4 @@
-use common::{default_timestamp, repository::Entity};
+use common::{default_timestamp, impl_has_last_modified, repository::{Entity, HasLastModified}};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
@@ -13,6 +13,8 @@ pub struct WaitingListElement {
     #[serde(default = "default_timestamp")]
     pub last_modified: i64,
 }
+
+impl_has_last_modified!(WaitingListElement);
 
 impl Entity for WaitingListElement {
     fn id(&self) -> ObjectId {

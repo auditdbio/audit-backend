@@ -7,10 +7,11 @@ use serde_json::Value;
 use tokio::process::Command;
 
 use common::{
+    impl_has_last_modified,
     default_timestamp,
     auth::Auth,
     error,
-    repository::{mongo_repository::MongoRepository, Entity, Repository},
+    repository::{mongo_repository::MongoRepository, Entity, Repository, HasLastModified},
     services::{API_PREFIX, USERS_SERVICE, PROTOCOL},
 };
 
@@ -23,6 +24,8 @@ pub struct MetaEntry {
     #[serde(default = "default_timestamp")]
     last_modified: i64,
 }
+
+impl_has_last_modified!(MetaEntry);
 
 impl Entity for MetaEntry {
     fn id(&self) -> ObjectId {

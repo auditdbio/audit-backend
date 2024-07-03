@@ -2,11 +2,12 @@ use std::{fs::File, io::Write, path::Path};
 
 use actix_files::NamedFile;
 use common::{
+    impl_has_last_modified,
     access_rules::{AccessRules, Edit, Read},
     auth::Auth,
     context::GeneralContext,
     error::{self, AddCode},
-    repository::Entity,
+    repository::{Entity, HasLastModified},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
 use serde::{Deserialize, Serialize};
@@ -20,6 +21,8 @@ pub struct Metadata {
     pub extension: String,
     pub private: bool,
 }
+
+impl_has_last_modified!(Metadata);
 
 impl Entity for Metadata {
     fn id(&self) -> ObjectId {

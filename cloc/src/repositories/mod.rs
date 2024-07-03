@@ -4,7 +4,7 @@ use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use common::{
     error,
-    repository::{mongo_repository::MongoRepository, Entity, Repository},
+    repository::{mongo_repository::MongoRepository, Entity},
 };
 use mongodb::bson::{doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};

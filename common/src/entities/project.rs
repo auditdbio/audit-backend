@@ -3,9 +3,10 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::{
+    impl_has_last_modified,
     context::context_trait::GeneralContext,
     error,
-    repository::Entity,
+    repository::{Entity, HasLastModified},
     services::{API_PREFIX, CUSTOMERS_SERVICE, PROTOCOL},
 };
 
@@ -35,6 +36,8 @@ pub struct Project<Id> {
     #[serde(default)]
     pub auditors: Vec<Id>,
 }
+
+impl_has_last_modified!(Project<ObjectId>);
 
 impl Project<String> {
     pub fn parse(self) -> Project<ObjectId> {

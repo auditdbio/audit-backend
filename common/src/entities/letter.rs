@@ -3,7 +3,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     default_timestamp,
-    repository::Entity,
+    impl_has_last_modified,
+    repository::{Entity, HasLastModified},
 };
 
 
@@ -17,6 +18,8 @@ pub struct Letter {
     #[serde(default = "default_timestamp")]
     pub last_modified: i64,
 }
+
+impl_has_last_modified!(Letter);
 
 impl Entity for Letter {
     fn id(&self) -> ObjectId {

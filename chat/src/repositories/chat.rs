@@ -7,7 +7,8 @@ use common::{
     default_timestamp,
     api::chat::{ChatId, PublicChat, PublicReadId},
     error,
-    repository::{Entity, Repository, mongo_repository::MongoRepository}
+    repository::{Entity, Repository, mongo_repository::MongoRepository, HasLastModified},
+    impl_has_last_modified,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -20,6 +21,8 @@ pub struct Group {
     last_message: Message,
     unread: Vec<ReadId>,
 }
+
+impl_has_last_modified!(Group);
 
 impl Group {
     pub fn publish(self) -> PublicChat {
@@ -49,6 +52,8 @@ pub struct Messages {
     #[serde(default = "default_timestamp")]
     last_modified: i64,
 }
+
+impl_has_last_modified!(Messages);
 
 impl Entity for Messages {
     fn id(&self) -> ObjectId {
@@ -80,6 +85,8 @@ pub struct PrivateChat {
     pub last_message: Message,
     pub unread: Option<[ReadId; 2]>,
 }
+
+impl_has_last_modified!(PrivateChat);
 
 impl Entity for PrivateChat {
     fn id(&self) -> ObjectId {

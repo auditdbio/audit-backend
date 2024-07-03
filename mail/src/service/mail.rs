@@ -1,6 +1,7 @@
 use chrono::Utc;
 use common::{
     default_timestamp,
+    impl_has_last_modified,
     access_rules::{AccessRules, SendMail},
     context::GeneralContext,
     entities::{
@@ -8,7 +9,7 @@ use common::{
         user::PublicUser,
     },
     error::{self, AddCode},
-    repository::Entity,
+    repository::{Entity, HasLastModified},
     services::{API_PREFIX, PROTOCOL, USERS_SERVICE},
 };
 use lettre::{
@@ -35,6 +36,8 @@ pub struct Feedback {
     #[serde(default = "default_timestamp")]
     pub last_modified: i64,
 }
+
+impl_has_last_modified!(Feedback);
 
 impl Entity for Feedback {
     fn id(&self) -> ObjectId {

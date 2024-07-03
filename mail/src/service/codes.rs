@@ -1,5 +1,11 @@
 use chrono::Utc;
-use common::{default_timestamp, context::GeneralContext, error, repository::Entity};
+use common::{
+    impl_has_last_modified,
+    default_timestamp,
+    context::GeneralContext,
+    error,
+    repository::{Entity, HasLastModified}
+};
 use mongodb::bson::{oid::ObjectId, Bson};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
@@ -13,6 +19,8 @@ pub struct Code {
     #[serde(default = "default_timestamp")]
     pub last_modified: i64,
 }
+
+impl_has_last_modified!(Code);
 
 impl Entity for Code {
     fn id(&self) -> ObjectId {

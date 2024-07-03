@@ -2,6 +2,7 @@ use actix_web::HttpRequest;
 use chrono::Utc;
 use common::{
     default_timestamp,
+    impl_has_last_modified,
     access_rules::AccessRules,
     api::{
         self,
@@ -22,7 +23,7 @@ use common::{
         user::{LinkedAccount, User, UserLogin},
     },
     error::{self, AddCode},
-    repository::Entity,
+    repository::{Entity, HasLastModified},
     services::{API_PREFIX, FRONTEND, MAIL_SERVICE, PROTOCOL, USERS_SERVICE},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
@@ -63,6 +64,8 @@ pub struct Link {
     pub last_modified: i64,
 }
 
+impl_has_last_modified!(Link);
+
 impl Entity for Link {
     fn id(&self) -> ObjectId {
         ObjectId::new()
@@ -76,6 +79,8 @@ pub struct Code {
     #[serde(default = "default_timestamp")]
     pub last_modified: i64,
 }
+
+impl_has_last_modified!(Code);
 
 impl Entity for Code {
     fn id(&self) -> ObjectId {
