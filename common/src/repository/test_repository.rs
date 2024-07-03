@@ -71,17 +71,17 @@ where
         Ok(result)
     }
 
-    async fn update_one(&self, old: Document, update: &T) -> error::Result<Option<T>> {
+    async fn update_one(&self, old: Document, update: &T) -> error::Result<bool> {
         let mut db = self.db.lock().unwrap();
         let update = to_document(update)?;
         for doc in db.iter_mut() {
             let doc_ref = doc.as_document_mut().unwrap();
             if old.iter().all(|(k, v)| doc_ref.get(k) == Some(v)) {
                 doc_ref.extend(update.iter().map(|(k, v)| (k.clone(), v.clone())));
-                return Ok(Some(bson::from_bson(doc.clone())?));
+                return Ok(true);
             }
         }
-        Ok(None)
+        Ok(false)
     }
 
     async fn find_all(&self, skip: u32, limit: u32) -> error::Result<Vec<T>> {

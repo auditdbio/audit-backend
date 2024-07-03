@@ -59,14 +59,15 @@ where
         Ok(result)
     }
 
-    async fn update_one(&self, mut old: Document, update: &T) -> error::Result<Option<T>> {
+    async fn update_one(&self, mut old: Document, update: &T) -> error::Result<bool> {
         old.insert("last_modified", Bson::Int64(update.last_modified()));
         let update = update.clone().set_last_modified(Utc::now().timestamp_micros());
 
         let result = self
             .collection
             .find_one_and_update(old, doc! {"$set": to_document(&update)?}, None)
-            .await?;
+            .await?
+            .is_some();
         Ok(result)
     }
 
