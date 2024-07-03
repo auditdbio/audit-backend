@@ -60,7 +60,7 @@ where
     }
 
     async fn update_one(&self, mut old: Document, update: &T) -> error::Result<Option<T>> {
-        old.insert("last_modified", update.last_modified());
+        old.insert("last_modified", Bson::Int64(update.last_modified()));
         let update = update.clone().set_last_modified(Utc::now().timestamp_micros());
 
         let result = self
