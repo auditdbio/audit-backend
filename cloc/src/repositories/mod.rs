@@ -1,10 +1,13 @@
 pub mod file_repo;
 
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use chrono::Utc;
 
 use common::{
     error,
-    repository::{mongo_repository::MongoRepository, Entity},
+    repository::{mongo_repository::MongoRepository, Entity, HasLastModified, Repository},
+    default_timestamp,
+    impl_has_last_modified,
 };
 use mongodb::bson::{doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};
@@ -24,7 +27,11 @@ pub struct GitRepoEntity {
     pub branch: Vec<String>,
     pub commit: HashMap<String, String>,
     pub state: GitState,
+    #[serde(default = "default_timestamp")]
+    pub last_modified: i64,
 }
+
+impl_has_last_modified!(GitRepoEntity);
 
 impl Entity for GitRepoEntity {
     fn id(&self) -> ObjectId {
@@ -47,6 +54,7 @@ impl GitRepoEntity {
             repo: request.repo.clone(),
             branch: vec![request.branch.clone().unwrap_or("master".to_owned())],
             commit: HashMap::new(),
+            last_modified: Utc::now().timestamp_micros(),
             state: GitState {
                 branch: request.branch.clone().unwrap_or("master".to_owned()),
                 commit: request.commit.clone(),
