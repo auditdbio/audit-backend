@@ -61,11 +61,11 @@ where
 
     async fn update_one(&self, mut old: Document, update: &T) -> error::Result<Option<T>> {
         old.insert("last_modified", update.last_modified());
-        update.clone().set_last_modified(Utc::now().timestamp_micros());
+        let update = update.clone().set_last_modified(Utc::now().timestamp_micros());
 
         let result = self
             .collection
-            .find_one_and_update(old, doc! {"$set": to_document(update)?}, None)
+            .find_one_and_update(old, doc! {"$set": to_document(&update)?}, None)
             .await?;
         Ok(result)
     }
