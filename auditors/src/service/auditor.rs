@@ -41,6 +41,7 @@ pub struct AuditorChange {
     price_range: Option<PriceRange>,
     tags: Option<Vec<String>>,
     link_id: Option<String>,
+    rating: Option<f32>,
 }
 
 pub struct AuditorService {
@@ -81,6 +82,7 @@ impl AuditorService {
             free_at: auditor.free_at.unwrap_or_default(),
             price_range: auditor.price_range.unwrap_or_default(),
             link_id: Some(link_id),
+            rating: None,
         };
 
         auditors.insert(&auditor).await?;
@@ -303,6 +305,10 @@ impl AuditorService {
 
         if change.link_id.is_some() {
             auditor.link_id = change.link_id;
+        }
+
+        if change.rating.is_some() {
+            auditor.rating = change.rating;
         }
 
         auditor.last_modified = Utc::now().timestamp_micros();

@@ -41,6 +41,7 @@ def get_services(config, api_prefix, proxy_network, expose, open_database):
         Service(config, "report", PortConfig(expose, "3011"), APIConfig(api_prefix, ["report", "notused2"]), ["binaries", "renderer"], [("binaries", "/data/binaries")], [proxy_network, "report"], proxy_network),
         Service(config, "cloc", PortConfig(expose, "3013"), APIConfig(api_prefix, ["cloc", "notused1"]), ["binaries"], [("binaries", "/data/binaries"), ("repo", "/repositories")], [proxy_network, "database"], proxy_network),
         Service(config, "event", PortConfig(expose, "3010"), APIConfig(api_prefix, ["notification", "event"]), **default_service_settings),
+        Service(config, "rating", PortConfig(expose, "3014"), APIConfig(api_prefix, ["rating", "notused1"]), **default_service_settings),
         Service(config, "database", PortConfig(open_database, "27017"), None, [], [("database", "/data/db"), ("backup", "/mongo_backup")], [proxy_network, "database"], proxy_network, [("MONGO_INITDB_ROOT_USERNAME", "\"${MONGO_LOGIN}\""), ("MONGO_INITDB_ROOT_PASSWORD", "\"${MONGO_PASSWORD}\"")])
     ]
 
@@ -152,6 +153,7 @@ x-common-variables: &common-variables
   USERS_SERVICE_URL: "${{USERS_SERVICE_URL}}"
   RENDERER_SERVICE_URL: "${{RENDERER_SERVICE_URL}}"
   REPORT_SERVICE_URL: "${{REPORT_SERVICE_URL}}"
+  RATING_SERVICE_URL: "${{RATING_SERVICE_URL}}"
   NOTIFICATIONS_SERVICE_URL: "${{NOTIFICATIONS_SERVICE_URL}}"
   EVENTS_SERVICE_URL: "${{EVENTS_SERVICE_URL}}"
   API_PREFIX: "${{API_PREFIX}}"
@@ -228,6 +230,7 @@ services = {
   "%USERS_SERVICE_URL%": "users",
   "%RENDERER_SERVICE_URL%": "renderer",
   "%REPORT_SERVICE_URL%": "report",
+  "%RATING_SERVICE_URL%": "rating",
   "%NOTIFICATIONS_SERVICE_URL%": "notification",
   "%EVENTS_SERVICE_URL%": "event",
   "%FRONTEND%": "frontend"
@@ -303,6 +306,7 @@ preset = {
         "notification": "0.0.0.0:3008",
         "renderer": "0.0.0.0:3015",
         "report": "0.0.0.0:3011",
+        "rating": "0.0.0.0:3014",
         "search": "0.0.0.0:3006",
         "telemetry": "0.0.0.0:3009",
         "users": "0.0.0.0:3001",

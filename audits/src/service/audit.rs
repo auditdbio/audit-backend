@@ -80,6 +80,7 @@ impl AuditService {
             price: request.price,
             total_cost: request.total_cost,
             last_modified: Utc::now().timestamp_micros(),
+            resolved_at: None,
             report: None,
             report_name: None,
             report_type: None,
@@ -183,6 +184,7 @@ impl AuditService {
             price: None,
             total_cost: None,
             last_modified: Utc::now().timestamp_micros(),
+            resolved_at: None,
             report: None,
             report_name: None,
             report_type: None,
@@ -386,6 +388,7 @@ impl AuditService {
                         return Err(anyhow::anyhow!("Audit approval is required from all participants").code(404));
                     } else if audit.status == AuditStatus::Started {
                         audit.status = AuditStatus::Resolved;
+                        audit.resolved_at = Some(Utc::now().timestamp_micros());
                         audit.resolve(&self.context).await?;
                     }
                 }

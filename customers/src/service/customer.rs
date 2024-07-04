@@ -36,6 +36,7 @@ pub struct CustomerChange {
     contacts: Option<Contacts>,
     tags: Option<Vec<String>>,
     link_id: Option<String>,
+    rating: Option<f32>,
 }
 
 pub struct CustomerService {
@@ -74,6 +75,7 @@ impl CustomerService {
             last_modified: Utc::now().timestamp_micros(),
             created_at: Some(Utc::now().timestamp_micros()),
             link_id: Some(link_id),
+            rating: None,
         };
 
         customers.insert(&customer).await?;
@@ -286,6 +288,10 @@ impl CustomerService {
 
         if change.link_id.is_some() {
             customer.link_id = change.link_id;
+        }
+
+        if change.rating.is_some() {
+            customer.rating = change.rating;
         }
 
         customer.last_modified = Utc::now().timestamp_micros();

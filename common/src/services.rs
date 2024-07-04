@@ -11,6 +11,7 @@ lazy_static! {
     pub static ref FILES_SERVICE: String = var("FILES_SERVICE_URL").unwrap();
     pub static ref RENDERER_SERVICE: String = var("RENDERER_SERVICE_URL").unwrap();
     pub static ref REPORT_SERVICE: String = var("REPORT_SERVICE_URL").unwrap();
+    pub static ref RATING_SERVICE: String = var("RATING_SERVICE_URL").unwrap();
     pub static ref MAIL_SERVICE: String = var("MAIL_SERVICE_URL").unwrap();
     pub static ref SEARCH_SERVICE: String = var("SEARCH_SERVICE_URL").unwrap();
     pub static ref NOTIFICATIONS_SERVICE: String = var("NOTIFICATIONS_SERVICE_URL").unwrap();
