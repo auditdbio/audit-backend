@@ -60,7 +60,14 @@ where
     }
 
     async fn update_one(&self, mut old: Document, update: &T) -> error::Result<bool> {
-        old.insert("last_modified", Bson::Int64(update.last_modified()));
+        // old.insert("last_modified", Bson::Int64(update.last_modified()));
+        old.extend(doc! {
+            "$or": [
+                { "last_modified": Bson::Int64(update.last_modified()) },
+                { "last_modified": { "$exists": false } }
+            ]
+        });
+
         let mut update = update.clone();
         update.set_last_modified(Utc::now().timestamp_micros());
 

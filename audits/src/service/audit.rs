@@ -448,8 +448,6 @@ impl AuditService {
         post_event(&self.context, event, self.context.server_auth()).await?;
 
         if change.report.is_some() && audit.status != AuditStatus::Resolved {
-            // audits.delete("_id", &id).await?;
-            // audits.insert(&audit).await?;
             audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
             return Ok(public_audit)
         }
@@ -477,8 +475,6 @@ impl AuditService {
             });
         }
 
-        // audits.delete("_id", &id).await?;
-        // audits.insert(&audit).await?;
         audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
 
         Ok(public_audit)
@@ -556,8 +552,6 @@ impl AuditService {
 
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
-        // audits.delete("_id", &audit_id).await?;
-        // audits.insert(&audit).await?;
         audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
 
         if audit.no_customer {
@@ -823,8 +817,6 @@ impl AuditService {
 
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
-        // audits.delete("_id", &audit_id).await?;
-        // audits.insert(&audit).await?;
         audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
 
         let public_issue = auth.public_issue(issue);
@@ -863,9 +855,6 @@ impl AuditService {
             });
 
             let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
-
-            // audits.delete("_id", &audit_id).await?;
-            // audits.insert(&audit).await?;
             audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
 
             let issues = audit.issues;
@@ -959,9 +948,6 @@ impl AuditService {
         audit.issues.retain(|issue| issue.id != issue_id);
 
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
-
-        // audits.delete("_id", &audit_id).await?;
-        // audits.insert(&audit).await?;
         audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
 
         let public_issue = auth.public_issue(issue);
@@ -990,9 +976,6 @@ impl AuditService {
             }
 
             let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
-
-            // audits.delete("_id", &audit_id).await?;
-            // audits.insert(&audit).await?;
             audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
 
             return Ok(());
@@ -1128,9 +1111,6 @@ impl AuditService {
         }
 
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
-
-        // audits.delete("_id", &audit_id).await?;
-        // audits.insert(&audit).await?;
         audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
 
         let role = if history.author == audit.auditor_id.to_hex() {
@@ -1157,9 +1137,6 @@ impl AuditService {
         audit.unread_edits.insert(user_id.to_hex(), unread);
 
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
-
-        // audits.delete("_id", &audit_id).await?;
-        // audits.insert(&audit).await?;
         audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
 
         Ok(())

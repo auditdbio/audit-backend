@@ -453,8 +453,6 @@ impl RequestService {
 
         request.last_changer = last_changer_role;
 
-        // request.last_modified = Utc::now().timestamp_micros();
-
         if is_history_changed {
             let project = get_project(&self.context, request.project_id).await?;
 
@@ -502,8 +500,6 @@ impl RequestService {
             message_id: chat.last_message.id,
         });
 
-        // requests.delete("id", &id).await?;
-        // requests.insert(&request).await?;
         requests.update_one(doc! {"_id": &request.id}, &request).await?;
 
         Ok(public_request)
@@ -661,8 +657,6 @@ impl RequestService {
             .context
             .try_get_repository::<AuditRequest<ObjectId>>()?;
 
-        // requests.delete("_id", &request_id).await?;
-        // requests.insert(&request).await?;
         requests.update_one(doc! {"_id": &request.id}, &request).await?;
 
         Ok(())
