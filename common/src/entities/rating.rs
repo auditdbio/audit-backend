@@ -173,19 +173,19 @@ impl Rating<ObjectId> {
         summary = (summary * 10.0).trunc() / 10.0;
 
         let rating_details = serde_json::to_string(&json!({
-            "Identity points": format!("{} out of {}", identity_points, IDENTITY_MAX_POINTS),
+            "Identity points": format!("{}/{}", identity_points, IDENTITY_MAX_POINTS),
             "Completed in time points": format!(
-                "{} out of {}",
+                "{}/{}",
                 (completed_in_time_points * 10.0).trunc() / 10.0,
                 COMPLETED_IN_TIME_MAX_POINTS,
             ),
             "Last completed audits points": format!(
-                "{} out of {}",
+                "{}/{}",
                 (last_completed_audits_points * 10.0).trunc() / 10.0,
                 LAST_COMPLETED_MAX_POINTS,
             ),
             "Feedback points": format!(
-                "{} out of {}",
+                "{}/{}",
                 (feedback_points * 10.0).trunc() / 10.0,
                 FEEDBACK_MAX_POINTS,
             ),
