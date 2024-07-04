@@ -8,7 +8,7 @@ use mongodb::{
 use mongodb::bson::Document;
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::error;
+use crate::error::{self, AddCode};
 use crate::repository::HasLastModified;
 
 use super::{Entity, Repository};
@@ -69,6 +69,11 @@ where
             .find_one_and_update(old, doc! {"$set": to_document(&update)?}, None)
             .await?
             .is_some();
+
+        if !result {
+            return Err(anyhow::anyhow!("Failed to save changes").code(409));
+        }
+
         Ok(result)
     }
 
