@@ -1,4 +1,4 @@
-use mongodb::bson::{Bson, oid::ObjectId};
+use mongodb::bson::{Bson, doc, oid::ObjectId};
 use chrono::{Utc, NaiveDateTime, Duration};
 use serde::{Deserialize, Serialize};
 
@@ -43,6 +43,7 @@ impl RatingService {
             user_id,
             auditor: role_rating.clone(),
             customer: role_rating,
+            last_modified: Utc::now().timestamp_micros(),
         };
 
         let rating = rating.calculate(&self.context, role).await?;
@@ -79,8 +80,9 @@ impl RatingService {
             } else {
                 let rating = rating.calculate(&self.context, role).await?;
 
-                ratings.delete("id", &rating.id).await?;
-                ratings.insert(&rating).await?;
+                // ratings.delete("id", &rating.id).await?;
+                // ratings.insert(&rating).await?;
+                ratings.update_one(doc! {"id": &rating.id}, &rating).await?;
                 Ok(rating)
             }
         }
@@ -193,8 +195,9 @@ impl RatingService {
         let rating = rating.calculate(&self.context, receiver_role).await?;
 
         let ratings = self.context.try_get_repository::<Rating<ObjectId>>()?;
-        ratings.delete("id", &rating.id).await?;
-        ratings.insert(&rating).await?;
+        // ratings.delete("id", &rating.id).await?;
+        // ratings.insert(&rating).await?;
+        ratings.update_one(doc! {"id": &rating.id}, &rating).await?;
 
         Ok(create_feedback.stringify())
     }

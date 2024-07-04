@@ -12,8 +12,9 @@ use crate::{
         role::Role,
     },
     error,
-    repository::Entity,
+    repository::{Entity, HasLastModified},
     services::{AUDITS_SERVICE, AUDITORS_SERVICE, API_PREFIX, CUSTOMERS_SERVICE, PROTOCOL},
+    default_timestamp, impl_has_last_modified,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -22,7 +23,11 @@ pub struct Rating<Id> {
     pub user_id: Id,
     pub auditor: RoleRating<Id>,
     pub customer: RoleRating<Id>,
+    #[serde(default = "default_timestamp")]
+    pub last_modified: i64,
 }
+
+impl_has_last_modified!(Rating<ObjectId>);
 
 impl Rating<ObjectId> {
     pub fn stringify(self) -> Rating<String> {
@@ -31,6 +36,7 @@ impl Rating<ObjectId> {
             user_id: self.user_id.to_hex(),
             auditor: self.auditor.stringify(),
             customer: self.customer.stringify(),
+            last_modified: self.last_modified,
         }
     }
 
@@ -239,6 +245,7 @@ impl Rating<String> {
             user_id: self.user_id.parse().unwrap(),
             auditor: self.auditor.parse(),
             customer: self.customer.parse(),
+            last_modified: self.last_modified,
         }
     }
 }
