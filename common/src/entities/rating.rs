@@ -358,6 +358,8 @@ pub struct UserFeedbackRating {
 pub struct FeedbackFrom<Id> {
     pub user_id: Id,
     pub role: Role,
+    pub username: Option<String>,
+    pub avatar: Option<String>,
 }
 
 impl FeedbackFrom<String> {
@@ -365,6 +367,8 @@ impl FeedbackFrom<String> {
         FeedbackFrom {
             user_id: self.user_id.parse().unwrap(),
             role: self.role,
+            username: self.username,
+            avatar: self.avatar,
         }
     }
 }
@@ -374,6 +378,8 @@ impl FeedbackFrom<ObjectId> {
         FeedbackFrom {
             user_id: self.user_id.to_hex(),
             role: self.role,
+            username: self.username,
+            avatar: self.avatar,
         }
     }
 }
