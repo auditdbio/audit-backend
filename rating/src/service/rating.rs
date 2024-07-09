@@ -124,6 +124,12 @@ impl RatingService {
         let auth = self.context.auth();
         let user_id = auth.id().unwrap();
 
+        if feedback.quality_of_work.is_none()
+            && feedback.time_management.is_none()
+            && feedback.collaboration.is_none() {
+            return Err(anyhow::anyhow!("At least one assessment required").code(400));
+        }
+
         let audit = self
             .context
             .make_request::<PublicAudit>()
