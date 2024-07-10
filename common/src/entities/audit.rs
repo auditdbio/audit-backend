@@ -167,7 +167,7 @@ impl Audit<ObjectId> {
                     API_PREFIX.as_str(),
                     self.id,
                 ))
-                .auth(context.auth())
+                .auth(context.server_auth())
                 .send()
                 .await;
 
