@@ -60,6 +60,7 @@ impl RatingService {
         user_id: ObjectId,
         role: Role,
         force_update: bool,
+        recalculate: bool,
     ) -> error::Result<Rating<ObjectId>> {
         let ratings = self.context.try_get_repository::<Rating<ObjectId>>()?;
         let rating = ratings
@@ -81,11 +82,11 @@ impl RatingService {
 
             return if last_update_date == today_date && !force_update {
                 Ok(rating)
+            } else if !recalculate {
+                Ok(rating)
             } else {
                 let rating = rating.calculate(&self.context, role).await?;
 
-                // ratings.delete("id", &rating.id).await?;
-                // ratings.insert(&rating).await?;
                 ratings.update_one(doc! {"id": &rating.id}, &rating).await?;
                 Ok(rating)
             }
@@ -98,7 +99,7 @@ impl RatingService {
     }
 
     pub async fn get_user_rating(&self, user_id: ObjectId, role: Role) -> error::Result<SummaryResponse> {
-        let rating = self.find_or_create(user_id, role, false).await?;
+        let rating = self.find_or_create(user_id, role, false, true).await?;
         let summary = if role == Role::Auditor {
             rating.auditor.summary
         } else {
@@ -111,12 +112,12 @@ impl RatingService {
     }
 
     pub async fn get_user_rating_details(&self, user_id: ObjectId, role: Role) -> error::Result<RatingDetailsResponse> {
-        let rating = self.find_or_create(user_id, role, false).await?;
+        let rating = self.find_or_create(user_id, role, false, true).await?;
         Ok(RatingDetailsResponse::from_rating(rating, role, 90))
     }
 
     pub async fn recalculate_rating(&self, user_id: ObjectId, role: Role) -> error::Result<RatingDetailsResponse> {
-        let rating = self.find_or_create(user_id, role, true).await?;
+        let rating = self.find_or_create(user_id, role, true, true).await?;
         Ok(RatingDetailsResponse::from_rating(rating, role, 90))
     }
 
@@ -192,7 +193,8 @@ impl RatingService {
         let mut rating = self.find_or_create(
             receiver_id.parse().unwrap(),
             current_role,
-            false
+            false,
+            false,
         ).await?;
 
         let role_rating = if receiver_role == Role::Auditor {
@@ -233,7 +235,8 @@ impl RatingService {
         let rating = self.find_or_create(
             receiver_id,
             role,
-            false
+            false,
+            true,
         ).await?;
 
         let feedbacks = if role == Role::Auditor {
