@@ -27,7 +27,7 @@ def get_services(config, api_prefix, proxy_network, expose, open_database):
     }
     return [
         Service(config, "binaries", None, None, [], [("binaries", "/data/binaries")], [], proxy_network),
-        Service(config, "users", PortConfig(expose, "3001"), APIConfig(api_prefix, ["user", "auth", "my_user", "waiting_list", "github"]), **default_service_settings),
+        Service(config, "users", PortConfig(expose, "3001"), APIConfig(api_prefix, ["user", "auth", "my_user", "waiting_list", "github", "organization"]), **default_service_settings),
         Service(config, "customers", PortConfig(expose, "3002"), APIConfig(api_prefix, ["customer", "my_customer", "project", "my_project"]), **default_service_settings),
         Service(config, "audits", PortConfig(expose, "3003"), APIConfig(api_prefix, ["audit", "my_audit", "request", "my_request", "public_audits", "no_customer_audit"]), **default_service_settings),
         Service(config, "auditors", PortConfig(expose, "3004"), APIConfig(api_prefix, ["auditor", "my_auditor", "badge"]), **default_service_settings),
