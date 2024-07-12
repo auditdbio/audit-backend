@@ -67,20 +67,22 @@ impl OrganizationService {
 
         let organizations = self.context.try_get_repository::<Organization<ObjectId>>()?;
 
+        let owner = OrganizationMember {
+            user_id: id.to_hex(),
+            username,
+            avatar: Some(user_avatar),
+            access_level: vec![OrgAccessLevel::Owner, OrgAccessLevel::Representative, OrgAccessLevel::Editor]
+        };
+
         let organization = Organization {
             id: ObjectId::new(),
-            owner: OrganizationMember {
-                user_id: id.to_hex(),
-                username,
-                avatar: Some(user_avatar),
-                access_level: vec![OrgAccessLevel::Owner]
-            },
+            owner: owner.clone(),
             name: create_org.name,
             contacts: create_org.contacts,
             avatar: create_org.avatar,
             linked_accounts: vec![],
             organization_type: create_org.organization_type,
-            members: create_org.members.unwrap_or(vec![]),
+            members: create_org.members.unwrap_or(vec![owner]),
             last_modified: Utc::now().timestamp_micros(),
             created_at: Utc::now().timestamp_micros(),
         };
@@ -270,11 +272,22 @@ impl OrganizationService {
             .iter_mut()
             .find(|member| member.user_id == user_id.to_hex())
         {
-            member.access_level = data;
+            member.access_level = data.clone();
             member.clone()
         } else {
             return Err(anyhow::anyhow!("Member not found").code(404));
         };
+
+        if data.contains(&OrgAccessLevel::Owner) {
+            if let Some(old_owner) = organization
+                .members
+                .iter_mut()
+                .find(|member| member.user_id == current_id.to_hex())
+            {
+                old_owner.access_level.retain(|lvl| lvl.clone() != OrgAccessLevel::Owner);
+                organization.owner = member.clone();
+            }
+        }
 
         organizations.delete("id", &organization.id).await?;
         organizations.insert(&organization).await?;
