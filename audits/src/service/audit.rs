@@ -302,7 +302,11 @@ impl AuditService {
         let mut is_approve_needed = false;
 
         if let Some(public) = change.public {
-            audit.public = public;
+            if audit.status == AuditStatus::Resolved {
+                audit.public = public;
+            } else {
+                return Err(anyhow::anyhow!("Audit must be resolved").code(400));
+            }
         }
 
         if audit.status != AuditStatus::Resolved || audit.no_customer {
@@ -1007,7 +1011,9 @@ impl AuditService {
             return Err(anyhow::anyhow!("Invalid role").code(400));
         }
 
-        let audits = audits.find_many(&role, &Bson::ObjectId(user)).await?;
+        let mut audits = audits.find_many(&role, &Bson::ObjectId(user)).await?;
+
+        audits.retain(|audit| audit.public);
 
         let mut result = vec![];
 
