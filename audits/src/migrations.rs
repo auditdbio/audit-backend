@@ -134,8 +134,8 @@ impl Migration for IssuesChangeWillNotFixToNotFixed {
             let issues = audit.get_array_mut("issues")?;
             for issue in issues {
                 let issue = issue.as_document_mut().unwrap();
-                if issue.get_str("status")? == "WillNotFix" {
-                    issue.insert("status", "NotFixed".to_string());
+                if issue.get_str("status")? == "NotFixed" {
+                    issue.insert("status", "WillNotFix".to_string());
                 }
             }
 

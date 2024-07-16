@@ -658,7 +658,7 @@ impl AuditService {
             if audit.no_customer {
                 issue.status = match action {
                     Action::Fixed => Status::Fixed,
-                    Action::NotFixed => Status::NotFixed,
+                    Action::NotFixed => Status::WillNotFix,
                     _ => return Err(anyhow::anyhow!("Invalid action").code(400))
                 }
             } else {

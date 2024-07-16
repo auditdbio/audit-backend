@@ -162,7 +162,7 @@ fn generate_issue_section(issue: &PublicIssue) -> Option<Section> {
     let status = if status == &Status::Fixed {
         "Fixed"
     } else {
-        "NotFixed"
+        "WillNotFix"
     }
     .to_string();
 
