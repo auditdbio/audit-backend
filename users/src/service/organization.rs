@@ -1,5 +1,5 @@
 use chrono::Utc;
-use mongodb::bson::{Bson, oid::ObjectId};
+use mongodb::bson::{Bson, doc, oid::ObjectId};
 use serde::{Serialize, Deserialize};
 
 use common::{
@@ -31,6 +31,12 @@ pub struct ChangeOrganization {
     pub name: Option<String>,
     pub contacts: Option<Contacts>,
     pub avatar: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MyOrganizations {
+    pub owner: Vec<PublicOrganization>,
+    pub member: Vec<PublicOrganization>,
 }
 
 pub struct OrganizationService {
@@ -105,6 +111,33 @@ impl OrganizationService {
         };
 
         Ok(PublicOrganization::from(organization))
+    }
+
+    pub async fn my_organizations(&self) -> error::Result<MyOrganizations> {
+        let auth = self.context.auth();
+        let id = auth.id().unwrap();
+
+        let organizations = self.context.try_get_repository::<Organization<ObjectId>>()?;
+
+        let as_owner = organizations
+            .find_many("owner.user_id", &Bson::String(id.to_hex()))
+            .await?
+            .iter()
+            .map(|org| PublicOrganization::from(org.clone()))
+            .collect();
+
+        let as_member = organizations
+            .find_many("member", &Bson::Document(doc! {"$elemMatch": { "user_id": id.to_hex() }}))
+            .await?
+            .iter()
+            .map(|org| PublicOrganization::from(org.clone()))
+            .filter(|org| org.owner.user_id != id.to_hex())
+            .collect();
+
+        Ok(MyOrganizations {
+            owner: as_owner,
+            member: as_member,
+        })
     }
 
     pub async fn add_members(

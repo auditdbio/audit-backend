@@ -12,7 +12,8 @@ use common::{
 
 use crate::service::organization::{
     ChangeOrganization, CreateOrganization,
-    OrganizationService, PublicOrganization,
+    MyOrganizations, OrganizationService,
+    PublicOrganization
 };
 
 #[post("/organization")]
@@ -22,6 +23,15 @@ pub async fn create_organization(
 ) -> error::Result<Json<Organization<String>>> {
     Ok(Json(
         OrganizationService::new(context).create_organization(data).await?
+    ))
+}
+
+#[get("/my_organizations")]
+pub async fn get_my_organizations(
+    context: GeneralContext
+) -> error::Result<Json<MyOrganizations>> {
+    Ok(Json(
+        OrganizationService::new(context).my_organizations().await?
     ))
 }
 
