@@ -127,7 +127,7 @@ impl OrganizationService {
             .collect();
 
         let as_member = organizations
-            .find_many("member", &Bson::Document(doc! {"$elemMatch": { "user_id": id.to_hex() }}))
+            .find_many("members", &Bson::Document(doc! {"$elemMatch": { "user_id": id.to_hex() }}))
             .await?
             .iter()
             .map(|org| PublicOrganization::from(org.clone()))
