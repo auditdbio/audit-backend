@@ -14,6 +14,7 @@ pub enum Status {
     Verification,
     WillNotFix,
     Fixed,
+    NotFixed,
 }
 
 impl Status {
@@ -49,6 +50,7 @@ impl Status {
             (Status::Fixed, Action::Discard) => None,
             (Status::Fixed, Action::Verified) => Some(Status::Verification),
             (Status::Fixed, Action::ReOpen) => None,
+            _ => None,
         }
     }
 }
