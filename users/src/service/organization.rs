@@ -34,6 +34,12 @@ pub struct ChangeOrganization {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct NewOrganizationMember<Id> {
+    pub user_id: Id,
+    pub access_level: Vec<OrgAccessLevel>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct MyOrganizations {
     pub owner: Vec<PublicOrganization>,
     pub member: Vec<PublicOrganization>,
@@ -143,7 +149,7 @@ impl OrganizationService {
     pub async fn add_members(
         &self,
         org_id: ObjectId,
-        new_members: Vec<ObjectId>
+        new_members: Vec<NewOrganizationMember<ObjectId>>
     ) -> error::Result<Vec<OrganizationMember>> {
         let auth = self.context.auth();
         let id = auth.id().unwrap();
@@ -161,8 +167,8 @@ impl OrganizationService {
         }
 
         if organization.organization_type == Role::Auditor {
-            for member_id in new_members {
-                let auditor = match request_auditor(&self.context, member_id, auth.clone()).await {
+            for mut member in new_members {
+                let auditor = match request_auditor(&self.context, member.user_id, auth.clone()).await {
                     Ok(auditor) => auditor,
                     _ => continue
                 };
@@ -170,16 +176,18 @@ impl OrganizationService {
                     continue;
                 }
 
+                member.access_level.retain(|access| access != &OrgAccessLevel::Owner);
+
                 organization.members.push(OrganizationMember {
-                    user_id: member_id.to_hex(),
+                    user_id: member.user_id.to_hex(),
                     username: format!("{} {}", auditor.first_name(), auditor.last_name()),
                     avatar: Some(auditor.avatar().clone()),
-                    access_level: vec![],
+                    access_level: member.access_level,
                 })
             }
         } else if organization.organization_type == Role::Customer {
-            for member_id in new_members {
-                let customer = match request_customer(&self.context, member_id, auth.clone()).await {
+            for mut member in new_members {
+                let customer = match request_customer(&self.context, member.user_id, auth.clone()).await {
                     Ok(customer) => customer,
                     _ => continue
                 };
@@ -187,11 +195,13 @@ impl OrganizationService {
                     continue;
                 }
 
+                member.access_level.retain(|access| access != &OrgAccessLevel::Owner);
+
                 organization.members.push(OrganizationMember {
-                    user_id: member_id.to_hex(),
+                    user_id: member.user_id.to_hex(),
                     username: format!("{} {}", customer.first_name, customer.last_name),
                     avatar: Some(customer.avatar),
-                    access_level: vec![],
+                    access_level: member.access_level,
                 })
             }
         } else {
@@ -222,6 +232,10 @@ impl OrganizationService {
 
         if current_id.to_hex() != organization.owner.user_id && current_id != user_id {
             return Err(anyhow::anyhow!("User is not available to change this organization").code(403));
+        }
+
+        if organization.owner.user_id == user_id.to_hex() {
+            return Err(anyhow::anyhow!("Another owner must be assigned").code(400));
         }
 
         let Some(member) = organization
