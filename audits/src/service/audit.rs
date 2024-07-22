@@ -302,10 +302,12 @@ impl AuditService {
         let mut is_approve_needed = false;
 
         if let Some(public) = change.public {
-            if audit.status == AuditStatus::Resolved {
-                audit.public = public;
-            } else {
-                return Err(anyhow::anyhow!("Audit must be resolved").code(400));
+            if public {
+                if audit.status == AuditStatus::Resolved {
+                    audit.public = public;
+                } else {
+                    return Err(anyhow::anyhow!("Audit must be resolved").code(400));
+                }
             }
         }
 
