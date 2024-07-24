@@ -198,16 +198,9 @@ pub async fn change_audit_edit_history(
     params: Path<(String, usize)>,
     Json(data): Json<ChangeAuditHistory>,
 ) -> error::Result<Json<PublicAuditEditHistory>> {
-    // Ok(Json(
-    //     AuditService::new(context)
-    //         .change_audit_edit_history(params.0.parse()?, params.1, data)
-    //         .await?
-    // ))
-
     let audit_id = params.0.clone();
     let history_id = params.1;
     let result = retry_operation(
-
         move || {
             let context_clone = context.clone();
             let audit_id = audit_id.clone();
@@ -228,13 +221,8 @@ pub async fn audit_unread_edits(
     context: GeneralContext,
     params: Path<(String, usize)>,
 ) -> error::Result<HttpResponse> {
-    // AuditService::new(context)
-    //     .unread_edits(params.0.parse()?, params.1)
-    //     .await?;
-
     let audit_id = params.0.clone();
     let unread = params.1;
-
     retry_operation(
         {
             move || {
