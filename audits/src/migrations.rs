@@ -112,10 +112,10 @@ impl Migration for SecondAttemptToMutateStatus {
     }
 }
 
-pub struct IssuesChangeWillNotFixToNotFixed {}
+pub struct IssuesChangeNotFixedToWillNotFix {}
 
 #[async_trait]
-impl Migration for IssuesChangeWillNotFixToNotFixed {
+impl Migration for IssuesChangeNotFixedToWillNotFix {
     async fn up(&self, env: Env) -> anyhow::Result<()> {
         let conn = env
             .db
@@ -128,6 +128,7 @@ impl Migration for IssuesChangeWillNotFixToNotFixed {
             .collect::<Vec<Result<Document>>>()
             .await;
 
+        let mut updated_documents_count = 0;
         for audit in audits {
             let mut audit = audit?;
 
@@ -135,6 +136,7 @@ impl Migration for IssuesChangeWillNotFixToNotFixed {
             for issue in issues {
                 let issue = issue.as_document_mut().unwrap();
                 if issue.get_str("status")? == "NotFixed" {
+                    updated_documents_count += 1;
                     issue.insert("status", "WillNotFix".to_string());
                 }
             }
@@ -146,6 +148,7 @@ impl Migration for IssuesChangeWillNotFixToNotFixed {
             )
             .await?;
         }
+        println!("Updated {} documents", updated_documents_count);
 
         Ok(())
     }
@@ -159,7 +162,7 @@ pub async fn up_migrations(mongo_uri: &str) -> anyhow::Result<()> {
         Box::new(NewAuditStatusMigration {}),
         Box::new(SecondAttemptToMutateStatus {}),
         Box::new(AuditStatusCorrection {}),
-        Box::new(IssuesChangeWillNotFixToNotFixed {}),
+        Box::new(IssuesChangeNotFixedToWillNotFix {}),
     ];
     mongodb_migrator::migrator::default::DefaultMigrator::new()
         .with_conn(db.clone())
