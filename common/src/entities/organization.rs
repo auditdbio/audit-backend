@@ -20,8 +20,6 @@ pub enum OrgAccessLevel {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct OrganizationMember {
     pub user_id: String,
-    pub username: String,
-    pub avatar: Option<String>,
     pub access_level: Vec<OrgAccessLevel>,
 }
 

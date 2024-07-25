@@ -6,7 +6,7 @@ use mongodb::bson::oid::ObjectId;
 
 use common::{
     context::GeneralContext,
-    entities::organization::{Organization, OrganizationMember, OrgAccessLevel},
+    entities::organization::{OrganizationMember, OrgAccessLevel},
     error,
 };
 
@@ -20,7 +20,7 @@ use crate::service::organization::{
 pub async fn create_organization(
     context: GeneralContext,
     Json(data): Json<CreateOrganization>,
-) -> error::Result<Json<Organization<String>>> {
+) -> error::Result<Json<PublicOrganization>> {
     Ok(Json(
         OrganizationService::new(context).create_organization(data).await?
     ))

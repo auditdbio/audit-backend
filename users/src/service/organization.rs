@@ -57,32 +57,14 @@ impl OrganizationService {
     pub async fn create_organization(
         &self,
         create_org: CreateOrganization
-    ) -> error::Result<Organization<String>> {
+    ) -> error::Result<PublicOrganization> {
         let auth = self.context.auth();
         let id = auth.id().ok_or(anyhow::anyhow!("No user id found"))?;
-
-        let (username, user_avatar) = if create_org.organization_type == Role::Auditor {
-            let auditor = request_auditor(&self.context, id, auth.clone()).await?;
-            if auditor.is_empty() {
-                return Err(anyhow::anyhow!("Auditor not found").code(404))
-            }
-            (auditor.first_name().clone() + " " + auditor.last_name(), auditor.avatar().to_string())
-        } else if create_org.organization_type == Role::Customer {
-            let customer = request_customer(&self.context, id, auth.clone()).await?;
-            if customer.user_id.is_empty() {
-                return Err(anyhow::anyhow!("Customer not found").code(404))
-            }
-            (customer.first_name + " " + &customer.last_name, customer.avatar)
-        } else {
-            return Err(anyhow::anyhow!("Unknown organization type").code(400));
-        };
 
         let organizations = self.context.try_get_repository::<Organization<ObjectId>>()?;
 
         let owner = OrganizationMember {
             user_id: id.to_hex(),
-            username,
-            avatar: Some(user_avatar),
             access_level: vec![OrgAccessLevel::Owner, OrgAccessLevel::Representative, OrgAccessLevel::Editor]
         };
 
@@ -101,7 +83,7 @@ impl OrganizationService {
 
         organizations.insert(&organization).await?;
 
-        Ok(organization.parse())
+        Ok(PublicOrganization::new(&self.context, organization).await?)
     }
 
     pub async fn get_organization(
@@ -116,7 +98,7 @@ impl OrganizationService {
             return Err(anyhow::anyhow!("Organization not found").code(404));
         };
 
-        Ok(PublicOrganization::from(organization))
+        Ok(PublicOrganization::new(&self.context, organization).await?)
     }
 
     pub async fn my_organizations(&self) -> error::Result<MyOrganizations> {
@@ -125,20 +107,25 @@ impl OrganizationService {
 
         let organizations = self.context.try_get_repository::<Organization<ObjectId>>()?;
 
-        let as_owner = organizations
+        let organizations_as_owner = organizations
             .find_many("owner.user_id", &Bson::String(id.to_hex()))
-            .await?
-            .iter()
-            .map(|org| PublicOrganization::from(org.clone()))
-            .collect();
+            .await?;
+        let mut as_owner = vec![];
+        for org in organizations_as_owner {
+            let public_org = PublicOrganization::new(&self.context, org.clone()).await?;
+            as_owner.push(public_org);
+        }
 
-        let as_member = organizations
+        let organizations_as_member = organizations
             .find_many("members", &Bson::Document(doc! {"$elemMatch": { "user_id": id.to_hex() }}))
-            .await?
-            .iter()
-            .map(|org| PublicOrganization::from(org.clone()))
-            .filter(|org| org.owner.user_id != id.to_hex())
-            .collect();
+            .await?;
+        let mut as_member = vec![];
+        for org in organizations_as_member {
+            let public_org = PublicOrganization::new(&self.context, org.clone()).await?;
+            if public_org.owner.user_id != id.to_hex() {
+                as_member.push(public_org);
+            }
+        }
 
         Ok(MyOrganizations {
             owner: as_owner,
@@ -168,6 +155,14 @@ impl OrganizationService {
 
         if organization.organization_type == Role::Auditor {
             for mut member in new_members {
+                if organization
+                    .members
+                    .iter()
+                    .find(|m| m.user_id == member.user_id.to_hex())
+                    .is_some() {
+                    continue
+                }
+
                 let auditor = match request_auditor(&self.context, member.user_id, auth.clone()).await {
                     Ok(auditor) => auditor,
                     _ => continue
@@ -180,13 +175,19 @@ impl OrganizationService {
 
                 organization.members.push(OrganizationMember {
                     user_id: member.user_id.to_hex(),
-                    username: format!("{} {}", auditor.first_name(), auditor.last_name()),
-                    avatar: Some(auditor.avatar().clone()),
                     access_level: member.access_level,
                 })
             }
         } else if organization.organization_type == Role::Customer {
             for mut member in new_members {
+                if organization
+                    .members
+                    .iter()
+                    .find(|m| m.user_id == member.user_id.to_hex())
+                    .is_some() {
+                    continue
+                }
+
                 let customer = match request_customer(&self.context, member.user_id, auth.clone()).await {
                     Ok(customer) => customer,
                     _ => continue
@@ -199,8 +200,6 @@ impl OrganizationService {
 
                 organization.members.push(OrganizationMember {
                     user_id: member.user_id.to_hex(),
-                    username: format!("{} {}", customer.first_name, customer.last_name),
-                    avatar: Some(customer.avatar),
                     access_level: member.access_level,
                 })
             }
@@ -290,7 +289,7 @@ impl OrganizationService {
         organizations.delete("id", &organization.id).await?;
         organizations.insert(&organization).await?;
 
-        Ok(PublicOrganization::from(organization))
+        Ok(PublicOrganization::new(&self.context, organization).await?)
     }
 
     pub async fn change_access(
@@ -343,22 +342,67 @@ impl OrganizationService {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PublicOrganizationMember {
+    pub user_id: String,
+    pub username: String,
+    pub avatar: Option<String>,
+    pub access_level: Vec<OrgAccessLevel>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PublicOrganization {
     pub id: String,
-    pub owner: OrganizationMember,
+    pub owner: PublicOrganizationMember,
     pub name: String,
     pub contacts: Contacts,
     pub avatar: Option<String>,
     pub linked_accounts: Vec<PublicLinkedAccount>,
     pub organization_type: Role,
-    pub members: Vec<OrganizationMember>,
+    pub members: Vec<PublicOrganizationMember>,
     pub last_modified: i64,
     pub created_at: i64,
 }
 
-impl From<Organization<ObjectId>> for PublicOrganization {
-    fn from(org: Organization<ObjectId>) -> Self {
+impl PublicOrganization {
+    async fn get_public_member(
+        context: &GeneralContext,
+        org_type: Role,
+        member: OrganizationMember,
+    ) -> error::Result<PublicOrganizationMember> {
+        let auth = context.auth();
+
+        let (username, avatar) = if org_type == Role::Auditor {
+            let auditor = request_auditor(&context, member.user_id.parse()?, auth.clone()).await?;
+            if auditor.is_empty() {
+                return Err(anyhow::anyhow!("Auditor not found").code(404))
+            }
+            (auditor.first_name().clone() + " " + auditor.last_name(), auditor.avatar().to_string())
+        } else if org_type == Role::Customer {
+            let customer = request_customer(&context, member.user_id.parse()?, auth.clone()).await?;
+            if customer.user_id.is_empty() {
+                return Err(anyhow::anyhow!("Customer not found").code(404))
+            }
+            (customer.first_name + " " + &customer.last_name, customer.avatar)
+        } else {
+            return Err(anyhow::anyhow!("Unknown organization type").code(400));
+        };
+
+        Ok(PublicOrganizationMember {
+            user_id: member.user_id,
+            username,
+            avatar: Some(avatar),
+            access_level: member.access_level,
+        })
+    }
+
+    pub async fn new(
+        context: &GeneralContext,
+        org: Organization<ObjectId>,
+    ) -> error::Result<PublicOrganization> {
+        let auth = context.auth();
+        let current_id = auth.id().unwrap();
+
         let linked_accounts = org
             .linked_accounts
             .into_iter()
@@ -366,8 +410,14 @@ impl From<Organization<ObjectId>> for PublicOrganization {
             .filter(|acc| acc.is_public)
             .collect();
 
-        let contacts = if org.contacts.public_contacts {
-            org.contacts
+        let is_member = org.owner.user_id == current_id.to_hex() || org
+            .members
+            .iter()
+            .find(|m| m.user_id == current_id.to_hex())
+            .is_some();
+
+        let contacts = if org.contacts.public_contacts || is_member {
+            org.contacts.clone()
         } else {
             Contacts {
                 email: None,
@@ -376,17 +426,28 @@ impl From<Organization<ObjectId>> for PublicOrganization {
             }
         };
 
-        Self {
+        let mut members = vec![];
+        for member in org.members {
+            members.push(Self::get_public_member(&context, org.organization_type, member).await?);
+        }
+
+        let owner = Self::get_public_member(
+            &context,
+            org.organization_type,
+            org.owner
+        ).await?;
+
+        Ok(PublicOrganization {
             id: org.id.to_hex(),
-            owner: org.owner,
+            owner,
             name: org.name,
             contacts,
             avatar: org.avatar,
             linked_accounts,
             organization_type: org.organization_type,
-            members: org.members,
+            members,
             last_modified: org.last_modified,
             created_at: org.created_at,
-        }
+        })
     }
 }
