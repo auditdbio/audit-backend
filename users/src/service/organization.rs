@@ -365,37 +365,6 @@ pub struct PublicOrganization {
 }
 
 impl PublicOrganization {
-    async fn get_public_member(
-        context: &GeneralContext,
-        org_type: Role,
-        member: OrganizationMember,
-    ) -> error::Result<PublicOrganizationMember> {
-        let auth = context.auth();
-
-        let (username, avatar) = if org_type == Role::Auditor {
-            let auditor = request_auditor(&context, member.user_id.parse()?, auth.clone()).await?;
-            if auditor.is_empty() {
-                return Err(anyhow::anyhow!("Auditor not found").code(404))
-            }
-            (auditor.first_name().clone() + " " + auditor.last_name(), auditor.avatar().to_string())
-        } else if org_type == Role::Customer {
-            let customer = request_customer(&context, member.user_id.parse()?, auth.clone()).await?;
-            if customer.user_id.is_empty() {
-                return Err(anyhow::anyhow!("Customer not found").code(404))
-            }
-            (customer.first_name + " " + &customer.last_name, customer.avatar)
-        } else {
-            return Err(anyhow::anyhow!("Unknown organization type").code(400));
-        };
-
-        Ok(PublicOrganizationMember {
-            user_id: member.user_id,
-            username,
-            avatar: Some(avatar),
-            access_level: member.access_level,
-        })
-    }
-
     pub async fn new(
         context: &GeneralContext,
         org: Organization<ObjectId>,
@@ -428,7 +397,16 @@ impl PublicOrganization {
 
         let mut members = vec![];
         for member in org.members {
-            members.push(Self::get_public_member(&context, org.organization_type, member).await?);
+            let public_member = match Self::get_public_member(
+                &context,
+                org.organization_type,
+                member
+            ).await {
+                Ok(member) => member,
+                _ => continue,
+            };
+
+            members.push(public_member);
         }
 
         let owner = Self::get_public_member(
@@ -448,6 +426,37 @@ impl PublicOrganization {
             members,
             last_modified: org.last_modified,
             created_at: org.created_at,
+        })
+    }
+
+    async fn get_public_member(
+        context: &GeneralContext,
+        org_type: Role,
+        member: OrganizationMember,
+    ) -> error::Result<PublicOrganizationMember> {
+        let auth = context.auth();
+
+        let (username, avatar) = if org_type == Role::Auditor {
+            let auditor = request_auditor(&context, member.user_id.parse()?, auth.clone()).await?;
+            if auditor.is_empty() {
+                return Err(anyhow::anyhow!("Auditor not found").code(404))
+            }
+            (auditor.first_name().clone() + " " + auditor.last_name(), auditor.avatar().to_string())
+        } else if org_type == Role::Customer {
+            let customer = request_customer(&context, member.user_id.parse()?, auth.clone()).await?;
+            if customer.user_id.is_empty() {
+                return Err(anyhow::anyhow!("Customer not found").code(404))
+            }
+            (customer.first_name + " " + &customer.last_name, customer.avatar)
+        } else {
+            return Err(anyhow::anyhow!("Unknown organization type").code(400));
+        };
+
+        Ok(PublicOrganizationMember {
+            user_id: member.user_id,
+            username,
+            avatar: Some(avatar),
+            access_level: member.access_level,
         })
     }
 }
