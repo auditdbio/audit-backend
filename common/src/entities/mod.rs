@@ -8,5 +8,6 @@ pub mod issue;
 pub mod letter;
 pub mod notification;
 pub mod project;
+pub mod rating;
 pub mod role;
 pub mod user;

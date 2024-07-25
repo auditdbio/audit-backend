@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use crate::{
     context::GeneralContext,
     entities::{
-        audit::{Audit, AuditStatus, PublicAuditStatus},
+        audit::{Audit, AuditStatus, PublicAuditStatus, ReportType},
         audit_request::TimeRange,
         auditor::{ExtendedAuditor, PublicAuditor},
         contacts::Contacts,
@@ -35,7 +35,10 @@ pub struct AuditChange {
     pub description: Option<String>,
     pub scope: Option<Vec<String>>,
     pub tags: Option<Vec<String>>,
+    pub price: Option<i64>,
+    pub total_cost: Option<i64>,
     pub report_name: Option<String>,
+    pub report_type: Option<ReportType>,
     pub report: Option<String>,
     pub time: Option<TimeRange>,
     pub start_audit: Option<bool>,
@@ -100,12 +103,14 @@ pub struct PublicAudit {
     pub description: String,
     pub status: PublicAuditStatus,
     pub scope: Vec<String>,
-    pub price: i64,
+    pub price: Option<i64>,
+    pub total_cost: Option<i64>,
 
     pub auditor_contacts: Contacts,
     pub customer_contacts: Contacts,
     pub tags: Vec<String>,
     pub last_modified: i64,
+    pub resolved_at: Option<i64>,
     pub report: Option<String>,
     pub report_name: Option<String>,
     pub time: TimeRange,
@@ -123,6 +128,7 @@ impl PublicAudit {
         audit: Audit<ObjectId>,
     ) -> error::Result<PublicAudit> {
         let auth = context.auth();
+
         let auditor = context
             .make_request::<PublicAuditor>()
             .get(format!(
@@ -158,11 +164,20 @@ impl PublicAudit {
             ),
         };
 
+        let is_audit_approved = if audit.edit_history.is_empty() || audit.approved_by.is_empty() {
+            true
+        } else {
+            let first = audit.approved_by.values().next().unwrap();
+            audit.approved_by.values().all(|v| v == first)
+        };
+
         let status = match audit.status {
             AuditStatus::Waiting => PublicAuditStatus::WaitingForAudit,
             AuditStatus::Started => {
-                if audit.report.is_some() {
-                    PublicAuditStatus::ReadyForResolve
+                // else if audit.report.is_some() {
+                //     PublicAuditStatus::ReadyForResolve
+                if !is_audit_approved {
+                    PublicAuditStatus::ApprovalNeeded
                 } else if audit.issues.is_empty() {
                     PublicAuditStatus::InProgress
                 } else if audit.issues.iter().all(|issue| issue.is_resolved()) {
@@ -207,10 +222,12 @@ impl PublicAudit {
             status,
             scope: audit.scope,
             price: audit.price,
+            total_cost: audit.total_cost,
             auditor_contacts: auditor.contacts().clone(),
             customer_contacts,
             tags: audit.tags,
             last_modified: audit.last_modified,
+            resolved_at: audit.resolved_at,
             report: audit.report,
             report_name: audit.report_name,
             time: audit.time,

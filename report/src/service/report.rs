@@ -6,7 +6,10 @@ use common::{
     },
     auth::{Auth, Service},
     context::GeneralContext,
-    entities::issue::Status,
+    entities::{
+        audit::ReportType,
+        issue::Status,
+    },
     services::{API_PREFIX, FILES_SERVICE, FRONTEND, PROTOCOL, RENDERER_SERVICE, USERS_SERVICE},
 };
 use reqwest::multipart::{Form, Part};
@@ -159,7 +162,7 @@ fn generate_issue_section(issue: &PublicIssue) -> Option<Section> {
     let status = if status == &Status::Fixed {
         "Fixed"
     } else {
-        "NotFixed"
+        "WillNotFix"
     }
     .to_string();
 
@@ -356,6 +359,7 @@ pub async fn create_report(
         let audit_change = AuditChange {
             report: Some(path.clone()),
             report_name: Some(format!("{} report.pdf", audit.project_name)),
+            report_type: Some(ReportType::Generated),
             ..AuditChange::default()
         };
 
@@ -377,18 +381,3 @@ pub async fn create_report(
 
     Ok(PublicReport { path })
 }
-
-/*
-
-{
-    "auditor_name": "Aleksander Masloww",
-    "auditor_email": "maslow@gmail.com",
-    "project_name": "THIS IS PROJECT NAME",
-    "scope": [
-        "https://google.com",
-        "https://github.com"
-    ],
-    "markdown": "# header1\n---\n## header2\n---\n* **bold**\n* *italic*\n"
-}
-
-*/

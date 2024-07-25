@@ -22,6 +22,7 @@ pub struct Customer<Id> {
     pub last_modified: i64,
     pub created_at: Option<i64>,
     pub link_id: Option<String>,
+    pub rating: Option<f32>,
 }
 
 impl Customer<String> {
@@ -38,6 +39,7 @@ impl Customer<String> {
             last_modified: self.last_modified,
             created_at: self.created_at,
             link_id: self.link_id,
+            rating: self.rating,
         }
     }
 }
@@ -56,6 +58,7 @@ impl Customer<ObjectId> {
             last_modified: self.last_modified,
             created_at: self.created_at,
             link_id: self.link_id,
+            rating: self.rating,
         }
     }
 }
@@ -110,6 +113,7 @@ pub struct PublicCustomer {
     pub kind: String,
     pub tags: Vec<String>,
     pub link_id: Option<String>,
+    pub rating: Option<f32>,
 }
 
 // impl From<Customer<ObjectId>> for PublicCustomer {
