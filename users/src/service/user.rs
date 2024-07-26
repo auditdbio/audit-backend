@@ -19,7 +19,7 @@ use common::{
             GetGithubAccessToken, UpdateLinkedAccount,
             AddWallet,
         },
-        user::decrypt_github_token,
+        user::{get_access_token, create_request_with_token},
     },
     auth::Auth,
     context::GeneralContext,
@@ -584,7 +584,6 @@ impl UserService {
     ) -> error::Result<HttpResponse> {
         let auth = self.context.auth();
         let id = auth.id().unwrap();
-        let client = Client::new();
 
         let users = self.context.try_get_repository::<User<ObjectId>>()?;
 
@@ -592,35 +591,13 @@ impl UserService {
             return Err(anyhow::anyhow!("No user found").code(404));
         };
 
-        let mut access_token: Option<Vec<u8>> = None;
-        let mut github_account_id: Option<String> = None;
+        let (access_token, github_account_id) = get_access_token(user);
 
-        if let Some(linked_accounts) = user.linked_accounts {
-            if let Some(github_account) = linked_accounts
-                .iter()
-                .find(|account| account.name == LinkedService::GitHub) {
-                access_token = github_account.token.clone();
-                github_account_id = Some(github_account.id.clone());
-            }
-        }
-
-        let request = client
-            .get(format!("https://api.github.com/{}", path))
-            .header(header::ACCEPT, "application/json")
-            .header("User-Agent", "auditdbio");
-
-        let request = if let Some(encrypted_token) = access_token {
-            let decrypted_token = decrypt_github_token(encrypted_token).await?;
-            request.bearer_auth(decrypted_token)
-        } else {
-            request
-        };
-
-        let request = if !query.is_empty() {
-            request.query(&query)
-        } else {
-            request
-        };
+        let request = create_request_with_token(
+            format!("https://api.github.com/{}", path),
+            query,
+            access_token,
+        ).await?;
 
         let github_response = request
             .send()
@@ -662,5 +639,44 @@ impl UserService {
         }
 
         Ok(response)
+    }
+
+    pub async fn proxy_github_files(
+        &self,
+        path: String,
+        query: Vec<(String, String)>
+    ) -> error::Result<HttpResponse> {
+        if path.starts_with("raw.githubusercontent.com") {
+            let auth = self.context.auth();
+            let id = auth.id().unwrap();
+
+            let users = self.context.try_get_repository::<User<ObjectId>>()?;
+
+            let Some(user) = users.find("id", &Bson::ObjectId(id)).await? else {
+                return Err(anyhow::anyhow!("No user found").code(404));
+            };
+
+            let (access_token, _) = get_access_token(user);
+
+            let request = create_request_with_token(
+                format!("https://{}", path),
+                query,
+                access_token,
+            ).await?;
+
+            let github_response = request
+                .send()
+                .await?;
+
+            let status_code = github_response.status();
+            let mut response = HttpResponse::build(status_code);
+
+            let body = github_response.bytes().await?;
+            let response = response.body(body.clone());
+
+            return Ok(response)
+        }
+
+        Err(anyhow::anyhow!("Only for GitHub raw").code(404))
     }
 }

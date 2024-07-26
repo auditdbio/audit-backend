@@ -1,15 +1,16 @@
 use std::{fs, path::PathBuf, process::Output};
 use anyhow::Context;
-
-use common::{
-    error,
-    repository::{mongo_repository::MongoRepository, Entity, Repository},
-};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tokio::process::Command;
-use common::entities::user::User;
+
+use common::{
+    auth::Auth,
+    error,
+    repository::{mongo_repository::MongoRepository, Entity, Repository},
+    services::{API_PREFIX, USERS_SERVICE, PROTOCOL},
+};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct MetaEntry {
@@ -78,7 +79,7 @@ impl FileRepo {
         &self,
         user_id: ObjectId,
         files: Scope,
-        token: Option<String>,
+        auth: Auth,
     ) -> error::Result<(ObjectId, Vec<String>, Vec<String>)> {
         let id = ObjectId::new();
         let entry = MetaEntry {
@@ -89,6 +90,7 @@ impl FileRepo {
 
         // save scope and author in meta
         self.meta_repo.insert(&entry).await?;
+
         // make directory
         run_command(
             Command::new("mkdir")
@@ -99,21 +101,34 @@ impl FileRepo {
         let path = append_to_path(self.path.clone(), &id.to_hex());
         let mut errors = vec![];
         let mut skiped = vec![];
+
         // download files
         for file_link in entry.links {
             let mut command = Command::new("wget");
             command.current_dir(&path);
-            if let Some(token) = token.clone() {
-                command.arg("--header").arg(format!("Authorization: Bearer {}", token));
-            }
-            command.arg(&file_link);
+            if file_link.starts_with("https://raw.githubusercontent.com")
+                || file_link.starts_with("http://raw.githubusercontent.com")
+            {
+                let idx = file_link.find("://").unwrap();
+                let link = file_link[(idx + 3)..].to_string();
+                let proxy_url = format!(
+                    "{}://{}/{}/github_files/{}",
+                    PROTOCOL.as_str(),
+                    USERS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
+                    link,
+                );
+                command.arg(&proxy_url);
+                command.arg("--header").arg(format!("Authorization: Bearer {}", auth.to_token()?));
+            } else {
+                command.arg(&file_link);
+            };
 
             if run_command(&mut command)
                 .await
                 .is_none()
             {
-                errors.push(file_link);
-                continue;
+                errors.push(file_link.clone());
             }
 
             let file_name = file_link.split('/').last().unwrap();

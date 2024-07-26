@@ -44,6 +44,7 @@ pub enum Service {
     Telemetry,
     Event,
     Report,
+    Rating,
     Chat,
 }
 
@@ -106,6 +107,7 @@ impl Auth {
             tags: customer.tags,
             kind: "customer".to_string(),
             link_id: customer.link_id,
+            rating: customer.rating,
         }
     }
 
@@ -138,6 +140,7 @@ impl Auth {
             tags: auditor.tags,
             kind: "auditor".to_string(),
             link_id: auditor.link_id,
+            rating: auditor.rating,
         }
     }
 
@@ -200,13 +203,20 @@ impl Auth {
             status: project.status,
             creator_contacts: contacts,
             price: project.price,
+            total_cost: project.total_cost,
             kind: "project".to_string(),
             created_at: Some(Utc::now().timestamp_micros()),
         }
     }
 
     pub fn public_issue(&self, issue: Issue<ObjectId>) -> PublicIssue {
-        let id = self.id().unwrap();
+        let id = self.id();
+
+        let read = if id.is_some() {
+            *issue.read.get(&id.unwrap().to_hex()).unwrap_or(&0)
+        } else {
+            0
+        };
 
         PublicIssue {
             id: issue.id,
@@ -220,7 +230,7 @@ impl Auth {
             feedback: issue.feedback,
             events: Event::to_string_map(issue.events),
             last_modified: issue.last_modified,
-            read: *issue.read.get(&id.to_hex()).unwrap_or(&0),
+            read,
         }
     }
 }

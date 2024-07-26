@@ -12,7 +12,7 @@ pub enum Status {
     Draft,
     InProgress,
     Verification,
-    NotFixed,
+    WillNotFix,
     Fixed,
 }
 
@@ -28,7 +28,7 @@ impl Status {
             (Status::InProgress, Action::Begin) => None,
             (Status::InProgress, Action::Fixed) => Some(Status::Verification),
             (Status::InProgress, Action::NotFixed) => None,
-            (Status::InProgress, Action::Discard) => Some(Status::NotFixed),
+            (Status::InProgress, Action::Discard) => Some(Status::WillNotFix),
             (Status::InProgress, Action::Verified) => None,
             (Status::InProgress, Action::ReOpen) => None,
             (Status::Verification, Action::Begin) => None,
@@ -37,12 +37,12 @@ impl Status {
             (Status::Verification, Action::Discard) => None,
             (Status::Verification, Action::Verified) => Some(Status::Fixed),
             (Status::Verification, Action::ReOpen) => None,
-            (Status::NotFixed, Action::Begin) => None,
-            (Status::NotFixed, Action::Fixed) => None,
-            (Status::NotFixed, Action::NotFixed) => None,
-            (Status::NotFixed, Action::Discard) => None,
-            (Status::NotFixed, Action::Verified) => None,
-            (Status::NotFixed, Action::ReOpen) => Some(Status::InProgress),
+            (Status::WillNotFix, Action::Begin) => None,
+            (Status::WillNotFix, Action::Fixed) => None,
+            (Status::WillNotFix, Action::NotFixed) => None,
+            (Status::WillNotFix, Action::Discard) => None,
+            (Status::WillNotFix, Action::Verified) => None,
+            (Status::WillNotFix, Action::ReOpen) => Some(Status::InProgress),
             (Status::Fixed, Action::Begin) => None,
             (Status::Fixed, Action::Fixed) => None,
             (Status::Fixed, Action::NotFixed) => None,
@@ -119,7 +119,7 @@ pub struct Issue<Id> {
 
 impl<T> Issue<T> {
     pub fn is_resolved(&self) -> bool {
-        !self.include || self.status == Status::Fixed || self.status == Status::NotFixed
+        !self.include || self.status == Status::Fixed || self.status == Status::WillNotFix
     }
 }
 

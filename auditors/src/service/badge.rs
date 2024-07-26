@@ -278,6 +278,7 @@ impl BadgeService {
             free_at: badge.free_at,
             price_range: badge.price_range,
             link_id: badge.link_id,
+            rating: None,
         };
 
         if auditors
@@ -305,7 +306,8 @@ impl BadgeService {
                 customer_id: request.customer_id.clone(),
                 auditor_id: id_str.clone(),
                 project_id: request.project_id.clone(),
-                price: request.price,
+                price: request.price.clone(),
+                total_cost: request.total_cost.clone(),
                 description: request.description.clone(),
                 time: request.time.clone(),
             };

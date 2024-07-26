@@ -170,9 +170,11 @@ impl SearchRepo {
                         },
                     },
                     {
+                        "price": Bson::Null,
+                    },
+                    {
                         "price_range.from": {
                             "$lte": price_to,
-
                         },
                         "price_range.to": {
                             "$gte": price_from,

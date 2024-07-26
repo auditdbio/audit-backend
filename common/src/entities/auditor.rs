@@ -24,6 +24,7 @@ pub struct Auditor<Id> {
     pub last_modified: i64,
     pub created_at: Option<i64>,
     pub link_id: Option<String>,
+    pub rating: Option<f32>,
 }
 
 impl Auditor<String> {
@@ -42,6 +43,7 @@ impl Auditor<String> {
             last_modified: self.last_modified,
             created_at: self.created_at,
             link_id: self.link_id,
+            rating: self.rating,
         }
     }
 }
@@ -62,6 +64,7 @@ impl Auditor<ObjectId> {
             last_modified: self.last_modified,
             created_at: self.created_at,
             link_id: self.link_id,
+            rating: self.rating,
         }
     }
 }
@@ -92,6 +95,7 @@ pub struct PublicAuditor {
     pub kind: String,
     pub tags: Vec<String>,
     pub link_id: Option<String>,
+    pub rating: Option<f32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

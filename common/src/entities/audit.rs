@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::hash::Hash;
 
 use mongodb::bson::oid::ObjectId;
@@ -25,7 +26,9 @@ pub enum PublicAuditStatus {
     InProgress,
     #[serde(rename = "Issues workflow", alias = "IssuesWorkflow")]
     IssuesWorkflow,
-    #[serde(rename = "Ready for resolve", alias = "Resolved")]
+    #[serde(rename = "Approval needed", alias = "ApprovalNeeded")]
+    ApprovalNeeded,
+    #[serde(rename = "Ready for resolve", alias = "ReadyForResolve")]
     ReadyForResolve,
     #[serde(rename = "Resolved", alias = "Resolved")]
     Resolved,
@@ -36,6 +39,12 @@ pub enum AuditStatus {
     Waiting,
     Started,
     Resolved,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum ReportType {
+    Generated,
+    Custom,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -55,11 +64,14 @@ pub struct Audit<Id: Eq + Hash> {
     pub scope: Vec<String>,
     #[serde(default)]
     pub tags: Vec<String>,
-    pub price: i64,
+    pub price: Option<i64>,
+    pub total_cost: Option<i64>,
 
     pub last_modified: i64,
+    pub resolved_at: Option<i64>,
     pub report: Option<String>,
     pub report_name: Option<String>,
+    pub report_type: Option<ReportType>,
     pub time: TimeRange,
 
     #[serde(default)]
@@ -67,6 +79,10 @@ pub struct Audit<Id: Eq + Hash> {
 
     #[serde(default)]
     pub edit_history: Vec<AuditEditHistory>,
+    #[serde(default)]
+    pub approved_by: HashMap<String, usize>,
+    #[serde(default)]
+    pub unread_edits: HashMap<String, usize>,
 
     #[serde(default)]
     pub no_customer: bool,
@@ -87,9 +103,12 @@ impl Audit<String> {
             scope: self.scope,
             tags: self.tags,
             price: self.price,
+            total_cost: self.total_cost,
             last_modified: self.last_modified,
+            resolved_at: self.resolved_at,
             report: self.report,
             report_name: self.report_name,
+            report_type: self.report_type,
             time: self.time,
             issues: Issue::parse_map(self.issues),
             public: self.public,
@@ -97,6 +116,8 @@ impl Audit<String> {
             chat_id: self.chat_id,
             conclusion: self.conclusion,
             edit_history: self.edit_history,
+            approved_by: self.approved_by,
+            unread_edits: self.unread_edits,
         }
     }
 }
@@ -114,9 +135,12 @@ impl Audit<ObjectId> {
             scope: self.scope,
             tags: self.tags,
             price: self.price,
+            total_cost: self.total_cost,
             last_modified: self.last_modified,
+            resolved_at: self.resolved_at,
             report: self.report,
             report_name: self.report_name,
+            report_type: self.report_type,
             time: self.time,
             issues: Issue::to_string_map(self.issues),
             public: self.public,
@@ -124,11 +148,13 @@ impl Audit<ObjectId> {
             chat_id: self.chat_id,
             conclusion: self.conclusion,
             edit_history: self.edit_history,
+            approved_by: self.approved_by,
+            unread_edits: self.unread_edits,
         }
     }
 
     pub async fn resolve(&mut self, context: &GeneralContext) -> error::Result<()> {
-        if self.report.is_none() {
+        if self.report_type.is_none() || self.report_type.clone().unwrap() == ReportType::Generated {
             let report_response = context
                 .make_request::<PublicReport>()
                 .post(format!(
@@ -155,6 +181,7 @@ impl Audit<ObjectId> {
                 let public_report = public_report.unwrap();
                 self.report = Some(public_report.path.clone());
                 self.report_name = Some(public_report.path);
+                self.report_type = Some(ReportType::Generated);
             } else {
                 return Err(
                     anyhow::anyhow!(
@@ -263,6 +290,14 @@ impl PublicAuditEditHistory {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct EditHistoryResponse {
+    pub edit_history: Vec<PublicAuditEditHistory>,
+    pub approved_by: HashMap<String, usize>,
+    pub unread: HashMap<String, usize>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct ChangeAuditHistory {
     pub comment: Option<String>,
+    pub is_approved: Option<bool>,
 }

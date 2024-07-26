@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -33,7 +34,8 @@ pub struct AuditRequest<Id> {
     pub tags: Option<Vec<String>>,
     pub scope: Option<Vec<String>>,
 
-    pub price: i64,
+    pub price: Option<i64>,
+    pub total_cost: Option<i64>,
     pub last_modified: i64,
     pub last_changer: Role,
     pub time: TimeRange,
@@ -42,6 +44,8 @@ pub struct AuditRequest<Id> {
 
     #[serde(default)]
     pub edit_history: Vec<AuditEditHistory>,
+    #[serde(default)]
+    pub unread_edits: HashMap<String, usize>,
 }
 
 impl AuditRequest<String> {
@@ -55,11 +59,13 @@ impl AuditRequest<String> {
             tags: self.tags,
             scope: self.scope,
             price: self.price,
+            total_cost: self.total_cost,
             last_modified: self.last_modified,
             last_changer: self.last_changer,
             time: self.time,
             chat_id: self.chat_id,
             edit_history: self.edit_history,
+            unread_edits: self.unread_edits,
         }
     }
 }
@@ -75,11 +81,13 @@ impl AuditRequest<ObjectId> {
             tags: self.tags,
             scope: self.scope,
             price: self.price,
+            total_cost: self.total_cost,
             last_modified: self.last_modified,
             last_changer: self.last_changer,
             time: self.time,
             chat_id: self.chat_id,
             edit_history: self.edit_history,
+            unread_edits: self.unread_edits,
         }
     }
 }
