@@ -343,7 +343,7 @@ impl AuditService {
             }
             if let Some(conclusion) = change.conclusion {
                 if user_id == audit.auditor_id {
-                    if audit.conclusion.is_some() && audit.conclusion.clone().unwrap() != conclusion {
+                    if audit.conclusion.clone().unwrap_or("".to_string()) != conclusion {
                         audit.conclusion = Some(conclusion);
                         is_history_changed = true;
                     }
