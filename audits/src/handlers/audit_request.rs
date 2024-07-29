@@ -92,6 +92,19 @@ pub async fn find_all_audit_request(
     ))
 }
 
+#[get("/audit_request/organization/{org_id}")]
+pub async fn find_organization_audit_requests(
+    context: GeneralContext,
+    path: web::Path<String>,
+) -> error::Result<Json<Vec<AuditRequest<String>>>> {
+    let org_id = path.into_inner();
+    Ok(Json(
+        RequestService::new(context)
+            .find_organization_audit_requests(org_id.parse()?)
+            .await?,
+    ))
+}
+
 #[get("/audit_request/{id}/edit_history")]
 pub async fn get_request_edit_history(
     context: GeneralContext,

@@ -307,7 +307,7 @@ pub async fn create_report(
     let input = RendererInput {
         auditor_name: audit.auditor_first_name + " " + &audit.auditor_last_name,
         profile_link: format!(
-            "{}://{}/user/{}/auditor",
+            "{}://{}/a/{}",
             PROTOCOL.as_str(),
             FRONTEND.as_str(),
             audit.auditor_id

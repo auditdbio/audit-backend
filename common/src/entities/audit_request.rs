@@ -46,6 +46,9 @@ pub struct AuditRequest<Id> {
     pub edit_history: Vec<AuditEditHistory>,
     #[serde(default)]
     pub unread_edits: HashMap<String, usize>,
+
+    pub auditor_organization: Option<Id>,
+    pub customer_organization: Option<Id>,
 }
 
 impl AuditRequest<String> {
@@ -66,6 +69,8 @@ impl AuditRequest<String> {
             chat_id: self.chat_id,
             edit_history: self.edit_history,
             unread_edits: self.unread_edits,
+            auditor_organization: self.auditor_organization.map(|v| v.parse().unwrap()),
+            customer_organization: self.customer_organization.map(|v| v.parse().unwrap()),
         }
     }
 }
@@ -88,6 +93,8 @@ impl AuditRequest<ObjectId> {
             chat_id: self.chat_id,
             edit_history: self.edit_history,
             unread_edits: self.unread_edits,
+            auditor_organization: self.auditor_organization.map(|v| v.to_hex()),
+            customer_organization: self.customer_organization.map(|v| v.to_hex()),
         }
     }
 }

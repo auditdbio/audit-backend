@@ -7,7 +7,7 @@ use actix_web::{
 
 use common::{
     api::{
-        audits::{AuditChange, CreateIssue, NoCustomerAuditRequest, PublicAudit},
+        audits::{AuditChange, CreateAudit, CreateIssue, NoCustomerAuditRequest, PublicAudit},
         seartch::PaginationParams,
     },
     context::GeneralContext,
@@ -21,13 +21,12 @@ use common::{
 
 use crate::service::{
     audit::{AuditService},
-    audit_request::PublicRequest,
 };
 
 #[post("/audit")]
 pub async fn post_audit(
     context: GeneralContext,
-    Json(data): Json<PublicRequest>,
+    Json(data): Json<CreateAudit>,
 ) -> error::Result<Json<PublicAudit>> {
     Ok(Json(AuditService::new(context).create(data).await?))
 }
@@ -171,6 +170,19 @@ pub async fn get_public_audits(
     Ok(Json(
         AuditService::new(context)
             .find_public(id.parse()?, role)
+            .await?,
+    ))
+}
+
+#[get("/audit/organization/{org_id}")]
+pub async fn get_organization_audits(
+    context: GeneralContext,
+    path: Path<String>,
+) -> error::Result<Json<Vec<PublicAudit>>> {
+    let org_id = path.into_inner();
+    Ok(Json(
+        AuditService::new(context)
+            .find_organization_audits(org_id.parse()?)
             .await?,
     ))
 }

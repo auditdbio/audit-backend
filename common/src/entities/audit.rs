@@ -88,6 +88,9 @@ pub struct Audit<Id: Eq + Hash> {
     pub no_customer: bool,
     pub chat_id: Option<AuditMessageId>,
     pub conclusion: Option<String>,
+
+    pub auditor_organization: Option<Id>,
+    pub customer_organization: Option<Id>,
 }
 
 impl Audit<String> {
@@ -118,6 +121,8 @@ impl Audit<String> {
             edit_history: self.edit_history,
             approved_by: self.approved_by,
             unread_edits: self.unread_edits,
+            auditor_organization: self.auditor_organization.map(|v| v.parse().unwrap()),
+            customer_organization: self.customer_organization.map(|v| v.parse().unwrap()),
         }
     }
 }
@@ -150,6 +155,8 @@ impl Audit<ObjectId> {
             edit_history: self.edit_history,
             approved_by: self.approved_by,
             unread_edits: self.unread_edits,
+            auditor_organization: self.auditor_organization.map(|v| v.to_hex()),
+            customer_organization: self.customer_organization.map(|v| v.to_hex()),
         }
     }
 

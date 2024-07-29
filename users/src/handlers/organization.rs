@@ -1,19 +1,20 @@
 use actix_web::{
     delete, get, post, patch,
-    web::{Json, Path},
+    web::{Json, Path, Query},
 };
 use mongodb::bson::oid::ObjectId;
 
 use common::{
+    api::organization::GetOrganizationQuery,
     context::GeneralContext,
-    entities::organization::{OrganizationMember, OrgAccessLevel},
+    entities::organization::{OrganizationMember, OrgAccessLevel, PublicOrganization},
     error,
 };
 
 use crate::service::organization::{
     ChangeOrganization, CreateOrganization,
     MyOrganizations, NewOrganizationMember,
-    OrganizationService, PublicOrganization
+    OrganizationService,
 };
 
 #[post("/organization")]
@@ -39,9 +40,12 @@ pub async fn get_my_organizations(
 pub async fn get_organization(
     context: GeneralContext,
     org_id: Path<String>,
+    query: Query<GetOrganizationQuery>
 ) -> error::Result<Json<PublicOrganization>> {
     Ok(Json(
-        OrganizationService::new(context).get_organization(org_id.parse()?).await?
+        OrganizationService::new(context)
+            .get_organization(org_id.parse()?, query.into_inner())
+            .await?
     ))
 }
 

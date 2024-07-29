@@ -18,6 +18,7 @@ use common::{
         events::{EventPayload, PublicEvent},
         mail::send_mail,
         requests::CreateRequest,
+        organization::{check_is_organization_user, get_organization},
         seartch::PaginationParams,
         send_notification, NewNotification,
     },
@@ -102,6 +103,32 @@ impl RequestService {
 
         let project = get_project(&self.context, request.project_id.parse()?).await?;
 
+        if request.auditor_organization.is_some() {
+            let org = get_organization(
+                &self.context,
+                request.auditor_organization.clone().unwrap().parse()?,
+                None,
+            ).await?;
+            if org.organization_type != Role::Auditor {
+                return Err(
+                    anyhow::anyhow!("The type for the auditor's organization does not match").code(400)
+                );
+            }
+        }
+
+        if request.customer_organization.is_some() {
+            let org = get_organization(
+                &self.context,
+                request.customer_organization.clone().unwrap().parse()?,
+                None,
+            ).await?;
+            if org.organization_type != Role::Customer {
+                return Err(
+                    anyhow::anyhow!("The type for the customer's organization does not match").code(400)
+                );
+            }
+        }
+
         let mut request = AuditRequest {
             id: ObjectId::new(),
             customer_id,
@@ -118,6 +145,8 @@ impl RequestService {
             chat_id: None,
             edit_history: Vec::new(),
             unread_edits: HashMap::new(),
+            auditor_organization: request.auditor_organization.map(|v| v.parse().unwrap()),
+            customer_organization: request.customer_organization.map(|v| v.parse().unwrap()),
         };
 
         let edit_history_item = AuditEditHistory {
@@ -309,8 +338,19 @@ impl RequestService {
             return Ok(None);
         };
 
-        if !Read.get_access(&auth, &request) {
-            return Err(anyhow::anyhow!("User is not available to read this request").code(400));
+        let user_access = Read.get_access(&auth, &request);
+        if !user_access && request.auditor_organization.is_none() {
+            return Err(anyhow::anyhow!("User is not available to read this audit request").code(403));
+        }
+
+        if !user_access {
+            if let Some(auditor_organization) = request.auditor_organization {
+                let is_organization_auditor = check_is_organization_user(&self.context, auditor_organization)
+                    .await?;
+                if !is_organization_auditor {
+                    return Err(anyhow::anyhow!("User is not available to read this audit request").code(403));
+                }
+            }
         }
 
         Ok(Some(request))
@@ -389,8 +429,19 @@ impl RequestService {
             return Err(anyhow::anyhow!("No customer found").code(404));
         };
 
-        if !Edit.get_access(&auth, &request) {
-            return Err(anyhow::anyhow!("User is not available to change this audit request").code(400));
+        let user_access = Edit.get_access(&auth, &request);
+        if !user_access && request.auditor_organization.is_none() {
+            return Err(anyhow::anyhow!("User is not available to change this audit request").code(403));
+        }
+
+        let mut is_organization_auditor = false;
+        if !user_access {
+            if let Some(auditor_organization) = request.auditor_organization {
+                is_organization_auditor = check_is_organization_user(&self.context, auditor_organization).await?;
+                if !is_organization_auditor {
+                    return Err(anyhow::anyhow!("User is not available to change this audit request").code(403));
+                }
+            }
         }
 
         let mut is_history_changed = false;
@@ -439,16 +490,16 @@ impl RequestService {
 
         let last_changer_role = if user_id == request.customer_id {
             Role::Customer
-        } else if user_id == request.auditor_id {
+        } else if user_id == request.auditor_id || is_organization_auditor {
             Role::Auditor
         } else {
-            return Err(anyhow::anyhow!("User is not available to change this request").code(400));
+            return Err(anyhow::anyhow!("User is not available to change this request").code(403));
         };
 
-        let (receiver_id, receiver_role) = if last_changer_role == Role::Customer {
-            (request.auditor_id, Role::Auditor)
+        let (receiver_id, receiver_role, changer_id) = if last_changer_role == Role::Customer {
+            (request.auditor_id, Role::Auditor, request.customer_id)
         } else {
-            (request.customer_id, Role::Customer)
+            (request.customer_id, Role::Customer, request.auditor_id)
         };
 
         request.last_changer = last_changer_role;
@@ -461,7 +512,7 @@ impl RequestService {
             let edit_history_item = AuditEditHistory {
                 id: request.edit_history.len(),
                 date: request.last_modified.clone(),
-                author: user_id.to_hex(),
+                author: changer_id.to_hex(),
                 comment: change.comment,
                 audit: serde_json::to_string(&json!({
                     "project_name": project.name,
@@ -519,17 +570,35 @@ impl RequestService {
             return Err(anyhow::anyhow!("No customer found").code(404));
         };
 
-        if !Edit.get_access(&auth, &request) {
+        // if !Edit.get_access(&auth, &request) {
+        //     requests.insert(&request).await?;
+        //     return Err(anyhow::anyhow!("User is not available to delete this request").code(400));
+        // }
+
+        let user_access = Edit.get_access(&auth, &request);
+        if !user_access && request.auditor_organization.is_none() {
             requests.insert(&request).await?;
-            return Err(anyhow::anyhow!("User is not available to delete this request").code(400));
+            return Err(anyhow::anyhow!("User is not available to delete this audit request").code(403));
+        }
+
+        let mut is_organization_auditor = false;
+        if !user_access {
+            if let Some(auditor_organization) = request.auditor_organization {
+                is_organization_auditor = check_is_organization_user(&self.context, auditor_organization)
+                    .await?;
+                if !is_organization_auditor {
+                    requests.insert(&request).await?;
+                    return Err(anyhow::anyhow!("User is not available to delete this audit request").code(400));
+                }
+            }
         }
 
         let current_role = if auth.id() == Some(request.customer_id) {
             Role::Customer
-        } else if auth.id() == Some(request.auditor_id) {
+        } else if auth.id() == Some(request.auditor_id) || is_organization_auditor {
             Role::Auditor
         } else {
-            return Err(anyhow::anyhow!("User is not available to delete this request").code(400));
+            return Err(anyhow::anyhow!("User is not available to delete this request").code(403));
         };
 
         let public_request = PublicRequest::new(&self.context, request.clone()).await?;
@@ -606,6 +675,29 @@ impl RequestService {
 
         let result = requests
             .find_many(id, &Bson::ObjectId(user_id))
+            .await?
+            .into_iter()
+            .map(|r| r.stringify())
+            .collect();
+
+        Ok(result)
+    }
+
+    pub async fn find_organization_audit_requests(&self, org_id: ObjectId) -> error::Result<Vec<AuditRequest<String>>> {
+        let requests = self
+            .context
+            .try_get_repository::<AuditRequest<ObjectId>>()?;
+
+        let is_organization_member = check_is_organization_user(&self.context, org_id)
+            .await?;
+        if !is_organization_member {
+            return Err(
+                anyhow::anyhow!("User is not a member of this organization or the user is not able to view audits"
+            ).code(403));
+        }
+
+        let result = requests
+            .find_many("auditor_organization", &Bson::ObjectId(org_id))
             .await?
             .into_iter()
             .map(|r| r.stringify())
