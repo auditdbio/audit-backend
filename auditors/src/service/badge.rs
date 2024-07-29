@@ -310,6 +310,8 @@ impl BadgeService {
                 total_cost: request.total_cost.clone(),
                 description: request.description.clone(),
                 time: request.time.clone(),
+                auditor_organization: request.auditor_organization.clone().map(|org| org.id),
+                customer_organization: request.customer_organization.clone().map(|org| org.id),
             };
 
             let auth = Auth::User(request.customer_id.parse()?);
