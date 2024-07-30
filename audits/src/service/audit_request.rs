@@ -30,13 +30,13 @@ use common::{
         letter::CreateLetter,
         project::get_project,
         role::Role,
+        organization::OrgAccessLevel,
     },
     error::{self, AddCode},
     services::{API_PREFIX, CUSTOMERS_SERVICE, EVENTS_SERVICE, FRONTEND, PROTOCOL},
 };
 
 pub use common::api::requests::PublicRequest;
-use common::entities::organization::OrgAccessLevel;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RequestChange {

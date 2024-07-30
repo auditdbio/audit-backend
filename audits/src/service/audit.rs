@@ -36,10 +36,10 @@ use common::{
         issue::{severity_to_integer, ChangeIssue, Event, EventKind, Issue, Status, Action},
         project::get_project,
         role::Role,
+        organization::OrgAccessLevel,
     },
     error::{self, AddCode},
 };
-use common::entities::organization::OrgAccessLevel;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MyAuditResult {

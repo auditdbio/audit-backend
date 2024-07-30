@@ -91,9 +91,9 @@ impl OrganizationService {
             avatar: create_org.avatar,
             linked_accounts: vec![],
             organization_type: create_org.organization_type,
-            members: create_org.members.unwrap_or(vec![owner]),
-            last_modified: Utc::now().timestamp_micros(),
+            members: vec![owner],
             created_at: Utc::now().timestamp_micros(),
+            last_modified: Utc::now().timestamp_micros(),
         };
 
         organizations.insert(&organization).await?;
