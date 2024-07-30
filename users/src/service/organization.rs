@@ -1,9 +1,23 @@
 use chrono::Utc;
 use mongodb::bson::{Bson, doc, oid::ObjectId};
 use serde::{Serialize, Deserialize};
+use std::env::var;
 
 use common::{
-    api::{auditor::request_auditor, customer::request_customer},
+    api::{
+        auditor::request_auditor,
+        customer::request_customer,
+        linked_accounts::{
+            create_github_account,
+            create_linked_in_account,
+            create_x_account,
+            AddLinkedAccount,
+            GetGithubAccessToken,
+            LinkedService,
+        },
+        organization::GetOrganizationQuery,
+        user::get_by_id,
+    },
     context::GeneralContext,
     entities::{
         contacts::Contacts,
@@ -12,10 +26,11 @@ use common::{
             OrgAccessLevel, PublicOrganization,
         },
         role::Role,
+        user::PublicLinkedAccount,
     },
     error::{self, AddCode},
 };
-use common::api::organization::GetOrganizationQuery;
+use common::entities::user::LinkedAccount;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateOrganization {
@@ -109,9 +124,16 @@ impl OrganizationService {
 
         let organizations = self.context.try_get_repository::<Organization<ObjectId>>()?;
 
+        let user = get_by_id(&self.context, auth, id.clone()).await?;
+        let current_role = Role::parse(&user.current_role)?;
+
         let organizations_as_owner = organizations
             .find_many("owner.user_id", &Bson::String(id.to_hex()))
-            .await?;
+            .await?
+            .into_iter()
+            .filter(|org| org.organization_type == current_role)
+            .collect::<Vec<Organization<ObjectId>>>();
+
         let mut as_owner = vec![];
         for org in organizations_as_owner {
             let public_org = PublicOrganization::new(&self.context, org.clone(), true).await?;
@@ -120,7 +142,11 @@ impl OrganizationService {
 
         let organizations_as_member = organizations
             .find_many("members", &Bson::Document(doc! {"$elemMatch": { "user_id": id.to_hex() }}))
-            .await?;
+            .await?
+            .into_iter()
+            .filter(|org| org.organization_type == current_role)
+            .collect::<Vec<Organization<ObjectId>>>();
+
         let mut as_member = vec![];
         for org in organizations_as_member {
             let public_org = PublicOrganization::new(&self.context, org.clone(), true).await?;
@@ -341,5 +367,112 @@ impl OrganizationService {
         organizations.insert(&organization).await?;
 
         Ok(member)
+    }
+
+    pub async fn add_organization_linked_account(
+        &self,
+        org_id: ObjectId,
+        data: AddLinkedAccount,
+    ) -> error::Result<PublicLinkedAccount> {
+        let auth = self.context.auth();
+        let current_id = auth.id().unwrap();
+
+        let organizations = self.context.try_get_repository::<Organization<ObjectId>>()?;
+
+        let Some(mut organization) = organizations
+            .find("id", &Bson::ObjectId(org_id))
+            .await? else {
+            return Err(anyhow::anyhow!("Organization not found").code(404));
+        };
+
+        if current_id.to_hex() != organization.owner.user_id {
+            return Err(anyhow::anyhow!("User is not available to change this organization").code(403));
+        }
+
+        let linked_account: LinkedAccount;
+
+        if data.service == LinkedService::GitHub {
+            let github_auth = GetGithubAccessToken {
+                code: data.clone().code,
+                client_id: var("GITHUB_CLIENT_ID").unwrap(),
+                client_secret: var("GITHUB_CLIENT_SECRET").unwrap(),
+            };
+
+            linked_account = create_github_account(github_auth).await?;
+            if organization
+                .linked_accounts
+                .iter()
+                .find(|acc| acc.id == linked_account.id)
+                .is_some() {
+                return Err(anyhow::anyhow!("Account has already been added").code(400))
+            }
+
+            organization.linked_accounts.push(linked_account.clone());
+        } else if data.service == LinkedService::X {
+            linked_account = create_x_account(data).await?;
+            if organization
+                .linked_accounts
+                .iter()
+                .find(|acc| acc.id == linked_account.id)
+                .is_some() {
+                return Err(anyhow::anyhow!("Account has already been added").code(400))
+            }
+
+            organization.linked_accounts.push(linked_account.clone());
+        } else if data.service == LinkedService::LinkedIn {
+            linked_account = create_linked_in_account(data).await?;
+            if organization
+                .linked_accounts
+                .iter()
+                .find(|acc| acc.id == linked_account.id)
+                .is_some() {
+                return Err(anyhow::anyhow!("Account has already been added").code(400))
+            }
+
+            organization.linked_accounts.push(linked_account.clone());
+        } else {
+            return Err(anyhow::anyhow!("Account connection error").code(400));
+        }
+
+        organizations.delete("id", &organization.id).await?;
+        organizations.insert(&organization).await?;
+
+        Ok(PublicLinkedAccount::from(linked_account))
+    }
+
+    pub async fn delete_organization_linked_account(
+        &self,
+        org_id: ObjectId,
+        account_id: String,
+    ) -> error::Result<PublicLinkedAccount> {
+        let auth = self.context.auth();
+        let current_id = auth.id().unwrap();
+
+        let organizations = self.context.try_get_repository::<Organization<ObjectId>>()?;
+
+        let Some(mut organization) = organizations
+            .find("id", &Bson::ObjectId(org_id))
+            .await? else {
+            return Err(anyhow::anyhow!("Organization not found").code(404));
+        };
+
+        if current_id.to_hex() != organization.owner.user_id {
+            return Err(anyhow::anyhow!("User is not available to change this organization").code(403));
+        }
+
+        let Some(linked_account) = organization.linked_accounts
+            .iter()
+            .find(|acc| acc.id == account_id)
+            .cloned()
+            else {
+                return Err(anyhow::anyhow!("Linked account not found").code(404));
+            };
+
+        organization.linked_accounts.retain(|acc| acc.id != account_id);
+
+        organizations.delete("id", &organization.id).await?;
+        organizations.insert(&organization).await?;
+
+        Ok(PublicLinkedAccount::from(linked_account))
     }
 }

@@ -5,9 +5,15 @@ use actix_web::{
 use mongodb::bson::oid::ObjectId;
 
 use common::{
-    api::organization::GetOrganizationQuery,
+    api::{
+        linked_accounts::AddLinkedAccount,
+        organization::GetOrganizationQuery
+    },
     context::GeneralContext,
-    entities::organization::{OrganizationMember, OrgAccessLevel, PublicOrganization},
+    entities::{
+        organization::{OrganizationMember, OrgAccessLevel, PublicOrganization},
+        user::PublicLinkedAccount,
+    },
     error,
 };
 
@@ -94,6 +100,33 @@ pub async fn change_access(
     Ok(Json(
         OrganizationService::new(context)
             .change_access(org_id.parse()?, user_id.parse()?, data)
+            .await?
+    ))
+}
+
+#[post("/organization/{org_id}/linked_account")]
+pub async fn add_organization_linked_account(
+    context: GeneralContext,
+    path: Path<String>,
+    Json(data): Json<AddLinkedAccount>,
+) -> error::Result<Json<PublicLinkedAccount>> {
+    let org_id = path.into_inner();
+    Ok(Json(
+        OrganizationService::new(context)
+            .add_organization_linked_account(org_id.parse()?, data)
+            .await?
+    ))
+}
+
+#[delete("/organization/{org_id}/linked_account/{acc_id}")]
+pub async fn delete_organization_linked_account(
+    context: GeneralContext,
+    path: Path<(String, String)>,
+) -> error::Result<Json<PublicLinkedAccount>> {
+    let (org_id, acc_id) = path.into_inner();
+    Ok(Json(
+        OrganizationService::new(context)
+            .delete_organization_linked_account(org_id.parse()?, acc_id)
             .await?
     ))
 }

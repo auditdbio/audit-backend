@@ -36,6 +36,7 @@ use common::{
 };
 
 pub use common::api::requests::PublicRequest;
+use common::entities::organization::OrgAccessLevel;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RequestChange {
@@ -345,8 +346,11 @@ impl RequestService {
 
         if !user_access {
             if let Some(auditor_organization) = request.auditor_organization {
-                let is_organization_auditor = check_is_organization_user(&self.context, auditor_organization)
-                    .await?;
+                let is_organization_auditor = check_is_organization_user(
+                    &self.context,
+                    auditor_organization,
+                    None,
+                ).await?;
                 if !is_organization_auditor {
                     return Err(anyhow::anyhow!("User is not available to read this audit request").code(403));
                 }
@@ -437,7 +441,11 @@ impl RequestService {
         let mut is_organization_auditor = false;
         if !user_access {
             if let Some(auditor_organization) = request.auditor_organization {
-                is_organization_auditor = check_is_organization_user(&self.context, auditor_organization).await?;
+                is_organization_auditor = check_is_organization_user(
+                    &self.context,
+                    auditor_organization,
+                    Some(OrgAccessLevel::Editor),
+                ).await?;
                 if !is_organization_auditor {
                     return Err(anyhow::anyhow!("User is not available to change this audit request").code(403));
                 }
@@ -584,8 +592,11 @@ impl RequestService {
         let mut is_organization_auditor = false;
         if !user_access {
             if let Some(auditor_organization) = request.auditor_organization {
-                is_organization_auditor = check_is_organization_user(&self.context, auditor_organization)
-                    .await?;
+                is_organization_auditor = check_is_organization_user(
+                    &self.context,
+                    auditor_organization,
+                    Some(OrgAccessLevel::Editor),
+                ).await?;
                 if !is_organization_auditor {
                     requests.insert(&request).await?;
                     return Err(anyhow::anyhow!("User is not available to delete this audit request").code(400));
@@ -688,7 +699,7 @@ impl RequestService {
             .context
             .try_get_repository::<AuditRequest<ObjectId>>()?;
 
-        let is_organization_member = check_is_organization_user(&self.context, org_id)
+        let is_organization_member = check_is_organization_user(&self.context, org_id, None)
             .await?;
         if !is_organization_member {
             return Err(

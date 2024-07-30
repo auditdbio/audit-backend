@@ -44,19 +44,27 @@ pub async fn get_organization(
     )
 }
 
-pub async fn check_is_organization_user(context: &GeneralContext, org_id: ObjectId) -> error::Result<bool> {
+pub async fn check_is_organization_user(
+    context: &GeneralContext,
+    org_id: ObjectId,
+    access: Option<OrgAccessLevel>,
+) -> error::Result<bool> {
     let auth = context.auth();
     let user_id = auth.id().unwrap();
 
     let org = get_organization(context, org_id, None).await?;
     let is_owner = org.owner.user_id == user_id.to_hex();
+
     let is_member = org.members
         .as_ref()
         .map_or(false, |members| {
             members
                 .iter()
                 .any(|m| {
-                    m.user_id == user_id.to_hex() && m.access_level.contains(&OrgAccessLevel::Editor)
+                    m.user_id == user_id.to_hex() && match &access {
+                        Some(access) => m.access_level.contains(access),
+                        None => true,
+                    }
                 })
         });
 

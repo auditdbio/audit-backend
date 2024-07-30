@@ -64,6 +64,8 @@ pub fn create_app(
                 .service(delete_member)
                 .service(change_organization)
                 .service(change_access)
+                .service(add_organization_linked_account)
+                .service(delete_organization_linked_account)
         );
     app
 }

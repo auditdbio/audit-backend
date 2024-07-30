@@ -39,6 +39,7 @@ use common::{
     },
     error::{self, AddCode},
 };
+use common::entities::organization::OrgAccessLevel;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MyAuditResult {
@@ -269,8 +270,11 @@ impl AuditService {
 
         if !user_access {
             if let Some(auditor_organization) = audit.auditor_organization {
-                let is_organization_auditor = check_is_organization_user(&self.context, auditor_organization)
-                    .await?;
+                let is_organization_auditor = check_is_organization_user(
+                    &self.context,
+                    auditor_organization,
+                    None,
+                ).await?;
                 if !is_organization_auditor {
                     return Err(anyhow::anyhow!("User is not available to read this audit").code(403));
                 }
@@ -358,8 +362,11 @@ impl AuditService {
         let mut is_organization_auditor = false;
         if !user_access {
             if let Some(auditor_organization) = audit.auditor_organization {
-                is_organization_auditor = check_is_organization_user(&self.context, auditor_organization)
-                    .await?;
+                is_organization_auditor = check_is_organization_user(
+                    &self.context,
+                    auditor_organization,
+                    Some(OrgAccessLevel::Editor),
+                ).await?;
                 if !is_organization_auditor {
                     return Err(anyhow::anyhow!("User is not available to change this audit").code(403));
                 }
@@ -574,8 +581,11 @@ impl AuditService {
 
         if !user_access {
             if let Some(auditor_organization) = audit.auditor_organization {
-                let is_organization_auditor = check_is_organization_user(&self.context, auditor_organization)
-                    .await?;
+                let is_organization_auditor = check_is_organization_user(
+                    &self.context,
+                    auditor_organization,
+                    Some(OrgAccessLevel::Editor),
+                ).await?;
                 if !is_organization_auditor {
                     audits.insert(&audit).await?;
                     return Err(anyhow::anyhow!("User is not available to delete this audit").code(403));
@@ -702,8 +712,11 @@ impl AuditService {
         let mut is_organization_auditor = false;
         if !user_access {
             if let Some(auditor_organization) = audit.auditor_organization {
-                is_organization_auditor = check_is_organization_user(&self.context, auditor_organization)
-                    .await?;
+                is_organization_auditor = check_is_organization_user(
+                    &self.context,
+                    auditor_organization,
+                    Some(OrgAccessLevel::Editor),
+                ).await?;
                 if !is_organization_auditor {
                     return Err(anyhow::anyhow!("User is not available to change this issue").code(403));
                 }
@@ -1116,7 +1129,7 @@ impl AuditService {
     pub async fn find_organization_audits(&self, org_id: ObjectId) -> error::Result<Vec<PublicAudit>> {
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
-        let is_organization_member = check_is_organization_user(&self.context, org_id)
+        let is_organization_member = check_is_organization_user(&self.context, org_id, None)
             .await?;
         if !is_organization_member {
             return Err(

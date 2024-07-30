@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+use crate::error::{self, AddCode};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, ToSchema)]
 pub enum Role {
@@ -10,11 +11,11 @@ pub enum Role {
 }
 
 impl Role {
-    pub fn parse(s: &str) -> Result<Role, String> {
-        match s {
+    pub fn parse(s: &str) -> error::Result<Role> {
+        match s.to_lowercase().as_str() {
             "customer" => Ok(Role::Customer),
             "auditor" => Ok(Role::Auditor),
-            _ => Err(format!("Invalid role: {}", s)),
+            _ => Err(anyhow::anyhow!("Invalid role: {}", s).code(400)),
         }
     }
 
