@@ -18,6 +18,8 @@ use common::{
         },
         organization::GetOrganizationQuery,
         user::get_by_id,
+        send_notification,
+        NewNotification,
     },
     context::GeneralContext,
     entities::{
@@ -239,6 +241,13 @@ impl OrganizationService {
                 );
                 post_event(&self.context, event, self.context.server_auth()).await?;
 
+                let mut new_notification: NewNotification =
+                    serde_json::from_str(include_str!("../../templates/organization_invite.txt"))?;
+                new_notification.user_id = Some(member.user_id);
+                let variables = vec![("organization".to_owned(), organization.name.clone())];
+                new_notification.role = organization.organization_type.stringify().to_string();
+                send_notification(&self.context, false, true, new_notification, variables).await?;
+
                 organization.invites.push(OrganizationMember {
                     user_id: member.user_id.to_hex(),
                     access_level: member.access_level,
@@ -277,6 +286,13 @@ impl OrganizationService {
                     EventPayload::OrganizationInvite(public_org.clone())
                 );
                 post_event(&self.context, event, self.context.server_auth()).await?;
+
+                let mut new_notification: NewNotification =
+                    serde_json::from_str(include_str!("../../templates/organization_invite.txt"))?;
+                new_notification.user_id = Some(member.user_id);
+                let variables = vec![("organization".to_owned(), organization.name.clone())];
+                new_notification.role = organization.organization_type.stringify().to_string();
+                send_notification(&self.context, false, true, new_notification, variables).await?;
 
                 organization.invites.push(OrganizationMember {
                     user_id: member.user_id.to_hex(),
