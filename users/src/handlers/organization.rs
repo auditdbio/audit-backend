@@ -73,7 +73,22 @@ pub async fn delete_member(
 ) -> error::Result<Json<OrganizationMember>> {
     let (org_id, user_id) = path.into_inner();
     Ok(Json(
-        OrganizationService::new(context).delete_member(org_id.parse()?, user_id.parse()?).await?
+        OrganizationService::new(context)
+            .delete_member(org_id.parse()?, user_id.parse()?)
+            .await?
+    ))
+}
+
+#[delete("/organization/{org_id}/invites/{user_id}")]
+pub async fn cancel_invite(
+    context: GeneralContext,
+    path: Path<(String, String)>,
+) -> error::Result<Json<OrganizationMember>> {
+    let (org_id, user_id) = path.into_inner();
+    Ok(Json(
+        OrganizationService::new(context)
+            .cancel_invite(org_id.parse()?, user_id.parse()?)
+            .await?
     ))
 }
 
@@ -127,6 +142,32 @@ pub async fn delete_organization_linked_account(
     Ok(Json(
         OrganizationService::new(context)
             .delete_organization_linked_account(org_id.parse()?, acc_id)
+            .await?
+    ))
+}
+
+#[get("/organization/{org_id}/invites")]
+pub async fn get_invites(
+    context: GeneralContext,
+    path: Path<String>,
+) -> error::Result<Json<Vec<OrganizationMember>>> {
+    let org_id = path.into_inner();
+    Ok(Json(
+        OrganizationService::new(context)
+            .get_invites(org_id.parse()?)
+            .await?
+    ))
+}
+
+#[post("/organization/{org_id}/invites/confirm")]
+pub async fn confirm_invite(
+    context: GeneralContext,
+    path: Path<String>,
+) -> error::Result<Json<PublicOrganization>> {
+    let org_id = path.into_inner();
+    Ok(Json(
+        OrganizationService::new(context)
+            .confirm_invite(org_id.parse()?)
             .await?
     ))
 }

@@ -35,9 +35,11 @@ pub struct Organization<Id> {
     pub avatar: Option<String>,
     pub linked_accounts: Vec<LinkedAccount>,
     pub organization_type: Role,
-    pub members: Vec<OrganizationMember>,
     pub last_modified: i64,
     pub created_at: i64,
+    pub members: Vec<OrganizationMember>,
+    #[serde(default)]
+    pub invites: Vec<OrganizationMember>,
 }
 
 impl Organization<String> {
@@ -51,6 +53,7 @@ impl Organization<String> {
             linked_accounts: self.linked_accounts,
             organization_type: self.organization_type,
             members: self.members,
+            invites: self.invites,
             last_modified: self.last_modified,
             created_at: self.created_at,
         }
@@ -68,6 +71,7 @@ impl Organization<ObjectId> {
             linked_accounts: self.linked_accounts,
             organization_type: self.organization_type,
             members: self.members,
+            invites: self.invites,
             last_modified: self.last_modified,
             created_at: self.created_at,
         }

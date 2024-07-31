@@ -3,6 +3,7 @@ use common::{
         audits::{AuditChange, PublicAudit},
         issue::PublicIssue,
         report::PublicReport,
+        organization::{get_organization, GetOrganizationQuery},
     },
     auth::{Auth, Service},
     context::GeneralContext,
@@ -303,9 +304,22 @@ pub async fn create_report(
         .json::<PublicAudit>()
         .await?;
 
+    let mut auditor_name = audit.auditor_first_name + " " + &audit.auditor_last_name;
+    if audit.auditor_organization.is_some() {
+        let organization_query = GetOrganizationQuery {
+            with_members: Some(false),
+        };
+        let organization = get_organization(
+            &context,
+            audit.auditor_organization.unwrap().id.parse()?,
+            Some(organization_query),
+        ).await?;
+        auditor_name = organization.name;
+    }
+
     let report_data = generate_data(&audit);
     let input = RendererInput {
-        auditor_name: audit.auditor_first_name + " " + &audit.auditor_last_name,
+        auditor_name,
         profile_link: format!(
             "{}://{}/a/{}",
             PROTOCOL.as_str(),

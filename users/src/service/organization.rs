@@ -7,6 +7,7 @@ use common::{
     api::{
         auditor::request_auditor,
         customer::request_customer,
+        events::{post_event, PublicEvent, EventPayload},
         linked_accounts::{
             create_github_account,
             create_linked_in_account,
@@ -26,11 +27,10 @@ use common::{
             OrgAccessLevel, PublicOrganization,
         },
         role::Role,
-        user::PublicLinkedAccount,
+        user::{LinkedAccount, PublicLinkedAccount},
     },
     error::{self, AddCode},
 };
-use common::entities::user::LinkedAccount;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateOrganization {
@@ -58,6 +58,7 @@ pub struct NewOrganizationMember<Id> {
 pub struct MyOrganizations {
     pub owner: Vec<PublicOrganization>,
     pub member: Vec<PublicOrganization>,
+    pub invites: Vec<PublicOrganization>,
 }
 
 pub struct OrganizationService {
@@ -92,6 +93,7 @@ impl OrganizationService {
             linked_accounts: vec![],
             organization_type: create_org.organization_type,
             members: vec![owner],
+            invites: vec![],
             created_at: Utc::now().timestamp_micros(),
             last_modified: Utc::now().timestamp_micros(),
         };
@@ -155,9 +157,25 @@ impl OrganizationService {
             }
         }
 
+        let organizations_invite = organizations
+            .find_many("invites", &Bson::Document(doc! {"$elemMatch": { "user_id": id.to_hex() }}))
+            .await?
+            .into_iter()
+            .filter(|org| org.organization_type == current_role)
+            .collect::<Vec<Organization<ObjectId>>>();
+
+        let mut invites = vec![];
+        for org in organizations_invite {
+            let public_org = PublicOrganization::new(&self.context, org.clone(), true).await?;
+            if public_org.owner.user_id != id.to_hex() {
+                invites.push(public_org);
+            }
+        }
+
         Ok(MyOrganizations {
             owner: as_owner,
             member: as_member,
+            invites,
         })
     }
 
@@ -181,10 +199,24 @@ impl OrganizationService {
             return Err(anyhow::anyhow!("User is not available to change this organization").code(403));
         }
 
+        let public_org = PublicOrganization::new(
+            &self.context,
+            organization.clone(),
+            false
+        ).await?;
+
         if organization.organization_type == Role::Auditor {
             for mut member in new_members {
                 if organization
                     .members
+                    .iter()
+                    .find(|m| m.user_id == member.user_id.to_hex())
+                    .is_some() {
+                    continue
+                }
+
+                if organization
+                    .invites
                     .iter()
                     .find(|m| m.user_id == member.user_id.to_hex())
                     .is_some() {
@@ -201,7 +233,13 @@ impl OrganizationService {
 
                 member.access_level.retain(|access| access != &OrgAccessLevel::Owner);
 
-                organization.members.push(OrganizationMember {
+                let event = PublicEvent::new(
+                    member.user_id,
+                    EventPayload::OrganizationInvite(public_org.clone())
+                );
+                post_event(&self.context, event, self.context.server_auth()).await?;
+
+                organization.invites.push(OrganizationMember {
                     user_id: member.user_id.to_hex(),
                     access_level: member.access_level,
                 })
@@ -210,6 +248,14 @@ impl OrganizationService {
             for mut member in new_members {
                 if organization
                     .members
+                    .iter()
+                    .find(|m| m.user_id == member.user_id.to_hex())
+                    .is_some() {
+                    continue
+                }
+
+                if organization
+                    .invites
                     .iter()
                     .find(|m| m.user_id == member.user_id.to_hex())
                     .is_some() {
@@ -226,7 +272,13 @@ impl OrganizationService {
 
                 member.access_level.retain(|access| access != &OrgAccessLevel::Owner);
 
-                organization.members.push(OrganizationMember {
+                let event = PublicEvent::new(
+                    member.user_id,
+                    EventPayload::OrganizationInvite(public_org.clone())
+                );
+                post_event(&self.context, event, self.context.server_auth()).await?;
+
+                organization.invites.push(OrganizationMember {
                     user_id: member.user_id.to_hex(),
                     access_level: member.access_level,
                 })
@@ -239,6 +291,38 @@ impl OrganizationService {
         organizations.insert(&organization).await?;
 
         Ok(organization.members)
+    }
+
+    pub async fn confirm_invite(
+        &self,
+        org_id: ObjectId,
+    ) -> error::Result<PublicOrganization> {
+        let auth = self.context.auth();
+        let user_id = auth.id().unwrap();
+
+        let organizations = self.context.try_get_repository::<Organization<ObjectId>>()?;
+
+        let Some(mut organization) = organizations
+            .find("id", &Bson::ObjectId(org_id))
+            .await? else {
+            return Err(anyhow::anyhow!("Organization not found").code(404));
+        };
+
+        let Some(member) = organization
+            .invites
+            .iter()
+            .find(|m| m.user_id == user_id.to_hex())
+            .cloned() else {
+            return Err(anyhow::anyhow!("Invite not found").code(404));
+        };
+
+        organization.invites.retain(|inv| inv.user_id != user_id.to_hex());
+        organization.members.push(member);
+
+        organizations.delete("id", &organization.id).await?;
+        organizations.insert(&organization).await?;
+
+        Ok(PublicOrganization::new(&self.context, organization, true).await?)
     }
 
     pub async fn delete_member(
@@ -275,6 +359,42 @@ impl OrganizationService {
         };
 
         organization.members.retain(|member| member.user_id != user_id.to_hex());
+
+        organizations.delete("id", &organization.id).await?;
+        organizations.insert(&organization).await?;
+
+        Ok(member)
+    }
+
+    pub async fn cancel_invite(
+        &self,
+        org_id: ObjectId,
+        user_id: ObjectId,
+    ) -> error::Result<OrganizationMember> {
+        let auth = self.context.auth();
+        let current_id = auth.id().unwrap();
+
+        let organizations = self.context.try_get_repository::<Organization<ObjectId>>()?;
+
+        let Some(mut organization) = organizations
+            .find("id", &Bson::ObjectId(org_id))
+            .await? else {
+            return Err(anyhow::anyhow!("Organization not found").code(404));
+        };
+
+        if current_id.to_hex() != organization.owner.user_id && current_id != user_id {
+            return Err(anyhow::anyhow!("User is not available to change this organization").code(403));
+        }
+
+        let Some(member) = organization
+            .invites
+            .iter()
+            .find(|member| member.user_id == user_id.to_hex())
+            .cloned() else {
+            return Err(anyhow::anyhow!("Member not found").code(404));
+        };
+
+        organization.invites.retain(|member| member.user_id != user_id.to_hex());
 
         organizations.delete("id", &organization.id).await?;
         organizations.insert(&organization).await?;
@@ -474,5 +594,27 @@ impl OrganizationService {
         organizations.insert(&organization).await?;
 
         Ok(PublicLinkedAccount::from(linked_account))
+    }
+
+    pub async fn get_invites(
+        &self,
+        org_id: ObjectId,
+    ) -> error::Result<Vec<OrganizationMember>> {
+        let auth = self.context.auth();
+        let current_id = auth.id().unwrap();
+
+        let organizations = self.context.try_get_repository::<Organization<ObjectId>>()?;
+
+        let Some(organization) = organizations
+            .find("id", &Bson::ObjectId(org_id))
+            .await? else {
+            return Err(anyhow::anyhow!("Organization not found").code(404));
+        };
+
+        if current_id.to_hex() != organization.owner.user_id {
+            return Err(anyhow::anyhow!("User is not available to read this organization").code(403));
+        }
+
+        Ok(organization.invites)
     }
 }
