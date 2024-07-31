@@ -304,16 +304,16 @@ pub async fn create_report(
         .json::<PublicAudit>()
         .await?;
 
-    let mut auditor_name = audit.auditor_first_name + " " + &audit.auditor_last_name;
+    let mut auditor_name = audit.auditor_first_name.clone() + " " + &audit.auditor_last_name.clone();
     if audit.auditor_organization.is_some() {
         let organization_query = GetOrganizationQuery {
             with_members: Some(false),
         };
         let organization = get_organization(
             &context,
-            audit.auditor_organization.unwrap().id.parse()?,
+            audit.auditor_organization.clone().unwrap().id.parse()?,
             Some(organization_query),
-        ).await?;
+        ).await.unwrap();
         auditor_name = organization.name;
     }
 
