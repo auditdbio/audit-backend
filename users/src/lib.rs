@@ -59,6 +59,7 @@ pub fn create_app(
                 .service(find_user_by_email)
                 .service(create_organization)
                 .service(get_organization)
+                .service(get_organization_by_link_id)
                 .service(get_my_organizations)
                 .service(add_members)
                 .service(delete_member)
