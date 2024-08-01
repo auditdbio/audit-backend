@@ -1,9 +1,11 @@
 use mongodb::bson::oid::ObjectId;
+use rand::{distributions::Alphanumeric, Rng};
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     context::GeneralContext,
-    error,
+    error::{self, AddCode},
     entities::{
         organization::{PublicOrganization, OrgAccessLevel},
     },
@@ -73,4 +75,56 @@ pub async fn check_is_organization_user(
     }
 
     Ok(true)
+}
+
+pub async fn new_org_link_id(
+    context: &GeneralContext,
+    link_id: String,
+    org_id: String,
+    add_postfix: bool,
+) -> error::Result<String> {
+    let regex = Regex::new(r"[^A-Za-z0-9_-]").unwrap();
+    let link_id = regex.replace_all(&link_id, "").to_string().to_lowercase();
+
+    let organization = context
+        .make_request::<PublicOrganization>()
+        .get(format!(
+            "{}://{}/{}/organization/link_id/{}",
+            PROTOCOL.as_str(),
+            USERS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
+            link_id,
+        ))
+        .auth(context.server_auth())
+        .send()
+        .await?;
+
+    let is_taken = if organization.status().is_success() {
+        organization.json::<PublicOrganization>().await.map_or_else(
+            |_| false,
+            |org| org.id != org_id
+        )
+    } else { false };
+
+    if !add_postfix && is_taken.clone() {
+        return Err(anyhow::anyhow!("This link id is already taken").code(400));
+    }
+
+    if add_postfix && is_taken {
+        let rnd: String = rand::thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(5)
+            .map(char::from)
+            .collect();
+
+        let result_link_id = format!(
+            "{}-{}{}",
+            link_id,
+            org_id.chars().rev().take(3).collect::<String>(),
+            rnd,
+        );
+        return Ok(result_link_id.to_lowercase());
+    }
+
+    Ok(link_id.to_lowercase())
 }

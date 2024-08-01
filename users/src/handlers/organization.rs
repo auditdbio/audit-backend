@@ -55,6 +55,18 @@ pub async fn get_organization(
     ))
 }
 
+#[get("/organization/link_id/{link_id}")]
+pub async fn get_organization_by_link_id(
+    context: GeneralContext,
+    link_id: Path<String>,
+) -> error::Result<Json<PublicOrganization>> {
+    Ok(Json(
+        OrganizationService::new(context)
+            .get_organization_by_link_id(link_id.into_inner())
+            .await?
+    ))
+}
+
 #[post("/organization/{org_id}/members")]
 pub async fn add_members(
     context: GeneralContext,

@@ -2,6 +2,7 @@ use chrono::Utc;
 use mongodb::bson::{Bson, doc, oid::ObjectId};
 use serde::{Serialize, Deserialize};
 use std::env::var;
+use regex::Regex;
 
 use common::{
     api::{
@@ -16,7 +17,7 @@ use common::{
             GetGithubAccessToken,
             LinkedService,
         },
-        organization::GetOrganizationQuery,
+        organization::{new_org_link_id, GetOrganizationQuery},
         user::get_by_id,
         send_notification,
         NewNotification,
@@ -48,6 +49,7 @@ pub struct ChangeOrganization {
     pub name: Option<String>,
     pub contacts: Option<Contacts>,
     pub avatar: Option<String>,
+    pub link_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -77,19 +79,29 @@ impl OrganizationService {
         create_org: CreateOrganization
     ) -> error::Result<PublicOrganization> {
         let auth = self.context.auth();
-        let id = auth.id().ok_or(anyhow::anyhow!("No user id found"))?;
+        let user_id = auth.id().ok_or(anyhow::anyhow!("No user id found"))?;
 
         let organizations = self.context.try_get_repository::<Organization<ObjectId>>()?;
 
         let owner = OrganizationMember {
-            user_id: id.to_hex(),
+            user_id: user_id.to_hex(),
             access_level: vec![OrgAccessLevel::Owner, OrgAccessLevel::Representative, OrgAccessLevel::Editor]
         };
 
+        let org_id = ObjectId::new();
+
+        let link_id = new_org_link_id(
+            &self.context,
+            create_org.name.clone(),
+            org_id.to_hex(),
+            true,
+        ).await?;
+
         let organization = Organization {
-            id: ObjectId::new(),
+            id: org_id,
             owner: owner.clone(),
             name: create_org.name,
+            link_id,
             contacts: create_org.contacts,
             avatar: create_org.avatar,
             linked_accounts: vec![],
@@ -120,6 +132,21 @@ impl OrganizationService {
         };
 
         Ok(PublicOrganization::new(&self.context, organization, with_members).await?)
+    }
+
+    pub async fn get_organization_by_link_id(
+        &self,
+        link_id: String,
+    ) -> error::Result<PublicOrganization> {
+        let organizations = self.context.try_get_repository::<Organization<ObjectId>>()?;
+
+        let Some(organization) = organizations
+            .find("link_id", &Bson::String(link_id.clone().to_lowercase()))
+            .await? else {
+            return Err(anyhow::anyhow!("Organization not found").code(404));
+        };
+
+        Ok(PublicOrganization::new(&self.context, organization, true).await?)
     }
 
     pub async fn my_organizations(&self) -> error::Result<MyOrganizations> {
@@ -243,9 +270,14 @@ impl OrganizationService {
 
                 let mut new_notification: NewNotification =
                     serde_json::from_str(include_str!("../../templates/organization_invite.txt"))?;
+
                 new_notification.user_id = Some(member.user_id);
-                let variables = vec![("organization".to_owned(), organization.name.clone())];
                 new_notification.role = organization.organization_type.stringify().to_string();
+                let variables = vec![("organization".to_owned(), organization.name.clone())];
+                new_notification
+                    .links
+                    .push(format!("/o/{}", organization.id));
+
                 send_notification(&self.context, false, true, new_notification, variables).await?;
 
                 organization.invites.push(OrganizationMember {
@@ -289,9 +321,14 @@ impl OrganizationService {
 
                 let mut new_notification: NewNotification =
                     serde_json::from_str(include_str!("../../templates/organization_invite.txt"))?;
+
                 new_notification.user_id = Some(member.user_id);
-                let variables = vec![("organization".to_owned(), organization.name.clone())];
                 new_notification.role = organization.organization_type.stringify().to_string();
+                let variables = vec![("organization".to_owned(), organization.name.clone())];
+                new_notification
+                    .links
+                    .push(format!("/o/{}", organization.id));
+
                 send_notification(&self.context, false, true, new_notification, variables).await?;
 
                 organization.invites.push(OrganizationMember {
@@ -448,6 +485,24 @@ impl OrganizationService {
 
         if change.avatar.is_some() {
             organization.avatar = change.avatar;
+        }
+
+        if let Some(link_id) = change.link_id {
+            let regex = Regex::new(r"^[A-Za-z0-9_-]+$").unwrap();
+            if regex.is_match(&link_id) {
+                return Err(
+                    anyhow::anyhow!("Link ID may only contain alphanumeric characters, hyphens or underscore").code(400)
+                );
+            }
+
+            let new_link_id = new_org_link_id(
+                &self.context,
+                link_id,
+                organization.id.to_hex(),
+                false,
+            ).await?;
+
+            organization.link_id = new_link_id;
         }
 
         organizations.delete("id", &organization.id).await?;
