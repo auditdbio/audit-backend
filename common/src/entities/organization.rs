@@ -12,6 +12,7 @@ use crate::{
     },
     repository::Entity,
 };
+use crate::auth::Auth;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum OrgAccessLevel {
@@ -118,7 +119,17 @@ impl PublicOrganization {
         with_members: bool,
     ) -> error::Result<PublicOrganization> {
         let auth = context.auth();
-        let current_id = auth.id().unwrap();
+
+        let mut is_member = false;
+        if auth != Auth::None {
+            if let Some(current_id) = auth.id() {
+                is_member = org.owner.user_id == current_id.to_hex() || org
+                    .members
+                    .iter()
+                    .find(|m| m.user_id == current_id.to_hex())
+                    .is_some();
+            }
+        }
 
         let linked_accounts = org
             .linked_accounts
@@ -126,12 +137,6 @@ impl PublicOrganization {
             .map(|acc| PublicLinkedAccount::from(acc))
             .filter(|acc| acc.is_public)
             .collect();
-
-        let is_member = org.owner.user_id == current_id.to_hex() || org
-            .members
-            .iter()
-            .find(|m| m.user_id == current_id.to_hex())
-            .is_some();
 
         let contacts = if org.contacts.public_contacts || is_member {
             org.contacts.clone()
