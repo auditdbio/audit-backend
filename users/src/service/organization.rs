@@ -276,7 +276,7 @@ impl OrganizationService {
                 let variables = vec![("organization".to_owned(), organization.name.clone())];
                 new_notification
                     .links
-                    .push(format!("/o/{}", organization.id));
+                    .push(format!("/o/{}", organization.link_id));
 
                 send_notification(&self.context, false, true, new_notification, variables).await?;
 
@@ -327,7 +327,7 @@ impl OrganizationService {
                 let variables = vec![("organization".to_owned(), organization.name.clone())];
                 new_notification
                     .links
-                    .push(format!("/o/{}", organization.id));
+                    .push(format!("/o/{}", organization.link_id));
 
                 send_notification(&self.context, false, true, new_notification, variables).await?;
 
