@@ -121,14 +121,15 @@ impl PublicOrganization {
         let auth = context.auth();
 
         let mut is_member = false;
-        if let Auth::None = auth {
-        } else {
-            if let Some(current_id) = auth.id() {
-                is_member = org.owner.user_id == current_id.to_hex() || org
-                    .members
-                    .iter()
-                    .find(|m| m.user_id == current_id.to_hex())
-                    .is_some();
+        match auth {
+            Auth::None => log::info!("User is not authorized"),
+            _ => {
+                if let Some(current_id) = auth.id() {
+                    is_member = org.owner.user_id == current_id.to_hex() || org
+                        .members
+                        .iter()
+                        .any(|m| m.user_id == current_id.to_hex());
+                }
             }
         }
 
