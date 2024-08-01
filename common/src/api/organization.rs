@@ -99,18 +99,11 @@ pub async fn new_org_link_id(
         .send()
         .await?;
 
-    log::info!("status {:?}", organization.status());
-
     let is_taken = if organization.status().is_success() {
-        let test_org = organization.json::<PublicOrganization>().await?;
-        log::info!("org: {:?}", test_org);
-        log::info!("org resp id: {} - org arg id: {}", test_org.id, org_id);
-
-        // organization.json::<PublicOrganization>().await.map_or_else(
-        //     |_| false,
-        //     |org| org.id != org_id
-        // )
-        false
+        organization.json::<PublicOrganization>().await.map_or_else(
+            |_| false,
+            |org| org.id != org_id
+        )
     } else { false };
 
     if !add_postfix && is_taken.clone() {

@@ -121,7 +121,8 @@ impl PublicOrganization {
         let auth = context.auth();
 
         let mut is_member = false;
-        if auth != Auth::None {
+        if let Auth::None = auth {
+        } else {
             if let Some(current_id) = auth.id() {
                 is_member = org.owner.user_id == current_id.to_hex() || org
                     .members
