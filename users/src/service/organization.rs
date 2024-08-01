@@ -489,7 +489,7 @@ impl OrganizationService {
 
         if let Some(link_id) = change.link_id {
             let regex = Regex::new(r"^[A-Za-z0-9_-]+$").unwrap();
-            if regex.is_match(&link_id) {
+            if !regex.is_match(&link_id) {
                 return Err(
                     anyhow::anyhow!("Link ID may only contain alphanumeric characters, hyphens or underscore").code(400)
                 );
