@@ -197,7 +197,7 @@ impl PublicOrganization {
         org_type: Role,
         member: OrganizationMember,
     ) -> error::Result<PublicOrganizationMember> {
-        let auth = context.auth();
+        let auth = context.server_auth();
 
         let (username, avatar) = if org_type == Role::Auditor {
             let auditor = request_auditor(&context, member.user_id.parse()?, auth.clone()).await?;
