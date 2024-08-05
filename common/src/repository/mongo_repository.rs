@@ -2,10 +2,9 @@ use async_trait::async_trait;
 use chrono::Utc;
 use futures::StreamExt;
 use mongodb::{
-    bson::{doc, oid::ObjectId, Bson, to_document},
-    options::FindOptions,
+    bson::{Document, doc, oid::ObjectId, Bson, to_document},
+    options::{FindOptions, FindOneAndUpdateOptions, ReturnDocument},
 };
-use mongodb::bson::Document;
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::error::{self, AddCode};
@@ -70,9 +69,13 @@ where
         let mut update = update.clone();
         update.set_last_modified(Utc::now().timestamp_micros());
 
+        let options = FindOneAndUpdateOptions::builder()
+            .return_document(ReturnDocument::After)
+            .build();
+
         let result = self
             .collection
-            .find_one_and_update(old, doc! {"$set": to_document(&update)?}, None)
+            .find_one_and_update(old, doc! {"$set": to_document(&update)?}, options)
             .await?;
 
         if result.is_none() {
