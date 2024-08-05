@@ -59,7 +59,7 @@ where
         Ok(result)
     }
 
-    async fn update_one(&self, mut old: Document, update: &T) -> error::Result<bool> {
+    async fn update_one(&self, mut old: Document, update: &T) -> error::Result<T> {
         old.extend(doc! {
             "$or": [
                 { "last_modified": Bson::Int64(update.last_modified()) },
@@ -73,14 +73,13 @@ where
         let result = self
             .collection
             .find_one_and_update(old, doc! {"$set": to_document(&update)?}, None)
-            .await?
-            .is_some();
+            .await?;
 
-        if !result {
+        if result.is_none() {
             return Err(anyhow::anyhow!("Failed to save changes").code(409));
         }
 
-        Ok(result)
+        Ok(result.unwrap())
     }
 
     async fn find_all(&self, skip: u32, limit: u32) -> error::Result<Vec<T>> {

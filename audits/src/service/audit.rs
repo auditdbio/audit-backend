@@ -448,8 +448,8 @@ impl AuditService {
         post_event(&self.context, event, self.context.server_auth()).await?;
 
         if change.report.is_some() && audit.status != AuditStatus::Resolved {
-            audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
-            return Ok(public_audit)
+            let updated_audit = audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
+            return Ok(PublicAudit::new(&self.context, updated_audit.clone()).await?)
         }
 
         if !audit.no_customer
@@ -475,9 +475,9 @@ impl AuditService {
             });
         }
 
-        audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
+        let updated_audit = audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
 
-        Ok(public_audit)
+        Ok(PublicAudit::new(&self.context, updated_audit.clone()).await?)
     }
 
     pub async fn delete(&self, id: ObjectId) -> error::Result<PublicAudit> {
@@ -1102,6 +1102,7 @@ impl AuditService {
                     audit.price = updated_audit.price;
                     audit.total_cost = updated_audit.total_cost;
                     audit.time = updated_audit.time;
+                    audit.last_modified = updated_audit.last_modified;
                 }
             }
         }
