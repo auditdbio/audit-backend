@@ -20,7 +20,7 @@ use common::{
         },
         events::{post_event, EventPayload, PublicEvent},
         issue::PublicIssue,
-        organization::{get_organization, check_is_organization_user},
+        organization::{get_organization, check_is_organization_user, check_editor_rights},
         send_notification, NewNotification,
         seartch::PaginationParams,
     },
@@ -82,6 +82,9 @@ impl AuditService {
                     anyhow::anyhow!("The type for the auditor's organization does not match").code(400)
                 );
             }
+            if let Some(members) = org.members {
+                check_editor_rights(members, user_id).await?;
+            }
         }
         if request.customer_organization.is_some() {
             let org = get_organization(
@@ -93,6 +96,9 @@ impl AuditService {
                 return Err(
                     anyhow::anyhow!("The type for the customer's organization does not match").code(400)
                 );
+            }
+            if let Some(members) = org.members {
+                check_editor_rights(members, user_id).await?;
             }
         }
 
@@ -192,10 +198,16 @@ impl AuditService {
         request: NoCustomerAuditRequest,
     ) -> error::Result<PublicAudit> {
         let auth = self.context.auth();
+        let user_id = auth.id().unwrap();
+
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
         let auditor_id: ObjectId = request.auditor_id.parse()?;
         let customer_id: ObjectId = auditor_id;
+
+        if user_id != auditor_id {
+            return Err(anyhow::anyhow!("Auditor ID doesn't match current user").code(403));
+        }
 
         if request.auditor_organization.is_some() {
             let org = get_organization(
@@ -207,6 +219,9 @@ impl AuditService {
                 return Err(
                     anyhow::anyhow!("The type for the auditor's organization does not match").code(400)
                 );
+            }
+            if let Some(members) = org.members {
+                check_editor_rights(members, user_id).await?;
             }
         }
 

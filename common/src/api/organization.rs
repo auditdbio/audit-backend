@@ -7,7 +7,7 @@ use crate::{
     context::GeneralContext,
     error::{self, AddCode},
     entities::{
-        organization::{PublicOrganization, OrgAccessLevel},
+        organization::{PublicOrganization, OrgAccessLevel, PublicOrganizationMember},
     },
     services::{API_PREFIX, USERS_SERVICE, PROTOCOL},
 };
@@ -75,6 +75,23 @@ pub async fn check_is_organization_user(
     }
 
     Ok(true)
+}
+
+pub async fn check_editor_rights(members: Vec<PublicOrganizationMember>, user_id: ObjectId) -> error::Result<()> {
+    if members
+        .iter()
+        .find(|m| {
+            m.user_id == user_id.to_hex()
+                && (m.access_level.contains(&OrgAccessLevel::Editor)
+                || m.access_level.contains(&OrgAccessLevel::Owner))
+        })
+        .is_none() {
+        return Err(
+            anyhow::anyhow!("The user doesn't have permission to create an audit").code(403)
+        );
+    }
+
+    Ok(())
 }
 
 pub async fn new_org_link_id(

@@ -18,7 +18,7 @@ use common::{
         events::{EventPayload, PublicEvent},
         mail::send_mail,
         requests::CreateRequest,
-        organization::{check_is_organization_user, get_organization},
+        organization::{check_is_organization_user, get_organization, check_editor_rights},
         seartch::PaginationParams,
         send_notification, NewNotification,
     },
@@ -96,12 +96,6 @@ impl RequestService {
             );
         };
 
-        let price_per_line = if request.total_cost.is_none() {
-            request.price
-        } else {
-            None
-        };
-
         let project = get_project(&self.context, request.project_id.parse()?).await?;
 
         if request.auditor_organization.is_some() {
@@ -114,6 +108,10 @@ impl RequestService {
                 return Err(
                     anyhow::anyhow!("The type for the auditor's organization does not match").code(400)
                 );
+            }
+
+            if let Some(members) = org.members {
+                check_editor_rights(members, user_id).await?;
             }
         }
 
@@ -128,7 +126,16 @@ impl RequestService {
                     anyhow::anyhow!("The type for the customer's organization does not match").code(400)
                 );
             }
+            if let Some(members) = org.members {
+                check_editor_rights(members, user_id).await?;
+            }
         }
+
+        let price_per_line = if request.total_cost.is_none() {
+            request.price
+        } else {
+            None
+        };
 
         let mut request = AuditRequest {
             id: ObjectId::new(),
