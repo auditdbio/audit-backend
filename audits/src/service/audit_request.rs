@@ -500,7 +500,9 @@ impl RequestService {
             message_id: chat.last_message.id,
         });
 
-        requests.update_one(doc! {"_id": &request.id}, &request).await?;
+        // requests.update_one(doc! {"_id": &request.id}, &request).await?;
+        requests.delete("_id", &request.id).await?;
+        requests.insert(&request).await?;
 
         Ok(public_request)
     }
@@ -657,7 +659,9 @@ impl RequestService {
             .context
             .try_get_repository::<AuditRequest<ObjectId>>()?;
 
-        requests.update_one(doc! {"_id": &request.id}, &request).await?;
+        // requests.update_one(doc! {"_id": &request.id}, &request).await?;
+        requests.delete("_id", &request.id).await?;
+        requests.insert(&request).await?;
 
         Ok(())
     }

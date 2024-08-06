@@ -279,11 +279,11 @@ impl AuditorService {
             auditor.link_id = Some(new_link_id)
         }
 
-        // auditor.last_modified = Utc::now().timestamp_micros();
+        auditor.last_modified = Utc::now().timestamp_micros();
 
-        // auditors.delete("user_id", &id).await?;
-        // auditors.insert(&auditor).await?;
-        auditors.update_one(doc! {"user_id": &id}, &auditor).await?;
+        auditors.delete("user_id", &id).await?;
+        auditors.insert(&auditor).await?;
+        // auditors.update_one(doc! {"user_id": &id}, &auditor).await?;
 
         Ok(auditor.stringify())
     }
@@ -312,11 +312,11 @@ impl AuditorService {
             auditor.rating = change.rating;
         }
 
-        // auditor.last_modified = Utc::now().timestamp_micros();
+        auditor.last_modified = Utc::now().timestamp_micros();
 
-        // auditors.delete("user_id", &id).await?;
-        // auditors.insert(&auditor).await?;
-        auditors.update_one(doc! {"user_id": &id}, &auditor).await?;
+        auditors.delete("user_id", &id).await?;
+        auditors.insert(&auditor).await?;
+        // auditors.update_one(doc! {"user_id": &id}, &auditor).await?;
 
         Ok(auditor.stringify())
     }

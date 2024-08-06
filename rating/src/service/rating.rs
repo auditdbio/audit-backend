@@ -87,7 +87,9 @@ impl RatingService {
             } else {
                 let rating = rating.calculate(&self.context, role).await?;
 
-                ratings.update_one(doc! {"id": &rating.id}, &rating).await?;
+                // ratings.update_one(doc! {"id": &rating.id}, &rating).await?;
+                ratings.delete("id", &rating.id).await?;
+                ratings.insert(&rating).await?;
                 Ok(rating)
             }
         }
@@ -217,9 +219,9 @@ impl RatingService {
         let rating = rating.calculate(&self.context, receiver_role).await?;
 
         let ratings = self.context.try_get_repository::<Rating<ObjectId>>()?;
-        // ratings.delete("id", &rating.id).await?;
-        // ratings.insert(&rating).await?;
-        ratings.update_one(doc! {"id": &rating.id}, &rating).await?;
+        ratings.delete("id", &rating.id).await?;
+        ratings.insert(&rating).await?;
+        // ratings.update_one(doc! {"id": &rating.id}, &rating).await?;
 
         Ok(create_feedback.stringify())
     }
