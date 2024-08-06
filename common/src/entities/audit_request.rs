@@ -4,9 +4,10 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::{
+    impl_has_last_modified,
     api::chat::AuditMessageId,
     entities::audit::AuditEditHistory,
-    repository::Entity,
+    repository::{Entity, HasLastModified},
 };
 
 use super::role::Role;
@@ -47,6 +48,8 @@ pub struct AuditRequest<Id> {
     #[serde(default)]
     pub unread_edits: HashMap<String, usize>,
 }
+
+impl_has_last_modified!(AuditRequest<ObjectId>);
 
 impl AuditRequest<String> {
     pub fn parse(self) -> AuditRequest<ObjectId> {

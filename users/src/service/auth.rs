@@ -1,6 +1,8 @@
 use actix_web::HttpRequest;
 use chrono::Utc;
 use common::{
+    default_timestamp,
+    impl_has_last_modified,
     access_rules::AccessRules,
     api::{
         self,
@@ -21,7 +23,7 @@ use common::{
         user::{LinkedAccount, User, UserLogin},
     },
     error::{self, AddCode},
-    repository::Entity,
+    repository::{Entity, HasLastModified},
     services::{API_PREFIX, FRONTEND, MAIL_SERVICE, PROTOCOL, USERS_SERVICE},
 };
 use mongodb::bson::{oid::ObjectId, Bson};
@@ -58,7 +60,11 @@ pub struct Link {
     pub user: User<ObjectId>,
     pub code: String,
     pub secret: Option<String>,
+    #[serde(default = "default_timestamp")]
+    pub last_modified: i64,
 }
+
+impl_has_last_modified!(Link);
 
 impl Entity for Link {
     fn id(&self) -> ObjectId {
@@ -70,7 +76,11 @@ impl Entity for Link {
 pub struct Code {
     pub code: String,
     pub user: ObjectId,
+    #[serde(default = "default_timestamp")]
+    pub last_modified: i64,
 }
+
+impl_has_last_modified!(Code);
 
 impl Entity for Code {
     fn id(&self) -> ObjectId {
@@ -243,6 +253,7 @@ impl AuthService {
             user: new_user,
             code: code.clone(),
             secret: user.secret,
+            last_modified: Utc::now().timestamp_micros(),
         };
 
         if verify_email {
@@ -550,6 +561,7 @@ impl AuthService {
         let code = Code {
             code: code.clone(),
             user: user.id,
+            last_modified: Utc::now().timestamp_micros(),
         };
 
         let codes = self.context.try_get_repository::<Code>()?;
