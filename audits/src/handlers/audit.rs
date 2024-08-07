@@ -80,7 +80,7 @@ pub async fn patch_audit(
     Json(data): Json<AuditChange>,
 ) -> error::Result<Json<PublicAudit>> {
     Ok(Json(
-        AuditService::new(context).change(id.parse()?, data).await?,
+        AuditService::new(context).change_and_save(id.parse()?, data).await?,
     ))
 }
 

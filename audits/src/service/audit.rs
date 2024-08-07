@@ -284,7 +284,11 @@ impl AuditService {
         Ok(public_audits)
     }
 
-    pub async fn change(&self, id: ObjectId, change: AuditChange) -> error::Result<PublicAudit> {
+    async fn change(
+        &self,
+        id: ObjectId,
+        change: AuditChange,
+    ) -> error::Result<Audit<ObjectId>> {
         let auth = self.context.auth();
         let user_id = auth.id().unwrap();
 
@@ -395,8 +399,6 @@ impl AuditService {
             }
         }
 
-        // audit.last_modified = Utc::now().timestamp_micros();
-
         let (
             event_receiver,
             receiver_role,
@@ -448,8 +450,7 @@ impl AuditService {
         post_event(&self.context, event, self.context.server_auth()).await?;
 
         if change.report.is_some() && audit.status != AuditStatus::Resolved {
-            let updated_audit = audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
-            return Ok(PublicAudit::new(&self.context, updated_audit.clone()).await?)
+            return Ok(audit)
         }
 
         if !audit.no_customer
@@ -475,6 +476,13 @@ impl AuditService {
             });
         }
 
+        Ok(audit)
+    }
+
+    pub async fn change_and_save(&self, id: ObjectId, change: AuditChange) -> error::Result<PublicAudit> {
+        let audit = self.change(id, change).await?;
+
+        let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
         let updated_audit = audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
 
         Ok(PublicAudit::new(&self.context, updated_audit.clone()).await?)
@@ -1102,7 +1110,6 @@ impl AuditService {
                     audit.price = updated_audit.price;
                     audit.total_cost = updated_audit.total_cost;
                     audit.time = updated_audit.time;
-                    audit.last_modified = updated_audit.last_modified;
                 }
             }
         }
