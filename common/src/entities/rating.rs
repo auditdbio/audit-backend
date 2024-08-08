@@ -12,8 +12,9 @@ use crate::{
         role::Role,
     },
     error,
-    repository::Entity,
+    repository::{Entity, HasLastModified},
     services::{AUDITS_SERVICE, AUDITORS_SERVICE, API_PREFIX, CUSTOMERS_SERVICE, PROTOCOL},
+    default_timestamp, impl_has_last_modified,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -22,7 +23,11 @@ pub struct Rating<Id> {
     pub user_id: Id,
     pub auditor: RoleRating<Id>,
     pub customer: RoleRating<Id>,
+    #[serde(default = "default_timestamp")]
+    pub last_modified: i64,
 }
+
+impl_has_last_modified!(Rating<ObjectId>);
 
 impl Rating<ObjectId> {
     pub fn stringify(self) -> Rating<String> {
@@ -31,6 +36,7 @@ impl Rating<ObjectId> {
             user_id: self.user_id.to_hex(),
             auditor: self.auditor.stringify(),
             customer: self.customer.stringify(),
+            last_modified: self.last_modified,
         }
     }
 
@@ -167,19 +173,19 @@ impl Rating<ObjectId> {
         summary = (summary * 10.0).trunc() / 10.0;
 
         let rating_details = serde_json::to_string(&json!({
-            "Identity points": format!("{} out of {}", identity_points, IDENTITY_MAX_POINTS),
+            "Identity points": format!("{}/{}", identity_points, IDENTITY_MAX_POINTS),
             "Completed in time points": format!(
-                "{} out of {}",
+                "{}/{}",
                 (completed_in_time_points * 10.0).trunc() / 10.0,
                 COMPLETED_IN_TIME_MAX_POINTS,
             ),
             "Last completed audits points": format!(
-                "{} out of {}",
+                "{}/{}",
                 (last_completed_audits_points * 10.0).trunc() / 10.0,
                 LAST_COMPLETED_MAX_POINTS,
             ),
             "Feedback points": format!(
-                "{} out of {}",
+                "{}/{}",
                 (feedback_points * 10.0).trunc() / 10.0,
                 FEEDBACK_MAX_POINTS,
             ),
@@ -239,6 +245,7 @@ impl Rating<String> {
             user_id: self.user_id.parse().unwrap(),
             auditor: self.auditor.parse(),
             customer: self.customer.parse(),
+            last_modified: self.last_modified,
         }
     }
 }
@@ -351,6 +358,8 @@ pub struct UserFeedbackRating {
 pub struct FeedbackFrom<Id> {
     pub user_id: Id,
     pub role: Role,
+    pub username: Option<String>,
+    pub avatar: Option<String>,
 }
 
 impl FeedbackFrom<String> {
@@ -358,6 +367,8 @@ impl FeedbackFrom<String> {
         FeedbackFrom {
             user_id: self.user_id.parse().unwrap(),
             role: self.role,
+            username: self.username,
+            avatar: self.avatar,
         }
     }
 }
@@ -367,6 +378,8 @@ impl FeedbackFrom<ObjectId> {
         FeedbackFrom {
             user_id: self.user_id.to_hex(),
             role: self.role,
+            username: self.username,
+            avatar: self.avatar,
         }
     }
 }

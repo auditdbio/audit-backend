@@ -1,8 +1,9 @@
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use crate::{
+    impl_has_last_modified,
     api::linked_accounts::LinkedService,
-    repository::Entity,
+    repository::{Entity, HasLastModified},
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -63,6 +64,8 @@ pub struct User<Id> {
     pub linked_accounts: Option<Vec<LinkedAccount>>,
     pub is_passwordless: Option<bool>,
 }
+
+impl_has_last_modified!(User<ObjectId>);
 
 impl User<String> {
     pub fn parse(self) -> User<ObjectId> {

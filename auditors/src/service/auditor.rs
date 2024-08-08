@@ -13,7 +13,7 @@ use common::{
     error::{self, AddCode},
     services::{API_PREFIX, PROTOCOL, USERS_SERVICE},
 };
-use mongodb::bson::{oid::ObjectId, Bson};
+use mongodb::bson::{oid::ObjectId, Bson, doc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -279,10 +279,11 @@ impl AuditorService {
             auditor.link_id = Some(new_link_id)
         }
 
-        auditor.last_modified = Utc::now().timestamp_micros();
+        // auditor.last_modified = Utc::now().timestamp_micros();
 
-        auditors.delete("user_id", &id).await?;
-        auditors.insert(&auditor).await?;
+        // auditors.delete("user_id", &id).await?;
+        // auditors.insert(&auditor).await?;
+        auditors.update_one(doc! {"user_id": &id}, &auditor).await?;
 
         Ok(auditor.stringify())
     }
@@ -311,10 +312,11 @@ impl AuditorService {
             auditor.rating = change.rating;
         }
 
-        auditor.last_modified = Utc::now().timestamp_micros();
+        // auditor.last_modified = Utc::now().timestamp_micros();
 
-        auditors.delete("user_id", &id).await?;
-        auditors.insert(&auditor).await?;
+        // auditors.delete("user_id", &id).await?;
+        // auditors.insert(&auditor).await?;
+        auditors.update_one(doc! {"user_id": &id}, &auditor).await?;
 
         Ok(auditor.stringify())
     }

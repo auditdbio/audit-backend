@@ -1,9 +1,13 @@
-use mongodb::bson::{Bson, oid::ObjectId};
+use mongodb::bson::{Bson, doc, oid::ObjectId};
 use chrono::{Utc, NaiveDateTime, Duration};
 use serde::{Deserialize, Serialize};
 
 use common::{
-    api::audits::PublicAudit,
+    api::{
+        audits::PublicAudit,
+        auditor::request_auditor,
+        customer::request_customer,
+    },
     context::GeneralContext,
     error::{self, AddCode},
     entities::{
@@ -12,12 +16,12 @@ use common::{
             CompletedAuditInfo, Rating,
             RoleRating, UserFeedback,
             FeedbackFrom, UserFeedbackRating,
+            FeedbackStars,
         },
         role::Role,
     },
     services::{API_PREFIX, AUDITS_SERVICE, PROTOCOL},
 };
-use common::entities::rating::FeedbackStars;
 
 
 pub struct RatingService {
@@ -43,6 +47,7 @@ impl RatingService {
             user_id,
             auditor: role_rating.clone(),
             customer: role_rating,
+            last_modified: Utc::now().timestamp_micros(),
         };
 
         let rating = rating.calculate(&self.context, role).await?;
@@ -55,6 +60,7 @@ impl RatingService {
         user_id: ObjectId,
         role: Role,
         force_update: bool,
+        recalculate: bool,
     ) -> error::Result<Rating<ObjectId>> {
         let ratings = self.context.try_get_repository::<Rating<ObjectId>>()?;
         let rating = ratings
@@ -76,11 +82,12 @@ impl RatingService {
 
             return if last_update_date == today_date && !force_update {
                 Ok(rating)
+            } else if !recalculate {
+                Ok(rating)
             } else {
                 let rating = rating.calculate(&self.context, role).await?;
 
-                ratings.delete("id", &rating.id).await?;
-                ratings.insert(&rating).await?;
+                ratings.update_one(doc! {"id": &rating.id}, &rating).await?;
                 Ok(rating)
             }
         }
@@ -92,7 +99,7 @@ impl RatingService {
     }
 
     pub async fn get_user_rating(&self, user_id: ObjectId, role: Role) -> error::Result<SummaryResponse> {
-        let rating = self.find_or_create(user_id, role, false).await?;
+        let rating = self.find_or_create(user_id, role, false, true).await?;
         let summary = if role == Role::Auditor {
             rating.auditor.summary
         } else {
@@ -105,18 +112,24 @@ impl RatingService {
     }
 
     pub async fn get_user_rating_details(&self, user_id: ObjectId, role: Role) -> error::Result<RatingDetailsResponse> {
-        let rating = self.find_or_create(user_id, role, false).await?;
+        let rating = self.find_or_create(user_id, role, false, true).await?;
         Ok(RatingDetailsResponse::from_rating(rating, role, 90))
     }
 
     pub async fn recalculate_rating(&self, user_id: ObjectId, role: Role) -> error::Result<RatingDetailsResponse> {
-        let rating = self.find_or_create(user_id, role, true).await?;
+        let rating = self.find_or_create(user_id, role, true, true).await?;
         Ok(RatingDetailsResponse::from_rating(rating, role, 90))
     }
 
     pub async fn send_feedback(&self, feedback: CreateFeedback) -> error::Result<UserFeedback<String>> {
         let auth = self.context.auth();
         let user_id = auth.id().unwrap();
+
+        if feedback.quality_of_work.is_none()
+            && feedback.time_management.is_none()
+            && feedback.collaboration.is_none() {
+            return Err(anyhow::anyhow!("At least one assessment required").code(400));
+        }
 
         let audit = self
             .context
@@ -151,12 +164,22 @@ impl RatingService {
             return Err(anyhow::anyhow!("Unknown user role").code(404));
         };
 
+        let (username, avatar) = if current_role == Role::Auditor {
+            let auditor = request_auditor(&self.context, user_id, auth.clone()).await?;
+            (format!("{} {}", auditor.first_name(), auditor.last_name()), auditor.avatar().clone())
+        } else {
+            let customer = request_customer(&self.context, user_id, auth.clone()).await?;
+            (format!("{} {}", customer.first_name, customer.last_name), customer.avatar)
+        };
+
         let create_feedback = UserFeedback {
             id: ObjectId::new(),
             audit_id: feedback.audit_id.parse().unwrap(),
             from: FeedbackFrom {
                 user_id,
                 role: current_role,
+                username: Some(username),
+                avatar: Some(avatar),
             },
             rating: UserFeedbackRating {
                 quality_of_work: FeedbackStars::new(feedback.quality_of_work).unwrap(),
@@ -170,7 +193,8 @@ impl RatingService {
         let mut rating = self.find_or_create(
             receiver_id.parse().unwrap(),
             current_role,
-            false
+            false,
+            false,
         ).await?;
 
         let role_rating = if receiver_role == Role::Auditor {
@@ -193,8 +217,9 @@ impl RatingService {
         let rating = rating.calculate(&self.context, receiver_role).await?;
 
         let ratings = self.context.try_get_repository::<Rating<ObjectId>>()?;
-        ratings.delete("id", &rating.id).await?;
-        ratings.insert(&rating).await?;
+        // ratings.delete("id", &rating.id).await?;
+        // ratings.insert(&rating).await?;
+        ratings.update_one(doc! {"id": &rating.id}, &rating).await?;
 
         Ok(create_feedback.stringify())
     }
@@ -210,7 +235,8 @@ impl RatingService {
         let rating = self.find_or_create(
             receiver_id,
             role,
-            false
+            false,
+            true,
         ).await?;
 
         let feedbacks = if role == Role::Auditor {
