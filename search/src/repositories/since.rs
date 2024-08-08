@@ -1,14 +1,16 @@
-use std::collections::HashMap;
-use std::ops::Deref;
-use std::sync::Arc;
-
-use common::error;
-use common::repository::mongo_repository::MongoRepository;
-use common::repository::Entity;
-use common::services::{API_PREFIX, AUDITORS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL};
-use mongodb::bson::oid::ObjectId;
-use mongodb::bson::{doc, Bson, Document};
+use mongodb::bson::{doc, Bson, Document, oid::ObjectId};
 use serde::{Deserialize, Serialize};
+use std::{
+    collections::HashMap,
+    ops::Deref,
+    sync::Arc,
+};
+
+use common::{
+    error,
+    repository::{Entity ,mongo_repository::MongoRepository},
+    services::{API_PREFIX, AUDITORS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL, USERS_SERVICE},
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Since {
@@ -62,6 +64,15 @@ impl Default for Since {
                         "{}://{}/{}/customer/data",
                         PROTOCOL.as_str(),
                         CUSTOMERS_SERVICE.as_str(),
+                        API_PREFIX.as_str(),
+                    ),
+                    0,
+                );
+                map.insert(
+                    format!(
+                        "{}://{}/{}/organization/data",
+                        PROTOCOL.as_str(),
+                        USERS_SERVICE.as_str(),
                         API_PREFIX.as_str(),
                     ),
                     0,

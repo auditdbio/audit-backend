@@ -17,6 +17,7 @@ use common::{
 pub use handlers::auth::*;
 pub use handlers::user::*;
 pub use handlers::organization::*;
+use crate::handlers::indexer::{get_organization_data, provide_organization_data};
 
 pub fn create_app(
     state: Arc<ServiceState>,
@@ -70,6 +71,8 @@ pub fn create_app(
                 .service(get_invites)
                 .service(confirm_invite)
                 .service(cancel_invite)
+                .service(provide_organization_data)
+                .service(get_organization_data)
         );
     app
 }

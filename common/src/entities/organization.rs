@@ -1,4 +1,4 @@
-use mongodb::bson::oid::ObjectId;
+use mongodb::bson::{Document, oid::ObjectId, to_document};
 use serde::{Serialize, Deserialize};
 
 use crate::{
@@ -11,6 +11,7 @@ use crate::{
         user::{LinkedAccount, PublicLinkedAccount},
     },
     repository::Entity,
+    services::{API_PREFIX, PROTOCOL, USERS_SERVICE},
 };
 use crate::auth::Auth;
 
@@ -64,7 +65,7 @@ impl Organization<String> {
 }
 
 impl Organization<ObjectId> {
-    pub fn parse(self) -> Organization<String> {
+    pub fn stringify(self) -> Organization<String> {
         Organization {
             id: self.id.to_hex(),
             owner: self.owner,
@@ -85,6 +86,33 @@ impl Organization<ObjectId> {
 impl Entity for Organization<ObjectId> {
     fn id(&self) -> ObjectId {
         self.id
+    }
+}
+
+impl From<Organization<ObjectId>> for Option<Document> {
+    fn from(organization: Organization<ObjectId>) -> Self {
+        let organization = organization.stringify();
+        let mut document = to_document(&organization).unwrap();
+        if !organization.contacts.public_contacts {
+            document.remove("contacts");
+        }
+
+        document.insert(
+            "request_url",
+            format!(
+                "{}://{}/{}/organization/data",
+                PROTOCOL.as_str(),
+                USERS_SERVICE.as_str(),
+                API_PREFIX.as_str(),
+            ),
+        );
+
+        document.remove("last_modified");
+        document.remove("linked_accounts");
+        document.remove("members");
+        document.remove("invites");
+        document.insert("kind", "organization");
+        Some(document)
     }
 }
 
