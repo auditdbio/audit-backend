@@ -7,7 +7,7 @@ import SeverityChip from './SeverityChip.js'
 const IssueDataBlock = ({ data, num, subsectionLevel }) => {
   const getStatusColor = (status) => {
     if (status === 'Fixed') return '#09C010'
-    if (status === 'NotFixed') return 'darkred'
+    if (status === 'NotFixed' || status === 'WillNotFix') return 'darkred'
     return 'black'
   }
 

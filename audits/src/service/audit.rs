@@ -306,7 +306,13 @@ impl AuditService {
         let mut is_approve_needed = false;
 
         if let Some(public) = change.public {
-            audit.public = public;
+            if public {
+                if audit.status == AuditStatus::Resolved {
+                    audit.public = public;
+                } else {
+                    return Err(anyhow::anyhow!("Audit must be resolved").code(400));
+                }
+            }
         }
 
         if audit.status != AuditStatus::Resolved || audit.no_customer {
@@ -347,7 +353,7 @@ impl AuditService {
             }
             if let Some(conclusion) = change.conclusion {
                 if user_id == audit.auditor_id {
-                    if audit.conclusion.is_some() && audit.conclusion.clone().unwrap() != conclusion {
+                    if audit.conclusion.clone().unwrap_or("".to_string()) != conclusion {
                         audit.conclusion = Some(conclusion);
                         is_history_changed = true;
                     }
@@ -662,7 +668,7 @@ impl AuditService {
             if audit.no_customer {
                 issue.status = match action {
                     Action::Fixed => Status::Fixed,
-                    Action::NotFixed => Status::NotFixed,
+                    Action::NotFixed => Status::WillNotFix,
                     _ => return Err(anyhow::anyhow!("Invalid action").code(400))
                 }
             } else {
@@ -1005,7 +1011,9 @@ impl AuditService {
             return Err(anyhow::anyhow!("Invalid role").code(400));
         }
 
-        let audits = audits.find_many(&role, &Bson::ObjectId(user)).await?;
+        let mut audits = audits.find_many(&role, &Bson::ObjectId(user)).await?;
+
+        audits.retain(|audit| audit.public);
 
         let mut result = vec![];
 
