@@ -174,7 +174,7 @@ pub async fn get_public_audits(
     ))
 }
 
-#[get("/audit/organization/all")]
+#[get("/audit/for_my_organizations")]
 pub async fn get_my_organization_audits(
     context: GeneralContext,
 ) -> error::Result<Json<Vec<PublicAudit>>> {
