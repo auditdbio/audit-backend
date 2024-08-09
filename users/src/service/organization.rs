@@ -28,6 +28,7 @@ use common::{
         organization::{
             Organization, OrganizationMember,
             OrgAccessLevel, PublicOrganization,
+            MyOrganizations,
         },
         role::Role,
         user::{LinkedAccount, PublicLinkedAccount},
@@ -56,13 +57,6 @@ pub struct ChangeOrganization {
 pub struct NewOrganizationMember<Id> {
     pub user_id: Id,
     pub access_level: Vec<OrgAccessLevel>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct MyOrganizations {
-    pub owner: Vec<PublicOrganization>,
-    pub member: Vec<PublicOrganization>,
-    pub invites: Vec<PublicOrganization>,
 }
 
 pub struct OrganizationService {

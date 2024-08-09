@@ -7,7 +7,7 @@ use crate::{
     context::GeneralContext,
     error::{self, AddCode},
     entities::{
-        organization::{PublicOrganization, OrgAccessLevel, PublicOrganizationMember},
+        organization::{PublicOrganization, OrgAccessLevel, PublicOrganizationMember, MyOrganizations},
     },
     services::{API_PREFIX, USERS_SERVICE, PROTOCOL},
 };
@@ -44,6 +44,26 @@ pub async fn get_organization(
         .json::<PublicOrganization>()
         .await?
     )
+}
+
+pub async fn get_my_organizations(
+    context: &GeneralContext,
+) -> error::Result<MyOrganizations> {
+    let organizations = context
+        .make_request::<MyOrganizations>()
+        .auth(context.auth())
+        .get(format!(
+            "{}://{}/{}/my_organizations",
+            PROTOCOL.as_str(),
+            USERS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
+        ))
+        .send()
+        .await?
+        .json::<MyOrganizations>()
+        .await?;
+
+    Ok(organizations)
 }
 
 pub async fn check_is_organization_user(

@@ -18,7 +18,10 @@ use common::{
         events::{EventPayload, PublicEvent},
         mail::send_mail,
         requests::CreateRequest,
-        organization::{check_is_organization_user, get_organization, check_editor_rights},
+        organization::{
+            check_is_organization_user, get_organization,
+            check_editor_rights, get_my_organizations,
+        },
         seartch::PaginationParams,
         send_notification, NewNotification,
     },
@@ -697,6 +700,34 @@ impl RequestService {
         Ok(result)
     }
 
+    pub async fn find_my_organization_audit_requests(&self) -> error::Result<Vec<PublicRequest>> {
+        let organizations = get_my_organizations(&self.context).await?;
+        let requests = self
+            .context
+            .try_get_repository::<AuditRequest<ObjectId>>()?;
+
+        let mut result = vec![];
+        for org in organizations.owner {
+            let org_requests = requests
+                .find_many("auditor_organization", &Bson::ObjectId(org.id.parse()?))
+                .await?;
+            for req in org_requests {
+                result.push(PublicRequest::new(&self.context, req).await?);
+            }
+        }
+
+        for org in organizations.member {
+            let org_requests = requests
+                .find_many("auditor_organization", &Bson::ObjectId(org.id.parse()?))
+                .await?;
+            for req in org_requests {
+                result.push(PublicRequest::new(&self.context, req).await?);
+            }
+        }
+
+        Ok(result)
+    }
+
     pub async fn find_organization_audit_requests(&self, org_id: ObjectId) -> error::Result<Vec<PublicRequest>> {
         let requests = self
             .context
@@ -716,8 +747,7 @@ impl RequestService {
 
         let mut public_requests = vec![];
         for req in org_requests {
-            let public_request = PublicRequest::new(&self.context, req).await?;
-            public_requests.push(public_request);
+            public_requests.push(PublicRequest::new(&self.context, req).await?);
         }
 
         Ok(public_requests)

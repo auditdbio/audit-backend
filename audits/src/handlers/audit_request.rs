@@ -92,8 +92,19 @@ pub async fn find_all_audit_request(
     ))
 }
 
+#[get("/audit_request/organization/all")]
+pub async fn get_my_organization_audit_requests(
+    context: GeneralContext,
+) -> error::Result<Json<Vec<PublicRequest>>> {
+    Ok(Json(
+        RequestService::new(context)
+            .find_my_organization_audit_requests()
+            .await?,
+    ))
+}
+
 #[get("/audit_request/organization/{org_id}")]
-pub async fn find_organization_audit_requests(
+pub async fn get_organization_audit_requests(
     context: GeneralContext,
     path: web::Path<String>,
 ) -> error::Result<Json<Vec<PublicRequest>>> {

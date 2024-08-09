@@ -20,7 +20,10 @@ use common::{
         },
         events::{post_event, EventPayload, PublicEvent},
         issue::PublicIssue,
-        organization::{get_organization, check_is_organization_user, check_editor_rights},
+        organization::{
+            get_organization, check_is_organization_user,
+            check_editor_rights, get_my_organizations,
+        },
         send_notification, NewNotification,
         seartch::PaginationParams,
     },
@@ -1147,6 +1150,32 @@ impl AuditService {
 
         for audit in audits {
             result.push(PublicAudit::new(&self.context, audit).await?);
+        }
+
+        Ok(result)
+    }
+
+    pub async fn find_my_organization_audits(&self) -> error::Result<Vec<PublicAudit>> {
+        let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
+        let organizations = get_my_organizations(&self.context).await?;
+
+        let mut result = vec![];
+        for org in organizations.owner {
+            let org_audits = audits
+                .find_many("auditor_organization", &Bson::ObjectId(org.id.parse()?))
+                .await?;
+            for audit in org_audits {
+                result.push(PublicAudit::new(&self.context, audit).await?);
+            }
+        }
+
+        for org in organizations.member {
+            let org_audits = audits
+                .find_many("auditor_organization", &Bson::ObjectId(org.id.parse()?))
+                .await?;
+            for audit in org_audits {
+                result.push(PublicAudit::new(&self.context, audit).await?);
+            }
         }
 
         Ok(result)

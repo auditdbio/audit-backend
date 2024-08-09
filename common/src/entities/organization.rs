@@ -251,3 +251,10 @@ impl PublicOrganization {
         })
     }
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MyOrganizations {
+    pub owner: Vec<PublicOrganization>,
+    pub member: Vec<PublicOrganization>,
+    pub invites: Vec<PublicOrganization>,
+}

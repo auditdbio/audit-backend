@@ -11,7 +11,7 @@ use common::{
     },
     context::GeneralContext,
     entities::{
-        organization::{OrganizationMember, OrgAccessLevel, PublicOrganization},
+        organization::{OrganizationMember, OrgAccessLevel, PublicOrganization, MyOrganizations},
         user::PublicLinkedAccount,
     },
     error,
@@ -19,8 +19,7 @@ use common::{
 
 use crate::service::organization::{
     ChangeOrganization, CreateOrganization,
-    MyOrganizations, NewOrganizationMember,
-    OrganizationService,
+    NewOrganizationMember, OrganizationService,
 };
 
 #[post("/organization")]
