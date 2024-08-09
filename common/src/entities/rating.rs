@@ -4,7 +4,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::{
-    api::{audits::PublicAudit, user::get_by_id},
+    api::{
+        audits::PublicAudit,
+        auditor::request_auditor,
+        customer::request_customer,
+        user::get_by_id
+    },
     context::GeneralContext,
     entities::{
         audit::PublicAuditStatus,
@@ -358,8 +363,6 @@ pub struct UserFeedbackRating {
 pub struct FeedbackFrom<Id> {
     pub user_id: Id,
     pub role: Role,
-    pub username: Option<String>,
-    pub avatar: Option<String>,
 }
 
 impl FeedbackFrom<String> {
@@ -367,8 +370,6 @@ impl FeedbackFrom<String> {
         FeedbackFrom {
             user_id: self.user_id.parse().unwrap(),
             role: self.role,
-            username: self.username,
-            avatar: self.avatar,
         }
     }
 }
@@ -378,8 +379,6 @@ impl FeedbackFrom<ObjectId> {
         FeedbackFrom {
             user_id: self.user_id.to_hex(),
             role: self.role,
-            username: self.username,
-            avatar: self.avatar,
         }
     }
 }
@@ -426,5 +425,58 @@ impl UserFeedback<ObjectId> {
 
     pub fn stringify_map(map: Vec<Self>) -> Vec<UserFeedback<String>> {
         map.into_iter().map(|v| v.stringify()).collect()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PublicFeedbackFrom {
+    pub user_id: String,
+    pub role: Role,
+    pub username: String,
+    pub avatar: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PublicUserFeedback {
+    pub id: String,
+    pub audit_id: String,
+    pub from: PublicFeedbackFrom,
+    pub created_at: i64,
+    pub rating: UserFeedbackRating,
+    pub comment: Option<String>,
+}
+
+impl PublicUserFeedback {
+    pub async fn new(
+        context: &GeneralContext,
+        feedback: UserFeedback<ObjectId>,
+    ) -> error::Result<PublicUserFeedback> {
+        let auth = context.auth();
+
+        let (username, avatar) = if feedback.from.role == Role::Auditor {
+            let auditor = request_auditor(&context, feedback.from.user_id, auth.clone()).await?;
+            (format!("{} {}", auditor.first_name(), auditor.last_name()), auditor.avatar().clone())
+        } else {
+            let customer = request_customer(&context, feedback.from.user_id, auth.clone()).await?;
+            (format!("{} {}", customer.first_name, customer.last_name), customer.avatar)
+        };
+
+        Ok(PublicUserFeedback {
+            id: feedback.id.to_hex(),
+            audit_id: feedback.audit_id.to_hex(),
+            from: PublicFeedbackFrom {
+                user_id: feedback.from.user_id.to_hex(),
+                role: feedback.from.role,
+                username,
+                avatar,
+            },
+            created_at: feedback.created_at,
+            rating: UserFeedbackRating {
+                quality_of_work: feedback.rating.quality_of_work,
+                time_management: feedback.rating.time_management,
+                collaboration: feedback.rating.collaboration,
+            },
+            comment: feedback.comment,
+        })
     }
 }

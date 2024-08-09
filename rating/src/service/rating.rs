@@ -3,11 +3,7 @@ use chrono::{Utc, NaiveDateTime, Duration};
 use serde::{Deserialize, Serialize};
 
 use common::{
-    api::{
-        audits::PublicAudit,
-        auditor::request_auditor,
-        customer::request_customer,
-    },
+    api::audits::PublicAudit,
     context::GeneralContext,
     error::{self, AddCode},
     entities::{
@@ -166,22 +162,12 @@ impl RatingService {
             return Err(anyhow::anyhow!("Unknown user role").code(404));
         };
 
-        let (username, avatar) = if current_role == Role::Auditor {
-            let auditor = request_auditor(&self.context, user_id, auth.clone()).await?;
-            (format!("{} {}", auditor.first_name(), auditor.last_name()), auditor.avatar().clone())
-        } else {
-            let customer = request_customer(&self.context, user_id, auth.clone()).await?;
-            (format!("{} {}", customer.first_name, customer.last_name), customer.avatar)
-        };
-
         let create_feedback = UserFeedback {
             id: ObjectId::new(),
             audit_id: feedback.audit_id.parse().unwrap(),
             from: FeedbackFrom {
                 user_id,
                 role: current_role,
-                username: Some(username),
-                avatar: Some(avatar),
             },
             rating: UserFeedbackRating {
                 quality_of_work: FeedbackStars::new(feedback.quality_of_work).unwrap(),
