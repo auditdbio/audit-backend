@@ -412,9 +412,10 @@ impl RequestService {
         let mut public_requests = Vec::new();
 
         for req in result {
-            let public_request = PublicRequest::new(&self.context, req).await?;
-
-            public_requests.push(public_request);
+            if req.auditor_organization.is_some() || req.customer_organization.is_some() {
+                continue
+            }
+            public_requests.push(PublicRequest::new(&self.context, req).await?);
         }
 
         // Ok(MyAuditRequestResult {
@@ -585,11 +586,6 @@ impl RequestService {
             return Err(anyhow::anyhow!("No customer found").code(404));
         };
 
-        // if !Edit.get_access(&auth, &request) {
-        //     requests.insert(&request).await?;
-        //     return Err(anyhow::anyhow!("User is not available to delete this request").code(400));
-        // }
-
         let user_access = Edit.get_access(&auth, &request);
         if !user_access && request.auditor_organization.is_none() {
             requests.insert(&request).await?;
@@ -701,7 +697,7 @@ impl RequestService {
         Ok(result)
     }
 
-    pub async fn find_organization_audit_requests(&self, org_id: ObjectId) -> error::Result<Vec<AuditRequest<String>>> {
+    pub async fn find_organization_audit_requests(&self, org_id: ObjectId) -> error::Result<Vec<PublicRequest>> {
         let requests = self
             .context
             .try_get_repository::<AuditRequest<ObjectId>>()?;
@@ -714,14 +710,17 @@ impl RequestService {
             ).code(403));
         }
 
-        let result = requests
+        let org_requests = requests
             .find_many("auditor_organization", &Bson::ObjectId(org_id))
-            .await?
-            .into_iter()
-            .map(|r| r.stringify())
-            .collect();
+            .await?;
 
-        Ok(result)
+        let mut public_requests = vec![];
+        for req in org_requests {
+            let public_request = PublicRequest::new(&self.context, req).await?;
+            public_requests.push(public_request);
+        }
+
+        Ok(public_requests)
     }
 
     pub async fn get_request_edit_history(

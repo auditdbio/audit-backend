@@ -96,7 +96,7 @@ pub async fn find_all_audit_request(
 pub async fn find_organization_audit_requests(
     context: GeneralContext,
     path: web::Path<String>,
-) -> error::Result<Json<Vec<AuditRequest<String>>>> {
+) -> error::Result<Json<Vec<PublicRequest>>> {
     let org_id = path.into_inner();
     Ok(Json(
         RequestService::new(context)

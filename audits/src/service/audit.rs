@@ -349,6 +349,9 @@ impl AuditService {
         let mut public_audits = Vec::new();
 
         for audit in audits {
+            if audit.auditor_organization.is_some() || audit.customer_organization.is_some() {
+                continue
+            }
             public_audits.push(PublicAudit::new(&self.context, audit).await?);
         }
 
