@@ -66,14 +66,22 @@ impl SearchRepo {
             })
             .collect::<Vec<_>>();
 
-        let find_options = if let Some(sort_by) = &query.sort_by {
-            let sort_order = query.sort_order.unwrap_or(1);
-            let mut sort = doc! {};
+        let mut skip = (query.page - 1) * query.per_page;
+        let mut limit = (query.per_page * query.pages.unwrap_or(1)) as i64;
 
-            if kind.contains(&"auditor".to_string()) {
-                sort.insert("kind", 1);
-            }
+        if query.page == 0 {
+            skip = 0;
+            limit = 1000;
+        }
 
+        let sort_order = query.sort_order.unwrap_or(1);
+        let mut sort = doc! {};
+
+        if kind.contains(&"auditor".to_string()) {
+            sort.insert("kind", 1);
+        }
+
+        if let Some(sort_by) = &query.sort_by {
             if sort_by == "price" {
                 if kind.contains(&"auditor".to_string()) {
                     sort.insert("price_range.from", sort_order);
@@ -81,27 +89,15 @@ impl SearchRepo {
                     sort.insert("price", sort_order);
                 }
             }
-
-            sort.insert("_id", -1);
-
-            let mut skip = (query.page - 1) * query.per_page;
-            let mut limit = (query.per_page * query.pages.unwrap_or(1)) as i64;
-
-            if query.page == 0 {
-                skip = 0;
-                limit = 1000;
-            }
-
-            Some(
-                FindOptions::builder()
-                    .sort(sort)
-                    .skip(skip)
-                    .limit(limit)
-                    .build(),
-            )
         } else {
-            None
-        };
+            sort.insert("_id", -1);
+        }
+
+        let find_options = FindOptions::builder()
+            .sort(sort)
+            .skip(skip)
+            .limit(limit)
+            .build();
 
         let mut docs = vec![
             doc! {
@@ -161,12 +157,12 @@ impl SearchRepo {
                     "$and": [
                         {
                             "price_range.from": {
-                                "$lte": query.price_to.unwrap_or(i64::MAX),
+                                "$gte": query.price_from.unwrap_or(0),
                             },
                         },
                         {
                             "price_range.to": {
-                                "$gte": query.price_from.unwrap_or(0),
+                                "$lte": query.price_to.unwrap_or(i64::MAX),
                             },
                         }
                     ]
