@@ -74,15 +74,12 @@ impl SearchRepo {
                 sort.insert("kind", 1);
             }
 
-            sort.insert(sort_by.clone(), sort_order.clone());
             if sort_by == "price" {
-                let sort_field = if sort_order == 1 {
-                    "price_range.to"
-                } else {
-                    "price_range.from"
+                if kind.contains(&"auditor".to_string()) {
+                    sort.insert("price_range.from", sort_order);
+                } else if kind.contains(&"project".to_string()) {
+                    sort.insert("price", sort_order);
                 }
-                .to_string();
-                sort.insert(sort_field, sort_order);
             }
 
             sort.insert("_id", -1);
@@ -159,30 +156,29 @@ impl SearchRepo {
         }
 
         if !kind.contains(&"customer".to_string()) {
-            let price_from = query.price_from.unwrap_or(0);
-            let price_to = query.price_to.unwrap_or(i64::MAX);
-            docs.push(doc! {
-                "$or": [
-                    {
-                        "price": {
-                            "$gte": price_from,
-                            "$lte": price_to,
+            if kind.contains(&"auditor".to_string()) || kind.contains(&"badge".to_string()) {
+                docs.push(doc! {
+                    "$and": [
+                        {
+                            "price_range.from": {
+                                "$lte": query.price_to.unwrap_or(i64::MAX),
+                            },
                         },
-                    },
-                    {
-                        "price": Bson::Null,
-                    },
-                    {
-                        "price_range.from": {
-                            "$lte": price_to,
-                        },
-                        "price_range.to": {
-                            "$gte": price_from,
-                        },
-                    },
-
-                ]
-            });
+                        {
+                            "price_range.to": {
+                                "$gte": query.price_from.unwrap_or(0),
+                            },
+                        }
+                    ]
+                });
+            } else if kind.contains(&"project".to_string()) {
+                docs.push(doc! {
+                    "price": {
+                        "$gte": query.price_from.unwrap_or(0),
+                        "$lte": query.price_to.unwrap_or(i64::MAX),
+                    }
+                });
+            }
         }
 
         if let (Some(time_from), Some(time_to)) = (query.time_from, query.time_to) {
