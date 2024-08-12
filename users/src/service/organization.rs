@@ -539,6 +539,10 @@ impl OrganizationService {
             return Err(anyhow::anyhow!("User is not available to change this organization").code(403));
         }
 
+        if organization.owner.user_id == user_id.to_hex() {
+            return Err(anyhow::anyhow!("The owner has full access level by default.").code(400));
+        }
+
         let member = if let Some(member) = organization
             .members
             .iter_mut()
