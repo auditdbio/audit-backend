@@ -75,6 +75,10 @@ impl OrganizationService {
         let auth = self.context.auth();
         let user_id = auth.id().ok_or(anyhow::anyhow!("No user id found"))?;
 
+        if create_org.name.is_empty() {
+            return Err(anyhow::anyhow!("Name is required").code(400));
+        }
+
         let organizations = self.context.try_get_repository::<Organization<ObjectId>>()?;
 
         let owner = OrganizationMember {
@@ -470,10 +474,19 @@ impl OrganizationService {
         }
 
         if let Some(name) = change.name {
+            if name.is_empty() {
+                return Err(anyhow::anyhow!("Name is required").code(400));
+            }
             organization.name = name;
         }
 
         if let Some(contacts) = change.contacts {
+            if let Some(ref email) = contacts.email {
+                let email_regex = Regex::new(r"^[^\s@]+@[^\s@]+\.[^\s@]+$").unwrap();
+                if !email_regex.is_match(&email) && !email.is_empty() {
+                    return Err(anyhow::anyhow!("Incorrect email").code(400));
+                }
+            }
             organization.contacts = contacts;
         }
 
