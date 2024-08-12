@@ -84,6 +84,7 @@ impl SearchRepo {
         if let Some(sort_by) = &query.sort_by {
             if sort_by == "price" {
                 if kind.contains(&"auditor".to_string()) {
+                    sort.insert("price_range.to", sort_order);
                     sort.insert("price_range.from", sort_order);
                 } else if kind.contains(&"project".to_string()) {
                     sort.insert("price", sort_order);
@@ -168,6 +169,7 @@ impl SearchRepo {
                     ]
                 });
             } else if kind.contains(&"project".to_string()) {
+                // TODO: add projects with total cost to the result
                 docs.push(doc! {
                     "price": {
                         "$gte": query.price_from.unwrap_or(0),
@@ -193,6 +195,7 @@ impl SearchRepo {
         }
 
         log::info!("Search query: {:?}", docs);
+        log::info!("Search options: {:?}", find_options);
 
         let result: Vec<Document> = self
             .0
