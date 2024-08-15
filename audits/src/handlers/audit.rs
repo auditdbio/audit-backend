@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use serde_json::json;
 use actix_web::{
     delete, get, patch, post,
@@ -46,10 +47,13 @@ pub async fn post_no_customer_audit(
 pub async fn get_audit(
     context: GeneralContext,
     id: Path<String>,
+    query: Query<HashMap<String, String>>,
 ) -> error::Result<HttpResponse> {
-    let res = AuditService::new(context).find(id.parse()?).await?;
-    if let Some(res) = res {
-        Ok(HttpResponse::Ok().json(res))
+    let code = query.get("code");
+    let audit = AuditService::new(context).find(id.parse()?, code).await?;
+
+    if let Some(audit) = audit {
+        Ok(HttpResponse::Ok().json(audit))
     } else {
         Ok(HttpResponse::Ok().json(json! {{}}))
     }

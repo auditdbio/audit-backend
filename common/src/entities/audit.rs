@@ -88,6 +88,8 @@ pub struct Audit<Id: Eq + Hash> {
     pub no_customer: bool,
     pub chat_id: Option<AuditMessageId>,
     pub conclusion: Option<String>,
+
+    pub access_code: Option<String>,
 }
 
 impl Audit<String> {
@@ -118,6 +120,7 @@ impl Audit<String> {
             edit_history: self.edit_history,
             approved_by: self.approved_by,
             unread_edits: self.unread_edits,
+            access_code: self.access_code,
         }
     }
 }
@@ -150,6 +153,7 @@ impl Audit<ObjectId> {
             edit_history: self.edit_history,
             approved_by: self.approved_by,
             unread_edits: self.unread_edits,
+            access_code: self.access_code,
         }
     }
 

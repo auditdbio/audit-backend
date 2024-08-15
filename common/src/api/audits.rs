@@ -2,6 +2,7 @@ use chrono::Utc;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use rand::{distributions::Alphanumeric, Rng};
 
 use crate::{
     context::GeneralContext,
@@ -120,12 +121,14 @@ pub struct PublicAudit {
     #[serde(default)]
     pub no_customer: bool,
     pub conclusion: Option<String>,
+    pub access_code: Option<String>,
 }
 
 impl PublicAudit {
     pub async fn new(
         context: &GeneralContext,
         audit: Audit<ObjectId>,
+        only_public: bool,
     ) -> error::Result<PublicAudit> {
         let auth = context.auth();
 
@@ -209,6 +212,28 @@ impl PublicAudit {
             audit.project_name
         };
 
+        let (price, total_cost, access_code) = if only_public {
+            (None, None, None)
+        } else {
+            (audit.price, audit.total_cost, audit.access_code)
+        };
+
+        let mut issues = audit
+            .issues
+            .into_iter()
+            .map(|i| {
+                let mut public_issue = auth.public_issue(i);
+                if only_public {
+                    public_issue.events = vec![];
+                }
+                public_issue
+            })
+            .collect::<Vec<PublicIssue>>();
+
+        if only_public {
+            issues.retain(|issue| issue.include)
+        }
+
         let public_audit = PublicAudit {
             id: audit.id.to_hex(),
             auditor_id: audit.auditor_id.to_hex(),
@@ -221,8 +246,8 @@ impl PublicAudit {
             description: audit.description,
             status,
             scope: audit.scope,
-            price: audit.price,
-            total_cost: audit.total_cost,
+            price,
+            total_cost,
             auditor_contacts: auditor.contacts().clone(),
             customer_contacts,
             tags: audit.tags,
@@ -231,14 +256,11 @@ impl PublicAudit {
             report: audit.report,
             report_name: audit.report_name,
             time: audit.time,
-            issues: audit
-                .issues
-                .into_iter()
-                .map(|i| auth.public_issue(i))
-                .collect(),
+            issues,
             public: audit.public,
             no_customer: audit.no_customer,
             conclusion: audit.conclusion,
+            access_code,
         };
 
         Ok(public_audit)
@@ -266,4 +288,15 @@ pub struct NoCustomerAuditRequest {
 
     pub issues: Vec<CreateIssue>,
     pub conclusion: Option<String>,
+}
+
+pub fn create_access_code() -> String {
+    let time = Utc::now().timestamp_micros().to_string();
+    let rnd: String = rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(10)
+        .map(char::from)
+        .collect();
+
+    format!("{}{}", time, rnd)
 }
