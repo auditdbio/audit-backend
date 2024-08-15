@@ -12,7 +12,7 @@ use common::{
             CompletedAuditInfo, Rating,
             RoleRating, UserFeedback,
             FeedbackFrom, UserFeedbackRating,
-            FeedbackStars,
+            FeedbackStars, PublicUserFeedback,
         },
         role::Role,
     },
@@ -111,12 +111,12 @@ impl RatingService {
 
     pub async fn get_user_rating_details(&self, user_id: ObjectId, role: Role) -> error::Result<RatingDetailsResponse> {
         let rating = self.find_or_create(user_id, role, false, true).await?;
-        Ok(RatingDetailsResponse::from_rating(rating, role, 90))
+        Ok(RatingDetailsResponse::from_rating(&self.context, rating, role, 90).await?)
     }
 
     pub async fn recalculate_rating(&self, user_id: ObjectId, role: Role) -> error::Result<RatingDetailsResponse> {
         let rating = self.find_or_create(user_id, role, true, true).await?;
-        Ok(RatingDetailsResponse::from_rating(rating, role, 90))
+        Ok(RatingDetailsResponse::from_rating(&self.context, rating, role, 90).await?)
     }
 
     pub async fn send_feedback(&self, feedback: CreateFeedback) -> error::Result<UserFeedback<String>> {
@@ -268,13 +268,18 @@ pub struct RatingDetailsResponse {
     pub last_update: i64,
     pub summary: f32,
     pub rating_details: Option<String>,
-    pub user_feedbacks: Vec<UserFeedback<String>>,
+    pub user_feedbacks: Vec<PublicUserFeedback>,
     pub total_completed_audits: usize,
     pub completed_last_ninety_days: Vec<CompletedAuditInfo<String>>,
 }
 
 impl RatingDetailsResponse {
-    pub fn from_rating(rating: Rating<ObjectId>, role: Role, days: i64) -> RatingDetailsResponse {
+    pub async fn from_rating(
+        context: &GeneralContext,
+        rating: Rating<ObjectId>,
+        role: Role,
+        days: i64
+    ) -> error::Result<RatingDetailsResponse> {
         let rating = rating.stringify();
 
         let role_rating = if role == Role::Auditor {
@@ -292,16 +297,21 @@ impl RatingDetailsResponse {
             )
             .collect::<Vec<CompletedAuditInfo<String>>>();
 
-        RatingDetailsResponse {
+        let mut user_feedbacks = vec![];
+        for feedback in role_rating.user_feedbacks {
+            user_feedbacks.push(PublicUserFeedback::new(context, feedback.parse()).await?);
+        }
+
+        Ok(RatingDetailsResponse {
             id: rating.id,
             user_id: rating.user_id,
             role,
             last_update: role_rating.last_update,
             summary: role_rating.summary,
             rating_details: role_rating.rating_details,
-            user_feedbacks: role_rating.user_feedbacks,
+            user_feedbacks,
             total_completed_audits: role_rating.total_completed_audits.len(),
             completed_last_ninety_days,
-        }
+        })
     }
 }
