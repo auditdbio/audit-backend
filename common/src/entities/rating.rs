@@ -451,7 +451,7 @@ impl PublicUserFeedback {
         context: &GeneralContext,
         feedback: UserFeedback<ObjectId>,
     ) -> error::Result<PublicUserFeedback> {
-        let auth = context.auth();
+        let auth = context.server_auth();
 
         let (username, avatar) = if feedback.from.role == Role::Auditor {
             let auditor = request_auditor(&context, feedback.from.user_id, auth.clone()).await?;
