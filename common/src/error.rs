@@ -1,6 +1,6 @@
 #[derive(Debug)]
 pub struct ServiceError {
-    code: u16,
+    pub code: u16,
     err: anyhow::Error,
 }
 

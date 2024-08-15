@@ -13,7 +13,7 @@ use common::{
     error::{self, AddCode},
     services::{API_PREFIX, PROTOCOL, USERS_SERVICE},
 };
-use mongodb::bson::{oid::ObjectId, Bson};
+use mongodb::bson::{oid::ObjectId, Bson, doc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -283,6 +283,7 @@ impl AuditorService {
 
         auditors.delete("user_id", &id).await?;
         auditors.insert(&auditor).await?;
+        // auditors.update_one(doc! {"user_id": &id}, &auditor).await?;
 
         Ok(auditor.stringify())
     }
@@ -315,6 +316,7 @@ impl AuditorService {
 
         auditors.delete("user_id", &id).await?;
         auditors.insert(&auditor).await?;
+        // auditors.update_one(doc! {"user_id": &id}, &auditor).await?;
 
         Ok(auditor.stringify())
     }

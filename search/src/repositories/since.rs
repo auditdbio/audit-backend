@@ -1,5 +1,6 @@
 use mongodb::bson::{doc, Bson, Document, oid::ObjectId};
 use serde::{Deserialize, Serialize};
+use chrono::Utc;
 use std::{
     collections::HashMap,
     ops::Deref,
@@ -8,7 +9,9 @@ use std::{
 
 use common::{
     error,
-    repository::{Entity ,mongo_repository::MongoRepository},
+    default_timestamp,
+    impl_has_last_modified,
+    repository::{Entity, HasLastModified, mongo_repository::MongoRepository},
     services::{API_PREFIX, AUDITORS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL, USERS_SERVICE},
 };
 
@@ -17,7 +20,11 @@ pub struct Since {
     pub id: ObjectId,
     pub name: String,
     pub dict: HashMap<String, i64>,
+    #[serde(default = "default_timestamp")]
+    pub last_modified: i64,
 }
+
+impl_has_last_modified!(Since);
 
 impl Entity for Since {
     fn id(&self) -> ObjectId {
@@ -30,6 +37,7 @@ impl Default for Since {
         Self {
             id: ObjectId::new(),
             name: "since".to_string(),
+            last_modified: Utc::now().timestamp_micros(),
             dict: {
                 let mut map = HashMap::new();
                 map.insert(

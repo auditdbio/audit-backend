@@ -66,45 +66,39 @@ impl SearchRepo {
             })
             .collect::<Vec<_>>();
 
-        let find_options = if let Some(sort_by) = &query.sort_by {
-            let sort_order = query.sort_order.unwrap_or(1);
-            let mut sort = doc! {};
+        let mut skip = (query.page - 1) * query.per_page;
+        let mut limit = (query.per_page * query.pages.unwrap_or(1)) as i64;
 
-            if kind.contains(&"auditor".to_string()) {
-                sort.insert("kind", 1);
-            }
+        if query.page == 0 {
+            skip = 0;
+            limit = 1000;
+        }
 
-            sort.insert(sort_by.clone(), sort_order.clone());
+        let sort_order = query.sort_order.unwrap_or(1);
+        let mut sort = doc! {};
+
+        if kind.contains(&"auditor".to_string()) {
+            sort.insert("kind", 1);
+        }
+
+        if let Some(sort_by) = &query.sort_by {
             if sort_by == "price" {
-                let sort_field = if sort_order == 1 {
-                    "price_range.to"
-                } else {
-                    "price_range.from"
+                if kind.contains(&"auditor".to_string()) {
+                    sort.insert("price_range.to", sort_order);
+                    sort.insert("price_range.from", sort_order);
+                } else if kind.contains(&"project".to_string()) {
+                    sort.insert("price", sort_order);
                 }
-                .to_string();
-                sort.insert(sort_field, sort_order);
             }
-
-            sort.insert("_id", -1);
-
-            let mut skip = (query.page - 1) * query.per_page;
-            let mut limit = (query.per_page * query.pages.unwrap_or(1)) as i64;
-
-            if query.page == 0 {
-                skip = 0;
-                limit = 1000;
-            }
-
-            Some(
-                FindOptions::builder()
-                    .sort(sort)
-                    .skip(skip)
-                    .limit(limit)
-                    .build(),
-            )
         } else {
-            None
-        };
+            sort.insert("_id", -1);
+        }
+
+        let find_options = FindOptions::builder()
+            .sort(sort)
+            .skip(skip)
+            .limit(limit)
+            .build();
 
         let mut docs = vec![
             doc! {
@@ -159,30 +153,30 @@ impl SearchRepo {
         }
 
         if !kind.contains(&"customer".to_string()) {
-            let price_from = query.price_from.unwrap_or(0);
-            let price_to = query.price_to.unwrap_or(i64::MAX);
-            docs.push(doc! {
-                "$or": [
-                    {
-                        "price": {
-                            "$gte": price_from,
-                            "$lte": price_to,
+            if kind.contains(&"auditor".to_string()) || kind.contains(&"badge".to_string()) {
+                docs.push(doc! {
+                    "$and": [
+                        {
+                            "price_range.from": {
+                                "$gte": query.price_from.unwrap_or(0),
+                            },
                         },
-                    },
-                    {
-                        "price": Bson::Null,
-                    },
-                    {
-                        "price_range.from": {
-                            "$lte": price_to,
-                        },
-                        "price_range.to": {
-                            "$gte": price_from,
-                        },
-                    },
-
-                ]
-            });
+                        {
+                            "price_range.to": {
+                                "$lte": query.price_to.unwrap_or(i64::MAX),
+                            },
+                        }
+                    ]
+                });
+            } else if kind.contains(&"project".to_string()) {
+                // TODO: add projects with total cost to the result
+                docs.push(doc! {
+                    "price": {
+                        "$gte": query.price_from.unwrap_or(0),
+                        "$lte": query.price_to.unwrap_or(i64::MAX),
+                    }
+                });
+            }
         }
 
         if let (Some(time_from), Some(time_to)) = (query.time_from, query.time_to) {
@@ -201,6 +195,7 @@ impl SearchRepo {
         }
 
         log::info!("Search query: {:?}", docs);
+        log::info!("Search options: {:?}", find_options);
 
         let result: Vec<Document> = self
             .0

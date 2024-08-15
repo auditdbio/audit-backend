@@ -4,11 +4,14 @@ use common::{
     context::GeneralContext,
     entities::notification::{CreateNotification, NotificationInner},
     error::{self},
-    repository::Entity,
+    repository::{Entity, HasLastModified},
     services::{API_PREFIX, EVENTS_SERVICE, PROTOCOL},
+    default_timestamp,
+    impl_has_last_modified,
 };
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
+use chrono::Utc;
 
 use crate::repositories::notifications::NotificationsRepository;
 
@@ -17,7 +20,11 @@ pub struct Notification {
     id: ObjectId,
     user_id: ObjectId,
     inner: NotificationInner,
+    #[serde(default = "default_timestamp")]
+    last_modified: i64,
 }
+
+impl_has_last_modified!(Notification);
 
 impl Notification {
     pub fn serialize(self) -> PublicNotification {
@@ -56,6 +63,7 @@ pub async fn send_notification(
         id: ObjectId::new(),
         user_id: notif.user_id,
         inner: notif.inner,
+        last_modified: Utc::now().timestamp_micros(),
     };
 
     notifications.insert(&notification).await?;

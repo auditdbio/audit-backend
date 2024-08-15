@@ -76,7 +76,7 @@ impl CreateIssue {
             links: self.links,
             include: true,
             feedback: self.feedback.unwrap_or_default(),
-            last_modified: Utc::now().timestamp(),
+            last_modified: Utc::now().timestamp_micros(),
             read: HashMap::new(),
         }
     }
