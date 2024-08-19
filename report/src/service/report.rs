@@ -41,6 +41,7 @@ pub struct Section {
 pub struct RendererInput {
     pub auditor_name: String,
     pub profile_link: String,
+    pub audit_link: String,
     pub project_name: String,
     pub scope: Vec<String>,
     pub report_data: Vec<Section>,
@@ -289,7 +290,7 @@ pub async fn create_report(
 ) -> anyhow::Result<PublicReport> {
     let audit = context
         .make_request::<PublicAudit>()
-        .auth(context.auth())
+        .auth(context.server_auth())
         .get(format!(
             "{}://{}/{}/audit/{}",
             PROTOCOL.as_str(),
@@ -304,13 +305,24 @@ pub async fn create_report(
         .await?;
 
     let report_data = generate_data(&audit);
+    let access_code = if let Some(code) = audit.access_code {
+        format!("?code={}", code)
+    } else { "".to_string() };
+
     let input = RendererInput {
         auditor_name: audit.auditor_first_name + " " + &audit.auditor_last_name,
         profile_link: format!(
-            "{}://{}/user/{}/auditor",
+            "{}://{}/a/{}",
             PROTOCOL.as_str(),
             FRONTEND.as_str(),
-            audit.auditor_id
+            audit.auditor_id,
+        ),
+        audit_link: format!(
+            "{}://{}/audit-info/{}{}",
+            PROTOCOL.as_str(),
+            FRONTEND.as_str(),
+            audit.id,
+            access_code,
         ),
         project_name: audit.project_name.clone(),
         scope: audit.scope,

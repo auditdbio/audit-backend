@@ -1,6 +1,6 @@
 import { PDFName, PDFString } from 'pdf-lib'
 
-const createPageLinkAnnotation = async (pdfDoc, tableOfContents, tocPagesCounter, profileLink) => {
+const createPageLinkAnnotation = async (pdfDoc, tableOfContents, tocPagesCounter, profileLink, auditLink) => {
   const pdfDocPages = pdfDoc.getPages()
 
   const createProfileLinkAnnot = (profileLink) => {
@@ -16,8 +16,25 @@ const createPageLinkAnnotation = async (pdfDoc, tableOfContents, tocPagesCounter
     )
   }
 
+  const createAuditLinkAnnot = (profileLink) => {
+    return pdfDoc.context.register(
+      pdfDoc.context.obj({
+        Type: 'Annot',
+        Subtype: 'Link',
+        Rect: [60, 390, 125, 415],
+        Border: [0, 0, 0],
+        C: [1, 1, 1],
+        A: { Type: 'Action', S: 'URI', URI: PDFString.of(profileLink) },
+      })
+    )
+  }
+
   if (profileLink) {
     pdfDocPages[0]?.node.set(PDFName.of('Annots'), pdfDoc.context.obj([createProfileLinkAnnot(profileLink)]))
+  }
+
+  if (auditLink) {
+    pdfDocPages[0]?.node.set(PDFName.of('Annots'), pdfDoc.context.obj([createAuditLinkAnnot(auditLink)]))
   }
 
   const createAnnot = (pageRef, tocStringCoordY, destCoordY, tocStringNumberOfLines) => {
