@@ -88,7 +88,7 @@ impl Rating<ObjectId> {
         let identity_points = user
             .linked_accounts
             .as_ref()
-            .map_or(0.0, |a| a.len().min(2) as f32) * IDENTITY_POINT;
+            .map_or(0.0, |a| a.len().min(2) as f32) * IDENTITY_POINT_MULTIPLIER;
 
         let total_completed_audits = audits
             .into_iter()
