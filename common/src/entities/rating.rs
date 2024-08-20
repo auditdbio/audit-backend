@@ -55,7 +55,7 @@ impl Rating<ObjectId> {
         let audits = context
             .make_request::<Vec<PublicAudit>>()
             .get(format!(
-                "{}://{}/{}/public_audits/{}/{}",
+                "{}://{}/{}/audit/user/{}/{}",
                 PROTOCOL.as_str(),
                 AUDITS_SERVICE.as_str(),
                 API_PREFIX.as_str(),
@@ -76,7 +76,7 @@ impl Rating<ObjectId> {
 
 
         // Rating calculation:
-        const IDENTITY_POINT: f32 = 5.0;
+        const IDENTITY_POINT_MULTIPLIER: f32 = 5.0;
         const LAST_COMPLETED_AUDITS_MULTIPLIER: f32 = 1.5;
         const FEEDBACK_MULTIPLIER: f32 = 12.0;
 
