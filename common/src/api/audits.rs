@@ -193,7 +193,15 @@ impl PublicAudit {
         };
 
         let customer_contacts = if let Some(project) = &project {
-            project.creator_contacts.clone()
+            if !project.creator_contacts.public_contacts && only_public {
+                Contacts {
+                    email: None,
+                    telegram: None,
+                    public_contacts: false,
+                }
+            } else {
+                project.creator_contacts.clone()
+            }
         } else {
             Contacts {
                 email: None,
@@ -201,6 +209,16 @@ impl PublicAudit {
                 public_contacts: false,
             }
         };
+
+        let mut auditor_contacts = auditor.contacts().clone();
+
+        if !auditor_contacts.public_contacts && only_public {
+            auditor_contacts = Contacts {
+                email: None,
+                telegram: None,
+                public_contacts: false,
+            }
+        }
 
         let project_name = if let Some(project) = &project {
             if audit.project_name == "" {
@@ -248,7 +266,7 @@ impl PublicAudit {
             scope: audit.scope,
             price,
             total_cost,
-            auditor_contacts: auditor.contacts().clone(),
+            auditor_contacts,
             customer_contacts,
             tags: audit.tags,
             last_modified: audit.last_modified,
