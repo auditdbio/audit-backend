@@ -162,14 +162,19 @@ impl Audit<ObjectId> {
 
     pub async fn resolve(&mut self, context: &GeneralContext) -> error::Result<()> {
         if self.report_type.is_none() || self.report_type.clone().unwrap() == ReportType::Generated {
+            let access_code = if let Some(code) = &self.access_code {
+                format!("?code={}", code)
+            } else { "".to_string() };
+
             let report_response = context
                 .make_request::<PublicReport>()
                 .post(format!(
-                    "{}://{}/{}/report/{}",
+                    "{}://{}/{}/report/{}{}",
                     PROTOCOL.as_str(),
                     REPORT_SERVICE.as_str(),
                     API_PREFIX.as_str(),
                     self.id,
+                    access_code,
                 ))
                 .auth(context.server_auth())
                 .send()

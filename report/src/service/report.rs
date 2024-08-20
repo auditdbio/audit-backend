@@ -287,6 +287,7 @@ fn generate_data(audit: &PublicAudit) -> Vec<Section> {
 pub async fn create_report(
     context: GeneralContext,
     audit_id: String,
+    code: Option<&String>
 ) -> anyhow::Result<PublicReport> {
     let audit = context
         .make_request::<PublicAudit>()
@@ -305,7 +306,7 @@ pub async fn create_report(
         .await?;
 
     let report_data = generate_data(&audit);
-    let access_code = if let Some(code) = audit.access_code {
+    let access_code = if let Some(code) = code {
         format!("?code={}", code)
     } else { "".to_string() };
 
