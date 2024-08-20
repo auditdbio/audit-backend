@@ -1,12 +1,14 @@
 use async_trait::async_trait;
+use chrono::Utc;
 use futures::StreamExt;
 use mongodb::{
-    bson::{doc, oid::ObjectId, Bson},
-    options::FindOptions,
+    bson::{Document, doc, oid::ObjectId, Bson, to_document},
+    options::{FindOptions, FindOneAndUpdateOptions, ReturnDocument},
 };
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::error;
+use crate::error::{self, AddCode};
+use crate::repository::HasLastModified;
 
 use super::{Entity, Repository};
 
@@ -28,7 +30,7 @@ impl<T> MongoRepository<T> {
 #[async_trait]
 impl<T> Repository<T> for MongoRepository<T>
 where
-    T: Entity + Serialize + DeserializeOwned + Unpin + Clone + Send + Sync,
+    T: Entity + Serialize + DeserializeOwned + Unpin + Clone + Send + Sync + HasLastModified,
 {
     async fn insert(&self, item: &T) -> error::Result<bool> {
         let result = self
@@ -54,6 +56,33 @@ where
             .find_one_and_delete(doc! {field: item}, None)
             .await?;
         Ok(result)
+    }
+
+    async fn update_one(&self, mut old: Document, update: &T) -> error::Result<T> {
+        old.extend(doc! {
+            "$or": [
+                { "last_modified": Bson::Int64(update.last_modified()) },
+                { "last_modified": { "$exists": false } }
+            ]
+        });
+
+        let mut update = update.clone();
+        update.set_last_modified(Utc::now().timestamp_micros());
+
+        let options = FindOneAndUpdateOptions::builder()
+            .return_document(ReturnDocument::After)
+            .build();
+
+        let result = self
+            .collection
+            .find_one_and_update(old, doc! {"$set": to_document(&update)?}, options)
+            .await?;
+
+        if result.is_none() {
+            return Err(anyhow::anyhow!("Failed to save changes").code(409));
+        }
+
+        Ok(result.unwrap())
     }
 
     async fn find_all(&self, skip: u32, limit: u32) -> error::Result<Vec<T>> {

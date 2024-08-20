@@ -5,6 +5,7 @@ use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    impl_has_last_modified,
     api::{
         chat::AuditMessageId,
         report::PublicReport,
@@ -12,7 +13,7 @@ use crate::{
     entities::{auditor::ExtendedAuditor, customer::PublicCustomer, role::Role},
     error::{self, AddCode},
     context::GeneralContext,
-    repository::Entity,
+    repository::{Entity, HasLastModified},
     services::{API_PREFIX, PROTOCOL, AUDITORS_SERVICE, CUSTOMERS_SERVICE, REPORT_SERVICE},
 };
 
@@ -92,6 +93,8 @@ pub struct Audit<Id: Eq + Hash> {
     pub access_code: Option<String>,
 }
 
+impl_has_last_modified!(Audit<ObjectId>);
+
 impl Audit<String> {
     pub fn parse(self) -> Audit<ObjectId> {
         Audit {
@@ -168,7 +171,7 @@ impl Audit<ObjectId> {
                     API_PREFIX.as_str(),
                     self.id,
                 ))
-                .auth(context.auth())
+                .auth(context.server_auth())
                 .send()
                 .await;
 
