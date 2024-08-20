@@ -1071,7 +1071,7 @@ impl AuditService {
 
         let mut result = vec![];
         for audit in audits {
-            result.push(PublicAudit::new(&self.context, audit).await?);
+            result.push(PublicAudit::new(&self.context, audit, false).await?);
         }
 
         Ok(result)
