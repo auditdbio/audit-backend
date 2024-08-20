@@ -5,17 +5,17 @@ use std::collections::HashMap;
 use rand::{distributions::Alphanumeric, Rng};
 
 use crate::{
+    api::{auditor::request_auditor, customer::request_customer},
     context::GeneralContext,
     entities::{
         audit::{Audit, AuditStatus, PublicAuditStatus, ReportType},
         audit_request::TimeRange,
-        auditor::{ExtendedAuditor, PublicAuditor},
         contacts::Contacts,
         issue::{Issue, Status},
         project::PublicProject,
     },
     error,
-    services::{API_PREFIX, AUDITORS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL},
+    services::{API_PREFIX, CUSTOMERS_SERVICE, PROTOCOL},
 };
 
 use super::issue::PublicIssue;
@@ -132,20 +132,8 @@ impl PublicAudit {
     ) -> error::Result<PublicAudit> {
         let auth = context.auth();
 
-        let auditor = context
-            .make_request::<PublicAuditor>()
-            .get(format!(
-                "{}://{}/{}/auditor/{}",
-                PROTOCOL.as_str(),
-                AUDITORS_SERVICE.as_str(),
-                API_PREFIX.as_str(),
-                audit.auditor_id
-            ))
-            .auth(context.server_auth())
-            .send()
-            .await?
-            .json::<ExtendedAuditor>()
-            .await?;
+        let auditor = request_auditor(&context, audit.auditor_id, context.server_auth()).await?;
+        let customer = request_customer(&context, audit.auditor_id, context.server_auth()).await?;
 
         let project = match audit.no_customer {
             true => None,
@@ -177,8 +165,6 @@ impl PublicAudit {
         let status = match audit.status {
             AuditStatus::Waiting => PublicAuditStatus::WaitingForAudit,
             AuditStatus::Started => {
-                // else if audit.report.is_some() {
-                //     PublicAuditStatus::ReadyForResolve
                 if !is_audit_approved {
                     PublicAuditStatus::ApprovalNeeded
                 } else if audit.issues.is_empty() {
@@ -192,23 +178,6 @@ impl PublicAudit {
             AuditStatus::Resolved => PublicAuditStatus::Resolved,
         };
 
-        let customer_contacts = if let Some(project) = &project {
-            if !project.creator_contacts.public_contacts && only_public {
-                Contacts {
-                    email: None,
-                    telegram: None,
-                    public_contacts: false,
-                }
-            } else {
-                project.creator_contacts.clone()
-            }
-        } else {
-            Contacts {
-                email: None,
-                telegram: None,
-                public_contacts: false,
-            }
-        };
 
         let mut auditor_contacts = auditor.contacts().clone();
 
@@ -219,6 +188,16 @@ impl PublicAudit {
                 public_contacts: false,
             }
         }
+
+        let customer_contacts= if !customer.contacts.public_contacts && only_public {
+            Contacts {
+                email: None,
+                telegram: None,
+                public_contacts: false,
+            }
+        } else {
+            customer.contacts
+        };
 
         let project_name = if let Some(project) = &project {
             if audit.project_name == "" {
