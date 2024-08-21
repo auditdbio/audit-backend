@@ -437,7 +437,33 @@ impl AuditService {
                 audit.approved_by.insert(audit.auditor_id.to_hex(), edit_history_item.id.clone());
                 audit.approved_by.insert(audit.customer_id.to_hex(), edit_history_item.id.clone());
             } else {
-                audit.approved_by.insert(user_id.to_hex(), edit_history_item.id.clone());
+                let is_values_match = audit.approved_by.values().all(|v| {
+                    if let Some(history) = audit
+                        .edit_history
+                        .iter()
+                        .find(|h| h.id == *v)
+                    {
+                        if history.author == user_id.to_hex() {
+                            return true;
+                        }
+
+                        let history: AuditChange = serde_json::from_str(&history.audit).unwrap();
+                        let history_scope = history.scope.unwrap_or_default().join("");
+                        if history.price == audit.price
+                            && history.total_cost == audit.total_cost
+                            && history_scope == audit.scope.join("")
+                        {
+                            true
+                        } else { false }
+                    } else { false }
+                });
+
+                if is_values_match {
+                    audit.approved_by.insert(audit.auditor_id.to_hex(), edit_history_item.id.clone());
+                    audit.approved_by.insert(audit.customer_id.to_hex(), edit_history_item.id.clone());
+                } else {
+                    audit.approved_by.insert(user_id.to_hex(), edit_history_item.id.clone());
+                }
             }
 
             *audit.unread_edits.entry(event_receiver.to_hex()).or_insert(0) += 1;
