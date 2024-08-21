@@ -1,6 +1,6 @@
 use common::{
     api::{
-        audits::{AuditChange, PublicAudit},
+        audits::{AuditChange, PublicAudit, create_verification_code},
         issue::PublicIssue,
         report::PublicReport,
     },
@@ -44,6 +44,7 @@ pub struct RendererInput {
     pub audit_link: String,
     pub project_name: String,
     pub scope: Vec<String>,
+    pub verification_code: Option<String>,
     pub report_data: Vec<Section>,
 }
 
@@ -289,6 +290,8 @@ pub async fn create_report(
     audit_id: String,
     code: Option<&String>
 ) -> anyhow::Result<PublicReport> {
+    let auth = context.auth();
+
     let audit = context
         .make_request::<PublicAudit>()
         .auth(context.server_auth())
@@ -310,6 +313,12 @@ pub async fn create_report(
         format!("?code={}", code)
     } else { "".to_string() };
 
+    let verification_code = if let Auth::Service(Service::Audits, _) = auth {
+        Some(create_verification_code(audit.clone()))
+    } else {
+        None
+    };
+
     let input = RendererInput {
         auditor_name: audit.auditor_first_name + " " + &audit.auditor_last_name,
         profile_link: format!(
@@ -327,6 +336,7 @@ pub async fn create_report(
         ),
         project_name: audit.project_name.clone(),
         scope: audit.scope,
+        verification_code: verification_code.clone(),
         report_data,
     };
 
@@ -367,7 +377,7 @@ pub async fn create_report(
         .send()
         .await?;
 
-    if let Auth::Service(Service::Audits, _) = context.auth() {
+    if let Auth::Service(Service::Audits, _) = auth {
     } else {
         let audit_change = AuditChange {
             report: Some(path.clone()),
@@ -385,12 +395,15 @@ pub async fn create_report(
                 API_PREFIX.as_str(),
                 audit.id
             ))
-            .auth(context.auth())
+            .auth(auth)
             .json(&audit_change)
             .send()
             .await
             .unwrap();
     }
 
-    Ok(PublicReport { path })
+    Ok(PublicReport {
+        path,
+        verification_code,
+    })
 }

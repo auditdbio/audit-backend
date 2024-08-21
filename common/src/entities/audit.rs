@@ -1,5 +1,5 @@
-use std::collections::HashMap;
-use std::hash::Hash;
+use std::{collections::HashMap, hash::Hash};
+use chrono::Utc;
 
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     impl_has_last_modified,
     api::{
+        audits::create_access_code,
         chat::AuditMessageId,
         report::PublicReport,
     },
@@ -91,6 +92,7 @@ pub struct Audit<Id: Eq + Hash> {
     pub conclusion: Option<String>,
 
     pub access_code: Option<String>,
+    pub verification_code: Option<String>,
 }
 
 impl_has_last_modified!(Audit<ObjectId>);
@@ -124,6 +126,7 @@ impl Audit<String> {
             approved_by: self.approved_by,
             unread_edits: self.unread_edits,
             access_code: self.access_code,
+            verification_code: self.verification_code,
         }
     }
 }
@@ -157,19 +160,20 @@ impl Audit<ObjectId> {
             approved_by: self.approved_by,
             unread_edits: self.unread_edits,
             access_code: self.access_code,
+            verification_code: self.verification_code,
         }
     }
 
     pub async fn resolve(&mut self, context: &GeneralContext) -> error::Result<()> {
-        if self.report_type.is_none() || self.report_type.clone().unwrap() == ReportType::Generated {
-            let access_code = if let Some(code) = &self.access_code {
-                format!("?code={}", code)
-            } else { "".to_string() };
+        self.resolved_at = Some(Utc::now().timestamp_micros());
+        let access_code = create_access_code();
+        self.access_code = Some(access_code.clone());
 
+        if self.report_type.is_none() || self.report_type.clone().unwrap() == ReportType::Generated {
             let report_response = context
                 .make_request::<PublicReport>()
                 .post(format!(
-                    "{}://{}/{}/report/{}{}",
+                    "{}://{}/{}/report/{}?code={}",
                     PROTOCOL.as_str(),
                     REPORT_SERVICE.as_str(),
                     API_PREFIX.as_str(),
@@ -194,6 +198,7 @@ impl Audit<ObjectId> {
                 self.report = Some(public_report.path.clone());
                 self.report_name = Some(public_report.path);
                 self.report_type = Some(ReportType::Generated);
+                self.verification_code = public_report.verification_code;
             } else {
                 return Err(
                     anyhow::anyhow!(

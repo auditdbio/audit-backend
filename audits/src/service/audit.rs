@@ -8,7 +8,12 @@ use mongodb::bson::{oid::ObjectId, Bson, doc};
 use common::{
     access_rules::{AccessRules, Edit, Read},
     api::{
-        audits::{AuditAction, AuditChange, CreateIssue, PublicAudit, NoCustomerAuditRequest, create_access_code},
+        audits::{
+            AuditAction, AuditChange,
+            CreateIssue, PublicAudit,
+            NoCustomerAuditRequest,
+            create_access_code,
+        },
         chat::{
             send_message, create_audit_message,
             delete_message, AuditMessageStatus,
@@ -97,6 +102,7 @@ impl AuditService {
                 (auditor_id.to_hex(), 0)
             ]),
             access_code: None,
+            verification_code: None,
         };
 
         let requests = self
@@ -199,6 +205,7 @@ impl AuditService {
             approved_by: HashMap::new(),
             unread_edits: HashMap::new(),
             access_code: Some(create_access_code()),
+            verification_code: None,
         };
 
         if !Edit.get_access(&auth, &audit) {
@@ -399,8 +406,6 @@ impl AuditService {
                         return Err(anyhow::anyhow!("Audit approval is required from all participants").code(400));
                     } else if audit.status == AuditStatus::Started {
                         audit.status = AuditStatus::Resolved;
-                        audit.resolved_at = Some(Utc::now().timestamp_micros());
-                        audit.access_code = Some(create_access_code());
                         audit.resolve(&self.context).await?;
                     }
                 }

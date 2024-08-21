@@ -122,6 +122,7 @@ pub struct PublicAudit {
     pub no_customer: bool,
     pub conclusion: Option<String>,
     pub access_code: Option<String>,
+    pub verification_code: Option<String>,
 }
 
 impl PublicAudit {
@@ -258,6 +259,7 @@ impl PublicAudit {
             no_customer: audit.no_customer,
             conclusion: audit.conclusion,
             access_code,
+            verification_code: audit.verification_code,
         };
 
         Ok(public_audit)
@@ -296,4 +298,23 @@ pub fn create_access_code() -> String {
         .collect();
 
     format!("{}{}", time, rnd)
+}
+
+pub fn create_verification_code(audit: PublicAudit) -> String {
+    let issues = audit.issues
+        .iter()
+        .map(|issue| issue.name.as_str()) // преобразование в &str
+        .collect::<String>();
+
+    let str = audit.id
+        + &audit.auditor_id
+        + &audit.customer_id
+        + &audit.project_name
+        + &audit.description
+        + &audit.conclusion.unwrap_or_default()
+        + &audit.tags.join("")
+        + &audit.scope.join("")
+        + &issues;
+
+    sha256::digest(str)
 }
