@@ -161,15 +161,28 @@ pub async fn patch_audit_issue_read(
     Ok(HttpResponse::Ok().finish())
 }
 
-#[get("/public_audits/{id}/{role}")]
+#[get("/public_audits/{user_id}/{role}")]
 pub async fn get_public_audits(
     context: GeneralContext,
     path: Path<(String, String)>,
 ) -> error::Result<Json<Vec<PublicAudit>>> {
-    let (id, role) = path.into_inner();
+    let (user_id, role) = path.into_inner();
     Ok(Json(
         AuditService::new(context)
-            .find_public(id.parse()?, role)
+            .find_public(user_id.parse()?, role)
+            .await?,
+    ))
+}
+
+#[get("/audit/user/{user_id}/{role}")]
+pub async fn get_audits_by_user(
+    context: GeneralContext,
+    path: Path<(String, String)>,
+) -> error::Result<Json<Vec<PublicAudit>>> {
+    let (user_id, role) = path.into_inner();
+    Ok(Json(
+        AuditService::new(context)
+            .find_audits_by_user(user_id.parse()?, role)
             .await?,
     ))
 }

@@ -55,7 +55,7 @@ impl Rating<ObjectId> {
         let audits = context
             .make_request::<Vec<PublicAudit>>()
             .get(format!(
-                "{}://{}/{}/public_audits/{}/{}",
+                "{}://{}/{}/audit/user/{}/{}",
                 PROTOCOL.as_str(),
                 AUDITS_SERVICE.as_str(),
                 API_PREFIX.as_str(),
@@ -76,7 +76,7 @@ impl Rating<ObjectId> {
 
 
         // Rating calculation:
-        const IDENTITY_POINT: f32 = 5.0;
+        const IDENTITY_POINT_MULTIPLIER: f32 = 5.0;
         const LAST_COMPLETED_AUDITS_MULTIPLIER: f32 = 1.5;
         const FEEDBACK_MULTIPLIER: f32 = 12.0;
 
@@ -88,7 +88,7 @@ impl Rating<ObjectId> {
         let identity_points = user
             .linked_accounts
             .as_ref()
-            .map_or(0.0, |a| a.len().min(2) as f32) * IDENTITY_POINT;
+            .map_or(0.0, |a| a.len().min(2) as f32) * IDENTITY_POINT_MULTIPLIER;
 
         let total_completed_audits = audits
             .into_iter()
@@ -179,15 +179,15 @@ impl Rating<ObjectId> {
 
         let rating_details = serde_json::to_string(&json!({
             "Identity points": format!("{}/{}", identity_points, IDENTITY_MAX_POINTS),
-            "Completed in time points": format!(
-                "{}/{}",
-                (completed_in_time_points * 10.0).trunc() / 10.0,
-                COMPLETED_IN_TIME_MAX_POINTS,
-            ),
-            "Last completed audits points": format!(
+            "Last resolved audits points": format!(
                 "{}/{}",
                 (last_completed_audits_points * 10.0).trunc() / 10.0,
                 LAST_COMPLETED_MAX_POINTS,
+            ),
+            "Resolved in time points": format!(
+                "{}/{}",
+                (completed_in_time_points * 10.0).trunc() / 10.0,
+                COMPLETED_IN_TIME_MAX_POINTS,
             ),
             "Feedback points": format!(
                 "{}/{}",

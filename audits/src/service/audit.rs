@@ -1139,7 +1139,7 @@ impl AuditService {
 
     pub async fn find_public(
         &self,
-        user: ObjectId,
+        user_id: ObjectId,
         role: String,
     ) -> error::Result<Vec<PublicAudit>> {
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
@@ -1150,12 +1150,38 @@ impl AuditService {
             return Err(anyhow::anyhow!("Invalid role").code(400));
         }
 
-        let mut audits = audits.find_many(&role, &Bson::ObjectId(user)).await?;
+        let mut audits = audits.find_many(&role, &Bson::ObjectId(user_id)).await?;
 
         audits.retain(|audit| audit.public);
 
         let mut result = vec![];
 
+        for audit in audits {
+            result.push(PublicAudit::new(&self.context, audit).await?);
+        }
+
+        Ok(result)
+    }
+
+    pub async fn find_audits_by_user(
+        &self,
+        user_id: ObjectId,
+        role: String,
+    ) -> error::Result<Vec<PublicAudit>> {
+        let auth = self.context.auth();
+        if !auth.full_access() {
+            return Err(anyhow::anyhow!("User is not available to read this audits").code(403));
+        }
+
+        let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
+        let role = role.to_ascii_lowercase() + "_id";
+        if role != "customer_id" && role != "auditor_id" {
+            return Err(anyhow::anyhow!("Invalid role").code(400));
+        }
+
+        let audits = audits.find_many(&role, &Bson::ObjectId(user_id)).await?;
+
+        let mut result = vec![];
         for audit in audits {
             result.push(PublicAudit::new(&self.context, audit).await?);
         }
