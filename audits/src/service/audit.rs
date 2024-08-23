@@ -238,12 +238,16 @@ impl AuditService {
 
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
-        let Some(audit) = audits.find("_id", &Bson::ObjectId(id)).await? else {
+        let Some(mut audit) = audits.find("_id", &Bson::ObjectId(id)).await? else {
             return Err(anyhow::anyhow!("Audit not found").code(404));
         };
 
         if Read.get_access(&auth, &audit) {
-            let public_audit = PublicAudit::new(&self.context, audit, false).await?;
+            let public_audit = PublicAudit::new(&self.context, audit.clone(), false).await?;
+            let is_customer = auth.id().unwrap() == audit.customer_id && !audit.no_customer;
+            if is_customer {
+                audit.issues.retain(|issue| issue.status != Status::Draft);
+            }
             return Ok(Some(public_audit))
         } else if audit.public {
             let public_audit = PublicAudit::new(&self.context, audit, true).await?;
