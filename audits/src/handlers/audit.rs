@@ -133,9 +133,11 @@ pub async fn get_audit_issue(
 pub async fn get_audit_issue_by_id(
     context: GeneralContext,
     id: Path<(String, usize)>,
+    query: Query<HashMap<String, String>>,
 ) -> error::Result<HttpResponse> {
+    let code = query.get("code");
     let result = AuditService::new(context)
-        .get_issue_by_id(id.0.parse()?, id.1)
+        .get_issue_by_id(id.0.parse()?, id.1, code)
         .await?;
     Ok(HttpResponse::Ok().json(result))
 }

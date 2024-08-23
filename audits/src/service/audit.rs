@@ -945,9 +945,9 @@ impl AuditService {
         &self,
         audit_id: ObjectId,
         issue_id: usize,
+        code: Option<&String>,
     ) -> error::Result<PublicIssue> {
-        let auth = self.context.auth();
-        let audit = self.get_audit(audit_id).await?;
+        let audit = self.find(audit_id, code).await?;
 
         if let Some(audit) = audit {
             let issue = audit
@@ -957,7 +957,7 @@ impl AuditService {
                 .cloned();
 
             if let Some(issue) = issue {
-                return Ok(auth.public_issue(issue));
+                return Ok(issue);
             }
         }
 
