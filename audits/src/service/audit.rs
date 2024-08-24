@@ -433,28 +433,20 @@ impl AuditService {
 
             audit.edit_history.push(edit_history_item.clone());
 
-            log::info!("is_approve_needed = {}", is_approve_needed);
             if is_audit_approved && !is_approve_needed {
-                log::info!("No approve needed cond");
                 audit.approved_by.insert(audit.auditor_id.to_hex(), edit_history_item.id.clone());
                 audit.approved_by.insert(audit.customer_id.to_hex(), edit_history_item.id.clone());
             } else {
-                let is_values_match = audit.approved_by.values().all(|v| {
+                let mut approved_by = audit.approved_by.clone();
+                approved_by.remove(&user_id.to_hex());
+                let is_values_match = approved_by.values().all(|v| {
                     if let Some(history) = audit
                         .edit_history
                         .iter()
                         .find(|h| h.id == *v)
                     {
-                        log::info!("approved_by.value = {}", v);
-                        if history.author == user_id.to_hex() {
-                            return true;
-                        }
-
                         let history: AuditChange = serde_json::from_str(&history.audit).unwrap();
                         let history_scope = history.scope.unwrap_or_default().join("");
-
-                        log::info!("price h={:?} c={:?}", history.price, change.price);
-                        log::info!("total_cost h={:?} c={:?}", history.total_cost, change.total_cost);
 
                         if history.price == change.price
                             && history.total_cost == change.total_cost
@@ -464,8 +456,6 @@ impl AuditService {
                         } else { false }
                     } else { false }
                 });
-
-                log::info!("is_values_match = {}", is_values_match);
 
                 if is_values_match {
                     audit.approved_by.insert(audit.auditor_id.to_hex(), edit_history_item.id.clone());
