@@ -366,6 +366,10 @@ pub async fn create_report(
         .part("customerId", Part::text(audit.auditor_id))
         .part("auditorId", Part::text(audit.customer_id));
 
+    // if let Some(code) = code {
+    //     form.part("access_code", Part::text(code.to_string()));
+    // }
+
     let _ = client
         .post(format!(
             "{}://{}/{}/file",

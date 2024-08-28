@@ -1,9 +1,15 @@
 use actix_files::NamedFile;
 use actix_multipart::Multipart;
-use actix_web::{delete, get, post, web::Path, HttpResponse};
-use common::{context::GeneralContext, error};
+use actix_web::{delete, get, post, patch, web::{Path, Json, Query}, HttpResponse};
 use futures::StreamExt;
 use mongodb::bson::oid::ObjectId;
+use std::collections::HashMap;
+
+use common::{
+    api::file::ChangeFile,
+    context::GeneralContext,
+    error,
+};
 
 use crate::service::file::FileService;
 
@@ -20,6 +26,7 @@ pub async fn create_file(
     let mut customer_id = String::new();
     let mut auditor_id = String::new();
     let mut full_access = String::new();
+    let mut access_code = String::new();
 
     while let Some(item) = payload.next().await {
         let mut field = item.unwrap();
@@ -71,6 +78,12 @@ pub async fn create_file(
                     full_access.push_str(&String::from_utf8(data.to_vec()).unwrap());
                 }
             }
+            "access_code" => {
+                while let Some(chunk) = field.next().await {
+                    let data = chunk.unwrap();
+                    access_code.push_str(&String::from_utf8(data.to_vec()).unwrap());
+                }
+            }
             _ => (),
         }
     }
@@ -91,7 +104,7 @@ pub async fn create_file(
     }
 
     FileService::new(context)
-        .create_file(path, full_access, private, original_name, file.concat())
+        .create_file(path, full_access, private, original_name, file.concat(), access_code)
         .await?;
 
     Ok(HttpResponse::Ok().finish())
@@ -101,9 +114,11 @@ pub async fn create_file(
 pub async fn find_file(
     context: GeneralContext,
     filename: Path<String>,
+    query: Query<HashMap<String, String>>,
 ) -> error::Result<NamedFile> {
+    let code = query.get("code");
     FileService::new(context)
-        .find_file(filename.into_inner())
+        .find_file(filename.into_inner(), code)
         .await
 }
 
@@ -111,8 +126,23 @@ pub async fn find_file(
 pub async fn delete_file(
     context: GeneralContext,
     filename: Path<String>,
-) -> error::Result<NamedFile> {
+) -> error::Result<HttpResponse> {
     FileService::new(context)
-        .find_file(filename.into_inner())
-        .await
+        .delete_file(filename.into_inner())
+        .await?;
+
+    Ok(HttpResponse::Ok().finish())
+}
+
+#[patch("/file/{filename:.*}")]
+pub async fn change_file(
+    context: GeneralContext,
+    filename: Path<String>,
+    Json(data): Json<ChangeFile>,
+) -> error::Result<HttpResponse> {
+    FileService::new(context)
+        .change_file(filename.into_inner(), data)
+        .await?;
+
+    Ok(HttpResponse::Ok().finish())
 }

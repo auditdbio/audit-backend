@@ -1,16 +1,17 @@
 use std::{fs::File, io::Write, path::Path};
-
+use mongodb::bson::{oid::ObjectId, Bson};
+use serde::{Deserialize, Serialize};
 use actix_files::NamedFile;
+
 use common::{
     impl_has_last_modified,
     access_rules::{AccessRules, Edit, Read},
+    api::file::ChangeFile,
     auth::Auth,
     context::GeneralContext,
     error::{self, AddCode},
     repository::{Entity, HasLastModified},
 };
-use mongodb::bson::{oid::ObjectId, Bson};
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Metadata {
@@ -20,6 +21,7 @@ pub struct Metadata {
     pub path: String,
     pub extension: String,
     pub private: bool,
+    pub access_code: Option<String>,
 }
 
 impl_has_last_modified!(Metadata);
@@ -49,13 +51,7 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b Metadata> for Read {
 impl<'a, 'b> AccessRules<&'a Auth, &'b Metadata> for Edit {
     fn get_access(&self, auth: &'a Auth, subject: &'b Metadata) -> bool {
         match auth {
-            Auth::User(id) => {
-                if subject.private {
-                    subject.allowed_users.contains(id)
-                } else {
-                    true
-                }
-            }
+            Auth::User(id) => subject.allowed_users.contains(id),
             Auth::Admin(_) | Auth::Service(_, _) => true,
             Auth::None => false,
         }
@@ -83,6 +79,7 @@ impl FileService {
         private: bool,
         original_name: String,
         content: Vec<u8>,
+        access_code: String,
     ) -> error::Result<()> {
         let metas = self.context.try_get_repository::<Metadata>()?;
 
@@ -107,6 +104,8 @@ impl FileService {
 
         file.write_all(&content).unwrap();
 
+
+
         let meta = Metadata {
             id: ObjectId::new(),
             last_modified: chrono::Utc::now().timestamp_micros(),
@@ -114,6 +113,7 @@ impl FileService {
             extension,
             private,
             allowed_users,
+            access_code: None,
         };
 
         metas.insert(&meta).await?;
@@ -121,7 +121,7 @@ impl FileService {
         Ok(())
     }
 
-    pub async fn find_file(&self, path: String) -> error::Result<NamedFile> {
+    pub async fn find_file(&self, path: String, code: Option<&String>) -> error::Result<NamedFile> {
         let auth = self.context.auth();
 
         let path = format!("/auditdb-files/{}", path);
@@ -132,10 +132,12 @@ impl FileService {
             return Err(anyhow::anyhow!("File not found").code(404));
         };
 
-        if !Read.get_access(&auth, &meta) {
+        let is_code_match = code == meta.access_code.as_ref();
+
+        if !Read.get_access(&auth, &meta) && !is_code_match {
             return Err(anyhow::anyhow!("Access denied for this user").code(403));
         }
-        let file = actix_files::NamedFile::open_async(format!("{}.{}", path, meta.extension))
+        let file = NamedFile::open_async(format!("{}.{}", path, meta.extension))
             .await
             .unwrap();
 
@@ -158,6 +160,33 @@ impl FileService {
         let path = format!("/auditdb-files/{}", path);
 
         std::fs::remove_file(path)?;
+        metas.delete("id", &meta.id).await?;
+
+        Ok(())
+    }
+
+    pub async fn change_file(&self, path: String, change: ChangeFile) -> error::Result<()> {
+        let auth = self.context.auth();
+
+        let metas = self.context.try_get_repository::<Metadata>()?;
+        let Some(mut meta) = metas.find("path", &Bson::String(path.clone())).await? else {
+            return Err(anyhow::anyhow!("File not found").code(404));
+        };
+
+        if !Edit.get_access(&auth, &meta) {
+            return Err(anyhow::anyhow!("Access denied for this user").code(403));
+        }
+
+        if let Some(private) = change.private {
+            meta.private = private;
+        }
+
+        if change.access_code.is_some() {
+            meta.access_code = change.access_code;
+        }
+
+        metas.delete("id", &meta.id).await?;
+        metas.insert(&meta).await?;
 
         Ok(())
     }
@@ -171,7 +200,7 @@ impl FileService {
 
         let path = format!("/auditdb-files/{}", token.path);
 
-        let file = actix_files::NamedFile::open_async(path).await.unwrap();
+        let file = NamedFile::open_async(path).await.unwrap();
 
         Ok(file)
     }

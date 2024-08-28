@@ -303,7 +303,7 @@ pub fn create_access_code() -> String {
 pub fn create_verification_code(audit: PublicAudit) -> String {
     let issues = audit.issues
         .iter()
-        .map(|issue| issue.name.as_str()) // преобразование в &str
+        .map(|issue| issue.name.as_str())
         .collect::<String>();
 
     let str = audit.id

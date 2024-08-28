@@ -38,7 +38,9 @@ use common::{
         role::Role,
     },
     error::{self, AddCode},
+    services::{FILES_SERVICE, PROTOCOL, API_PREFIX},
 };
+use common::api::file::ChangeFile;
 
 use super::audit_request::PublicRequest;
 
@@ -243,11 +245,11 @@ impl AuditService {
         };
 
         if Read.get_access(&auth, &audit) {
-            let public_audit = PublicAudit::new(&self.context, audit.clone(), false).await?;
             let is_customer = auth.id().unwrap() == audit.customer_id && !audit.no_customer;
             if is_customer {
-                audit.issues.retain(|issue| issue.status != Status::Draft);
+                audit.issues.retain(|issue| issue.status != Status::Draft && issue.include);
             }
+            let public_audit = PublicAudit::new(&self.context, audit.clone(), false).await?;
             return Ok(Some(public_audit))
         } else if audit.public {
             let public_audit = PublicAudit::new(&self.context, audit, true).await?;
@@ -417,13 +419,31 @@ impl AuditService {
         }
 
         if let Some(public) = change.public {
-            if public {
-                if audit.status == AuditStatus::Resolved {
-                    audit.public = public;
+            if audit.status == AuditStatus::Resolved {
+                audit.public = public.clone();
+
+                if let Some(ref report) = audit.report {
+                    self
+                        .context
+                        .make_request()
+                        .patch(format!(
+                            "{}://{}/{}/file/{}",
+                            PROTOCOL.as_str(),
+                            FILES_SERVICE.as_str(),
+                            API_PREFIX.as_str(),
+                            report,
+                        ))
+                        .json(&ChangeFile {
+                            private: Some(public),
+                            ..Default::default()
+                        })
+                        .auth(self.context.server_auth())
+                        .send()
+                        .await?;
+                    }
                 } else {
                     return Err(anyhow::anyhow!("Audit must be resolved").code(400));
                 }
-            }
         }
 
         // audit.last_modified = Utc::now().timestamp_micros();
