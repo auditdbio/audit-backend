@@ -245,7 +245,10 @@ impl AuditService {
         };
 
         if Read.get_access(&auth, &audit) {
-            let is_customer = auth.id().unwrap() == audit.customer_id && !audit.no_customer;
+            let is_customer = if let Some(id) = auth.id() {
+                id == audit.customer_id && !audit.no_customer
+            } else { false };
+
             if is_customer {
                 audit.issues.retain(|issue| issue.status != Status::Draft && issue.include);
             }

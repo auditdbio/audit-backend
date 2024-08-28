@@ -292,11 +292,9 @@ pub async fn create_report(
 ) -> anyhow::Result<PublicReport> {
     let auth = context.auth();
 
-    log::info!("before get audit");
-
     let audit = context
         .make_request::<PublicAudit>()
-        .auth(context.server_auth())
+        .auth(auth)
         .get(format!(
             "{}://{}/{}/audit/{}",
             PROTOCOL.as_str(),
@@ -310,10 +308,7 @@ pub async fn create_report(
         .json::<PublicAudit>()
         .await?;
 
-    log::info!("after get audit");
-
     let report_data = generate_data(&audit);
-    log::info!("after report generate data");
     let access_code = if let Some(code) = code {
         format!("?code={}", code)
     } else { "".to_string() };
@@ -323,8 +318,6 @@ pub async fn create_report(
     } else {
         None
     };
-
-    log::info!("after access & verification code");
 
     let input = RendererInput {
         auditor_name: audit.auditor_first_name + " " + &audit.auditor_last_name,
@@ -362,8 +355,6 @@ pub async fn create_report(
         .bytes()
         .await?;
 
-    log::info!("after report req");
-
     let path = audit.id.clone() + ".pdf";
 
     let client = &context.client();
@@ -374,8 +365,6 @@ pub async fn create_report(
         .part("private", Part::text("true"))
         .part("customerId", Part::text(audit.auditor_id))
         .part("auditorId", Part::text(audit.customer_id));
-
-    log::info!("after create form for file");
 
     // if let Some(code) = code {
     //     form.part("access_code", Part::text(code.to_string()));
@@ -392,10 +381,7 @@ pub async fn create_report(
         .send()
         .await?;
 
-    log::info!("after create file req");
-
     if let Auth::Service(Service::Audits, _) = auth {
-        log::info!("service == audits");
     } else {
         let audit_change = AuditChange {
             report: Some(path.clone()),

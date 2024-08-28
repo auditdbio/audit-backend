@@ -21,7 +21,7 @@ pub struct Metadata {
     pub path: String,
     pub extension: String,
     pub private: bool,
-    // pub access_code: Option<String>,
+    pub access_code: Option<String>,
 }
 
 impl_has_last_modified!(Metadata);
@@ -79,6 +79,7 @@ impl FileService {
         private: bool,
         original_name: String,
         content: Vec<u8>,
+        access_code: String,
     ) -> error::Result<()> {
         let metas = self.context.try_get_repository::<Metadata>()?;
 
@@ -102,14 +103,19 @@ impl FileService {
 
         file.write_all(&content).unwrap();
 
-        let meta = Metadata {
+        let mut meta = Metadata {
             id: ObjectId::new(),
             last_modified: chrono::Utc::now().timestamp_micros(),
             path,
             extension,
             private,
             allowed_users,
+            access_code: None,
         };
+
+        if !access_code.is_empty() {
+            meta.access_code = Some(access_code);
+        }
 
         metas.insert(&meta).await?;
 
@@ -126,9 +132,9 @@ impl FileService {
             return Err(anyhow::anyhow!("File not found").code(404));
         };
 
-        // let is_code_match = code == meta.access_code.as_ref();
+        let is_code_match = code == meta.access_code.as_ref();
 
-        if !Read.get_access(&auth, &meta) {
+        if !Read.get_access(&auth, &meta) && !is_code_match {
             return Err(anyhow::anyhow!("Access denied for this user").code(403));
         }
         let file = NamedFile::open_async(format!("{}.{}", path, meta.extension))
@@ -177,9 +183,9 @@ impl FileService {
             meta.private = private;
         }
 
-        // if change.access_code.is_some() {
-        //     meta.access_code = change.access_code;
-        // }
+        if change.access_code.is_some() {
+            meta.access_code = change.access_code;
+        }
 
         metas.delete("id", &meta.id).await?;
         metas.insert(&meta).await?;
