@@ -132,7 +132,7 @@ impl FileService {
             return Err(anyhow::anyhow!("File not found").code(404));
         };
 
-        let is_code_match = code == meta.access_code.as_ref();
+        let is_code_match = meta.access_code.is_some() && code == meta.access_code.as_ref();
 
         if !Read.get_access(&auth, &meta) && !is_code_match {
             return Err(anyhow::anyhow!("Access denied for this user").code(403));

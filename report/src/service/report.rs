@@ -358,7 +358,7 @@ pub async fn create_report(
     let path = audit.id.clone() + ".pdf";
 
     let client = &context.client();
-    let form = Form::new()
+    let mut form = Form::new()
         .part("file", Part::bytes(report.to_vec()))
         .part("path", Part::text(path.clone()))
         .part("original_name", Part::text("report.pdf"))
@@ -366,9 +366,9 @@ pub async fn create_report(
         .part("customerId", Part::text(audit.auditor_id))
         .part("auditorId", Part::text(audit.customer_id));
 
-    // if let Some(code) = code {
-    //     form.part("access_code", Part::text(code.to_string()));
-    // }
+    if let Some(code) = code {
+        form = form.part("access_code", Part::text(code.to_string()));
+    }
 
     let _ = client
         .post(format!(
