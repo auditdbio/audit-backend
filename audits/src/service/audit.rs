@@ -437,7 +437,7 @@ impl AuditService {
                             report,
                         ))
                         .json(&ChangeFile {
-                            private: Some(public),
+                            private: Some(!public),
                             ..Default::default()
                         })
                         .auth(self.context.server_auth())
