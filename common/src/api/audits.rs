@@ -43,7 +43,6 @@ pub struct AuditChange {
     pub report: Option<String>,
     pub time: Option<TimeRange>,
     pub start_audit: Option<bool>,
-    #[serde(rename = "isPublic")]
     pub public: Option<bool>,
     pub conclusion: Option<String>,
     pub comment: Option<String>,

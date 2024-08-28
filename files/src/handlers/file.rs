@@ -78,12 +78,12 @@ pub async fn create_file(
                     full_access.push_str(&String::from_utf8(data.to_vec()).unwrap());
                 }
             }
-            "access_code" => {
-                while let Some(chunk) = field.next().await {
-                    let data = chunk.unwrap();
-                    access_code.push_str(&String::from_utf8(data.to_vec()).unwrap());
-                }
-            }
+            // "access_code" => {
+            //     while let Some(chunk) = field.next().await {
+            //         let data = chunk.unwrap();
+            //         access_code.push_str(&String::from_utf8(data.to_vec()).unwrap());
+            //     }
+            // }
             _ => (),
         }
     }
@@ -104,7 +104,7 @@ pub async fn create_file(
     }
 
     FileService::new(context)
-        .create_file(path, full_access, private, original_name, file.concat(), access_code)
+        .create_file(path, full_access, private, original_name, file.concat())
         .await?;
 
     Ok(HttpResponse::Ok().finish())
