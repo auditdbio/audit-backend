@@ -103,6 +103,8 @@ pub async fn create_file(
         }
     }
 
+    log::info!("before create file");
+
     FileService::new(context)
         .create_file(path, full_access, private, original_name, file.concat())
         .await?;

@@ -83,7 +83,6 @@ impl FileService {
         let metas = self.context.try_get_repository::<Metadata>()?;
 
         let path = format!("/auditdb-files/{}", path);
-
         let meta = metas.find("path", &Bson::String(path.clone())).await?;
 
         if let Some(meta) = meta {
@@ -103,8 +102,6 @@ impl FileService {
 
         file.write_all(&content).unwrap();
 
-
-
         let meta = Metadata {
             id: ObjectId::new(),
             last_modified: chrono::Utc::now().timestamp_micros(),
@@ -123,7 +120,6 @@ impl FileService {
         let auth = self.context.auth();
 
         let path = format!("/auditdb-files/{}", path);
-
         let metas = self.context.try_get_repository::<Metadata>()?;
 
         let Some(meta) = metas.find("path", &Bson::String(path.clone())).await? else {
@@ -145,6 +141,7 @@ impl FileService {
     pub async fn delete_file(&self, path: String) -> error::Result<()> {
         let auth = self.context.auth();
 
+        let path = format!("/auditdb-files/{}", path);
         let metas = self.context.try_get_repository::<Metadata>()?;
 
         let Some(meta) = metas.find("path", &Bson::String(path.clone())).await? else {
@@ -166,6 +163,7 @@ impl FileService {
     pub async fn change_file(&self, path: String, change: ChangeFile) -> error::Result<()> {
         let auth = self.context.auth();
 
+        let path = format!("/auditdb-files/{}", path);
         let metas = self.context.try_get_repository::<Metadata>()?;
         let Some(mut meta) = metas.find("path", &Bson::String(path.clone())).await? else {
             return Err(anyhow::anyhow!("File not found").code(404));
