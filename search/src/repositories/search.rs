@@ -77,6 +77,8 @@ impl SearchRepo {
         let sort_order = query.sort_order.unwrap_or(1);
         let mut sort = doc! {};
 
+        log::info!("________Start sort___________");
+
         if kind.contains(&"auditor".to_string()) {
             sort.insert("kind", 1);
         }
@@ -84,21 +86,13 @@ impl SearchRepo {
         if let Some(sort_by) = &query.sort_by {
             if sort_by == "price" {
                 if kind.contains(&"auditor".to_string()) {
-                    sort.insert(
-                        "price_range.to",
-                        doc! { "$ifNull": ["$price_range.to", 0],
-                            "$sort": sort_order }
-                    );
-                    sort.insert(
-                        "price_range.from",
-                        doc! { "$ifNull": ["$price_range.from", 0],
-                            "$sort": sort_order }
-                    );
+                    sort.insert("price_range.to", sort_order);
+                    sort.insert("price_range.from", sort_order);
                 } else if kind.contains(&"project".to_string()) {
-                    sort.insert("price", doc! { "$ifNull": ["$price", 0], "$sort": sort_order });
+                    sort.insert("price", sort_order);
                 }
             } else if sort_by == "rating" && kind.contains(&"auditor".to_string()) {
-                sort.insert("rating", doc! { "$ifNull": ["$rating", 0], "$sort": sort_order });
+                sort.insert("rating", sort_order);
             }
         } else {
             sort.insert("_id", -1);
@@ -204,9 +198,6 @@ impl SearchRepo {
             });
         }
 
-        log::info!("Search query: {:?}", docs);
-        log::info!("Search options: {:?}", find_options);
-
         let result: Vec<Document> = self
             .0
              .0
@@ -228,7 +219,7 @@ impl SearchRepo {
             .await
             .unwrap();
 
-        log::info!("Search result: {:?}", serde_json::to_string_pretty(&result));
+        log::info!("Search result: {:?}", result);
 
         Ok(SearchResult {
             result,
