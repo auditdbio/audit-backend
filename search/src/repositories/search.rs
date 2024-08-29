@@ -77,8 +77,6 @@ impl SearchRepo {
         let sort_order = query.sort_order.unwrap_or(1);
         let mut sort = doc! {};
 
-        log::info!("________Start sort___________");
-
         if kind.contains(&"auditor".to_string()) {
             sort.insert("kind", 1);
         }
@@ -86,8 +84,8 @@ impl SearchRepo {
         if let Some(sort_by) = &query.sort_by {
             if sort_by == "price" {
                 if kind.contains(&"auditor".to_string()) {
-                    sort.insert("price_range.to", sort_order);
                     sort.insert("price_range.from", sort_order);
+                    sort.insert("price_range.to", sort_order);
                 } else if kind.contains(&"project".to_string()) {
                     sort.insert("price", sort_order);
                 }
@@ -218,8 +216,6 @@ impl SearchRepo {
             .count_documents(doc! { "$and": docs}, None)
             .await
             .unwrap();
-
-        log::info!("Search result: {:?}", result);
 
         Ok(SearchResult {
             result,
