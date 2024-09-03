@@ -58,6 +58,7 @@ pub fn create_app(
                 .service(delete_audit_issue)
                 .service(patch_audit_disclose_all)
                 .service(patch_audit_issue_read)
+                .service(patch_audit_issue_read_all)
                 .service(get_public_audits)
                 .service(get_audits_by_user)
                 .service(find_all_audit_request)

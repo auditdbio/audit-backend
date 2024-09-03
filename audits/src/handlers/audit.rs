@@ -147,22 +147,34 @@ pub async fn delete_audit_issue(
     Ok(HttpResponse::Ok().json(result))
 }
 
-#[patch("/audit/{id}/disclose_all")]
+#[patch("/audit/{audit_id}/disclose_all")]
 pub async fn patch_audit_disclose_all(
     context: GeneralContext,
-    id: Path<String>,
+    audit_id: Path<String>,
 ) -> error::Result<HttpResponse> {
-    let result = AuditService::new(context).disclose_all(id.parse()?).await?;
+    let result = AuditService::new(context).disclose_all(audit_id.parse()?).await?;
     Ok(HttpResponse::Ok().json(result))
 }
 
-#[patch("/audit/{id}/{issue_id}/read/{read}")]
+#[patch("/audit/{audit_id}/{issue_id}/read/{read}")]
 pub async fn patch_audit_issue_read(
     context: GeneralContext,
-    id: Path<(String, usize, u64)>,
+    path: Path<(String, usize, u64)>,
+) -> error::Result<HttpResponse> {
+    let (audit_id, issue_id, read) = path.into_inner();
+    AuditService::new(context)
+        .read_events(audit_id.parse()?, issue_id, read)
+        .await?;
+    Ok(HttpResponse::Ok().finish())
+}
+
+#[patch("/audit/{audit_id}/read_all")]
+pub async fn patch_audit_issue_read_all(
+    context: GeneralContext,
+    audit_id: Path<String>,
 ) -> error::Result<HttpResponse> {
     AuditService::new(context)
-        .read_events(id.0.parse()?, id.1, id.2)
+        .read_all_events(audit_id.parse()?)
         .await?;
     Ok(HttpResponse::Ok().finish())
 }

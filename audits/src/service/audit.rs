@@ -996,17 +996,42 @@ impl AuditService {
 
             if let Some(issue) = issue {
                 issue.read.insert(auth.id().unwrap().to_hex(), read);
-            }
 
+                let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
+                // audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
+                audits.delete("_id", &audit.id).await?;
+                audits.insert(&audit).await?;
+
+                return Ok(());
+            } else {
+                return Err(anyhow::anyhow!("No issue found").code(404));
+            }
+        }
+
+        Err(anyhow::anyhow!("No audit found").code(404))
+    }
+
+    pub async fn read_all_events(
+        &self,
+        audit_id: ObjectId,
+    ) -> error::Result<()> {
+        let auth = self.context.auth();
+
+        let audit = self.get_audit(audit_id).await?;
+
+        if let Some(mut audit) = audit {
+            for issue in &mut audit.issues {
+                issue.read.insert(auth.id().unwrap().to_hex(), issue.events.len() as u64);
+            }
             let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
-            // audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
+
             audits.delete("_id", &audit.id).await?;
             audits.insert(&audit).await?;
 
             return Ok(());
         }
 
-        Err(anyhow::anyhow!("No issue found").code(404))
+        Err(anyhow::anyhow!("No audit found").code(404))
     }
 
     pub async fn find_public(
