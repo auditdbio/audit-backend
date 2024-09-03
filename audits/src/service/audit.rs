@@ -1021,7 +1021,7 @@ impl AuditService {
 
         if let Some(mut audit) = audit {
             for issue in &mut audit.issues {
-                issue.read.insert(auth.id().unwrap().to_hex(), issue.events.len() as u64);
+                issue.read.insert(auth.id().unwrap().to_hex(), issue.events.len() as u64 + 1);
             }
             let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
