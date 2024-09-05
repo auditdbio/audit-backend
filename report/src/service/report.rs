@@ -1,6 +1,8 @@
+use actix_multipart::Multipart;
+use futures::StreamExt;
 use common::{
     api::{
-        audits::{AuditChange, PublicAudit, create_verification_code},
+        audits::{AuditChange, PublicAudit},
         issue::PublicIssue,
         report::PublicReport,
     },
@@ -14,6 +16,11 @@ use common::{
 };
 use reqwest::multipart::{Form, Part};
 use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct VerifyReportResponse {
+    pub verified: bool,
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct IssueData {
@@ -44,7 +51,6 @@ pub struct RendererInput {
     pub audit_link: String,
     pub project_name: String,
     pub scope: Vec<String>,
-    pub verification_code: Option<String>,
     pub report_data: Vec<Section>,
 }
 
@@ -205,14 +211,6 @@ fn generate_issue_section(issue: &PublicIssue) -> Option<Section> {
 fn generate_audit_sections(audit: &PublicAudit, issues: Vec<Section>) -> Vec<Section> {
     let statistics = Statistics::new(&audit.issues);
 
-    /*
-     * Table of contests
-     * Disclamer
-     * Summary
-     *     Project description
-     *     Scope
-     *     Conclusion
-     */
     let disclaimer = include_str!("../../templates/disclaimer.md").to_string();
 
     vec![
@@ -313,12 +311,6 @@ pub async fn create_report(
         format!("?code={}", code)
     } else { "".to_string() };
 
-    let verification_code = if let Auth::Service(Service::Audits, _) = auth {
-        Some(create_verification_code(audit.clone()))
-    } else {
-        None
-    };
-
     let input = RendererInput {
         auditor_name: audit.auditor_first_name + " " + &audit.auditor_last_name,
         profile_link: format!(
@@ -336,7 +328,6 @@ pub async fn create_report(
         ),
         project_name: audit.project_name.clone(),
         scope: audit.scope,
-        verification_code: verification_code.clone(),
         report_data,
     };
 
@@ -354,6 +345,14 @@ pub async fn create_report(
         .unwrap()
         .bytes()
         .await?;
+
+    let verification_code = if let Auth::Service(Service::Audits, _) = auth {
+        let mut combined_bytes = Vec::new();
+        combined_bytes.extend_from_slice(&report);
+        Some(sha256::digest(&combined_bytes[..]))
+    } else {
+        None
+    };
 
     let path = audit.id.clone() + ".pdf";
 
@@ -409,5 +408,46 @@ pub async fn create_report(
     Ok(PublicReport {
         path,
         verification_code,
+    })
+}
+
+pub async fn verify_report(
+    context: GeneralContext,
+    audit_id: String,
+    mut payload: Multipart,
+) -> anyhow::Result<VerifyReportResponse> {
+    let auth = context.auth();
+
+    let audit = context
+        .make_request::<PublicAudit>()
+        .auth(auth)
+        .get(format!(
+            "{}://{}/{}/audit/{}",
+            PROTOCOL.as_str(),
+            USERS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
+            audit_id,
+        ))
+        .send()
+        .await
+        .unwrap()
+        .json::<PublicAudit>()
+        .await?;
+
+    let mut report = vec![];
+
+    while let Some(item) = payload.next().await {
+        let mut field = item.unwrap();
+        while let Some(chunk) = field.next().await {
+            let data = chunk.unwrap();
+            report.extend_from_slice(&data);
+        }
+    }
+
+    let verification_code = sha256::digest(&report[..]);
+    let verified = Some(verification_code) == audit.verification_code;
+
+    Ok(VerifyReportResponse {
+        verified,
     })
 }

@@ -859,7 +859,6 @@ dependencies = [
  "rust-crypto",
  "serde",
  "serde_json",
- "sha256",
  "tokio",
  "type-map",
  "ureq",
@@ -2977,6 +2976,7 @@ dependencies = [
  "log",
  "reqwest",
  "serde",
+ "sha256",
  "tokio",
 ]
 

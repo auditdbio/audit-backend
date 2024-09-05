@@ -305,22 +305,3 @@ pub fn create_access_code() -> String {
 
     format!("{}{}", time, rnd)
 }
-
-pub fn create_verification_code(audit: PublicAudit) -> String {
-    let issues = audit.issues
-        .iter()
-        .map(|issue| issue.name.as_str())
-        .collect::<String>();
-
-    let str = audit.id
-        + &audit.auditor_id
-        + &audit.customer_id
-        + &audit.project_name
-        + &audit.description
-        + &audit.conclusion.unwrap_or_default()
-        + &audit.tags.join("")
-        + &audit.scope.join("")
-        + &issues;
-
-    sha256::digest(str)
-}
