@@ -3,7 +3,12 @@ use std::{collections::HashMap, hash::Hash};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-use crate::{access_rules::AccessRules, auth::Auth};
+use crate::{
+    access_rules::AccessRules,
+    auth::Auth,
+    entities::role::Role,
+    default_timestamp,
+};
 
 use super::audit::Audit;
 
@@ -29,12 +34,12 @@ impl Status {
             (Status::InProgress, Action::Fixed) => Some(Status::Verification),
             (Status::InProgress, Action::NotFixed) => None,
             (Status::InProgress, Action::Discard) => Some(Status::WillNotFix),
-            (Status::InProgress, Action::Verified) => None,
+            (Status::InProgress, Action::Verified) => Some(Status::Fixed),
             (Status::InProgress, Action::ReOpen) => None,
             (Status::Verification, Action::Begin) => None,
             (Status::Verification, Action::Fixed) => Some(Status::InProgress),
             (Status::Verification, Action::NotFixed) => Some(Status::InProgress),
-            (Status::Verification, Action::Discard) => None,
+            (Status::Verification, Action::Discard) => Some(Status::WillNotFix),
             (Status::Verification, Action::Verified) => Some(Status::Fixed),
             (Status::Verification, Action::ReOpen) => None,
             (Status::WillNotFix, Action::Begin) => None,
@@ -48,7 +53,7 @@ impl Status {
             (Status::Fixed, Action::NotFixed) => None,
             (Status::Fixed, Action::Discard) => None,
             (Status::Fixed, Action::Verified) => Some(Status::Verification),
-            (Status::Fixed, Action::ReOpen) => None,
+            (Status::Fixed, Action::ReOpen) => Some(Status::InProgress),
         }
     }
 }
@@ -82,8 +87,6 @@ impl Action {
         }
     }
 }
-
-use crate::default_timestamp;
 
 pub fn severity_to_integer(severity: &str) -> usize {
     match severity {
@@ -285,8 +288,3 @@ pub enum EventKind {
 }
 
 pub struct UpdateEvent {}
-
-/*
-{"auditor_id":"644263518a7b483205de945b","auditor_contacts":{"email":"1@custoooooooooooooooooooooooooooooooooooooomer.com","telegram":"tkoh","public_contacts":true},"customer_contacts":{"email":null,"telegram":null,"public_contacts":true},"last_changer":"auditor","price":46,"description":"fewfewfwefw ewf ewf","price_range":{"from":46,"to":46},"time":{"from":1684855963362,"to":1684855963362},"project_id":"644fc914a133a244b4839c5d","scope":["https://qwerty.qwe"],"time_frame":""}
-
- */
