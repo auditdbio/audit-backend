@@ -20,6 +20,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct VerifyReportResponse {
     pub verified: bool,
+    pub verification_code: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -445,10 +446,17 @@ pub async fn verify_report(
 
     while let Some(item) = payload.next().await {
         let mut field = item.unwrap();
-        while let Some(chunk) = field.next().await {
-            let data = chunk.unwrap();
-            report.extend_from_slice(&data);
+
+        match field.name() {
+            "file" => {
+                while let Some(chunk) = field.next().await {
+                    let data = chunk.unwrap();
+                    report.extend_from_slice(&data);
+                }
+            }
+            _ => (),
         }
+
     }
 
     let verification_code = sha256::digest(&report[..]);
@@ -456,5 +464,6 @@ pub async fn verify_report(
 
     Ok(VerifyReportResponse {
         verified,
+        verification_code: audit.verification_code,
     })
 }
