@@ -9,7 +9,7 @@ use crate::{
     api::{
         audits::create_access_code,
         chat::AuditMessageId,
-        report::PublicReport,
+        report::{PublicReport, CreateReport},
     },
     entities::{auditor::ExtendedAuditor, customer::PublicCustomer, role::Role},
     error::{self, AddCode},
@@ -171,7 +171,7 @@ impl Audit<ObjectId> {
 
         if self.report_type.is_none() || self.report_type.clone().unwrap() == ReportType::Generated {
             let report_response = context
-                .make_request::<PublicReport>()
+                .make_request()
                 .post(format!(
                     "{}://{}/{}/report/{}?code={}",
                     PROTOCOL.as_str(),
@@ -181,6 +181,9 @@ impl Audit<ObjectId> {
                     access_code,
                 ))
                 .auth(context.server_auth())
+                .json(&CreateReport {
+                    is_draft: Some(false),
+                })
                 .send()
                 .await;
 
