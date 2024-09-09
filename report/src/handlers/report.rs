@@ -6,7 +6,7 @@ use actix_web::{
 };
 
 use common::{
-    api::report::PublicReport,
+    api::report::{PublicReport, CreateReport},
     context::GeneralContext,
     error,
 };
@@ -17,11 +17,12 @@ use crate::service::report::{self, VerifyReportResponse};
 pub async fn create_report(
     context: GeneralContext,
     audit_id: Path<String>,
+    Json(data): Json<CreateReport>,
     query: Query<HashMap<String, String>>,
 ) -> error::Result<Json<PublicReport>> {
     let code = query.get("code");
     Ok(Json(
-        report::create_report(context, audit_id.into_inner(), code).await?,
+        report::create_report(context, audit_id.into_inner(), data, code).await?,
     ))
 }
 
