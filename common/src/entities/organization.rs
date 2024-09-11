@@ -10,8 +10,9 @@ use crate::{
         role::Role,
         user::{LinkedAccount, PublicLinkedAccount},
     },
-    repository::Entity,
+    repository::{Entity, HasLastModified},
     services::{API_PREFIX, PROTOCOL, USERS_SERVICE},
+    impl_has_last_modified,
 };
 use crate::auth::Auth;
 
@@ -44,6 +45,8 @@ pub struct Organization<Id> {
     #[serde(default)]
     pub invites: Vec<OrganizationMember>,
 }
+
+impl_has_last_modified!(Organization<ObjectId>);
 
 impl Organization<String> {
     pub fn parse(self) -> Organization<ObjectId> {
