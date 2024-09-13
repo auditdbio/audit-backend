@@ -26,7 +26,6 @@ impl Status {
         match (self, action, role) {
             (Status::Draft, Action::Begin, Role::Auditor) => Some(Status::InProgress),
 
-            (Status::InProgress, Action::Begin, Role::Auditor) => Some(Status::Draft),
             (Status::InProgress, Action::Fixed, Role::Auditor) => Some(Status::Fixed),
             (Status::InProgress, Action::Fixed, Role::Customer) => Some(Status::Verification),
             (Status::InProgress, Action::Discard, _) => Some(Status::WillNotFix),
