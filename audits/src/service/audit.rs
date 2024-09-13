@@ -700,7 +700,7 @@ impl AuditService {
                     _ => return Err(anyhow::anyhow!("Invalid action").code(400))
                 }
             } else {
-                let Some(new_state) = issue.status.apply(&action) else {
+                let Some(new_state) = issue.status.apply(&action, role) else {
                     return Err(anyhow::anyhow!("Invalid action").code(400));
                 };
 
