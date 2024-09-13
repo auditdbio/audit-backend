@@ -424,11 +424,9 @@ pub async fn verify_report(
     audit_id: String,
     mut payload: Multipart,
 ) -> anyhow::Result<VerifyReportResponse> {
-    let auth = context.auth();
-
     let audit = context
         .make_request::<PublicAudit>()
-        .auth(auth)
+        .auth(context.server_auth())
         .get(format!(
             "{}://{}/{}/audit/{}",
             PROTOCOL.as_str(),
