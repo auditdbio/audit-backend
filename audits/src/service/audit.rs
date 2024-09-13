@@ -532,19 +532,48 @@ impl AuditService {
 
             audit.edit_history.push(edit_history_item.clone());
 
+            let current_approve_id = if last_changer_role == Role::Customer {
+                audit.customer_id.to_hex()
+            } else if last_changer_role == Role::Auditor {
+                audit.auditor_id.to_hex()
+            } else {
+                return Err(anyhow::anyhow!("Unknown role").code(400));
+            };
+
             if is_audit_approved && !is_approve_needed {
                 audit.approved_by.insert(audit.auditor_id.to_hex(), edit_history_item.id.clone());
                 audit.approved_by.insert(audit.customer_id.to_hex(), edit_history_item.id.clone());
             } else {
-                if last_changer_role == Role::Customer {
-                    audit.approved_by.insert(audit.customer_id.to_hex(), edit_history_item.id.clone());
-                } else if last_changer_role == Role::Auditor {
+                let mut approved_by = audit.approved_by.clone();
+                approved_by.remove(&current_approve_id);
+                let is_values_match = approved_by.values().all(|v| {
+                    if let Some(history) = audit
+                        .edit_history
+                        .iter()
+                        .find(|h| h.id == *v)
+                    {
+                        let history: AuditChange = serde_json::from_str(&history.audit).unwrap();
+                        let history_scope = history.scope.unwrap_or_default().join("");
+
+                        if history.price == change.price
+                            && history.total_cost == change.total_cost
+                            && history_scope == audit.scope.join("")
+                        {
+                            true
+                        } else { false }
+                    } else { false }
+                });
+
+                if is_values_match {
                     audit.approved_by.insert(audit.auditor_id.to_hex(), edit_history_item.id.clone());
+                    audit.approved_by.insert(audit.customer_id.to_hex(), edit_history_item.id.clone());
+                } else {
+                    audit.approved_by.insert(current_approve_id.clone(), edit_history_item.id.clone());
                 }
             }
 
             *audit.unread_edits.entry(event_receiver.to_hex()).or_insert(0) += 1;
-            audit.unread_edits.insert(user_id.to_hex(), 0);
+            audit.unread_edits.insert(current_approve_id, 0);
         }
 
         let public_audit = PublicAudit::new(&self.context, audit.clone()).await?;
@@ -1124,17 +1153,42 @@ impl AuditService {
 
             if let Some(issue) = issue {
                 issue.read.insert(auth.id().unwrap().to_hex(), read);
-            }
 
+                let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
+                // audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
+                audits.delete("_id", &audit.id).await?;
+                audits.insert(&audit).await?;
+
+                return Ok(());
+            } else {
+                return Err(anyhow::anyhow!("No issue found").code(404));
+            }
+        }
+
+        Err(anyhow::anyhow!("No audit found").code(404))
+    }
+
+    pub async fn read_all_events(
+        &self,
+        audit_id: ObjectId,
+    ) -> error::Result<()> {
+        let auth = self.context.auth();
+
+        let audit = self.get_audit(audit_id).await?;
+
+        if let Some(mut audit) = audit {
+            for issue in &mut audit.issues {
+                issue.read.insert(auth.id().unwrap().to_hex(), issue.events.len() as u64 + 1);
+            }
             let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
-            // audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
+
             audits.delete("_id", &audit.id).await?;
             audits.insert(&audit).await?;
 
             return Ok(());
         }
 
-        Err(anyhow::anyhow!("No issue found").code(404))
+        Err(anyhow::anyhow!("No audit found").code(404))
     }
 
     pub async fn find_public(

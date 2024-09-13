@@ -178,22 +178,34 @@ impl Rating<ObjectId> {
         summary = (summary * 10.0).trunc() / 10.0;
 
         let rating_details = serde_json::to_string(&json!({
-            "Identity points": format!("{}/{}", identity_points, IDENTITY_MAX_POINTS),
-            "Last resolved audits points": format!(
-                "{}/{}",
-                (last_completed_audits_points * 10.0).trunc() / 10.0,
-                LAST_COMPLETED_MAX_POINTS,
-            ),
-            "Resolved in time points": format!(
-                "{}/{}",
-                (completed_in_time_points * 10.0).trunc() / 10.0,
-                COMPLETED_IN_TIME_MAX_POINTS,
-            ),
-            "Feedback points": format!(
-                "{}/{}",
-                (feedback_points * 10.0).trunc() / 10.0,
-                FEEDBACK_MAX_POINTS,
-            ),
+            "Identity points": {
+                "points": format!("{}/{}", identity_points, IDENTITY_MAX_POINTS),
+                "label": "Earn points by linking your identity accounts to your profile."
+            },
+            "Last resolved audits points": {
+                "label": "Earn points by successfully resolving audits.",
+                "points": format!(
+                    "{}/{}",
+                    (last_completed_audits_points * 10.0).trunc() / 10.0,
+                    LAST_COMPLETED_MAX_POINTS,
+                ),
+            },
+            "Resolved on time points": {
+                "label": "Earn extra points for resolving audits on time.",
+                "points": format!(
+                    "{}/{}",
+                    (completed_in_time_points * 10.0).trunc() / 10.0,
+                    COMPLETED_IN_TIME_MAX_POINTS,
+                ),
+            },
+            "Feedback points": {
+                "label": "Earn points based on feedback for resolved audits.",
+                "points": format!(
+                    "{}/{}",
+                    (feedback_points * 10.0).trunc() / 10.0,
+                    FEEDBACK_MAX_POINTS,
+                ),
+            },
         })).unwrap();
 
         let patch_url: String;

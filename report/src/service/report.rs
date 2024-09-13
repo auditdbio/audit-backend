@@ -119,9 +119,8 @@ impl Statistics {
 
         for issue in issues {
             if issue.include {
-                statistics.total += 1;
-
                 if issue.status == Status::Fixed {
+                    statistics.total += 1;
                     match issue.severity.as_str() {
                         "Critical" => statistics.fixed.critical += 1,
                         "Major" => statistics.fixed.major += 1,
@@ -129,7 +128,8 @@ impl Statistics {
                         "Minor" => statistics.fixed.minor += 1,
                         _ => {}
                     }
-                } else {
+                } else if issue.status == Status::WillNotFix {
+                    statistics.total += 1;
                     match issue.severity.as_str() {
                         "Critical" => statistics.not_fixed.critical += 1,
                         "Major" => statistics.not_fixed.major += 1,
@@ -137,6 +137,8 @@ impl Statistics {
                         "Minor" => statistics.not_fixed.minor += 1,
                         _ => {}
                     }
+                } else {
+                    continue
                 }
             }
         }
@@ -146,7 +148,7 @@ impl Statistics {
 }
 
 fn generate_issue_section(issue: &PublicIssue) -> Option<Section> {
-    if !issue.include {
+    if !issue.include || (issue.status != Status::Fixed && issue.status != Status::WillNotFix) {
         return None;
     }
 

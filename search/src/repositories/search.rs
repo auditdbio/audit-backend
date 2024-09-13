@@ -84,11 +84,15 @@ impl SearchRepo {
         if let Some(sort_by) = &query.sort_by {
             if sort_by == "price" {
                 if kind.contains(&"auditor".to_string()) {
-                    sort.insert("price_range.to", sort_order);
                     sort.insert("price_range.from", sort_order);
+                    sort.insert("price_range.to", sort_order);
                 } else if kind.contains(&"project".to_string()) {
                     sort.insert("price", sort_order);
                 }
+            } else if sort_by == "total_cost" && kind.contains(&"project".to_string()) {
+                sort.insert("total_cost", sort_order);
+            } else if sort_by == "rating" && kind.contains(&"auditor".to_string()) {
+                sort.insert("rating", sort_order);
             }
         } else {
             sort.insert("_id", -1);
@@ -169,12 +173,45 @@ impl SearchRepo {
                     ]
                 });
             } else if kind.contains(&"project".to_string()) {
-                // TODO: add projects with total cost to the result
-                docs.push(doc! {
-                    "price": {
-                        "$gte": query.price_from.unwrap_or(0),
-                        "$lte": query.price_to.unwrap_or(i64::MAX),
+                let mut price_filter = vec![];
+
+                if let Some(sort_by) = &query.sort_by {
+                    if sort_by == "price" {
+                        price_filter.push(doc! {
+                            "price": {
+                                "$gte": query.price_from.unwrap_or(0),
+                                "$lte": query.price_to.unwrap_or(i64::MAX),
+                            }
+                        });
+                    } else if sort_by == "total_cost" {
+                        price_filter.push(doc! {
+                            "total_cost": {
+                                "$gte": query.price_from.unwrap_or(0),
+                                "$lte": query.price_to.unwrap_or(i64::MAX),
+                            }
+                        });
                     }
+                } else {
+                    price_filter.push(doc! {
+                        "$or": [
+                            {
+                                "price": {
+                                    "$gte": query.price_from.unwrap_or(0),
+                                    "$lte": query.price_to.unwrap_or(i64::MAX),
+                                }
+                            },
+                            {
+                                "total_cost": {
+                                    "$gte": query.price_from.unwrap_or(0),
+                                    "$lte": query.price_to.unwrap_or(i64::MAX),
+                                }
+                            }
+                        ]
+                    });
+                }
+
+                docs.push(doc! {
+                    "$and": price_filter,
                 });
             }
         }
@@ -193,9 +230,6 @@ impl SearchRepo {
                 "ready_to_wait": ready_to_wait,
             });
         }
-
-        log::info!("Search query: {:?}", docs);
-        log::info!("Search options: {:?}", find_options);
 
         let result: Vec<Document> = self
             .0
