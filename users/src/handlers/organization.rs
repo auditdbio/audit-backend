@@ -77,6 +77,19 @@ pub async fn add_members(
     ))
 }
 
+#[get("/organization/{org_id}/members/{user_id}")]
+pub async fn get_member(
+    context: GeneralContext,
+    path: Path<(String, String)>,
+) -> error::Result<Json<OrganizationMember>> {
+    let (org_id, user_id) = path.into_inner();
+    Ok(Json(
+        OrganizationService::new(context)
+            .get_member(org_id.parse()?, user_id.parse()?)
+            .await?
+    ))
+}
+
 #[delete("/organization/{org_id}/members/{user_id}")]
 pub async fn delete_member(
     context: GeneralContext,

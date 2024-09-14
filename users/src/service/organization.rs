@@ -376,6 +376,31 @@ impl OrganizationService {
         Ok(PublicOrganization::new(&self.context, organization, true).await?)
     }
 
+    pub async fn get_member(
+        &self,
+        org_id: ObjectId,
+        user_id: ObjectId,
+    ) -> error::Result<OrganizationMember> {
+        let organizations = self.context.try_get_repository::<Organization<ObjectId>>()?;
+
+        let Some(organization) = organizations
+            .find("id", &Bson::ObjectId(org_id))
+            .await? else {
+            return Err(anyhow::anyhow!("Organization not found").code(404));
+        };
+
+        let Some(member) = organization
+            .members
+            .iter()
+            .find(|member| member.user_id == user_id.to_hex())
+            .cloned()
+            else {
+                return Err(anyhow::anyhow!("Member not found").code(404));
+            };
+
+        Ok(member)
+    }
+
     pub async fn delete_member(
         &self,
         org_id: ObjectId,

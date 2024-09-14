@@ -63,6 +63,7 @@ pub fn create_app(
                 .service(get_organization_by_link_id)
                 .service(get_my_organizations)
                 .service(add_members)
+                .service(get_member)
                 .service(delete_member)
                 .service(change_organization)
                 .service(change_access)
