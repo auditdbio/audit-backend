@@ -26,3 +26,32 @@ impl Role {
         }
     }
 }
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, ToSchema)]
+pub enum ChatRole {
+    #[serde(alias = "customer")]
+    Customer,
+    #[serde(alias = "auditor")]
+    Auditor,
+    #[serde(alias = "organization")]
+    Organization,
+}
+
+impl From<Role> for ChatRole {
+    fn from(role: Role) -> Self {
+        match role {
+            Role::Auditor => ChatRole::Auditor,
+            Role::Customer => ChatRole::Customer,
+        }
+    }
+}
+
+impl ChatRole {
+    pub fn stringify(&self) -> &'static str {
+        match self {
+            ChatRole::Customer => "Customer",
+            ChatRole::Auditor => "Auditor",
+            ChatRole::Organization => "Organization",
+        }
+    }
+}

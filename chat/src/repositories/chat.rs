@@ -20,6 +20,7 @@ pub struct Group {
     last_modified: i64,
     last_message: Message,
     unread: Vec<ReadId>,
+    avatar: Option<String>,
 }
 
 impl_has_last_modified!(Group);
@@ -32,7 +33,7 @@ impl Group {
             members: self.members.into_iter().map(ChatId::publish).collect(),
             last_message: self.last_message.publish(),
             last_modified: self.last_modified,
-            avatar: None,
+            avatar: self.avatar,
             unread: self.unread.into_iter().map(ReadId::publish).collect(),
         }
     }
@@ -205,9 +206,13 @@ impl ChatRepository {
 
     pub async fn groups_by_user(
         &self,
-        user_id: ChatId,
+        chat_id: ChatId,
     ) -> error::Result<(Vec<Group>, Vec<PrivateChat>)> {
-        let document = to_document(&user_id)?;
+        let document = doc! {
+            "role": chat_id.role.stringify(),
+            "id": chat_id.id,
+        };
+
         let groups = self
             .groups
             .find_many("members", &Bson::Document(document.clone()))
@@ -222,7 +227,12 @@ impl ChatRepository {
     pub async fn find_by_members(&self, members: Vec<ChatId>) -> error::Result<Option<PrivateChat>> {
         let values: Vec<Bson> = members
             .into_iter()
-            .map(|chat_id| Bson::Document(to_document(&chat_id).unwrap()))
+            .map(|chat_id| {
+                Bson::Document(doc! {
+                "role": chat_id.role.stringify(),
+                "id": chat_id.id,
+            })
+            })
             .collect();
 
         let document = Bson::Document(doc! {"$all": Bson::Array(values)});

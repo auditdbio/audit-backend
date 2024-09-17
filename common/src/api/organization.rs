@@ -28,7 +28,7 @@ pub async fn get_organization(
         query.unwrap().with_members.unwrap_or(true)
     };
 
-    Ok(context
+    let response = context
         .make_request::<PublicOrganization>()
         .auth(context.auth())
         .get(format!(
@@ -40,10 +40,14 @@ pub async fn get_organization(
             with_members,
         ))
         .send()
-        .await?
-        .json::<PublicOrganization>()
-        .await?
-    )
+        .await?;
+
+       if response.status().is_success() {
+           let organization: PublicOrganization = response.json().await?;
+           Ok(organization)
+       } else {
+           Err(anyhow::anyhow!("Organization not found").code(404))
+       }
 }
 
 pub async fn get_my_organizations(

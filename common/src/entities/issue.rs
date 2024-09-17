@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 use crate::{
     access_rules::AccessRules,
     auth::Auth,
-    entities::role::Role,
     default_timestamp,
 };
 

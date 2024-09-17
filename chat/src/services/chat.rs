@@ -7,14 +7,19 @@ use common::{
         chat::{ChatId, CreateMessage, MessageKind, PublicReadId, PublicMessage, PublicChat},
         customer::request_customer,
         events::{EventPayload, PublicEvent},
+        organization::{get_organization, GetOrganizationQuery},
     },
     context::GeneralContext,
-    entities::role::Role,
+    entities::{
+        organization::OrganizationMember,
+        role::ChatRole,
+    },
     error::{self, AddCode},
-    services::{API_PREFIX, EVENTS_SERVICE, PROTOCOL},
+    services::{API_PREFIX, EVENTS_SERVICE, PROTOCOL, USERS_SERVICE},
 };
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
+use common::api::chat::ChangeUnread;
 
 use crate::repositories::chat::{ChatRepository, Group, ReadId};
 
@@ -58,15 +63,49 @@ impl ChatService {
     pub async fn send_message(&self, message: CreateMessage) -> error::Result<PublicChat> {
         // TODO: check permissions
         let auth = self.context.auth();
+        let current_id = auth.id().unwrap();
 
         let repo = self
             .context
             .get_repository_manual::<Arc<ChatRepository>>()
             .unwrap();
 
-        let from = ChatId {
-            id: auth.id().unwrap(),
-            role: message.role,
+        let from = if message.role == ChatRole::Organization {
+            let org_id = message
+                .from_org_id
+                .ok_or_else(|| anyhow::anyhow!("Field 'from_org_id' is required for 'Organization' role").code(400))?
+                .parse()?;
+
+            let org_user_response = self
+                .context
+                .make_request::<OrganizationMember>()
+                .auth(auth)
+                .get(format!(
+                    "{}://{}/{}/organization/{}/members/{}",
+                    PROTOCOL.as_str(),
+                    USERS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
+                    org_id,
+                    current_id,
+                ))
+                .send()
+                .await?;
+
+            if org_user_response.status().is_success() {
+                ChatId {
+                    id: org_id,
+                    role: message.role,
+                    org_user_id: Some(current_id.clone()),
+                }
+            } else {
+                return Err(anyhow::anyhow!("The user is not a member of the specified organization").code(400))
+            }
+        } else {
+            ChatId {
+                id: current_id.clone(),
+                role: message.role,
+                org_user_id: None,
+            }
         };
 
         let message = if let Some(chat) = message.chat {
@@ -115,12 +154,14 @@ impl ChatService {
 
         let payload = EventPayload::ChatMessage(message.publish());
 
-        for user_id in chat.members() {
-            if user_id.id != auth.id().unwrap() {
-                repo.unread(chat.chat_id(), user_id.id, None).await?;
+        for member in chat.members() {
+            if member.id != current_id {
+                repo.unread(chat.chat_id(), member.id, None).await?;
             }
 
-            let event = PublicEvent::new(user_id.id, payload.clone());
+            // TODO: check event for organizations
+
+            let event = PublicEvent::new(member.id, payload.clone());
 
             self.context
                 .make_request()
@@ -137,31 +178,33 @@ impl ChatService {
         Ok(chat.publish())
     }
 
-    pub async fn preview(&self, role: Role) -> error::Result<Vec<PublicChat>> {
+    pub async fn preview(&self, role: ChatRole, org_id: Option<&String>) -> error::Result<Vec<PublicChat>> {
         let auth = self.context.auth();
+        let current_id = auth.id().unwrap();
 
         let repo = self
             .context
             .get_repository_manual::<Arc<ChatRepository>>()
             .unwrap();
 
-        let id = ChatId {
+        let chat_id = ChatId {
             role,
-            id: auth.id().unwrap(),
+            id: org_id.map_or(current_id, |org_id| org_id.parse().unwrap()),
+            org_user_id: None,
         };
 
-        let (chats, privates) = repo.groups_by_user(id).await?;
+        let (chats, privates) = repo.groups_by_user(chat_id).await?;
 
         let mut chats = chats.into_iter().map(Group::publish).collect::<Vec<_>>();
 
         for private in privates {
-            for id in private.members {
-                if id.id == auth.id().unwrap() {
+            for member in private.members {
+                if member.id == current_id {
                     continue;
                 }
 
-                let (name, avatar) = if id.role == Role::Auditor {
-                    let auditor = match request_auditor(&self.context, id.id, auth.clone()).await {
+                let (name, avatar) = if member.role == ChatRole::Auditor {
+                    let auditor = match request_auditor(&self.context, member.id, auth.clone()).await {
                         Ok(auditor) => auditor,
                         _ => continue
                     };
@@ -172,8 +215,8 @@ impl ChatService {
                         auditor.first_name().clone() + " " + auditor.last_name(),
                         auditor.avatar().to_string(),
                     )
-                } else {
-                    let customer = match request_customer(&self.context, id.id, auth.clone()).await {
+                } else if member.role == ChatRole::Customer {
+                    let customer = match request_customer(&self.context, member.id, auth.clone()).await {
                         Ok(customer) => customer,
                         _ => continue
                     };
@@ -184,6 +227,15 @@ impl ChatService {
                         customer.first_name + " " + &customer.last_name,
                         customer.avatar,
                     )
+                } else {
+                    let query = GetOrganizationQuery {
+                        with_members: Some(false),
+                    };
+                    let organization = match get_organization(&self.context, member.id, Some(query)).await {
+                        Ok(org) => org,
+                        _ => continue
+                    };
+                    (organization.name, organization.avatar.unwrap_or("".to_string()))
                 };
 
                 let unread = if let Some(unread) = private.unread.clone() {
@@ -229,9 +281,13 @@ impl ChatService {
             .collect())
     }
 
-    pub async fn unread_messages(&self, group: ObjectId, unread: i32) -> error::Result<()> {
+    pub async fn unread_messages(&self, group: ObjectId, unread: i32, data: ChangeUnread) -> error::Result<()> {
         let auth = self.context.auth();
-        let user_id = auth.id().unwrap();
+        let user_id = if let Some(org_id) = data.org_id {
+            org_id.parse()?
+        } else {
+            auth.id().unwrap()
+        };
 
         let repo = self
             .context
