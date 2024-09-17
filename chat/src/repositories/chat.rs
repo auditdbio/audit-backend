@@ -231,8 +231,10 @@ impl ChatRepository {
             .into_iter()
             .map(|chat_id| {
                 Bson::Document(doc! {
-                "role": chat_id.role.stringify(),
-                "id": chat_id.id,
+                "$elemMatch": {
+                    "role": chat_id.role.stringify(),
+                    "id": chat_id.id,
+                }
             })
             })
             .collect();
@@ -243,6 +245,7 @@ impl ChatRepository {
             .private_chats
             .find("members", &document)
             .await?;
+
         Ok(chat)
     }
 
