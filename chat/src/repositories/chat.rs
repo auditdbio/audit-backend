@@ -209,8 +209,10 @@ impl ChatRepository {
         chat_id: ChatId,
     ) -> error::Result<(Vec<Group>, Vec<PrivateChat>)> {
         let document = doc! {
-            "role": chat_id.role.stringify(),
-            "id": chat_id.id,
+            "$elemMatch": {
+                "role": chat_id.role.stringify(),
+                "id": chat_id.id,
+            }
         };
 
         let groups = self
