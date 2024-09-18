@@ -16,11 +16,11 @@ use crate::{
 };
 use crate::auth::Auth;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum OrgAccessLevel {
-    Owner,
     Representative,
     Editor,
+    Owner,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -125,7 +125,7 @@ pub struct PublicOrganizationMember {
     pub user_id: String,
     pub username: String,
     pub avatar: Option<String>,
-    pub access_level: Vec<OrgAccessLevel>,
+    pub access_level: OrgAccessLevel,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -250,7 +250,7 @@ impl PublicOrganization {
             user_id: member.user_id,
             username,
             avatar: Some(avatar),
-            access_level: member.access_level,
+            access_level: member.access_level.into_iter().max().unwrap(),
         })
     }
 }

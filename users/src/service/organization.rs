@@ -56,7 +56,12 @@ pub struct ChangeOrganization {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NewOrganizationMember<Id> {
     pub user_id: Id,
-    pub access_level: Vec<OrgAccessLevel>,
+    pub access_level: OrgAccessLevel,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ChangeMemberAccessLevel {
+    pub access_level: OrgAccessLevel,
 }
 
 pub struct OrganizationService {
@@ -233,7 +238,7 @@ impl OrganizationService {
         ).await?;
 
         if organization.organization_type == Role::Auditor {
-            for mut member in new_members {
+            for member in new_members {
                 if organization
                     .members
                     .iter()
@@ -258,7 +263,9 @@ impl OrganizationService {
                     continue;
                 }
 
-                member.access_level.retain(|access| access != &OrgAccessLevel::Owner);
+                if member.access_level == OrgAccessLevel::Owner {
+                    return Err(anyhow::anyhow!("You can't add a user with owner rights").code(400));
+                }
 
                 let event = PublicEvent::new(
                     member.user_id,
@@ -280,11 +287,11 @@ impl OrganizationService {
 
                 organization.invites.push(OrganizationMember {
                     user_id: member.user_id.to_hex(),
-                    access_level: member.access_level,
+                    access_level: vec![member.access_level],
                 })
             }
         } else if organization.organization_type == Role::Customer {
-            for mut member in new_members {
+            for member in new_members {
                 if organization
                     .members
                     .iter()
@@ -309,7 +316,9 @@ impl OrganizationService {
                     continue;
                 }
 
-                member.access_level.retain(|access| access != &OrgAccessLevel::Owner);
+                if member.access_level == OrgAccessLevel::Owner {
+                    return Err(anyhow::anyhow!("You can't add a user with owner rights").code(400));
+                }
 
                 let event = PublicEvent::new(
                     member.user_id,
@@ -331,7 +340,7 @@ impl OrganizationService {
 
                 organization.invites.push(OrganizationMember {
                     user_id: member.user_id.to_hex(),
-                    access_level: member.access_level,
+                    access_level: vec![member.access_level],
                 })
             }
         } else {
@@ -547,7 +556,7 @@ impl OrganizationService {
         &self,
         org_id: ObjectId,
         user_id: ObjectId,
-        data: Vec<OrgAccessLevel>,
+        data: ChangeMemberAccessLevel,
     ) -> error::Result<OrganizationMember> {
         let auth = self.context.auth();
         let current_id = auth.id().unwrap();
@@ -568,24 +577,25 @@ impl OrganizationService {
             return Err(anyhow::anyhow!("The owner has full access level by default.").code(400));
         }
 
-        let member = if let Some(member) = organization
+        let mut member = if let Some(member) = organization
             .members
             .iter_mut()
             .find(|member| member.user_id == user_id.to_hex())
         {
-            member.access_level = data.clone();
+            member.access_level = vec![data.access_level.clone()];
             member.clone()
         } else {
             return Err(anyhow::anyhow!("Member not found").code(404));
         };
 
-        if data.contains(&OrgAccessLevel::Owner) {
+        if data.access_level == OrgAccessLevel::Owner {
             if let Some(old_owner) = organization
                 .members
                 .iter_mut()
                 .find(|member| member.user_id == current_id.to_hex())
             {
                 old_owner.access_level.retain(|lvl| lvl.clone() != OrgAccessLevel::Owner);
+                member.access_level = vec![OrgAccessLevel::Owner, OrgAccessLevel::Representative, OrgAccessLevel::Editor];
                 organization.owner = member.clone();
             }
         }

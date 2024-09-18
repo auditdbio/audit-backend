@@ -88,7 +88,7 @@ pub async fn check_is_organization_user(
                 .iter()
                 .any(|m| {
                     m.user_id == user_id.to_hex() && match &access {
-                        Some(access) => m.access_level.contains(access),
+                        Some(access) => m.access_level == *access,
                         None => true,
                     }
                 })
@@ -106,8 +106,8 @@ pub async fn check_editor_rights(members: Vec<PublicOrganizationMember>, user_id
         .iter()
         .find(|m| {
             m.user_id == user_id.to_hex()
-                && (m.access_level.contains(&OrgAccessLevel::Editor)
-                || m.access_level.contains(&OrgAccessLevel::Owner))
+                && (m.access_level == OrgAccessLevel::Editor
+                || m.access_level == OrgAccessLevel::Owner)
         })
         .is_none() {
         return Err(

@@ -11,15 +11,16 @@ use common::{
     },
     context::GeneralContext,
     entities::{
-        organization::{OrganizationMember, OrgAccessLevel, PublicOrganization, MyOrganizations},
+        organization::{OrganizationMember, PublicOrganization, MyOrganizations},
         user::PublicLinkedAccount,
     },
     error,
 };
 
 use crate::service::organization::{
-    ChangeOrganization, CreateOrganization,
-    NewOrganizationMember, OrganizationService,
+    ChangeMemberAccessLevel, ChangeOrganization,
+    CreateOrganization, NewOrganizationMember,
+    OrganizationService,
 };
 
 #[post("/organization")]
@@ -133,7 +134,7 @@ pub async fn change_organization(
 pub async fn change_access(
     context: GeneralContext,
     path: Path<(String, String)>,
-    Json(data): Json<Vec<OrgAccessLevel>>,
+    Json(data): Json<ChangeMemberAccessLevel>,
 ) -> error::Result<Json<OrganizationMember>> {
     let (org_id, user_id) = path.into_inner();
     Ok(Json(
