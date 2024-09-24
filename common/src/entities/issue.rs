@@ -44,6 +44,16 @@ impl Status {
             _ => None,
         }
     }
+
+    pub fn to_string(&self) -> String {
+        match self {
+            Status::Draft => "Draft".to_string(),
+            Status::InProgress => "InProgress".to_string(),
+            Status::Verification => "Verification".to_string(),
+            Status::WillNotFix => "WillNotFix".to_string(),
+            Status::Fixed => "Fixed".to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]

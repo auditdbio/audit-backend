@@ -1,6 +1,7 @@
 use std::{
     future::Future,
     pin::Pin,
+    collections::HashMap,
 };
 use serde_json::json;
 use actix_web::{
@@ -51,10 +52,13 @@ pub async fn post_no_customer_audit(
 pub async fn get_audit(
     context: GeneralContext,
     id: Path<String>,
+    query: Query<HashMap<String, String>>,
 ) -> error::Result<HttpResponse> {
-    let res = AuditService::new(context).find(id.parse()?).await?;
-    if let Some(res) = res {
-        Ok(HttpResponse::Ok().json(res))
+    let code = query.get("code");
+    let audit = AuditService::new(context).find(id.parse()?, code).await?;
+
+    if let Some(audit) = audit {
+        Ok(HttpResponse::Ok().json(audit))
     } else {
         Ok(HttpResponse::Ok().json(json! {{}}))
     }
@@ -129,9 +133,11 @@ pub async fn get_audit_issue(
 pub async fn get_audit_issue_by_id(
     context: GeneralContext,
     id: Path<(String, usize)>,
+    query: Query<HashMap<String, String>>,
 ) -> error::Result<HttpResponse> {
+    let code = query.get("code");
     let result = AuditService::new(context)
-        .get_issue_by_id(id.0.parse()?, id.1)
+        .get_issue_by_id(id.0.parse()?, id.1, code)
         .await?;
     Ok(HttpResponse::Ok().json(result))
 }
