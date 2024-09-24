@@ -1,3 +1,7 @@
+use std::{
+    future::Future,
+    pin::Pin,
+};
 use serde_json::json;
 use actix_web::{
     delete, get, patch, post,
@@ -17,6 +21,7 @@ use common::{
         role::Role
     },
     error,
+    retry::retry_operation,
 };
 
 use crate::service::{
@@ -142,35 +147,60 @@ pub async fn delete_audit_issue(
     Ok(HttpResponse::Ok().json(result))
 }
 
-#[patch("/audit/{id}/disclose_all")]
+#[patch("/audit/{audit_id}/disclose_all")]
 pub async fn patch_audit_disclose_all(
     context: GeneralContext,
-    id: Path<String>,
+    audit_id: Path<String>,
 ) -> error::Result<HttpResponse> {
-    let result = AuditService::new(context).disclose_all(id.parse()?).await?;
+    let result = AuditService::new(context).disclose_all(audit_id.parse()?).await?;
     Ok(HttpResponse::Ok().json(result))
 }
 
-#[patch("/audit/{id}/{issue_id}/read/{read}")]
+#[patch("/audit/{audit_id}/{issue_id}/read/{read}")]
 pub async fn patch_audit_issue_read(
     context: GeneralContext,
-    id: Path<(String, usize, u64)>,
+    path: Path<(String, usize, u64)>,
 ) -> error::Result<HttpResponse> {
+    let (audit_id, issue_id, read) = path.into_inner();
     AuditService::new(context)
-        .read_events(id.0.parse()?, id.1, id.2)
+        .read_events(audit_id.parse()?, issue_id, read)
         .await?;
     Ok(HttpResponse::Ok().finish())
 }
 
-#[get("/public_audits/{id}/{role}")]
+#[patch("/audit/{audit_id}/read_all")]
+pub async fn patch_audit_issue_read_all(
+    context: GeneralContext,
+    audit_id: Path<String>,
+) -> error::Result<HttpResponse> {
+    AuditService::new(context)
+        .read_all_events(audit_id.parse()?)
+        .await?;
+    Ok(HttpResponse::Ok().finish())
+}
+
+#[get("/public_audits/{user_id}/{role}")]
 pub async fn get_public_audits(
     context: GeneralContext,
     path: Path<(String, String)>,
 ) -> error::Result<Json<Vec<PublicAudit>>> {
-    let (id, role) = path.into_inner();
+    let (user_id, role) = path.into_inner();
     Ok(Json(
         AuditService::new(context)
-            .find_public(id.parse()?, role)
+            .find_public(user_id.parse()?, role)
+            .await?,
+    ))
+}
+
+#[get("/audit/user/{user_id}/{role}")]
+pub async fn get_audits_by_user(
+    context: GeneralContext,
+    path: Path<(String, String)>,
+) -> error::Result<Json<Vec<PublicAudit>>> {
+    let (user_id, role) = path.into_inner();
+    Ok(Json(
+        AuditService::new(context)
+            .find_audits_by_user(user_id.parse()?, role)
             .await?,
     ))
 }
@@ -193,6 +223,23 @@ pub async fn change_audit_edit_history(
     params: Path<(String, usize)>,
     Json(data): Json<ChangeAuditHistory>,
 ) -> error::Result<Json<PublicAuditEditHistory>> {
+    // let audit_id = params.0.clone();
+    // let history_id = params.1;
+    // let result = retry_operation(
+    //     move || {
+    //         let context_clone = context.clone();
+    //         let audit_id = audit_id.clone();
+    //         let data = data.clone();
+    //         Box::pin(async move {
+    //             AuditService::new(context_clone)
+    //                 .change_audit_edit_history(audit_id.parse()?, history_id, data)
+    //                 .await
+    //         }) as Pin<Box<dyn Future<Output = error::Result<PublicAuditEditHistory>> + Send>>
+    //     }
+    // ).await?;
+    //
+    // Ok(Json(result))
+
     Ok(Json(
         AuditService::new(context)
             .change_audit_edit_history(params.0.parse()?, params.1, data)
@@ -205,8 +252,25 @@ pub async fn audit_unread_edits(
     context: GeneralContext,
     params: Path<(String, usize)>,
 ) -> error::Result<HttpResponse> {
+    // let audit_id = params.0.clone();
+    // let unread = params.1;
+    // retry_operation(
+    //     {
+    //         move || {
+    //             let context_clone = context.clone();
+    //             let audit_id = audit_id.clone();
+    //             Box::pin(async move {
+    //                 AuditService::new(context_clone)
+    //                     .unread_edits(audit_id.parse()?, unread)
+    //                     .await
+    //             }) as Pin<Box<dyn Future<Output = error::Result<()>> + Send>>
+    //         }
+    //     }
+    // ).await?;
+
     AuditService::new(context)
         .unread_edits(params.0.parse()?, params.1)
         .await?;
+
     Ok(HttpResponse::Ok().finish())
 }

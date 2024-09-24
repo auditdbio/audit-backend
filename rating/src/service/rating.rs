@@ -1,4 +1,4 @@
-use mongodb::bson::{Bson, oid::ObjectId};
+use mongodb::bson::{Bson, doc, oid::ObjectId};
 use chrono::{Utc, NaiveDateTime, Duration};
 use serde::{Deserialize, Serialize};
 
@@ -12,12 +12,12 @@ use common::{
             CompletedAuditInfo, Rating,
             RoleRating, UserFeedback,
             FeedbackFrom, UserFeedbackRating,
+            FeedbackStars, PublicUserFeedback,
         },
         role::Role,
     },
     services::{API_PREFIX, AUDITS_SERVICE, PROTOCOL},
 };
-use common::entities::rating::FeedbackStars;
 
 
 pub struct RatingService {
@@ -43,6 +43,7 @@ impl RatingService {
             user_id,
             auditor: role_rating.clone(),
             customer: role_rating,
+            last_modified: Utc::now().timestamp_micros(),
         };
 
         let rating = rating.calculate(&self.context, role).await?;
@@ -55,6 +56,7 @@ impl RatingService {
         user_id: ObjectId,
         role: Role,
         force_update: bool,
+        recalculate: bool,
     ) -> error::Result<Rating<ObjectId>> {
         let ratings = self.context.try_get_repository::<Rating<ObjectId>>()?;
         let rating = ratings
@@ -76,9 +78,12 @@ impl RatingService {
 
             return if last_update_date == today_date && !force_update {
                 Ok(rating)
+            } else if !recalculate {
+                Ok(rating)
             } else {
                 let rating = rating.calculate(&self.context, role).await?;
 
+                // ratings.update_one(doc! {"id": &rating.id}, &rating).await?;
                 ratings.delete("id", &rating.id).await?;
                 ratings.insert(&rating).await?;
                 Ok(rating)
@@ -92,7 +97,7 @@ impl RatingService {
     }
 
     pub async fn get_user_rating(&self, user_id: ObjectId, role: Role) -> error::Result<SummaryResponse> {
-        let rating = self.find_or_create(user_id, role, false).await?;
+        let rating = self.find_or_create(user_id, role, false, true).await?;
         let summary = if role == Role::Auditor {
             rating.auditor.summary
         } else {
@@ -105,18 +110,24 @@ impl RatingService {
     }
 
     pub async fn get_user_rating_details(&self, user_id: ObjectId, role: Role) -> error::Result<RatingDetailsResponse> {
-        let rating = self.find_or_create(user_id, role, false).await?;
-        Ok(RatingDetailsResponse::from_rating(rating, role, 90))
+        let rating = self.find_or_create(user_id, role, false, true).await?;
+        Ok(RatingDetailsResponse::from_rating(&self.context, rating, role, 90).await?)
     }
 
     pub async fn recalculate_rating(&self, user_id: ObjectId, role: Role) -> error::Result<RatingDetailsResponse> {
-        let rating = self.find_or_create(user_id, role, true).await?;
-        Ok(RatingDetailsResponse::from_rating(rating, role, 90))
+        let rating = self.find_or_create(user_id, role, true, true).await?;
+        Ok(RatingDetailsResponse::from_rating(&self.context, rating, role, 90).await?)
     }
 
     pub async fn send_feedback(&self, feedback: CreateFeedback) -> error::Result<UserFeedback<String>> {
         let auth = self.context.auth();
         let user_id = auth.id().unwrap();
+
+        if feedback.quality_of_work.is_none()
+            && feedback.time_management.is_none()
+            && feedback.collaboration.is_none() {
+            return Err(anyhow::anyhow!("At least one assessment required").code(400));
+        }
 
         let audit = self
             .context
@@ -170,7 +181,8 @@ impl RatingService {
         let mut rating = self.find_or_create(
             receiver_id.parse().unwrap(),
             current_role,
-            false
+            false,
+            false,
         ).await?;
 
         let role_rating = if receiver_role == Role::Auditor {
@@ -195,6 +207,7 @@ impl RatingService {
         let ratings = self.context.try_get_repository::<Rating<ObjectId>>()?;
         ratings.delete("id", &rating.id).await?;
         ratings.insert(&rating).await?;
+        // ratings.update_one(doc! {"id": &rating.id}, &rating).await?;
 
         Ok(create_feedback.stringify())
     }
@@ -210,7 +223,8 @@ impl RatingService {
         let rating = self.find_or_create(
             receiver_id,
             role,
-            false
+            false,
+            true,
         ).await?;
 
         let feedbacks = if role == Role::Auditor {
@@ -254,13 +268,18 @@ pub struct RatingDetailsResponse {
     pub last_update: i64,
     pub summary: f32,
     pub rating_details: Option<String>,
-    pub user_feedbacks: Vec<UserFeedback<String>>,
+    pub user_feedbacks: Vec<PublicUserFeedback>,
     pub total_completed_audits: usize,
     pub completed_last_ninety_days: Vec<CompletedAuditInfo<String>>,
 }
 
 impl RatingDetailsResponse {
-    pub fn from_rating(rating: Rating<ObjectId>, role: Role, days: i64) -> RatingDetailsResponse {
+    pub async fn from_rating(
+        context: &GeneralContext,
+        rating: Rating<ObjectId>,
+        role: Role,
+        days: i64
+    ) -> error::Result<RatingDetailsResponse> {
         let rating = rating.stringify();
 
         let role_rating = if role == Role::Auditor {
@@ -278,16 +297,21 @@ impl RatingDetailsResponse {
             )
             .collect::<Vec<CompletedAuditInfo<String>>>();
 
-        RatingDetailsResponse {
+        let mut user_feedbacks = vec![];
+        for feedback in role_rating.user_feedbacks {
+            user_feedbacks.push(PublicUserFeedback::new(context, feedback.parse()).await?);
+        }
+
+        Ok(RatingDetailsResponse {
             id: rating.id,
             user_id: rating.user_id,
             role,
             last_update: role_rating.last_update,
             summary: role_rating.summary,
             rating_details: role_rating.rating_details,
-            user_feedbacks: role_rating.user_feedbacks,
+            user_feedbacks,
             total_completed_audits: role_rating.total_completed_audits.len(),
             completed_last_ninety_days,
-        }
+        })
     }
 }

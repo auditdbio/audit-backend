@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use chrono::Utc;
 use rand::Rng;
-use mongodb::bson::{oid::ObjectId, Bson};
+use mongodb::bson::{oid::ObjectId, Bson, doc};
 
 use common::{
     access_rules::{AccessRules, Edit, Read},
@@ -302,7 +302,13 @@ impl AuditService {
         let mut is_approve_needed = false;
 
         if let Some(public) = change.public {
-            audit.public = public;
+            if public {
+                if audit.status == AuditStatus::Resolved {
+                    audit.public = public;
+                } else {
+                    return Err(anyhow::anyhow!("Audit must be resolved").code(400));
+                }
+            }
         }
 
         if audit.status != AuditStatus::Resolved || audit.no_customer {
@@ -395,7 +401,7 @@ impl AuditService {
             }
         }
 
-        audit.last_modified = Utc::now().timestamp_micros();
+        // audit.last_modified = Utc::now().timestamp_micros();
 
         let (
             event_receiver,
@@ -410,7 +416,7 @@ impl AuditService {
         if is_history_changed {
             let edit_history_item = AuditEditHistory {
                 id: audit.edit_history.len(),
-                date: audit.last_modified.clone(),
+                date: Utc::now().timestamp_micros(),
                 author: user_id.to_hex(),
                 comment: change.comment,
                 audit: serde_json::to_string(&json!({
@@ -431,7 +437,32 @@ impl AuditService {
                 audit.approved_by.insert(audit.auditor_id.to_hex(), edit_history_item.id.clone());
                 audit.approved_by.insert(audit.customer_id.to_hex(), edit_history_item.id.clone());
             } else {
-                audit.approved_by.insert(user_id.to_hex(), edit_history_item.id.clone());
+                let mut approved_by = audit.approved_by.clone();
+                approved_by.remove(&user_id.to_hex());
+                let is_values_match = approved_by.values().all(|v| {
+                    if let Some(history) = audit
+                        .edit_history
+                        .iter()
+                        .find(|h| h.id == *v)
+                    {
+                        let history: AuditChange = serde_json::from_str(&history.audit).unwrap();
+                        let history_scope = history.scope.unwrap_or_default().join("");
+
+                        if history.price == change.price
+                            && history.total_cost == change.total_cost
+                            && history_scope == audit.scope.join("")
+                        {
+                            true
+                        } else { false }
+                    } else { false }
+                });
+
+                if is_values_match {
+                    audit.approved_by.insert(audit.auditor_id.to_hex(), edit_history_item.id.clone());
+                    audit.approved_by.insert(audit.customer_id.to_hex(), edit_history_item.id.clone());
+                } else {
+                    audit.approved_by.insert(user_id.to_hex(), edit_history_item.id.clone());
+                }
             }
 
             *audit.unread_edits.entry(event_receiver.to_hex()).or_insert(0) += 1;
@@ -448,8 +479,12 @@ impl AuditService {
         post_event(&self.context, event, self.context.server_auth()).await?;
 
         if change.report.is_some() && audit.status != AuditStatus::Resolved {
+
             audits.delete("_id", &id).await?;
             audits.insert(&audit).await?;
+
+            // let updated_audit = audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
+            // return Ok(PublicAudit::new(&self.context, updated_audit.clone()).await?)
             return Ok(public_audit)
         }
 
@@ -476,9 +511,12 @@ impl AuditService {
             });
         }
 
-        audits.delete("_id", &id).await?;
-        audits.insert(&audit).await?;
 
+        // let updated_audit = audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
+        // Ok(PublicAudit::new(&self.context, updated_audit.clone()).await?)
+
+        audits.delete("_id", &audit.id).await?;
+        audits.insert(&audit).await?;
         Ok(public_audit)
     }
 
@@ -542,20 +580,20 @@ impl AuditService {
             links: issue.links,
             include: true,
             feedback: String::new(),
-            last_modified: Utc::now().timestamp(),
+            last_modified: Utc::now().timestamp_micros(),
             read: HashMap::new(),
         };
 
         audit.issues.push(issue.clone());
 
-        let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
-
-        audits.delete("_id", &audit_id).await?;
-
         audit.issues.sort_by(|a, b| {
             severity_to_integer(&a.severity).cmp(&severity_to_integer(&b.severity))
         });
 
+        let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
+
+        // audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
+        audits.delete("_id", &audit.id).await?;
         audits.insert(&audit).await?;
 
         if audit.no_customer {
@@ -587,7 +625,7 @@ impl AuditService {
         message: String,
     ) {
         let event = Event {
-            timestamp: Utc::now().timestamp(),
+            timestamp: Utc::now().timestamp_micros(),
             user: context.auth().id().unwrap(),
             kind,
             message,
@@ -662,7 +700,7 @@ impl AuditService {
                     _ => return Err(anyhow::anyhow!("Invalid action").code(400))
                 }
             } else {
-                let Some(new_state) = issue.status.apply(&action) else {
+                let Some(new_state) = issue.status.apply(&action, role) else {
                     return Err(anyhow::anyhow!("Invalid action").code(400));
                 };
 
@@ -769,7 +807,7 @@ impl AuditService {
 
                 for create_event in events {
                     let event = Event {
-                        timestamp: Utc::now().timestamp(),
+                        timestamp: Utc::now().timestamp_micros(),
                         user: self.context.auth().id().unwrap(),
                         kind: create_event.kind,
                         message: create_event.message,
@@ -807,15 +845,11 @@ impl AuditService {
             }
         }
 
-        issue.last_modified = Utc::now().timestamp();
+        issue.last_modified = Utc::now().timestamp_micros();
 
         if let Some(idx) = audit.issues.iter().position(|issue| issue.id == issue_id) {
             audit.issues[idx] = issue.clone();
         }
-
-        let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
-
-        audits.delete("_id", &audit_id).await?;
 
         if change.severity.is_some() {
             audit.issues.sort_by(|a, b| {
@@ -823,6 +857,10 @@ impl AuditService {
             });
         }
 
+        let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
+
+        // audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
+        audits.delete("_id", &audit.id).await?;
         audits.insert(&audit).await?;
 
         let public_issue = auth.public_issue(issue);
@@ -856,12 +894,13 @@ impl AuditService {
             audit.issues.iter_mut().for_each(|issue| {
                 if issue.status == Status::Draft {
                     issue.status = Status::InProgress;
-                    issue.last_modified = Utc::now().timestamp();
+                    issue.last_modified = Utc::now().timestamp_micros();
                 }
             });
 
             let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
-            audits.delete("_id", &audit_id).await?;
+            // audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
+            audits.delete("_id", &audit.id).await?;
             audits.insert(&audit).await?;
 
             let issues = audit.issues;
@@ -955,8 +994,10 @@ impl AuditService {
         audit.issues.retain(|issue| issue.id != issue_id);
 
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
-        audits.delete("_id", &audit_id).await?;
+        // audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
+        audits.delete("_id", &audit.id).await?;
         audits.insert(&audit).await?;
+
         let public_issue = auth.public_issue(issue);
 
         Ok(public_issue)
@@ -980,23 +1021,47 @@ impl AuditService {
 
             if let Some(issue) = issue {
                 issue.read.insert(auth.id().unwrap().to_hex(), read);
-            }
 
+                let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
+                // audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
+                audits.delete("_id", &audit.id).await?;
+                audits.insert(&audit).await?;
+
+                return Ok(());
+            } else {
+                return Err(anyhow::anyhow!("No issue found").code(404));
+            }
+        }
+
+        Err(anyhow::anyhow!("No audit found").code(404))
+    }
+
+    pub async fn read_all_events(
+        &self,
+        audit_id: ObjectId,
+    ) -> error::Result<()> {
+        let auth = self.context.auth();
+
+        let audit = self.get_audit(audit_id).await?;
+
+        if let Some(mut audit) = audit {
+            for issue in &mut audit.issues {
+                issue.read.insert(auth.id().unwrap().to_hex(), issue.events.len() as u64 + 1);
+            }
             let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
-            audits.delete("_id", &audit_id).await?;
-
+            audits.delete("_id", &audit.id).await?;
             audits.insert(&audit).await?;
 
             return Ok(());
         }
 
-        Err(anyhow::anyhow!("No issue found").code(404))
+        Err(anyhow::anyhow!("No audit found").code(404))
     }
 
     pub async fn find_public(
         &self,
-        user: ObjectId,
+        user_id: ObjectId,
         role: String,
     ) -> error::Result<Vec<PublicAudit>> {
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
@@ -1007,10 +1072,38 @@ impl AuditService {
             return Err(anyhow::anyhow!("Invalid role").code(400));
         }
 
-        let audits = audits.find_many(&role, &Bson::ObjectId(user)).await?;
+        let mut audits = audits.find_many(&role, &Bson::ObjectId(user_id)).await?;
+
+        audits.retain(|audit| audit.public);
 
         let mut result = vec![];
 
+        for audit in audits {
+            result.push(PublicAudit::new(&self.context, audit).await?);
+        }
+
+        Ok(result)
+    }
+
+    pub async fn find_audits_by_user(
+        &self,
+        user_id: ObjectId,
+        role: String,
+    ) -> error::Result<Vec<PublicAudit>> {
+        let auth = self.context.auth();
+        if !auth.full_access() {
+            return Err(anyhow::anyhow!("User is not available to read this audits").code(403));
+        }
+
+        let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
+        let role = role.to_ascii_lowercase() + "_id";
+        if role != "customer_id" && role != "auditor_id" {
+            return Err(anyhow::anyhow!("Invalid role").code(400));
+        }
+
+        let audits = audits.find_many(&role, &Bson::ObjectId(user_id)).await?;
+
+        let mut result = vec![];
         for audit in audits {
             result.push(PublicAudit::new(&self.context, audit).await?);
         }
@@ -1112,6 +1205,7 @@ impl AuditService {
                     audit.price = updated_audit.price;
                     audit.total_cost = updated_audit.total_cost;
                     audit.time = updated_audit.time;
+                    audit.last_modified = updated_audit.last_modified;
                 }
             }
         }
@@ -1121,7 +1215,8 @@ impl AuditService {
         }
 
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
-        audits.delete("_id", &audit_id).await?;
+        // audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
+        audits.delete("_id", &audit.id).await?;
         audits.insert(&audit).await?;
 
         let role = if history.author == audit.auditor_id.to_hex() {
@@ -1148,7 +1243,8 @@ impl AuditService {
         audit.unread_edits.insert(user_id.to_hex(), unread);
 
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
-        audits.delete("_id", &audit_id).await?;
+        // audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
+        audits.delete("_id", &audit.id).await?;
         audits.insert(&audit).await?;
 
         Ok(())

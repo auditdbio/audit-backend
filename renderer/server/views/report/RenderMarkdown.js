@@ -2,12 +2,13 @@ import React from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkMath from 'remark-math'
 import remarkGfm from 'remark-gfm'
+import remarkBreaks from 'remark-breaks';
 import rehypeKatex from 'rehype-katex'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 
 const RenderMarkdown = ({ markdown }) => {
   return React.createElement(ReactMarkdown, {
-    remarkPlugins: [remarkMath, remarkGfm],
+    remarkPlugins: [remarkMath, remarkGfm, remarkBreaks],
     rehypePlugins: [rehypeKatex],
     children: markdown,
     components: {
