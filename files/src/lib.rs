@@ -12,6 +12,7 @@ use handlers::{
     file::{create_file, delete_file, find_file},
     indexer::ping,
 };
+use crate::file::{get_file_by_id, get_meta_by_id};
 
 pub mod handlers;
 pub mod service;
@@ -38,6 +39,8 @@ pub fn create_app(
             web::scope(&API_PREFIX)
                 .service(create_file)
                 .service(find_file)
+                .service(get_file_by_id)
+                .service(get_meta_by_id)
                 .service(delete_file)
                 .service(ping),
         );
