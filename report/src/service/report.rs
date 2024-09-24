@@ -145,6 +145,8 @@ impl Statistics {
                         "Minor" => statistics.not_fixed.minor += 1,
                         _ => {}
                     }
+                } else {
+                    continue
                 }
             }
         }
@@ -154,7 +156,7 @@ impl Statistics {
 }
 
 fn generate_issue_section(issue: &PublicIssue, is_draft: bool) -> Option<Section> {
-    if !issue.include {
+    if !issue.include || (issue.status != Status::Fixed && issue.status != Status::WillNotFix) {
         return None;
     }
 

@@ -3,7 +3,12 @@ use std::{collections::HashMap, hash::Hash};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-use crate::{access_rules::AccessRules, auth::Auth};
+use crate::{
+    access_rules::AccessRules,
+    auth::Auth,
+    entities::role::Role,
+    default_timestamp,
+};
 
 use super::audit::Audit;
 
@@ -17,38 +22,26 @@ pub enum Status {
 }
 
 impl Status {
-    pub fn apply(&self, action: &Action) -> Option<Status> {
-        match (self, action) {
-            (Status::Draft, Action::Begin) => Some(Status::InProgress),
-            (Status::Draft, Action::Fixed) => None,
-            (Status::Draft, Action::NotFixed) => None,
-            (Status::Draft, Action::Discard) => None,
-            (Status::Draft, Action::Verified) => None,
-            (Status::Draft, Action::ReOpen) => None,
-            (Status::InProgress, Action::Begin) => None,
-            (Status::InProgress, Action::Fixed) => Some(Status::Verification),
-            (Status::InProgress, Action::NotFixed) => None,
-            (Status::InProgress, Action::Discard) => Some(Status::WillNotFix),
-            (Status::InProgress, Action::Verified) => None,
-            (Status::InProgress, Action::ReOpen) => None,
-            (Status::Verification, Action::Begin) => None,
-            (Status::Verification, Action::Fixed) => Some(Status::InProgress),
-            (Status::Verification, Action::NotFixed) => Some(Status::InProgress),
-            (Status::Verification, Action::Discard) => None,
-            (Status::Verification, Action::Verified) => Some(Status::Fixed),
-            (Status::Verification, Action::ReOpen) => None,
-            (Status::WillNotFix, Action::Begin) => None,
-            (Status::WillNotFix, Action::Fixed) => None,
-            (Status::WillNotFix, Action::NotFixed) => None,
-            (Status::WillNotFix, Action::Discard) => None,
-            (Status::WillNotFix, Action::Verified) => None,
-            (Status::WillNotFix, Action::ReOpen) => Some(Status::InProgress),
-            (Status::Fixed, Action::Begin) => None,
-            (Status::Fixed, Action::Fixed) => None,
-            (Status::Fixed, Action::NotFixed) => None,
-            (Status::Fixed, Action::Discard) => None,
-            (Status::Fixed, Action::Verified) => Some(Status::Verification),
-            (Status::Fixed, Action::ReOpen) => None,
+    pub fn apply(&self, action: &Action, role: Role) -> Option<Status> {
+        match (self, action, role) {
+            (Status::Draft, Action::Begin, Role::Auditor) => Some(Status::InProgress),
+
+            (Status::InProgress, Action::Fixed, Role::Auditor) => Some(Status::Fixed),
+            (Status::InProgress, Action::Fixed, Role::Customer) => Some(Status::Verification),
+            (Status::InProgress, Action::Discard, _) => Some(Status::WillNotFix),
+
+            (Status::Verification, Action::NotFixed, _) => Some(Status::InProgress),
+            (Status::Verification, Action::Discard, _) => Some(Status::WillNotFix),
+            (Status::Verification, Action::Verified, Role::Auditor) => Some(Status::Fixed),
+
+            (Status::WillNotFix, Action::Fixed, Role::Auditor) => Some(Status::Fixed),
+            (Status::WillNotFix, Action::Verified, Role::Auditor) => Some(Status::Verification),
+            (Status::WillNotFix, Action::ReOpen, _) => Some(Status::InProgress),
+
+            (Status::Fixed, Action::Discard, Role::Auditor) => Some(Status::WillNotFix),
+            (Status::Fixed, Action::NotFixed, Role::Auditor) => Some(Status::Verification),
+            (Status::Fixed, Action::ReOpen, Role::Auditor) => Some(Status::InProgress),
+            _ => None,
         }
     }
 
@@ -73,27 +66,14 @@ pub enum Action {
     ReOpen,
 }
 
-impl Action {
-    pub fn is_customer(&self) -> bool {
-        match self {
-            Action::Begin | Action::NotFixed | Action::Verified => false,
-            Action::Fixed | Action::Discard | Action::ReOpen => true,
-        }
-    }
-
-    pub fn is_auditor(&self) -> bool {
-        match self {
-            Action::Begin
-            | Action::NotFixed
-            | Action::Verified
-            | Action::Discard
-            | Action::ReOpen => true,
-            Action::Fixed => false,
-        }
-    }
-}
-
-use crate::default_timestamp;
+// impl Action {
+//     pub fn is_customer(&self) -> bool {
+//         match self {
+//             Action::Begin | Action::NotFixed | Action::Verified => false,
+//             Action::Fixed | Action::Discard | Action::ReOpen => true,
+//         }
+//     }
+// }
 
 pub fn severity_to_integer(severity: &str) -> usize {
     match severity {
@@ -204,20 +184,11 @@ pub struct ChangeIssue {
 
 impl ChangeIssue {
     pub fn get_access_auditor(&self, _audit: &Audit<ObjectId>) -> bool {
-        if let Some(action) = &self.status {
-            action.is_auditor()
-        } else {
-            true
-        }
+        true
     }
 
     pub fn get_access_customer(&self, _audit: &Audit<ObjectId>) -> bool {
-        let status = if let Some(action) = &self.status {
-            action.is_customer()
-        } else {
-            true
-        };
-        self.include.is_none() && status
+        self.include.is_none()
     }
 }
 
@@ -295,8 +266,3 @@ pub enum EventKind {
 }
 
 pub struct UpdateEvent {}
-
-/*
-{"auditor_id":"644263518a7b483205de945b","auditor_contacts":{"email":"1@custoooooooooooooooooooooooooooooooooooooomer.com","telegram":"tkoh","public_contacts":true},"customer_contacts":{"email":null,"telegram":null,"public_contacts":true},"last_changer":"auditor","price":46,"description":"fewfewfwefw ewf ewf","price_range":{"from":46,"to":46},"time":{"from":1684855963362,"to":1684855963362},"project_id":"644fc914a133a244b4839c5d","scope":["https://qwerty.qwe"],"time_frame":""}
-
- */
