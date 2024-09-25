@@ -12,10 +12,11 @@ use common::{
         audit::ReportType,
         issue::Status,
     },
-    services::{API_PREFIX, FILES_SERVICE, FRONTEND, PROTOCOL, RENDERER_SERVICE, USERS_SERVICE},
+    services::{API_PREFIX, FILES_SERVICE, FRONTEND, PROTOCOL, RENDERER_SERVICE},
 };
 use reqwest::multipart::{Form, Part};
 use serde::{Deserialize, Serialize};
+use common::services::AUDITS_SERVICE;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct VerifyReportResponse {
@@ -297,7 +298,7 @@ pub async fn create_report(
         .get(format!(
             "{}://{}/{}/audit/{}",
             PROTOCOL.as_str(),
-            USERS_SERVICE.as_str(),
+            AUDITS_SERVICE.as_str(),
             API_PREFIX.as_str(),
             audit_id,
         ))
@@ -403,7 +404,7 @@ pub async fn create_report(
                 .patch(format!(
                     "{}://{}/{}/audit/{}",
                     PROTOCOL.as_str(),
-                    USERS_SERVICE.as_str(),
+                    AUDITS_SERVICE.as_str(),
                     API_PREFIX.as_str(),
                     audit.id
                 ))
@@ -432,7 +433,7 @@ pub async fn verify_report(
         .get(format!(
             "{}://{}/{}/audit/{}",
             PROTOCOL.as_str(),
-            USERS_SERVICE.as_str(),
+            AUDITS_SERVICE.as_str(),
             API_PREFIX.as_str(),
             audit_id,
         ))
