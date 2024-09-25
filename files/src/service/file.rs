@@ -191,7 +191,7 @@ impl FileService {
         };
         original_name = original_name.rsplitn(2, '.').last().unwrap().to_string();
 
-        let path = format!("/{}/{}_{}", FILES_PATH_PREFIX, original_name, last_modified);
+        let path = format!("/{}/{}_{}.{}", FILES_PATH_PREFIX, original_name, last_modified, extension);
 
         if file_entity == Some(FileEntity::Avatar) || file_entity == Some(FileEntity::Report) {
             is_rewritable = true;
@@ -205,7 +205,7 @@ impl FileService {
 
         std::fs::create_dir_all(prefix)?;
 
-        let mut file = File::create(format!("{}.{}", path, extension))?;
+        let mut file = File::create(path.clone())?;
         let content = content.concat();
         file.write_all(&content).unwrap();
 
@@ -274,7 +274,7 @@ impl FileService {
                     } else { false }
                 })
             {
-                std::fs::remove_file(meta.path.clone())?;
+                std::fs::remove_file(meta.path.clone()).ok();
                 // TODO: Enable delete from metas
                 // metas.delete("id", &meta.id).await?;
             }
@@ -301,7 +301,7 @@ impl FileService {
             return Err(anyhow::anyhow!("Access denied for this user").code(403));
         }
 
-        let file = NamedFile::open_async(format!("{}.{}", path, meta.extension))
+        let file = NamedFile::open_async(path)
             .await
             .unwrap();
 
@@ -427,7 +427,7 @@ impl FileService {
             return Err(anyhow::anyhow!("File not found").code(404));
         };
 
-        let file = NamedFile::open_async(format!("{}.{}", meta.path, meta.extension))
+        let file = NamedFile::open_async(meta.path.clone())
             .await
             .unwrap();
 
