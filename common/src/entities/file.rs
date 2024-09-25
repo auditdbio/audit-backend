@@ -18,7 +18,7 @@ pub struct Metadata {
     pub author: Option<ObjectId>,
     pub access_code: Option<String>,
     pub original_name: Option<String>,
-    pub parent_entity: Option<ParentEntity>,
+    pub parent_entity: Option<ParentEntity<ObjectId>>,
     pub file_entity: Option<FileEntity>,
     #[serde(default)]
     pub is_rewritable: bool,
@@ -33,9 +33,18 @@ impl Entity for Metadata {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct ParentEntity {
-    pub id: ObjectId,
+pub struct ParentEntity<Id> {
+    pub id: Id,
     pub source: ParentEntitySource,
+}
+
+impl ParentEntity<ObjectId> {
+    pub fn stringify(self) -> ParentEntity<String> {
+        ParentEntity {
+            id: self.id.to_hex(),
+            source: self.source,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]

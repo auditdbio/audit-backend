@@ -17,7 +17,7 @@ pub struct PublicMetadata {
     pub allowed_users: Vec<String>,
     pub author: Option<String>,
     pub original_name: Option<String>,
-    pub parent_entity: Option<ParentEntity>,
+    pub parent_entity: Option<ParentEntity<String>>,
     pub file_entity: Option<FileEntity>,
     pub is_rewritable: bool,
 }
@@ -35,7 +35,7 @@ impl From<Metadata> for PublicMetadata {
             allowed_users,
             author: meta.author.map(|a| a.to_hex()),
             original_name: meta.original_name,
-            parent_entity: meta.parent_entity,
+            parent_entity: meta.parent_entity.map(|e| e.stringify()),
             file_entity: meta.file_entity,
             is_rewritable: meta.is_rewritable,
         }
