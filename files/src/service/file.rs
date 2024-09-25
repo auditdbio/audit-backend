@@ -1,13 +1,14 @@
 use std::{fs::File, io::Write, path::Path};
+use mongodb::bson::{oid::ObjectId, Bson};
+use serde::{Deserialize, Serialize};
 use actix_files::NamedFile;
 use actix_multipart::Multipart;
 use futures_util::StreamExt;
-use mongodb::bson::{oid::ObjectId, Bson};
-use serde::{Deserialize, Serialize};
 
 use common::{
     impl_has_last_modified,
     access_rules::{AccessRules, Edit, Read},
+    api::file::ChangeFile,
     auth::Auth,
     context::GeneralContext,
     entities::file::{ParentEntity, FileEntity},
@@ -19,11 +20,13 @@ use common::entities::file::ParentEntitySource;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Metadata {
     pub id: ObjectId,
-    pub allowed_users: Vec<ObjectId>,
     pub last_modified: i64,
     pub path: String,
     pub extension: String,
     pub private: bool,
+    pub allowed_users: Vec<ObjectId>,
+    pub author: Option<ObjectId>,
+    pub access_code: Option<String>,
     pub original_name: Option<String>,
     pub parent_entity: Option<ParentEntity>,
     pub file_entity: Option<FileEntity>,
@@ -58,13 +61,7 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b Metadata> for Read {
 impl<'a, 'b> AccessRules<&'a Auth, &'b Metadata> for Edit {
     fn get_access(&self, auth: &'a Auth, subject: &'b Metadata) -> bool {
         match auth {
-            Auth::User(id) => {
-                if subject.private {
-                    subject.allowed_users.contains(id)
-                } else {
-                    true
-                }
-            }
+            Auth::User(id) => subject.allowed_users.contains(id),
             Auth::Admin(_) | Auth::Service(_, _) => true,
             Auth::None => false,
         }
@@ -89,6 +86,9 @@ impl FileService {
         &self,
         mut payload: Multipart,
     ) -> error::Result<()> {
+        let auth = self.context.auth();
+        let current_id = auth.id();
+
         let mut content = vec![];
 
         let mut private = false;
@@ -97,6 +97,7 @@ impl FileService {
         let mut auditor_id = String::new();
         let mut full_access = String::new();
 
+        let mut access_code: Option<String> = None;
         let mut parent_entity_id: Option<ObjectId> = None;
         let mut parent_entity_source: Option<ParentEntitySource> = None;
         let mut file_entity: Option<FileEntity> = None;
@@ -155,6 +156,14 @@ impl FileService {
                     }
                 }
 
+                "access_code" => {
+                    let mut str = String::new();
+                    while let Some(chunk) = field.next().await {
+                        let data = chunk.unwrap();
+                        str.push_str(&String::from_utf8(data.to_vec()).unwrap());
+                    }
+                    access_code = Some(str);
+                }
                 "parent_entity_id" => {
                     let mut str = String::new();
                     while let Some(chunk) = field.next().await {
@@ -264,6 +273,8 @@ impl FileService {
             extension,
             private,
             allowed_users: full_access,
+            author: current_id,
+            access_code,
             original_name: Some(original_name),
             parent_entity,
             file_entity,
@@ -275,18 +286,19 @@ impl FileService {
         Ok(())
     }
 
-    pub async fn find_file(&self, path: String) -> error::Result<NamedFile> {
+    pub async fn find_file(&self, path: String, code: Option<&String>) -> error::Result<NamedFile> {
         let auth = self.context.auth();
 
         let path = format!("/auditdb-files/{}", path);
-
         let metas = self.context.try_get_repository::<Metadata>()?;
 
         let Some(meta) = metas.find("path", &Bson::String(path.clone())).await? else {
             return Err(anyhow::anyhow!("File not found").code(404));
         };
 
-        if !Read.get_access(&auth, &meta) {
+        let is_code_match = meta.access_code.is_some() && code == meta.access_code.as_ref();
+
+        if !Read.get_access(&auth, &meta) && !is_code_match {
             return Err(anyhow::anyhow!("Access denied for this user").code(403));
         }
 
@@ -331,12 +343,38 @@ impl FileService {
         Ok(meta)
     }
 
+    pub async fn change_file(&self, path: String, change: ChangeFile) -> error::Result<()> {
+        let auth = self.context.auth();
+
+        let path = format!("/auditdb-files/{}", path);
+        let metas = self.context.try_get_repository::<Metadata>()?;
+        let Some(mut meta) = metas.find("path", &Bson::String(path.clone())).await? else {
+            return Err(anyhow::anyhow!("File not found").code(404));
+        };
+
+        if !Edit.get_access(&auth, &meta) {
+            return Err(anyhow::anyhow!("Access denied for this user").code(403));
+        }
+
+        if let Some(private) = change.private {
+            meta.private = private;
+        }
+
+        if change.access_code.is_some() {
+            meta.access_code = change.access_code;
+        }
+
+        metas.delete("id", &meta.id).await?;
+        metas.insert(&meta).await?;
+
+        Ok(())
+    }
+
     pub async fn delete_file(&self, path: String) -> error::Result<()> {
         let auth = self.context.auth();
 
-        let metas = self.context.try_get_repository::<Metadata>()?;
-
         let path = format!("/auditdb-files/{}", path);
+        let metas = self.context.try_get_repository::<Metadata>()?;
 
         let Some(meta) = metas.find("path", &Bson::String(path.clone())).await? else {
             return Err(anyhow::anyhow!("File not found").code(404));
@@ -347,6 +385,7 @@ impl FileService {
         }
 
         std::fs::remove_file(path)?;
+        metas.delete("id", &meta.id).await?;
 
         Ok(())
     }
@@ -364,6 +403,7 @@ impl FileService {
         }
 
         std::fs::remove_file(meta.path)?;
+        metas.delete("id", &meta.id).await?;
 
         Ok(())
     }

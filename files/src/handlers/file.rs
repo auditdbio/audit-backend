@@ -1,7 +1,13 @@
 use actix_files::NamedFile;
 use actix_multipart::Multipart;
-use actix_web::{delete, get, post, web::{Path, Json}, HttpResponse};
-use common::{context::GeneralContext, error};
+use actix_web::{delete, get, post, patch, web::{Path, Json, Query}, HttpResponse};
+use std::collections::HashMap;
+
+use common::{
+    api::file::ChangeFile,
+    context::GeneralContext,
+    error,
+};
 
 use crate::service::file::{FileService, Metadata};
 
@@ -21,9 +27,11 @@ pub async fn create_file(
 pub async fn find_file(
     context: GeneralContext,
     filename: Path<String>,
+    query: Query<HashMap<String, String>>,
 ) -> error::Result<NamedFile> {
+    let code = query.get("code");
     FileService::new(context)
-        .find_file(filename.into_inner())
+        .find_file(filename.into_inner(), code)
         .await
 }
 
@@ -49,13 +57,38 @@ pub async fn get_meta_by_id(
     ))
 }
 
-#[delete("/file/{filename:.*}")]
+#[delete("/file/name/{filename:.*}")]
 pub async fn delete_file(
     context: GeneralContext,
     filename: Path<String>,
 ) -> error::Result<HttpResponse> {
     FileService::new(context)
         .delete_file(filename.into_inner())
+        .await?;
+
+    Ok(HttpResponse::Ok().finish())
+}
+
+#[delete("/file/id/{id}")]
+pub async fn delete_file_by_id(
+    context: GeneralContext,
+    file_id: Path<String>,
+) -> error::Result<HttpResponse> {
+    FileService::new(context)
+        .delete_file_by_id(file_id.parse()?)
+        .await?;
+
+    Ok(HttpResponse::Ok().finish())
+}
+
+#[patch("/file/name/{filename:.*}")]
+pub async fn change_file(
+    context: GeneralContext,
+    filename: Path<String>,
+    Json(data): Json<ChangeFile>,
+) -> error::Result<HttpResponse> {
+    FileService::new(context)
+        .change_file(filename.into_inner(), data)
         .await?;
 
     Ok(HttpResponse::Ok().finish())

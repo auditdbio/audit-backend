@@ -8,7 +8,12 @@ use mongodb::bson::{oid::ObjectId, Bson, doc};
 use common::{
     access_rules::{AccessRules, Edit, Read},
     api::{
-        audits::{AuditAction, AuditChange, CreateIssue, PublicAudit, NoCustomerAuditRequest},
+        audits::{
+            AuditAction, AuditChange,
+            CreateIssue, PublicAudit,
+            NoCustomerAuditRequest,
+            create_access_code,
+        },
         chat::{
             send_message, create_audit_message,
             delete_message, AuditMessageStatus,
@@ -33,7 +38,9 @@ use common::{
         role::Role,
     },
     error::{self, AddCode},
+    services::{FILES_SERVICE, PROTOCOL, API_PREFIX},
 };
+use common::api::file::ChangeFile;
 
 use super::audit_request::PublicRequest;
 
@@ -96,6 +103,8 @@ impl AuditService {
                 (customer_id.to_hex(), 0),
                 (auditor_id.to_hex(), 0)
             ]),
+            access_code: None,
+            verification_code: None,
         };
 
         let requests = self
@@ -117,7 +126,7 @@ impl AuditService {
             }
         }
 
-        let public_audit = PublicAudit::new(&self.context, audit.clone()).await?;
+        let public_audit = PublicAudit::new(&self.context, audit.clone(), false).await?;
 
         let (event_receiver, receiver_role, last_changer) = if user_id == customer_id {
             (auditor_id, Role::Auditor, Role::Customer)
@@ -197,6 +206,8 @@ impl AuditService {
             edit_history: Vec::new(),
             approved_by: HashMap::new(),
             unread_edits: HashMap::new(),
+            access_code: Some(create_access_code()),
+            verification_code: None,
         };
 
         if !Edit.get_access(&auth, &audit) {
@@ -205,7 +216,7 @@ impl AuditService {
 
         audits.insert(&audit).await?;
 
-        Ok(PublicAudit::new(&self.context, audit).await?)
+        Ok(PublicAudit::new(&self.context, audit, false).await?)
     }
 
     async fn get_audit(&self, id: ObjectId) -> error::Result<Option<Audit<ObjectId>>> {
@@ -224,16 +235,36 @@ impl AuditService {
         Ok(Some(audit))
     }
 
-    pub async fn find(&self, id: ObjectId) -> error::Result<Option<PublicAudit>> {
-        let audit = self.get_audit(id).await?;
+    pub async fn find(&self, id: ObjectId, code: Option<&String>) -> error::Result<Option<PublicAudit>> {
+        let auth = self.context.auth();
 
-        if let Some(audit) = audit {
-            let public_audit = PublicAudit::new(&self.context, audit).await?;
+        let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
-            return Ok(Some(public_audit));
+        let Some(mut audit) = audits.find("_id", &Bson::ObjectId(id)).await? else {
+            return Err(anyhow::anyhow!("Audit not found").code(404));
+        };
+
+        if Read.get_access(&auth, &audit) {
+            let is_customer = if let Some(id) = auth.id() {
+                id == audit.customer_id && !audit.no_customer
+            } else { false };
+
+            if is_customer {
+                audit.issues.retain(|issue| issue.status != Status::Draft && issue.include);
+            }
+            let public_audit = PublicAudit::new(&self.context, audit.clone(), false).await?;
+            return Ok(Some(public_audit))
+        } else if audit.public {
+            let public_audit = PublicAudit::new(&self.context, audit, true).await?;
+            return Ok(Some(public_audit))
+        } else if let Some(code) = code {
+            if audit.access_code.as_deref() == Some(code) {
+                let public_audit = PublicAudit::new(&self.context, audit, true).await?;
+                return Ok(Some(public_audit))
+            }
         }
 
-        Ok(None)
+        Err(anyhow::anyhow!("User is not available to read this audit").code(403))
     }
 
     pub async fn my_audit(
@@ -274,7 +305,7 @@ impl AuditService {
         let mut public_audits = Vec::new();
 
         for audit in audits {
-            public_audits.push(PublicAudit::new(&self.context, audit).await?);
+            public_audits.push(PublicAudit::new(&self.context, audit, false).await?);
         }
 
         // Ok(MyAuditResult {
@@ -300,16 +331,6 @@ impl AuditService {
 
         let mut is_history_changed = false;
         let mut is_approve_needed = false;
-
-        if let Some(public) = change.public {
-            if public {
-                if audit.status == AuditStatus::Resolved {
-                    audit.public = public;
-                } else {
-                    return Err(anyhow::anyhow!("Audit must be resolved").code(400));
-                }
-            }
-        }
 
         if audit.status != AuditStatus::Resolved || audit.no_customer {
             if let Some(scope) = change.scope.clone() {
@@ -391,14 +412,41 @@ impl AuditService {
                 }
                 AuditAction::Resolve => {
                     if !is_audit_approved {
-                        return Err(anyhow::anyhow!("Audit approval is required from all participants").code(404));
+                        return Err(anyhow::anyhow!("Audit approval is required from all participants").code(400));
                     } else if audit.status == AuditStatus::Started {
                         audit.status = AuditStatus::Resolved;
-                        audit.resolved_at = Some(Utc::now().timestamp_micros());
                         audit.resolve(&self.context).await?;
                     }
                 }
             }
+        }
+
+        if let Some(public) = change.public {
+            if audit.status == AuditStatus::Resolved {
+                audit.public = public.clone();
+
+                if let Some(ref report) = audit.report {
+                    self
+                        .context
+                        .make_request()
+                        .patch(format!(
+                            "{}://{}/{}/file/{}",
+                            PROTOCOL.as_str(),
+                            FILES_SERVICE.as_str(),
+                            API_PREFIX.as_str(),
+                            report,
+                        ))
+                        .json(&ChangeFile {
+                            private: Some(!public),
+                            ..Default::default()
+                        })
+                        .auth(self.context.server_auth())
+                        .send()
+                        .await?;
+                    }
+                } else {
+                    return Err(anyhow::anyhow!("Audit must be resolved").code(400));
+                }
         }
 
         // audit.last_modified = Utc::now().timestamp_micros();
@@ -469,7 +517,7 @@ impl AuditService {
             audit.unread_edits.insert(user_id.to_hex(), 0);
         }
 
-        let public_audit = PublicAudit::new(&self.context, audit.clone()).await?;
+        let public_audit = PublicAudit::new(&self.context, audit.clone(), false).await?;
 
         let event = PublicEvent::new(
             event_receiver,
@@ -534,7 +582,7 @@ impl AuditService {
             return Err(anyhow::anyhow!("User is not available to delete this audit").code(403));
         }
 
-        let public_audit = PublicAudit::new(&self.context, audit.clone()).await?;
+        let public_audit = PublicAudit::new(&self.context, audit.clone(), false).await?;
 
         let (receiver_id, receiver_role, current_role) = if auth.id().unwrap() == audit.customer_id {
             (audit.auditor_id, Role::Auditor, Role::Customer)
@@ -700,7 +748,7 @@ impl AuditService {
                     _ => return Err(anyhow::anyhow!("Invalid action").code(400))
                 }
             } else {
-                let Some(new_state) = issue.status.apply(&action) else {
+                let Some(new_state) = issue.status.apply(&action, role) else {
                     return Err(anyhow::anyhow!("Invalid action").code(400));
                 };
 
@@ -949,9 +997,9 @@ impl AuditService {
         &self,
         audit_id: ObjectId,
         issue_id: usize,
+        code: Option<&String>,
     ) -> error::Result<PublicIssue> {
-        let auth = self.context.auth();
-        let audit = self.get_audit(audit_id).await?;
+        let audit = self.find(audit_id, code).await?;
 
         if let Some(audit) = audit {
             let issue = audit
@@ -961,7 +1009,7 @@ impl AuditService {
                 .cloned();
 
             if let Some(issue) = issue {
-                return Ok(auth.public_issue(issue));
+                return Ok(issue);
             }
         }
 
@@ -1079,7 +1127,7 @@ impl AuditService {
         let mut result = vec![];
 
         for audit in audits {
-            result.push(PublicAudit::new(&self.context, audit).await?);
+            result.push(PublicAudit::new(&self.context, audit, true).await?);
         }
 
         Ok(result)
@@ -1105,7 +1153,7 @@ impl AuditService {
 
         let mut result = vec![];
         for audit in audits {
-            result.push(PublicAudit::new(&self.context, audit).await?);
+            result.push(PublicAudit::new(&self.context, audit, false).await?);
         }
 
         Ok(result)

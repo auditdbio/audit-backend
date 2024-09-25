@@ -22,38 +22,36 @@ pub enum Status {
 }
 
 impl Status {
-    pub fn apply(&self, action: &Action) -> Option<Status> {
-        match (self, action) {
-            (Status::Draft, Action::Begin) => Some(Status::InProgress),
-            (Status::Draft, Action::Fixed) => None,
-            (Status::Draft, Action::NotFixed) => None,
-            (Status::Draft, Action::Discard) => None,
-            (Status::Draft, Action::Verified) => None,
-            (Status::Draft, Action::ReOpen) => None,
-            (Status::InProgress, Action::Begin) => None,
-            (Status::InProgress, Action::Fixed) => Some(Status::Verification),
-            (Status::InProgress, Action::NotFixed) => None,
-            (Status::InProgress, Action::Discard) => Some(Status::WillNotFix),
-            (Status::InProgress, Action::Verified) => Some(Status::Fixed),
-            (Status::InProgress, Action::ReOpen) => None,
-            (Status::Verification, Action::Begin) => None,
-            (Status::Verification, Action::Fixed) => Some(Status::InProgress),
-            (Status::Verification, Action::NotFixed) => Some(Status::InProgress),
-            (Status::Verification, Action::Discard) => Some(Status::WillNotFix),
-            (Status::Verification, Action::Verified) => Some(Status::Fixed),
-            (Status::Verification, Action::ReOpen) => None,
-            (Status::WillNotFix, Action::Begin) => None,
-            (Status::WillNotFix, Action::Fixed) => None,
-            (Status::WillNotFix, Action::NotFixed) => None,
-            (Status::WillNotFix, Action::Discard) => None,
-            (Status::WillNotFix, Action::Verified) => None,
-            (Status::WillNotFix, Action::ReOpen) => Some(Status::InProgress),
-            (Status::Fixed, Action::Begin) => None,
-            (Status::Fixed, Action::Fixed) => None,
-            (Status::Fixed, Action::NotFixed) => None,
-            (Status::Fixed, Action::Discard) => None,
-            (Status::Fixed, Action::Verified) => Some(Status::Verification),
-            (Status::Fixed, Action::ReOpen) => Some(Status::InProgress),
+    pub fn apply(&self, action: &Action, role: Role) -> Option<Status> {
+        match (self, action, role) {
+            (Status::Draft, Action::Begin, Role::Auditor) => Some(Status::InProgress),
+
+            (Status::InProgress, Action::Fixed, Role::Auditor) => Some(Status::Fixed),
+            (Status::InProgress, Action::Fixed, Role::Customer) => Some(Status::Verification),
+            (Status::InProgress, Action::Discard, _) => Some(Status::WillNotFix),
+
+            (Status::Verification, Action::NotFixed, _) => Some(Status::InProgress),
+            (Status::Verification, Action::Discard, _) => Some(Status::WillNotFix),
+            (Status::Verification, Action::Verified, Role::Auditor) => Some(Status::Fixed),
+
+            (Status::WillNotFix, Action::Fixed, Role::Auditor) => Some(Status::Fixed),
+            (Status::WillNotFix, Action::Verified, Role::Auditor) => Some(Status::Verification),
+            (Status::WillNotFix, Action::ReOpen, _) => Some(Status::InProgress),
+
+            (Status::Fixed, Action::Discard, Role::Auditor) => Some(Status::WillNotFix),
+            (Status::Fixed, Action::NotFixed, Role::Auditor) => Some(Status::Verification),
+            (Status::Fixed, Action::ReOpen, Role::Auditor) => Some(Status::InProgress),
+            _ => None,
+        }
+    }
+
+    pub fn to_string(&self) -> String {
+        match self {
+            Status::Draft => "Draft".to_string(),
+            Status::InProgress => "InProgress".to_string(),
+            Status::Verification => "Verification".to_string(),
+            Status::WillNotFix => "WillNotFix".to_string(),
+            Status::Fixed => "Fixed".to_string(),
         }
     }
 }
@@ -68,25 +66,14 @@ pub enum Action {
     ReOpen,
 }
 
-impl Action {
-    pub fn is_customer(&self) -> bool {
-        match self {
-            Action::Begin | Action::NotFixed | Action::Verified => false,
-            Action::Fixed | Action::Discard | Action::ReOpen => true,
-        }
-    }
-
-    pub fn is_auditor(&self) -> bool {
-        match self {
-            Action::Begin
-            | Action::NotFixed
-            | Action::Verified
-            | Action::Discard
-            | Action::ReOpen => true,
-            Action::Fixed => false,
-        }
-    }
-}
+// impl Action {
+//     pub fn is_customer(&self) -> bool {
+//         match self {
+//             Action::Begin | Action::NotFixed | Action::Verified => false,
+//             Action::Fixed | Action::Discard | Action::ReOpen => true,
+//         }
+//     }
+// }
 
 pub fn severity_to_integer(severity: &str) -> usize {
     match severity {
@@ -197,20 +184,11 @@ pub struct ChangeIssue {
 
 impl ChangeIssue {
     pub fn get_access_auditor(&self, _audit: &Audit<ObjectId>) -> bool {
-        if let Some(action) = &self.status {
-            action.is_auditor()
-        } else {
-            true
-        }
+        true
     }
 
     pub fn get_access_customer(&self, _audit: &Audit<ObjectId>) -> bool {
-        let status = if let Some(action) = &self.status {
-            action.is_customer()
-        } else {
-            true
-        };
-        self.include.is_none() && status
+        self.include.is_none()
     }
 }
 
