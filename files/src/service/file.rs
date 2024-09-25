@@ -1,74 +1,22 @@
 use std::{fs::File, io::Write, path::Path};
 use mongodb::bson::{oid::ObjectId, Bson};
-use serde::{Deserialize, Serialize};
 use actix_files::NamedFile;
 use actix_multipart::Multipart;
 use futures_util::StreamExt;
 
 use common::{
-    impl_has_last_modified,
     access_rules::{AccessRules, Edit, Read},
-    api::{audits::PublicAudit, file::ChangeFile},
-    auth::Auth,
+    api::{
+        audits::PublicAudit,
+        file::{ChangeFile, PublicMetadata},
+    },
     context::GeneralContext,
-    entities::file::{ParentEntity, ParentEntitySource, FileEntity},
+    entities::file::{ParentEntity, ParentEntitySource, FileEntity, Metadata},
     error::{self, AddCode},
-    repository::{Entity, HasLastModified},
     services::{PROTOCOL, API_PREFIX, AUDITS_SERVICE},
 };
 
 const FILES_PATH_PREFIX: &str = "auditdb-files";
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct Metadata {
-    pub id: ObjectId,
-    pub last_modified: i64,
-    pub path: String,
-    pub extension: String,
-    pub private: bool,
-    pub allowed_users: Vec<ObjectId>,
-    pub author: Option<ObjectId>,
-    pub access_code: Option<String>,
-    pub original_name: Option<String>,
-    pub parent_entity: Option<ParentEntity>,
-    pub file_entity: Option<FileEntity>,
-    #[serde(default)]
-    pub is_rewritable: bool,
-}
-
-impl_has_last_modified!(Metadata);
-
-impl Entity for Metadata {
-    fn id(&self) -> ObjectId {
-        self.id
-    }
-}
-
-impl<'a, 'b> AccessRules<&'a Auth, &'b Metadata> for Read {
-    fn get_access(&self, auth: &'a Auth, subject: &'b Metadata) -> bool {
-        match auth {
-            Auth::User(id) => {
-                if subject.private {
-                    subject.allowed_users.contains(id) || subject.author == Some(id.clone())
-                } else {
-                    true
-                }
-            }
-            Auth::Admin(_) | Auth::Service(_, _) => true,
-            Auth::None => !subject.private,
-        }
-    }
-}
-
-impl<'a, 'b> AccessRules<&'a Auth, &'b Metadata> for Edit {
-    fn get_access(&self, auth: &'a Auth, subject: &'b Metadata) -> bool {
-        match auth {
-            Auth::User(id) => subject.allowed_users.contains(id) || subject.author == Some(id.clone()),
-            Auth::Admin(_) | Auth::Service(_, _) => true,
-            Auth::None => false,
-        }
-    }
-}
 
 pub struct FileToken {
     pub token: String,
@@ -87,7 +35,7 @@ impl FileService {
     pub async fn create_file(
         &self,
         mut payload: Multipart,
-    ) -> error::Result<Metadata> {
+    ) -> error::Result<PublicMetadata> {
         let auth = self.context.auth();
         let current_id = auth.id();
 
@@ -231,13 +179,9 @@ impl FileService {
 
         let last_modified = chrono::Utc::now().timestamp_micros();
         let object_id = ObjectId::new();
+
         if original_name.is_empty() {
             original_name = object_id.to_hex();
-        }
-        let path = format!("/{}/{}_{}", FILES_PATH_PREFIX, original_name, last_modified);
-
-        if file_entity == Some(FileEntity::Avatar) || file_entity == Some(FileEntity::Report) {
-            is_rewritable = true;
         }
 
         let extension = if original_name.contains('.') {
@@ -246,6 +190,12 @@ impl FileService {
             String::new()
         };
         original_name = original_name.rsplitn(2, '.').last().unwrap().to_string();
+
+        let path = format!("/{}/{}_{}", FILES_PATH_PREFIX, original_name, last_modified);
+
+        if file_entity == Some(FileEntity::Avatar) || file_entity == Some(FileEntity::Report) {
+            is_rewritable = true;
+        }
 
         let os_path = Path::new(&path);
 
@@ -332,7 +282,7 @@ impl FileService {
 
         metas.insert(&meta).await?;
 
-        Ok(meta)
+        Ok(meta.into())
     }
 
 
@@ -378,7 +328,7 @@ impl FileService {
         Ok(file)
     }
 
-    pub async fn get_meta_by_id(&self, file_id: ObjectId, code: Option<&String>) -> error::Result<Metadata> {
+    pub async fn get_meta_by_id(&self, file_id: ObjectId, code: Option<&String>) -> error::Result<PublicMetadata> {
         let auth = self.context.auth();
 
         let metas = self.context.try_get_repository::<Metadata>()?;
@@ -391,7 +341,7 @@ impl FileService {
             return Err(anyhow::anyhow!("Access denied for this user").code(403));
         }
 
-        Ok(meta)
+        Ok(meta.into())
     }
 
 

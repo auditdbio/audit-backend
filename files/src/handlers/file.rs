@@ -8,18 +8,18 @@ use actix_web::{
 use std::collections::HashMap;
 
 use common::{
-    api::file::ChangeFile,
+    api::file::{ChangeFile, PublicMetadata},
     context::GeneralContext,
     error,
 };
 
-use crate::service::file::{FileService, Metadata};
+use crate::service::file::FileService;
 
 #[post("/file")]
 pub async fn create_file(
     context: GeneralContext,
     payload: Multipart,
-) -> error::Result<Json<Metadata>> {
+) -> error::Result<Json<PublicMetadata>> {
     Ok(Json(
         FileService::new(context)
             .create_file(payload)
@@ -56,7 +56,7 @@ pub async fn get_meta_by_id(
     context: GeneralContext,
     file_id: Path<String>,
     query: Query<HashMap<String, String>>,
-) -> error::Result<Json<Metadata>> {
+) -> error::Result<Json<PublicMetadata>> {
     let code = query.get("code");
     Ok(Json(
         FileService::new(context)

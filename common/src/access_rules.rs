@@ -8,6 +8,7 @@ use crate::{
         auditor::Auditor,
         badge::Badge,
         customer::Customer,
+        file::Metadata,
         project::Project,
         user::User,
     },
@@ -22,6 +23,10 @@ pub struct Read;
 pub struct Edit;
 
 pub struct Delete;
+
+pub struct GetData;
+
+pub struct SendMail;
 
 impl<'a, 'b> AccessRules<&'a Auth, &'b User<ObjectId>> for Read {
     fn get_access(&self, auth: &'a Auth, _user: &'b User<ObjectId>) -> bool {
@@ -173,7 +178,31 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b Audit<ObjectId>> for Delete {
     }
 }
 
-pub struct GetData;
+impl<'a, 'b> AccessRules<&'a Auth, &'b Metadata> for Read {
+    fn get_access(&self, auth: &'a Auth, subject: &'b Metadata) -> bool {
+        match auth {
+            Auth::User(id) => {
+                if subject.private {
+                    subject.allowed_users.contains(id) || subject.author == Some(id.clone())
+                } else {
+                    true
+                }
+            }
+            Auth::Admin(_) | Auth::Service(_, _) => true,
+            Auth::None => !subject.private,
+        }
+    }
+}
+
+impl<'a, 'b> AccessRules<&'a Auth, &'b Metadata> for Edit {
+    fn get_access(&self, auth: &'a Auth, subject: &'b Metadata) -> bool {
+        match auth {
+            Auth::User(id) => subject.allowed_users.contains(id) || subject.author == Some(id.clone()),
+            Auth::Admin(_) | Auth::Service(_, _) => true,
+            Auth::None => false,
+        }
+    }
+}
 
 impl<'a> AccessRules<&'a Auth, ()> for GetData {
     fn get_access(&self, auth: &'a Auth, _user: ()) -> bool {
@@ -184,8 +213,6 @@ impl<'a> AccessRules<&'a Auth, ()> for GetData {
         }
     }
 }
-
-pub struct SendMail;
 
 impl<'a> AccessRules<&'a Auth, ()> for SendMail {
     fn get_access(&self, auth: &'a Auth, _user: ()) -> bool {
