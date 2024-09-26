@@ -8,8 +8,12 @@ use actix_web::{
     web::{self, Data},
     App,
 };
-use common::context::effectfull_context::ServiceState;
-use common::services::API_PREFIX;
+use common::{
+    context::effectfull_context::ServiceState,
+    services::API_PREFIX,
+};
+
+use crate::handlers::report::*;
 
 pub mod handlers;
 pub mod service;
@@ -32,6 +36,10 @@ pub fn create_app(
         .wrap(cors)
         .wrap(middleware::Logger::default())
         .app_data(Data::new(state))
-        .service(web::scope(&API_PREFIX).service(handlers::report::create_report));
+        .service(
+            web::scope(&API_PREFIX)
+                .service(create_report)
+                .service(verify_report)
+        );
     app
 }

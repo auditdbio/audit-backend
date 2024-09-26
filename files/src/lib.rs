@@ -9,7 +9,7 @@ use actix_web::{
 use common::{context::effectfull_context::ServiceState, services::API_PREFIX};
 pub use handlers::*;
 use handlers::{
-    file::{create_file, delete_file, find_file},
+    file::*,
     indexer::ping,
 };
 
@@ -39,6 +39,7 @@ pub fn create_app(
                 .service(create_file)
                 .service(find_file)
                 .service(delete_file)
+                .service(change_file)
                 .service(ping),
         );
 

@@ -2,14 +2,18 @@ use chrono::Utc;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use rand::{distributions::Alphanumeric, Rng};
 
 use crate::{
-    api::organization::{get_organization, GetOrganizationQuery},
+    api::{
+        auditor::request_auditor,
+        customer::request_customer,
+        organization::{get_organization, GetOrganizationQuery},
+    },
     context::GeneralContext,
     entities::{
         audit::{Audit, AuditStatus, PublicAuditStatus, ReportType},
         audit_request::TimeRange,
-        auditor::{ExtendedAuditor, PublicAuditor},
         contacts::Contacts,
         issue::{Issue, Status},
         project::PublicProject,
@@ -17,7 +21,7 @@ use crate::{
         organization::PublicOrganization
     },
     error,
-    services::{API_PREFIX, AUDITORS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL},
+    services::{API_PREFIX, CUSTOMERS_SERVICE, PROTOCOL},
 };
 
 use super::issue::PublicIssue;
@@ -45,7 +49,6 @@ pub struct AuditChange {
     pub report: Option<String>,
     pub time: Option<TimeRange>,
     pub start_audit: Option<bool>,
-    #[serde(rename = "isPublic")]
     pub public: Option<bool>,
     pub conclusion: Option<String>,
     pub comment: Option<String>,
@@ -95,34 +98,40 @@ pub struct PublicAudit {
     pub auditor_id: String,
     pub customer_id: String,
     pub project_id: String,
-    #[serde(rename = "isPublic")]
-    pub public: bool,
 
     pub auditor_first_name: String,
     pub auditor_last_name: String,
+    pub avatar: String,
+    pub auditor_contacts: Contacts,
+
+    pub customer_first_name: String,
+    pub customer_last_name: String,
+    pub customer_avatar: String,
+    pub customer_contacts: Contacts,
 
     pub project_name: String,
-    pub avatar: String,
     pub description: String,
-    pub status: PublicAuditStatus,
     pub scope: Vec<String>,
+    pub tags: Vec<String>,
+    pub status: PublicAuditStatus,
     pub price: Option<i64>,
     pub total_cost: Option<i64>,
 
-    pub auditor_contacts: Contacts,
-    pub customer_contacts: Contacts,
-    pub tags: Vec<String>,
+    pub time: TimeRange,
     pub last_modified: i64,
     pub resolved_at: Option<i64>,
     pub report: Option<String>,
     pub report_name: Option<String>,
-    pub time: TimeRange,
+    #[serde(rename = "isPublic")]
+    pub public: bool,
 
     pub issues: Vec<PublicIssue>,
 
     #[serde(default)]
     pub no_customer: bool,
     pub conclusion: Option<String>,
+    pub access_code: Option<String>,
+    pub verification_code: Option<String>,
 
     pub auditor_organization: Option<PublicOrganization>,
     pub customer_organization: Option<PublicOrganization>,
@@ -132,23 +141,12 @@ impl PublicAudit {
     pub async fn new(
         context: &GeneralContext,
         audit: Audit<ObjectId>,
+        only_public: bool,
     ) -> error::Result<PublicAudit> {
         let auth = context.auth();
 
-        let auditor = context
-            .make_request::<PublicAuditor>()
-            .get(format!(
-                "{}://{}/{}/auditor/{}",
-                PROTOCOL.as_str(),
-                AUDITORS_SERVICE.as_str(),
-                API_PREFIX.as_str(),
-                audit.auditor_id
-            ))
-            .auth(context.server_auth())
-            .send()
-            .await?
-            .json::<ExtendedAuditor>()
-            .await?;
+        let auditor = request_auditor(&context, audit.auditor_id, context.server_auth()).await?;
+        let customer = request_customer(&context, audit.customer_id, context.server_auth()).await?;
 
         let project = match audit.no_customer {
             true => None,
@@ -197,8 +195,6 @@ impl PublicAudit {
         let status = match audit.status {
             AuditStatus::Waiting => PublicAuditStatus::WaitingForAudit,
             AuditStatus::Started => {
-                // else if audit.report.is_some() {
-                //     PublicAuditStatus::ReadyForResolve
                 if !is_audit_approved {
                     PublicAuditStatus::ApprovalNeeded
                 } else if audit.issues.is_empty() {
@@ -212,14 +208,25 @@ impl PublicAudit {
             AuditStatus::Resolved => PublicAuditStatus::Resolved,
         };
 
-        let customer_contacts = if let Some(project) = &project {
-            project.creator_contacts.clone()
-        } else {
+
+        let mut auditor_contacts = auditor.contacts().clone();
+
+        if !auditor_contacts.public_contacts && only_public {
+            auditor_contacts = Contacts {
+                email: None,
+                telegram: None,
+                public_contacts: false,
+            }
+        }
+
+        let customer_contacts= if !customer.contacts.public_contacts && only_public {
             Contacts {
                 email: None,
                 telegram: None,
                 public_contacts: false,
             }
+        } else {
+            customer.contacts
         };
 
         let project_name = if let Some(project) = &project {
@@ -232,6 +239,28 @@ impl PublicAudit {
             audit.project_name
         };
 
+        let (price, total_cost, access_code) = if only_public {
+            (None, None, None)
+        } else {
+            (audit.price, audit.total_cost, audit.access_code)
+        };
+
+        let mut issues = audit
+            .issues
+            .into_iter()
+            .map(|i| {
+                let mut public_issue = auth.public_issue(i);
+                if only_public {
+                    public_issue.events = vec![];
+                }
+                public_issue
+            })
+            .collect::<Vec<PublicIssue>>();
+
+        if only_public {
+            issues.retain(|issue| issue.include)
+        }
+
         let public_audit = PublicAudit {
             id: audit.id.to_hex(),
             auditor_id: audit.auditor_id.to_hex(),
@@ -239,29 +268,30 @@ impl PublicAudit {
             project_id: audit.project_id.to_hex(),
             auditor_first_name: auditor.first_name().clone(),
             auditor_last_name: auditor.last_name().clone(),
-            project_name,
             avatar: auditor.avatar().clone(),
-            description: audit.description,
-            status,
-            scope: audit.scope,
-            price: audit.price,
-            total_cost: audit.total_cost,
-            auditor_contacts: auditor.contacts().clone(),
+            auditor_contacts,
+            customer_first_name: customer.first_name,
+            customer_last_name: customer.last_name,
+            customer_avatar: customer.avatar,
             customer_contacts,
+            project_name,
+            description: audit.description,
             tags: audit.tags,
+            scope: audit.scope,
+            status,
+            price,
+            total_cost,
+            time: audit.time,
             last_modified: audit.last_modified,
             resolved_at: audit.resolved_at,
             report: audit.report,
             report_name: audit.report_name,
-            time: audit.time,
-            issues: audit
-                .issues
-                .into_iter()
-                .map(|i| auth.public_issue(i))
-                .collect(),
+            issues,
             public: audit.public,
             no_customer: audit.no_customer,
             conclusion: audit.conclusion,
+            access_code,
+            verification_code: audit.verification_code,
             auditor_organization,
             customer_organization,
         };
@@ -315,4 +345,15 @@ pub struct CreateAudit {
     pub last_changer: Role,
     pub auditor_organization: Option<String>,
     pub customer_organization: Option<String>,
+}
+
+pub fn create_access_code() -> String {
+    let time = Utc::now().timestamp_micros().to_string();
+    let rnd: String = rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(10)
+        .map(char::from)
+        .collect();
+
+    format!("{}{}", time, rnd)
 }
