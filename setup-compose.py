@@ -132,7 +132,8 @@ class Service:
     environment:
       VIRTUAL_HOST: "${{VIRTUAL_HOST}}"{virtual_path_template}
       <<: *common-variables
-{variables}{networks_template}{restart_template}
+{variables}{networks_template}
+{restart_template}
 """
 
 
