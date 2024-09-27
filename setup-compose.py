@@ -122,6 +122,10 @@ class Service:
         for (name, value) in self.variables:
             variables += f"      {name}: {value}\n"
 
+        restart_template = ""
+        if self.service_name != "binaries":
+            restart_template = "    restart: always\n"
+
         return f"""  {self.config['container_namespace']}-{self.service_name}:{depend_on_template}
     build: ./{folder}
 {port_template}    {volumes_template}
@@ -129,7 +133,7 @@ class Service:
       VIRTUAL_HOST: "${{VIRTUAL_HOST}}"{virtual_path_template}
       <<: *common-variables
 {variables}{networks_template}
-    restart: always
+{restart_template}
 """
 
 
