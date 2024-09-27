@@ -75,6 +75,21 @@ impl FromStr for ParentEntitySource {
     }
 }
 
+impl ParentEntitySource {
+    pub fn to_string(&self) -> String {
+        match self {
+            ParentEntitySource::Audit => "Audit".to_string(),
+            ParentEntitySource::Auditor => "Auditor".to_string(),
+            ParentEntitySource::Customer => "Customer".to_string(),
+            ParentEntitySource::Chat => "Chat".to_string(),
+            ParentEntitySource::Project => "Project".to_string(),
+            ParentEntitySource::User => "User".to_string(),
+            ParentEntitySource::Organization => "Organization".to_string(),
+            ParentEntitySource::Other => "Other".to_string(),
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum FileEntity {
     Avatar,
@@ -91,6 +106,17 @@ impl FromStr for FileEntity {
             "chatattachment" => Ok(FileEntity::ChatAttachment),
             "report" => Ok(FileEntity::Report),
             _ => Ok(FileEntity::Other),
+        }
+    }
+}
+
+impl FileEntity {
+    pub fn to_string(&self) -> String {
+        match self {
+            FileEntity::Avatar => "Avatar".to_string(),
+            FileEntity::ChatAttachment => "ChatAttachment".to_string(),
+            FileEntity::Report => "Report".to_string(),
+            FileEntity::Other => "Other".to_string(),
         }
     }
 }

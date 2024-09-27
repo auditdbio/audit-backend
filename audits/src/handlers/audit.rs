@@ -1,6 +1,4 @@
 use std::{
-    future::Future,
-    pin::Pin,
     collections::HashMap,
 };
 use serde_json::json;
@@ -22,7 +20,6 @@ use common::{
         role::Role
     },
     error,
-    retry::retry_operation,
 };
 
 use crate::service::{
