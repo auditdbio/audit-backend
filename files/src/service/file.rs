@@ -228,6 +228,8 @@ impl FileService {
         let metas = self.context.try_get_repository::<Metadata>()?;
 
         if is_rewritable {
+            log::info!("is rewritable");
+            log::info!("file entity: {:?}", file_entity);
             if !auth.full_access() {
                 if file_entity == Some(FileEntity::Avatar) {
                     if parent_entity.source == ParentEntitySource::Organization {
@@ -267,6 +269,8 @@ impl FileService {
                 .find_many("parent_entity.id", &Bson::ObjectId(parent_entity.clone().id))
                 .await?;
 
+            log::info!("found metas: {}", found_metas.len());
+
             if let Some(meta) = found_metas
                 .iter()
                 .find(|m: &&Metadata| {
@@ -275,6 +279,7 @@ impl FileService {
                     } else { false }
                 })
             {
+                log::info!("current meta: {}", meta.path);
                 std::fs::remove_file(meta.path.clone()).ok();
                 // TODO: Enable delete from metas
                 // metas.delete("id", &meta.id).await?;
@@ -322,7 +327,7 @@ impl FileService {
             return Err(anyhow::anyhow!("Access denied for this user").code(403));
         }
 
-        let file = NamedFile::open_async(format!("{}.{}", meta.path, meta.extension))
+        let file = NamedFile::open_async(format!("/{}/{}.{}", FILES_PATH_PREFIX, meta.path, meta.extension))
             .await
             .unwrap();
 
