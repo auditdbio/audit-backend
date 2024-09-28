@@ -79,9 +79,9 @@ impl ChatService {
             let meta = request_file_metadata(&self.context, message.text.clone(), auth).await?;
             let filename = if let Some(meta) = meta {
                 format!(
-                    "{}.{}",
+                    "{}{}",
                     meta.original_name.unwrap_or("Unnamed file".to_string()),
-                    meta.extension,
+                    if meta.extension.is_empty() { "".to_string() } else { format!(".{}", meta.extension) }
                 )
             } else {
                 return Err(anyhow::anyhow!("File sending error").code(400));
