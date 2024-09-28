@@ -371,9 +371,12 @@ pub async fn create_report(
         FileEntity::Report
     };
 
+    let original_name = format!("{} report.pdf", audit.project_name);
+
     let client = &context.client();
     let mut form = Form::new()
         .part("file", Part::bytes(report.to_vec()))
+        .part("original_name", Part::text(original_name))
         .part("file_entity", Part::text(file_entity.to_string()))
         .part("parent_entity_id", Part::text(audit.id.clone()))
         .part("parent_entity_source", Part::text(ParentEntitySource::Audit.to_string()))
@@ -398,8 +401,6 @@ pub async fn create_report(
         .await?
         .text()
         .await?;
-
-    // TODO: check original name for report generation file
 
     let file_meta: PublicMetadata = serde_json::from_str(&file_meta_str)?;
     let report_name = format!(
@@ -438,6 +439,7 @@ pub async fn create_report(
         file_id: file_meta.id,
         path: file_meta.path,
         report_name,
+        is_draft,
         verification_code,
     })
 }
@@ -477,7 +479,6 @@ pub async fn verify_report(
             }
             _ => (),
         }
-
     }
 
     let verification_code = sha256::digest(&report[..]);

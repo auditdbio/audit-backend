@@ -67,18 +67,14 @@ impl FileService {
                         content.push(data);
                     }
                 }
-                // "path" => {
-                //     while let Some(chunk) = field.next().await {
-                //         let data = chunk.unwrap();
-                //         path.push_str(&String::from_utf8(data.to_vec()).unwrap());
-                //     }
-                // }
-                // "original_name" => {
-                //     while let Some(chunk) = field.next().await {
-                //         let data = chunk.unwrap();
-                //         original_name.push_str(&String::from_utf8(data.to_vec()).unwrap());
-                //     }
-                // }
+                "original_name" => {
+                    let mut str = String::new();
+                    while let Some(chunk) = field.next().await {
+                        let data = chunk.unwrap();
+                        str.push_str(&String::from_utf8(data.to_vec()).unwrap());
+                    }
+                    original_name = str;
+                }
                 "private" => {
                     let mut str = String::new();
                     while let Some(chunk) = field.next().await {
@@ -192,7 +188,13 @@ impl FileService {
         };
         original_name = original_name.rsplitn(2, '.').last().unwrap().to_string();
 
-        let path = format!("/{}/{}_{}.{}", FILES_PATH_PREFIX, original_name, last_modified, extension);
+        let path = format!(
+            "/{}/{}_{}{}",
+            FILES_PATH_PREFIX,
+            original_name,
+            last_modified,
+            if extension.is_empty() { "".to_string() } else { format!(".{}", extension) }
+        );
 
         if file_entity == Some(FileEntity::Avatar) || file_entity == Some(FileEntity::Report) {
             is_rewritable = true;
