@@ -388,7 +388,6 @@ impl AuditService {
         if let Some(ref report) = change.report {
             audit.report = Some(report.clone());
             audit.report_type = Some(change.report_type.unwrap_or(ReportType::Custom));
-            log::info!("change report is success");
         }
 
         let is_audit_approved = if audit.edit_history.is_empty() || audit.approved_by.is_empty() {
@@ -512,9 +511,7 @@ impl AuditService {
             audit.unread_edits.insert(user_id.to_hex(), 0);
         }
 
-        log::info!("before public audit new");
         let public_audit = PublicAudit::new(&self.context, audit.clone(), false).await?;
-        log::info!("after public audit new");
 
         let event = PublicEvent::new(
             event_receiver,

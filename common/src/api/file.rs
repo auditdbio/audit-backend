@@ -56,7 +56,7 @@ pub async fn request_file_metadata(
     let res = context
         .make_request::<PublicMetadata>()
         .get(format!(
-            "{}://{}/{}/file/id/{}",
+            "{}://{}/{}/file/meta/{}",
             PROTOCOL.as_str(),
             FILES_SERVICE.as_str(),
             API_PREFIX.as_str(),
@@ -65,9 +65,6 @@ pub async fn request_file_metadata(
         .auth(auth)
         .send()
         .await?;
-
-    log::info!("after request file meta");
-    log::info!("file meta res status: {:?}", res.status());
 
     if res.status().is_success() {
         Ok(Some(res.json::<PublicMetadata>().await?))

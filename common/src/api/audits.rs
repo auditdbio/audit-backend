@@ -164,8 +164,6 @@ impl PublicAudit {
             ),
         };
 
-        log::info!("after project request");
-
         let is_audit_approved = if audit.edit_history.is_empty() || audit.approved_by.is_empty() {
             true
         } else {
@@ -242,7 +240,6 @@ impl PublicAudit {
         }
 
         let report_name = if let Some(report) = audit.report.clone() {
-            log::info!("before request file meta");
             let meta = request_file_metadata(&context, report, context.server_auth()).await?;
             if let Some(meta) = meta {
                 Some(format!(
@@ -256,8 +253,6 @@ impl PublicAudit {
         } else {
             None
         };
-
-        log::info!("report name: {:?}", report_name);
 
         let public_audit = PublicAudit {
             id: audit.id.to_hex(),
