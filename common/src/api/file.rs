@@ -66,6 +66,9 @@ pub async fn request_file_metadata(
         .send()
         .await?;
 
+    log::info!("after request file meta");
+    log::info!("file meta res status: {:?}", res.status());
+
     if res.status().is_success() {
         Ok(Some(res.json::<PublicMetadata>().await?))
     } else {
