@@ -6,6 +6,7 @@ use actix_web::{
     HttpResponse, HttpRequest,
 };
 use std::collections::HashMap;
+use mongodb::bson::oid::ObjectId;
 
 use common::{
     api::file::{ChangeFile, PublicMetadata},
@@ -46,9 +47,20 @@ pub async fn get_file_by_id(
     query: Query<HashMap<String, String>>,
 ) -> error::Result<NamedFile> {
     let code = query.get("code");
-    FileService::new(context)
-        .get_file_by_id(file_id.parse()?, code)
-        .await
+    let parsed_id = file_id.parse::<ObjectId>();
+
+    match parsed_id {
+        Ok(file_id) => {
+            FileService::new(context)
+                .get_file_by_id(file_id, code)
+                .await
+        }
+        Err(_) => {
+            FileService::new(context)
+                .find_file(file_id.into_inner(), code)
+                .await
+        }
+    }
 }
 
 #[get("/file/meta/{id}")]

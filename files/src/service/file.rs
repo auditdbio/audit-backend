@@ -180,7 +180,6 @@ impl FileService {
             original_name = object_id.to_hex();
         }
 
-        // TODO: check with files without extension
         let extension = if original_name.contains('.') {
             original_name.split('.').last().unwrap().to_string()
         } else {
