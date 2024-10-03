@@ -116,7 +116,10 @@ impl FileService {
                         let data = chunk.unwrap();
                         str.push_str(&String::from_utf8(data.to_vec()).unwrap());
                     }
-                    parent_entity_id = Some(str.parse()?)
+                    parent_entity_id = match str.parse::<ObjectId>() {
+                        Ok(id) => Some(id),
+                        Err(_) => None
+                    }
                 }
                 "parent_entity_source" => {
                     let mut str = String::new();
@@ -124,7 +127,10 @@ impl FileService {
                         let data = chunk.unwrap();
                         str.push_str(&String::from_utf8(data.to_vec()).unwrap());
                     }
-                    parent_entity_source = Some(str.parse().unwrap());
+                    parent_entity_source = match str.parse::<ParentEntitySource>() {
+                        Ok(source) => Some(source),
+                        Err(_) => None
+                    }
                 }
                 "file_entity" => {
                     let mut str = String::new();
@@ -147,12 +153,6 @@ impl FileService {
             }
         }
 
-        if content.is_empty() || parent_entity_id.is_none() || parent_entity_source.is_none() || file_entity.is_none() {
-            return Err(anyhow::anyhow!(
-                    "Required fields: 'file', 'file_entity', 'parent_entity_id', 'parent_entity_source'"
-                ).code(400))
-        }
-
         let mut full_access = full_access
             .split(' ')
             .filter_map(|id| id.trim().parse().ok())
@@ -168,9 +168,13 @@ impl FileService {
             }
         }
 
-        let parent_entity = ParentEntity {
+        let parent_entity = if parent_entity_id.is_some() && parent_entity_source.is_some() {
+            Some(ParentEntity {
                 id: parent_entity_id.unwrap(),
                 source: parent_entity_source.unwrap(),
+            })
+        } else {
+            None
         };
 
         let last_modified = chrono::Utc::now().timestamp_micros();
@@ -221,7 +225,7 @@ impl FileService {
             author: current_id,
             access_code,
             original_name: Some(original_name),
-            parent_entity: Some(parent_entity.clone()),
+            parent_entity: parent_entity.clone(),
             file_entity: file_entity.clone(),
             is_rewritable,
         };
@@ -229,58 +233,62 @@ impl FileService {
         let metas = self.context.try_get_repository::<Metadata>()?;
 
         if is_rewritable {
-            if !auth.full_access() {
-                if file_entity == Some(FileEntity::Avatar) {
-                    if parent_entity.source == ParentEntitySource::Organization {
-                        // TODO: get and check user organization rights
-                    } else {
-                        if current_id.unwrap() != parent_entity.id {
-                            return Err(anyhow::anyhow!("User is not available to add this avatar").code(403));
+            if let Some(parent_entity) = parent_entity {
+                if !auth.full_access() {
+                    if file_entity == Some(FileEntity::Avatar) {
+                        if parent_entity.source == ParentEntitySource::Organization {
+                            // TODO: get and check user organization rights
+                        } else {
+                            if current_id.unwrap() != parent_entity.id {
+                                return Err(anyhow::anyhow!("User is not available to add this avatar").code(403));
+                            }
+                        }
+                    }
+
+                    if file_entity == Some(FileEntity::Report) {
+                        let audit = self
+                            .context
+                            .make_request::<PublicAudit>()
+                            .auth(auth)
+                            .get(format!(
+                                "{}://{}/{}/audit/{}",
+                                PROTOCOL.as_str(),
+                                AUDITS_SERVICE.as_str(),
+                                API_PREFIX.as_str(),
+                                parent_entity.id,
+                            ))
+                            .send()
+                            .await?
+                            .json::<PublicAudit>()
+                            .await?;
+
+                        // TODO: change check for organization audits
+                        if current_id.unwrap().to_hex() != audit.auditor_id {
+                            return Err(anyhow::anyhow!("User is not available to add this report").code(403));
                         }
                     }
                 }
 
-                if file_entity == Some(FileEntity::Report) {
-                    let audit = self
-                        .context
-                        .make_request::<PublicAudit>()
-                        .auth(auth)
-                        .get(format!(
-                            "{}://{}/{}/audit/{}",
-                            PROTOCOL.as_str(),
-                            AUDITS_SERVICE.as_str(),
-                            API_PREFIX.as_str(),
-                            parent_entity.id,
-                        ))
-                        .send()
-                        .await?
-                        .json::<PublicAudit>()
-                        .await?;
+                let found_metas = metas
+                    .find_many("parent_entity.id", &Bson::ObjectId(parent_entity.clone().id))
+                    .await?;
 
-                    // TODO: change check for organization audits
-                    if current_id.unwrap().to_hex() != audit.auditor_id {
-                        return Err(anyhow::anyhow!("User is not available to add this report").code(403));
-                    }
+                if let Some(meta) = found_metas
+                    .iter()
+                    .find(|m: &&Metadata| {
+                        if let Some(parent) = &m.parent_entity {
+                            parent.source == parent_entity.clone().source
+                        } else { false }
+                    })
+                {
+                    std::fs::remove_file(meta.path.clone()).map_or_else(
+                        |e| log::info!("Failed to delete file '{}'. Error: {:?}", meta.path, e),
+                        |_| log::info!("File '{}' successfully deleted.", meta.path),
+                    );
+                    metas.delete("id", &meta.id).await?;
                 }
-            }
-
-            let found_metas = metas
-                .find_many("parent_entity.id", &Bson::ObjectId(parent_entity.clone().id))
-                .await?;
-
-            if let Some(meta) = found_metas
-                .iter()
-                .find(|m: &&Metadata| {
-                    if let Some(parent) = &m.parent_entity {
-                        parent.source == parent_entity.clone().source
-                    } else { false }
-                })
-            {
-                std::fs::remove_file(meta.path.clone()).map_or_else(
-                    |e| log::info!("Failed to delete file '{}'. Error: {:?}", meta.path, e),
-                    |_| log::info!("File '{}' successfully deleted.", meta.path),
-                );
-                metas.delete("id", &meta.id).await?;
+            } else {
+                return Err(anyhow::anyhow!("Parent entity fields is required for rewritable files").code(400));
             }
         }
 
