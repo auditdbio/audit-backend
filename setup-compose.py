@@ -175,7 +175,7 @@ x-common-variables: &common-variables
   LINKEDIN_CLIENT_ID: "${{LINKEDIN_CLIENT_ID}}"
   RUST_LOG: actix=info,reqwest=info,search=info,common=info,audits=trace
   TIMEOUT: "60"
-  SECURE_COOKIE: {config['secure_cookie']}
+  SECURE_COOKIE: "{config['secure_cookie']}"
 
 services:
 {services_str}
