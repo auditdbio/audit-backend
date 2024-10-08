@@ -1,5 +1,13 @@
-use actix_web::HttpRequest;
+use actix_web::{HttpRequest, HttpResponse, cookie::Cookie};
 use chrono::Utc;
+use time::OffsetDateTime;
+use mongodb::bson::{oid::ObjectId, Bson};
+use rand::{distributions::Alphanumeric, Rng};
+use reqwest::{header, Client};
+use serde::{Deserialize, Serialize};
+use std::env::var;
+use crypto::{ aes, blockmodes, buffer::{self, ReadBuffer, WriteBuffer, BufferResult}};
+
 use common::{
     default_timestamp,
     impl_has_last_modified,
@@ -18,6 +26,7 @@ use common::{
     },
     auth::Auth,
     context::GeneralContext,
+    constants::DURATION,
     entities::{
         letter::CreateLetter,
         user::{LinkedAccount, User, UserLogin},
@@ -26,12 +35,6 @@ use common::{
     repository::{Entity, HasLastModified},
     services::{API_PREFIX, FRONTEND, MAIL_SERVICE, PROTOCOL, USERS_SERVICE},
 };
-use mongodb::bson::{oid::ObjectId, Bson};
-use rand::{distributions::Alphanumeric, Rng};
-use reqwest::{header, Client};
-use serde::{Deserialize, Serialize};
-use std::env::var;
-use crypto::{ aes, blockmodes, buffer::{self, ReadBuffer, WriteBuffer, BufferResult}};
 
 use super::user::UserService;
 
@@ -47,12 +50,6 @@ pub struct AuthService {
 pub struct Login {
     pub email: String,
     pub password: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Token {
-    pub token: String,
-    pub user: UserLogin,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -102,11 +99,6 @@ impl<'b> AccessRules<String, &'b User<ObjectId>> for ChangePassword {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TokenResponce {
-    pub token: String,
-}
-
 impl AuthService {
     pub fn new(context: GeneralContext) -> Self {
         Self { context }
@@ -117,7 +109,7 @@ impl AuthService {
         &sha256::digest(auth_password) == correct_password
     }
 
-    pub async fn login(&self, login: &Login) -> error::Result<Token> {
+    pub async fn login(&self, login: &Login) -> error::Result<HttpResponse> {
         let users = self.context.try_get_repository::<User<ObjectId>>()?;
 
         let Some(user) = users
@@ -384,7 +376,7 @@ impl AuthService {
         return Ok((user, linked_account));
     }
 
-    pub async fn github_auth(&self, data: AddLinkedAccount) -> error::Result<Token> {
+    pub async fn github_auth(&self, data: AddLinkedAccount) -> error::Result<HttpResponse> {
         let github_auth = GetGithubAccessToken {
             code: data.clone().code,
             client_id: var("GITHUB_CLIENT_ID").unwrap(),
@@ -624,29 +616,58 @@ impl AuthService {
         Ok(())
     }
 
-    pub async fn restore(&self, req: HttpRequest) -> error::Result<TokenResponce> {
+    pub async fn restore(&self, req: HttpRequest) -> error::Result<HttpResponse> {
         let Some(token) = req.headers().get("Authorization") else {
-            return Err(anyhow::anyhow!("No token found").code(401));
+            return Err(anyhow::anyhow!("Token not found").code(401));
         };
         let token = token.to_str()?.strip_prefix("Bearer ").unwrap();
         let auth = Auth::from_token(token)?;
         if auth.is_some() && auth != Some(Auth::None) {
-            return Ok(TokenResponce {
-                token: auth.unwrap().to_token()?,
-            });
+            let user_id = auth.unwrap().id().unwrap();
+            let users = self.context.try_get_repository::<User<ObjectId>>()?;
+            if let Some(user) = users.find("id", &Bson::ObjectId(user_id)).await? {
+                return create_auth_token(&user);
+            }
         }
         Err(anyhow::anyhow!("Invalid token").code(401))
     }
 }
 
-pub fn create_auth_token(user: &User<ObjectId>) -> error::Result<Token> {
+pub fn create_auth_token(user: &User<ObjectId>) -> error::Result<HttpResponse> {
     let auth = if user.is_admin {
         Auth::Admin(user.id)
     } else {
         Auth::User(user.id)
     };
-    Ok(Token {
-        user: UserLogin::from(user.clone()),
-        token: auth.to_token()?,
-    })
+
+    let token = auth.to_token()?;
+    let exp = OffsetDateTime::from_unix_timestamp(
+        Utc::now().timestamp() + DURATION.num_seconds()
+    )?;
+
+    let token_cookie = Cookie::build("token", token)
+        .path("/")
+        .http_only(false)
+        .secure(true)
+        .expires(exp)
+        .finish();
+
+    let token_expiration = Cookie::build(
+        "token_expiration",
+        (DURATION.num_milliseconds() + Utc::now().timestamp_millis()).to_string()
+    )
+        .path("/")
+        .http_only(false)
+        .secure(false)
+        .expires(exp)
+        .finish();
+
+    let user = UserLogin::from(user.clone());
+
+    Ok(
+        HttpResponse::Ok()
+            .cookie(token_cookie)
+            .cookie(token_expiration)
+            .json(user)
+    )
 }
