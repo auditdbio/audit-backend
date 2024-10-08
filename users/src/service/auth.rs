@@ -39,7 +39,7 @@ use common::{
 use super::user::UserService;
 
 lazy_static::lazy_static! {
-    static ref ADMIN_CREATION_PASSWORD: String = std::env::var("ADMIN_CREATION_PASSWORD").unwrap();
+    static ref ADMIN_CREATION_PASSWORD: String = var("ADMIN_CREATION_PASSWORD").unwrap();
 }
 
 pub struct AuthService {
@@ -644,11 +644,12 @@ pub fn create_auth_token(user: &User<ObjectId>) -> error::Result<HttpResponse> {
     let exp = OffsetDateTime::from_unix_timestamp(
         Utc::now().timestamp() + DURATION.num_seconds()
     )?;
+    let secure = var("SECURE_COOKIE").unwrap_or_default().to_lowercase() == "true";
 
     let token_cookie = Cookie::build("token", token)
         .path("/")
         .http_only(false)
-        .secure(true)
+        .secure(secure)
         .expires(exp)
         .finish();
 
@@ -658,7 +659,7 @@ pub fn create_auth_token(user: &User<ObjectId>) -> error::Result<HttpResponse> {
     )
         .path("/")
         .http_only(false)
-        .secure(false)
+        .secure(secure)
         .expires(exp)
         .finish();
 
