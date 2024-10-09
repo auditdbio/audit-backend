@@ -1,4 +1,4 @@
-use actix_web::{HttpRequest, HttpResponse, cookie::Cookie};
+use actix_web::{HttpRequest, HttpResponse, cookie::{Cookie, SameSite}};
 use chrono::Utc;
 use time::OffsetDateTime;
 use mongodb::bson::{oid::ObjectId, Bson};
@@ -645,11 +645,17 @@ pub fn create_auth_token(user: &User<ObjectId>) -> error::Result<HttpResponse> {
         Utc::now().timestamp() + DURATION.num_seconds()
     )?;
     let secure = var("SECURE_COOKIE").unwrap_or_default().to_lowercase() == "true";
+    let same_site = if secure {
+        SameSite::Lax
+    } else {
+        SameSite::None
+    };
 
     let token_cookie = Cookie::build("token", token)
         .path("/")
         .http_only(false)
         .secure(secure)
+        .same_site(same_site)
         .expires(exp)
         .finish();
 
@@ -660,6 +666,7 @@ pub fn create_auth_token(user: &User<ObjectId>) -> error::Result<HttpResponse> {
         .path("/")
         .http_only(false)
         .secure(secure)
+        .same_site(same_site)
         .expires(exp)
         .finish();
 
