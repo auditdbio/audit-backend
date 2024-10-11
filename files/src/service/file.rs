@@ -313,9 +313,14 @@ impl FileService {
             return Err(anyhow::anyhow!("Access denied for this user").code(403));
         }
 
-        let file = NamedFile::open_async(path)
-            .await
-            .unwrap();
+        let file = match NamedFile::open_async(meta.path.clone()).await {
+            Ok(file) => file,
+            Err(_) => {
+                NamedFile::open_async(format!("{}.{}", meta.path, meta.extension))
+                    .await
+                    .expect("File not found in storage")
+            }
+        };
 
         Ok(file)
     }
@@ -335,7 +340,7 @@ impl FileService {
 
         let file = NamedFile::open_async(meta.path)
             .await
-            .unwrap();
+            .expect("File not found in storage");
 
         Ok(file)
     }
