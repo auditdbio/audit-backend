@@ -3,7 +3,6 @@ use std::env::var;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref PROTOCOL: String = var("PROTOCOL").unwrap();
     pub static ref AUDITORS_SERVICE: String = var("AUDITORS_SERVICE_URL").unwrap();
     pub static ref AUDITS_SERVICE: String = var("AUDITS_SERVICE_URL").unwrap();
     pub static ref CUSTOMERS_SERVICE: String = var("CUSTOMERS_SERVICE_URL").unwrap();
@@ -17,6 +16,9 @@ lazy_static! {
     pub static ref NOTIFICATIONS_SERVICE: String = var("NOTIFICATIONS_SERVICE_URL").unwrap();
     pub static ref USERS_SERVICE: String = var("USERS_SERVICE_URL").unwrap();
     pub static ref EVENTS_SERVICE: String = var("EVENTS_SERVICE_URL").unwrap();
+
+    pub static ref PROTOCOL: String = var("PROTOCOL").unwrap();
     pub static ref API_PREFIX: String = var("API_PREFIX").unwrap();
     pub static ref FRONTEND: String = var("FRONTEND").unwrap();
+    pub static ref DEV_MODE: bool = var("DEV_MODE").unwrap_or_default().to_lowercase() == "true";
 }
