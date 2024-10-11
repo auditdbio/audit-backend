@@ -203,6 +203,10 @@ impl ChatService {
                     continue;
                 }
 
+                if role == ChatRole::Organization && member.org_user_id == Some(current_id) {
+                    continue;
+                }
+
                 let (name, avatar) = if member.role == ChatRole::Auditor {
                     let auditor = match request_auditor(&self.context, member.id, auth.clone()).await {
                         Ok(auditor) => auditor,
