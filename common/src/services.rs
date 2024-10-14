@@ -20,5 +20,4 @@ lazy_static! {
     pub static ref PROTOCOL: String = var("PROTOCOL").unwrap();
     pub static ref API_PREFIX: String = var("API_PREFIX").unwrap();
     pub static ref FRONTEND: String = var("FRONTEND").unwrap();
-    pub static ref DEV_MODE: bool = var("DEV_MODE").unwrap_or_default().to_lowercase() == "true";
 }

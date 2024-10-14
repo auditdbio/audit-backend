@@ -175,7 +175,6 @@ x-common-variables: &common-variables
   LINKEDIN_CLIENT_ID: "${{LINKEDIN_CLIENT_ID}}"
   RUST_LOG: actix=info,reqwest=info,search=info,common=info,audits=trace
   TIMEOUT: "60"
-  DEV_MODE: "{config['dev_mode']}"
 
 services:
 {services_str}
@@ -318,7 +317,6 @@ preset = {
         "users": "0.0.0.0:3001",
         "frontend": "dev.auditdb.io",
         "api_prefix": "api",
-        "dev_mode": True,
         "proxy_network": "nginx-proxy"
     },
     "prod": {
@@ -329,7 +327,6 @@ preset = {
         "network_namespace": "prod",
         "proxy_address": "auditdb.io",
         "api_prefix": "api",
-        "dev_mode": False,
         "proxy_network": "nginx-proxy"
     },
     "test": {
@@ -342,7 +339,6 @@ preset = {
         "proxy_address": "dev.auditdb.io",
         "features": '"test_server"',
         "api_prefix": "api",
-        "dev_mode": True,
         "proxy_network": "nginx-proxy"
     },
     "preprod": {
@@ -353,7 +349,6 @@ preset = {
         "network_namespace": "preprod",
         "proxy_address": "preprod.auditdb.io",
         "api_prefix": "api",
-        "dev_mode": False,
         "proxy_network": "nginx-proxy"
     }
 }

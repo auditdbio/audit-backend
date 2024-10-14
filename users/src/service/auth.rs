@@ -33,7 +33,7 @@ use common::{
     },
     error::{self, AddCode},
     repository::{Entity, HasLastModified},
-    services::{API_PREFIX, FRONTEND, MAIL_SERVICE, PROTOCOL, USERS_SERVICE, DEV_MODE},
+    services::{API_PREFIX, FRONTEND, MAIL_SERVICE, PROTOCOL, USERS_SERVICE},
 };
 
 use super::user::UserService;
@@ -650,12 +650,17 @@ pub fn create_auth_token(user: &User<ObjectId>) -> error::Result<HttpResponse> {
     let exp = OffsetDateTime::from_unix_timestamp(
         Utc::now().timestamp() + DURATION.num_seconds()
     )?;
-    let secure = !*DEV_MODE;
+
+    let mut is_test_server = false;
+    #[cfg(feature = "test_server")]
+    {
+        is_test_server = true;
+    }
 
     let token_cookie = Cookie::build("token", token.clone())
         .path("/")
         .http_only(false)
-        .secure(secure)
+        .secure(!is_test_server)
         .expires(exp)
         .finish();
 
@@ -665,13 +670,13 @@ pub fn create_auth_token(user: &User<ObjectId>) -> error::Result<HttpResponse> {
     )
         .path("/")
         .http_only(false)
-        .secure(secure)
+        .secure(!is_test_server)
         .expires(exp)
         .finish();
 
     let response = LoginResponse {
         user: UserLogin::from(user.clone()),
-        token: if *DEV_MODE { Some(token) } else { None },
+        token: if is_test_server { Some(token) } else { None },
     };
 
     Ok(
