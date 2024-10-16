@@ -1,13 +1,15 @@
 use std::sync::Arc;
+use mongodb::bson::oid::ObjectId;
+use serde::{Deserialize, Serialize};
 
 use chrono::Utc;
 use common::{
     api::{
         auditor::request_auditor,
-        chat::{ChatId, CreateMessage, MessageKind, PublicReadId, PublicMessage, PublicChat},
+        chat::{ChatId, CreateMessage, ChangeUnread, MessageKind, PublicReadId, PublicMessage, PublicChat},
         customer::request_customer,
         events::{EventPayload, PublicEvent},
-        organization::{get_organization, GetOrganizationQuery},
+        organization::{get_organization, get_my_organizations, GetOrganizationQuery},
     },
     context::GeneralContext,
     entities::{
@@ -17,9 +19,6 @@ use common::{
     error::{self, AddCode},
     services::{API_PREFIX, EVENTS_SERVICE, PROTOCOL, USERS_SERVICE},
 };
-use mongodb::bson::oid::ObjectId;
-use serde::{Deserialize, Serialize};
-use common::api::chat::ChangeUnread;
 
 use crate::repositories::chat::{ChatRepository, Group, ReadId};
 
@@ -193,8 +192,21 @@ impl ChatService {
             org_user_id: None,
         };
 
-        let (chats, privates) = repo.groups_by_user(chat_id).await?;
+        let my_organizations = get_my_organizations(&self.context).await?;
+        let mut my_org_ids = my_organizations
+            .owner
+            .iter()
+            .map(|o| o.id.clone())
+            .collect::<Vec<String>>();
 
+        my_org_ids.extend(my_organizations
+            .member
+            .iter()
+            .map(|o| o.id.clone())
+            .collect::<Vec<String>>()
+        );
+
+        let (chats, privates) = repo.groups_by_user(chat_id).await?;
         let mut chats = chats.into_iter().map(Group::publish).collect::<Vec<_>>();
 
         for private in privates {
@@ -203,8 +215,12 @@ impl ChatService {
                     continue;
                 }
 
-                if role == ChatRole::Organization && member.org_user_id == Some(current_id) {
-                    continue;
+                if role == ChatRole::Organization {
+                    if member.org_user_id == Some(current_id) {
+                        continue;
+                    } else if member.org_user_id.is_none() && my_org_ids.contains(&member.id.to_hex()) {
+                        continue;
+                    }
                 }
 
                 let (name, avatar) = if member.role == ChatRole::Auditor {
@@ -263,6 +279,7 @@ impl ChatService {
                     last_modified: private.last_modified,
                     last_message: private.last_message.clone().publish(),
                     unread,
+                    creator: private.creator.map(ChatId::publish),
                 })
             }
         }
@@ -273,16 +290,28 @@ impl ChatService {
     }
 
     pub async fn messages(&self, group: ObjectId) -> error::Result<Vec<PublicMessage>> {
+        let auth = self.context.auth();
+
         let repo = self
             .context
             .get_repository_manual::<Arc<ChatRepository>>()
             .unwrap();
-        Ok(repo
+
+        let chat = repo.find(group).await?;
+        let chat_members = chat.members();
+
+        if !chat_members.iter().any(|member| member.id == auth.id().unwrap()) {
+            return Err(anyhow::anyhow!("User is not available to read this chat").code(403));
+        }
+
+        let messages = repo
             .messages(group)
             .await?
             .into_iter()
             .map(Message::publish)
-            .collect())
+            .collect();
+
+        Ok(messages)
     }
 
     pub async fn unread_messages(&self, group: ObjectId, unread: i32, data: ChangeUnread) -> error::Result<()> {

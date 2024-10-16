@@ -100,6 +100,7 @@ pub struct PublicChat {
     pub last_message: PublicMessage,
     pub avatar: Option<String>,
     pub unread: Vec<PublicReadId>,
+    pub creator: Option<PublicChatId>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
