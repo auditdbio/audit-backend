@@ -250,7 +250,7 @@ impl PublicOrganization {
             user_id: member.user_id,
             username,
             avatar: Some(avatar),
-            access_level: member.access_level.into_iter().max().unwrap(),
+            access_level: member.access_level.into_iter().max().unwrap_or(OrgAccessLevel::Representative),
         })
     }
 }
