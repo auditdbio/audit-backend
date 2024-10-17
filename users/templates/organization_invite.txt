@@ -1,0 +1,8 @@
+{
+    "alert": "You have received an invitation from {}",
+    "subject": "AuditDB: invitation to the organization",
+    "message": "",
+    "role": "Auditor",
+    "title": "Invitation",
+    "substitutions": [{"text": "{organization}", "styles": ["bold"]}]
+}

@@ -5,7 +5,11 @@ use std::collections::HashMap;
 use rand::{distributions::Alphanumeric, Rng};
 
 use crate::{
-    api::{auditor::request_auditor, customer::request_customer},
+    api::{
+        auditor::request_auditor,
+        customer::request_customer,
+        organization::{get_organization, GetOrganizationQuery},
+    },
     context::GeneralContext,
     entities::{
         audit::{Audit, AuditStatus, PublicAuditStatus, ReportType},
@@ -13,6 +17,8 @@ use crate::{
         contacts::Contacts,
         issue::{Issue, Status},
         project::PublicProject,
+        role::Role,
+        organization::PublicOrganization
     },
     error,
     services::{API_PREFIX, CUSTOMERS_SERVICE, PROTOCOL},
@@ -126,6 +132,9 @@ pub struct PublicAudit {
     pub conclusion: Option<String>,
     pub access_code: Option<String>,
     pub verification_code: Option<String>,
+
+    pub auditor_organization: Option<PublicOrganization>,
+    pub customer_organization: Option<PublicOrganization>,
 }
 
 impl PublicAudit {
@@ -157,6 +166,23 @@ impl PublicAudit {
                     .json::<PublicProject>()
                     .await?,
             ),
+        };
+
+
+        let organization_query = GetOrganizationQuery {
+            with_members: Some(false),
+        };
+
+        let auditor_organization = if let Some(auditor_org) = audit.auditor_organization {
+            Some(get_organization(context, auditor_org, Some(organization_query.clone())).await?)
+        } else {
+            None
+        };
+
+        let customer_organization = if let Some(customer_org) = audit.customer_organization {
+            Some(get_organization(context, customer_org, Some(organization_query)).await?)
+        } else {
+            None
         };
 
         let is_audit_approved = if audit.edit_history.is_empty() || audit.approved_by.is_empty() {
@@ -266,6 +292,8 @@ impl PublicAudit {
             conclusion: audit.conclusion,
             access_code,
             verification_code: audit.verification_code,
+            auditor_organization,
+            customer_organization,
         };
 
         Ok(public_audit)
@@ -293,6 +321,30 @@ pub struct NoCustomerAuditRequest {
 
     pub issues: Vec<CreateIssue>,
     pub conclusion: Option<String>,
+    pub auditor_organization: Option<String>,
+}
+
+#[derive(Clone, Deserialize, Serialize, Debug)]
+pub struct CreateAudit {
+    pub id: String,
+    pub auditor_first_name: String,
+    pub auditor_last_name: String,
+    pub customer_id: String,
+    pub auditor_id: String,
+    pub project_id: String,
+    pub description: String,
+    pub time: TimeRange,
+    pub project_name: String,
+    pub avatar: String,
+    pub project_scope: Vec<String>,
+    pub tags: Option<Vec<String>>,
+    pub price: Option<i64>,
+    pub total_cost: Option<i64>,
+    pub auditor_contacts: Contacts,
+    pub customer_contacts: Contacts,
+    pub last_changer: Role,
+    pub auditor_organization: Option<String>,
+    pub customer_organization: Option<String>,
 }
 
 pub fn create_access_code() -> String {

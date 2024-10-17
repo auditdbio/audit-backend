@@ -1,15 +1,19 @@
-use std::collections::HashMap;
-use std::ops::Deref;
-use std::sync::Arc;
-use chrono::Utc;
-
-use common::{error, impl_has_last_modified, default_timestamp};
-use common::repository::mongo_repository::MongoRepository;
-use common::repository::{Entity, HasLastModified};
-use common::services::{API_PREFIX, AUDITORS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL};
-use mongodb::bson::oid::ObjectId;
-use mongodb::bson::{doc, Bson, Document};
+use mongodb::bson::{doc, Bson, Document, oid::ObjectId};
 use serde::{Deserialize, Serialize};
+use chrono::Utc;
+use std::{
+    collections::HashMap,
+    ops::Deref,
+    sync::Arc,
+};
+
+use common::{
+    error,
+    default_timestamp,
+    impl_has_last_modified,
+    repository::{Entity, HasLastModified, mongo_repository::MongoRepository},
+    services::{API_PREFIX, AUDITORS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL, USERS_SERVICE},
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Since {
@@ -68,6 +72,15 @@ impl Default for Since {
                         "{}://{}/{}/customer/data",
                         PROTOCOL.as_str(),
                         CUSTOMERS_SERVICE.as_str(),
+                        API_PREFIX.as_str(),
+                    ),
+                    0,
+                );
+                map.insert(
+                    format!(
+                        "{}://{}/{}/organization/data",
+                        PROTOCOL.as_str(),
+                        USERS_SERVICE.as_str(),
                         API_PREFIX.as_str(),
                     ),
                     0,
