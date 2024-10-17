@@ -2,7 +2,10 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PublicReport {
+    pub file_id: String,
     pub path: String,
+    pub report_name: String,
+    pub is_draft: bool,
     pub verification_code: Option<String>,
 }
 
