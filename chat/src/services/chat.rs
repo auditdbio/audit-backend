@@ -158,21 +158,40 @@ impl ChatService {
                 repo.unread(chat.chat_id(), member.id, None).await?;
             }
 
-            // TODO: check event for organizations
+            if member.role == ChatRole::Organization {
+                let org_members = get_organization(&self.context, member.id, None)
+                    .await?
+                    .members
+                    .unwrap_or(vec![]);
 
-            let event = PublicEvent::new(member.id, payload.clone());
-
-            self.context
-                .make_request()
-                .post(format!(
-                    "{}://{}/{}/event",
-                    PROTOCOL.as_str(),
-                    EVENTS_SERVICE.as_str(),
-                    API_PREFIX.as_str(),
-                ))
-                .json(&event)
-                .send()
-                .await?;
+                for org_member in org_members {
+                    let event = PublicEvent::new(org_member.user_id.parse()?, payload.clone());
+                    self.context
+                        .make_request()
+                        .post(format!(
+                            "{}://{}/{}/event",
+                            PROTOCOL.as_str(),
+                            EVENTS_SERVICE.as_str(),
+                            API_PREFIX.as_str(),
+                        ))
+                        .json(&event)
+                        .send()
+                        .await?;
+                }
+            } else {
+                let event = PublicEvent::new(member.id, payload.clone());
+                self.context
+                    .make_request()
+                    .post(format!(
+                        "{}://{}/{}/event",
+                        PROTOCOL.as_str(),
+                        EVENTS_SERVICE.as_str(),
+                        API_PREFIX.as_str(),
+                    ))
+                    .json(&event)
+                    .send()
+                    .await?;
+            }
         }
         Ok(chat.publish())
     }
