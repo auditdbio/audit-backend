@@ -11,19 +11,19 @@ use common::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::service::auth::{AuthService, ChangePasswordData, Login, Token, TokenResponce};
+use crate::service::auth::{AuthService, ChangePasswordData, Login};
 
 #[post("/auth/login")]
-pub async fn login(context: GeneralContext, login: Json<Login>) -> error::Result<Json<Token>> {
-    Ok(Json(AuthService::new(context).login(&login).await?))
+pub async fn login(context: GeneralContext, login: Json<Login>) -> error::Result<HttpResponse> {
+    Ok(AuthService::new(context).login(&login).await?)
 }
 
 #[post("/auth/github")]
 pub async fn github_auth(
     context: GeneralContext,
     Json(data): Json<AddLinkedAccount>,
-) -> error::Result<Json<Token>> {
-    Ok(Json(AuthService::new(context).github_auth(data).await?))
+) -> error::Result<HttpResponse> {
+    Ok(AuthService::new(context).github_auth(data).await?)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -119,6 +119,6 @@ pub async fn reset_password(
 pub async fn restore_token(
     context: GeneralContext,
     req: HttpRequest,
-) -> error::Result<Json<TokenResponce>> {
-    Ok(Json(AuthService::new(context).restore(req).await?))
+) -> error::Result<HttpResponse> {
+    Ok(AuthService::new(context).restore(req).await?)
 }
