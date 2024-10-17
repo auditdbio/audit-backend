@@ -17,10 +17,8 @@ pub struct ChangeFile {
 pub struct PublicMetadata {
     pub id: String,
     pub last_modified: i64,
-    pub path: String,
     pub extension: String,
     pub private: bool,
-    pub allowed_users: Vec<String>,
     pub author: Option<String>,
     pub original_name: Option<String>,
     pub parent_entity: Option<ParentEntity<String>>,
@@ -30,15 +28,11 @@ pub struct PublicMetadata {
 
 impl From<Metadata> for PublicMetadata {
     fn from(meta: Metadata) -> Self {
-        let allowed_users = meta.allowed_users.iter().map(|u| u.to_hex()).collect();
-
         Self {
             id: meta.id.to_hex(),
             last_modified: meta.last_modified,
-            path: meta.path,
             extension: meta.extension,
             private: meta.private,
-            allowed_users,
             author: meta.author.map(|a| a.to_hex()),
             original_name: meta.original_name,
             parent_entity: meta.parent_entity.map(|e| e.stringify()),
