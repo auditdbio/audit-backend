@@ -120,7 +120,7 @@ impl ChatService {
                 repo.unread(chat.chat_id(), user_id.id, None).await?;
             }
 
-            let event = PublicEvent::new(user_id.id, payload.clone());
+            let event = PublicEvent::new(user_id.id, None, payload.clone());
 
             self.context
                 .make_request()
@@ -261,7 +261,7 @@ impl ChatService {
         let payload = EventPayload::ChatDeleteMessage(message_id.to_hex());
 
         for member in chat_members {
-            let event = PublicEvent::new(member.id, payload.clone());
+            let event = PublicEvent::new(member.id, None, payload.clone());
             self.context
                 .make_request()
                 .post(format!(
