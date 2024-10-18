@@ -1,24 +1,24 @@
 use actix_multipart::Multipart;
 use futures::StreamExt;
+use reqwest::multipart::{Form, Part};
+use serde::{Deserialize, Serialize};
+
 use common::{
     api::{
         audits::{AuditChange, PublicAudit},
         issue::PublicIssue,
+        file::PublicMetadata,
         report::{PublicReport, CreateReport},
     },
     auth::{Auth, Service},
     context::GeneralContext,
     entities::{
         audit::ReportType,
+        file::{FileEntity, ParentEntitySource},
         issue::Status,
     },
-    services::{API_PREFIX, FILES_SERVICE, FRONTEND, PROTOCOL, RENDERER_SERVICE},
+    services::{API_PREFIX, AUDITS_SERVICE, FILES_SERVICE, FRONTEND, PROTOCOL, RENDERER_SERVICE},
 };
-use reqwest::multipart::{Form, Part};
-use serde::{Deserialize, Serialize};
-use common::api::file::PublicMetadata;
-use common::entities::file::{FileEntity, ParentEntitySource};
-use common::services::AUDITS_SERVICE;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct VerifyReportResponse {
@@ -437,7 +437,6 @@ pub async fn create_report(
 
     Ok(PublicReport {
         file_id: file_meta.id,
-        path: file_meta.path,
         report_name,
         is_draft,
         verification_code,
