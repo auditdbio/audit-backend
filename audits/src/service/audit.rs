@@ -89,7 +89,6 @@ impl AuditService {
             last_modified: Utc::now().timestamp_micros(),
             resolved_at: None,
             report: None,
-            report_name: None,
             report_type: None,
             time: request.time,
             issues: Vec::new(),
@@ -200,7 +199,6 @@ impl AuditService {
             last_modified: Utc::now().timestamp_micros(),
             resolved_at: None,
             report: None,
-            report_name: None,
             report_type: None,
             time,
             public: false,
@@ -397,10 +395,6 @@ impl AuditService {
             audit.report_type = Some(change.report_type.unwrap_or(ReportType::Custom));
         }
 
-        if let Some(ref report_name) = change.report_name {
-            audit.report_name = Some(report_name.clone());
-        }
-
         let is_audit_approved = if audit.edit_history.is_empty() || audit.approved_by.is_empty() {
             true
         } else {
@@ -435,7 +429,7 @@ impl AuditService {
                         .context
                         .make_request()
                         .patch(format!(
-                            "{}://{}/{}/file/{}",
+                            "{}://{}/{}/file/id/{}",
                             PROTOCOL.as_str(),
                             FILES_SERVICE.as_str(),
                             API_PREFIX.as_str(),
@@ -543,7 +537,7 @@ impl AuditService {
         }
 
         if !audit.no_customer
-           && (change.report.is_some() || change.report_name.is_some() || change.action.is_some())
+           && (change.report.is_some() || change.action.is_some())
         {
             if let Some(chat_id) = audit.chat_id {
                 delete_message(chat_id.chat_id, chat_id.message_id, auth.clone())?
