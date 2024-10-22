@@ -310,6 +310,7 @@ impl ChatService {
 
     pub async fn messages(&self, group: ObjectId) -> error::Result<Vec<PublicMessage>> {
         let auth = self.context.auth();
+        let current_id = auth.id().unwrap();
 
         let repo = self
             .context
@@ -319,18 +320,36 @@ impl ChatService {
         let chat = repo.find(group).await?;
         let chat_members = chat.members();
 
-        if !chat_members.iter().any(|member| member.id == auth.id().unwrap()) {
-            return Err(anyhow::anyhow!("User is not available to read this chat").code(403));
+        for member in chat_members {
+            if member.id == current_id || member.org_user_id == Some(current_id) {
+                let messages = repo
+                    .messages(group)
+                    .await?
+                    .into_iter()
+                    .map(Message::publish)
+                    .collect();
+                return Ok(messages)
+            } else if member.role == ChatRole::Organization {
+                let org_members = get_organization(&self.context, member.id, None)
+                    .await?
+                    .members
+                    .unwrap_or(vec![])
+                    .into_iter()
+                    .map(|m| m.user_id)
+                    .collect::<Vec<String>>();
+
+                if org_members.contains(&current_id.to_hex()) {
+                    let messages = repo
+                        .messages(group)
+                        .await?
+                        .into_iter()
+                        .map(Message::publish)
+                        .collect();
+                    return Ok(messages)
+                }
+            }
         }
-
-        let messages = repo
-            .messages(group)
-            .await?
-            .into_iter()
-            .map(Message::publish)
-            .collect();
-
-        Ok(messages)
+        Err(anyhow::anyhow!("User is not available to read this chat").code(403))
     }
 
     pub async fn unread_messages(&self, group: ObjectId, unread: i32, data: ChangeUnread) -> error::Result<()> {
