@@ -19,6 +19,7 @@ use common::{
     },
     services::{API_PREFIX, AUDITS_SERVICE, FILES_SERVICE, FRONTEND, PROTOCOL, RENDERER_SERVICE},
 };
+use common::entities::audit::PublicAuditStatus;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct VerifyReportResponse {
@@ -411,7 +412,7 @@ pub async fn create_report(
 
     if let Auth::Service(Service::Audits, _) = auth {
     } else {
-        if !is_draft {
+        if !is_draft && audit.status != PublicAuditStatus::Resolved {
             let audit_change = AuditChange {
                 report: Some(file_meta.id.clone()),
                 report_type: Some(ReportType::Generated),
