@@ -319,7 +319,6 @@ preset = {
         "api_prefix": "api",
         "proxy_network": "nginx-proxy"
     },
-
     "prod": {
         "open_database": False,
         "with_proxy": True,
@@ -329,7 +328,6 @@ preset = {
         "proxy_address": "auditdb.io",
         "api_prefix": "api",
         "proxy_network": "nginx-proxy"
-
     },
     "test": {
         "open_database": True,
@@ -342,8 +340,6 @@ preset = {
         "features": '"test_server"',
         "api_prefix": "api",
         "proxy_network": "nginx-proxy"
-
-
     },
     "preprod": {
         "open_database": False,
