@@ -161,7 +161,7 @@ impl Statistics {
 }
 
 fn generate_issue_section(issue: &PublicIssue, is_draft: bool) -> Option<Section> {
-    if !issue.include || (issue.status != Status::Fixed && issue.status != Status::WillNotFix) {
+    if !issue.include {
         return None;
     }
 
