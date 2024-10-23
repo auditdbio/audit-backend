@@ -1,9 +1,13 @@
 use std::{env, sync::Arc};
-
 use actix_web::HttpServer;
-use common::repository::mongo_repository::MongoRepository;
-use common::{auth::Service, context::effectfull_context::ServiceState};
-use files::{create_app, service::file::Metadata};
+
+use common::{
+    auth::Service,
+    context::effectfull_context::ServiceState,
+    entities::file::Metadata,
+    repository::mongo_repository::MongoRepository,
+};
+use files::create_app;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

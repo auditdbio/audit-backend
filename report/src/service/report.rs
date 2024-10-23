@@ -1,21 +1,26 @@
 use actix_multipart::Multipart;
 use futures::StreamExt;
+use reqwest::multipart::{Form, Part};
+use serde::{Deserialize, Serialize};
+
 use common::{
     api::{
         audits::{AuditChange, PublicAudit},
         issue::PublicIssue,
+        file::PublicMetadata,
         report::{PublicReport, CreateReport},
     },
     auth::{Auth, Service},
     context::GeneralContext,
     entities::{
         audit::ReportType,
+        file::{FileEntity, ParentEntitySource},
         issue::Status,
     },
-    services::{API_PREFIX, FILES_SERVICE, FRONTEND, PROTOCOL, RENDERER_SERVICE, USERS_SERVICE},
+    error::{self, AddCode},
+    services::{API_PREFIX, AUDITS_SERVICE, FILES_SERVICE, FRONTEND, PROTOCOL, RENDERER_SERVICE},
 };
-use reqwest::multipart::{Form, Part};
-use serde::{Deserialize, Serialize};
+use common::entities::audit::PublicAuditStatus;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct VerifyReportResponse {
@@ -156,7 +161,7 @@ impl Statistics {
 }
 
 fn generate_issue_section(issue: &PublicIssue, is_draft: bool) -> Option<Section> {
-    if !issue.include || (issue.status != Status::Fixed && issue.status != Status::WillNotFix) {
+    if !issue.include {
         return None;
     }
 
@@ -288,7 +293,7 @@ pub async fn create_report(
     audit_id: String,
     data: CreateReport,
     code: Option<&String>
-) -> anyhow::Result<PublicReport> {
+) -> error::Result<PublicReport> {
     let auth = context.auth();
 
     let audit = context
@@ -297,7 +302,7 @@ pub async fn create_report(
         .get(format!(
             "{}://{}/{}/audit/{}",
             PROTOCOL.as_str(),
-            USERS_SERVICE.as_str(),
+            AUDITS_SERVICE.as_str(),
             API_PREFIX.as_str(),
             audit_id,
         ))
@@ -306,6 +311,10 @@ pub async fn create_report(
         .unwrap()
         .json::<PublicAudit>()
         .await?;
+
+    if !audit.no_customer && audit.status == PublicAuditStatus::Resolved && audit.report.is_some() {
+        return Err(anyhow::anyhow!("Cannot generate report for resolved audit").code(400));
+    }
 
     let mut is_draft = data.is_draft.unwrap_or(false);
     if let Some(id) = auth.id() {
@@ -362,13 +371,21 @@ pub async fn create_report(
         None
     };
 
-    let path = audit.id.clone() + ".pdf";
+    let file_entity = if is_draft {
+        FileEntity::Other
+    } else {
+        FileEntity::Report
+    };
+
+    let original_name = format!("{} report.pdf", audit.project_name);
 
     let client = &context.client();
     let mut form = Form::new()
         .part("file", Part::bytes(report.to_vec()))
-        .part("path", Part::text(path.clone()))
-        .part("original_name", Part::text("report.pdf"))
+        .part("original_name", Part::text(original_name))
+        .part("file_entity", Part::text(file_entity.to_string()))
+        .part("parent_entity_id", Part::text(audit.id.clone()))
+        .part("parent_entity_source", Part::text(ParentEntitySource::Audit.to_string()))
         .part("private", Part::text("true"))
         .part("customerId", Part::text(audit.auditor_id))
         .part("auditorId", Part::text(audit.customer_id));
@@ -377,23 +394,32 @@ pub async fn create_report(
         form = form.part("access_code", Part::text(code.to_string()));
     }
 
-    let _ = client
+    let file_meta_str = client
         .post(format!(
             "{}://{}/{}/file",
             PROTOCOL.as_str(),
             FILES_SERVICE.as_str(),
             API_PREFIX.as_str(),
         ))
+        .bearer_auth(auth.to_token().unwrap())
         .multipart(form)
         .send()
+        .await?
+        .text()
         .await?;
+
+    let file_meta: PublicMetadata = serde_json::from_str(&file_meta_str)?;
+    let report_name = format!(
+        "{}.{}",
+        file_meta.original_name.unwrap_or("Report".to_string()),
+        file_meta.extension,
+    );
 
     if let Auth::Service(Service::Audits, _) = auth {
     } else {
-        if !is_draft {
+        if !is_draft && audit.status != PublicAuditStatus::Resolved {
             let audit_change = AuditChange {
-                report: Some(path.clone()),
-                report_name: Some(format!("{} report.pdf", audit.project_name)),
+                report: Some(file_meta.id.clone()),
                 report_type: Some(ReportType::Generated),
                 ..AuditChange::default()
             };
@@ -403,7 +429,7 @@ pub async fn create_report(
                 .patch(format!(
                     "{}://{}/{}/audit/{}",
                     PROTOCOL.as_str(),
-                    USERS_SERVICE.as_str(),
+                    AUDITS_SERVICE.as_str(),
                     API_PREFIX.as_str(),
                     audit.id
                 ))
@@ -416,7 +442,9 @@ pub async fn create_report(
     }
 
     Ok(PublicReport {
-        path,
+        file_id: file_meta.id,
+        report_name,
+        is_draft,
         verification_code,
     })
 }
@@ -432,7 +460,7 @@ pub async fn verify_report(
         .get(format!(
             "{}://{}/{}/audit/{}",
             PROTOCOL.as_str(),
-            USERS_SERVICE.as_str(),
+            AUDITS_SERVICE.as_str(),
             API_PREFIX.as_str(),
             audit_id,
         ))
@@ -456,7 +484,6 @@ pub async fn verify_report(
             }
             _ => (),
         }
-
     }
 
     let verification_code = sha256::digest(&report[..]);
