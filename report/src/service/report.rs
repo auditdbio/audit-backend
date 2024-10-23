@@ -17,6 +17,7 @@ use common::{
         file::{FileEntity, ParentEntitySource},
         issue::Status,
     },
+    error::{self, AddCode},
     services::{API_PREFIX, AUDITS_SERVICE, FILES_SERVICE, FRONTEND, PROTOCOL, RENDERER_SERVICE},
 };
 use common::entities::audit::PublicAuditStatus;
@@ -292,7 +293,7 @@ pub async fn create_report(
     audit_id: String,
     data: CreateReport,
     code: Option<&String>
-) -> anyhow::Result<PublicReport> {
+) -> error::Result<PublicReport> {
     let auth = context.auth();
 
     let audit = context
@@ -310,6 +311,10 @@ pub async fn create_report(
         .unwrap()
         .json::<PublicAudit>()
         .await?;
+
+    if !audit.no_customer && audit.status == PublicAuditStatus::Resolved && audit.report.is_some() {
+        return Err(anyhow::anyhow!("Cannot generate report for resolved audit").code(400));
+    }
 
     let mut is_draft = data.is_draft.unwrap_or(false);
     if let Some(id) = auth.id() {
