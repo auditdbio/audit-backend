@@ -269,6 +269,7 @@ impl OrganizationService {
 
                 let event = PublicEvent::new(
                     member.user_id,
+                    Some(Role::Auditor),
                     EventPayload::OrganizationInvite(public_org.clone())
                 );
                 post_event(&self.context, event, self.context.server_auth()).await?;
@@ -322,6 +323,7 @@ impl OrganizationService {
 
                 let event = PublicEvent::new(
                     member.user_id,
+                    Some(Role::Customer),
                     EventPayload::OrganizationInvite(public_org.clone())
                 );
                 post_event(&self.context, event, self.context.server_auth()).await?;
