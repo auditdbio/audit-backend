@@ -1,14 +1,16 @@
+use std::collections::HashMap;
 use actix_web::{
     get, patch, post, delete,
-    web::{Json, Path},
+    web::{Json, Path, Query},
     HttpResponse,
 };
 use common::{
     api::chat::{CreateMessage, PublicMessage, PublicChat},
     context::GeneralContext,
-    entities::role::Role,
+    entities::role::ChatRole,
     error,
 };
+use common::api::chat::ChangeUnread;
 
 use crate::services::chat::{ChatService};
 
@@ -23,10 +25,12 @@ pub async fn send_message(
 #[get("/chat/preview/{role}")]
 pub async fn preview(
     context: GeneralContext,
-    role: Path<Role>,
+    role: Path<ChatRole>,
+    query: Query<HashMap<String, String>>,
 ) -> error::Result<Json<Vec<PublicChat>>> {
+    let org_id = query.get("org_id");
     Ok(Json(
-        ChatService::new(context).preview(role.into_inner()).await?,
+        ChatService::new(context).preview(role.into_inner(), org_id).await?,
     ))
 }
 
@@ -46,9 +50,10 @@ pub async fn messages(
 pub async fn chat_unread(
     context: GeneralContext,
     params: Path<(String, i32)>,
+    Json(data): Json<ChangeUnread>,
 ) -> error::Result<HttpResponse> {
     ChatService::new(context)
-        .unread_messages(params.0.parse()?, params.1)
+        .unread_messages(params.0.parse()?, params.1, data)
         .await?;
     Ok(HttpResponse::Ok().finish())
 }

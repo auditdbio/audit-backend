@@ -6,11 +6,15 @@ use crate::{
     context::GeneralContext,
     entities::role::Role,
     error,
+    entities::organization::PublicOrganization,
     services::{API_PREFIX, EVENTS_SERVICE, PROTOCOL},
 };
 
 use super::{
-    audits::PublicAudit, chat::PublicMessage, issue::PublicIssue, requests::PublicRequest,
+    audits::PublicAudit,
+    chat::PublicMessage,
+    issue::PublicIssue,
+    requests::PublicRequest,
     PublicNotification,
 };
 
@@ -25,6 +29,7 @@ pub enum EventPayload {
     ChatMessage(PublicMessage),
     ChatDeleteMessage(String),
     IssueUpdate { issue: PublicIssue, audit: String },
+    OrganizationInvite(PublicOrganization),
     VersionUpdate,
 }
 
@@ -40,6 +45,7 @@ impl EventPayload {
             EventPayload::RequestAccept(_) => "RequestAccept".to_owned(),
             EventPayload::RequestDecline(_) => "RequestDecline".to_owned(),
             EventPayload::IssueUpdate { issue: _, audit: _ } => "IssueUpdated".to_owned(),
+            EventPayload::OrganizationInvite(_) => "OrganizationInvite".to_owned(),
             EventPayload::VersionUpdate => "VersionUpdate".to_owned(),
         }
     }
