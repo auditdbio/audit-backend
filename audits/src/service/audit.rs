@@ -187,12 +187,17 @@ impl AuditService {
 
         audits.insert(&audit).await?;
 
-        let event = PublicEvent::new(event_receiver, EventPayload::NewAudit(public_audit.clone()));
+        let event = PublicEvent::new(
+            event_receiver,
+            Some(receiver_role),
+            EventPayload::NewAudit(public_audit.clone())
+        );
 
         post_event(&self.context, event, self.context.server_auth()).await?;
 
         let event = PublicEvent::new(
             event_receiver,
+            Some(receiver_role),
             EventPayload::RequestAccept(request.id.clone()),
         );
 
@@ -624,6 +629,7 @@ impl AuditService {
 
         let event = PublicEvent::new(
             event_receiver,
+            Some(receiver_role),
             EventPayload::AuditUpdate(public_audit.clone()),
         );
 
@@ -1055,6 +1061,7 @@ impl AuditService {
 
         let event = PublicEvent::new(
             event_reciver,
+            None,
             EventPayload::IssueUpdate {
                 issue: public_issue.clone(),
                 audit: audit_id.to_hex(),

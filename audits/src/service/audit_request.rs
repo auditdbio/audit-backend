@@ -319,6 +319,7 @@ impl RequestService {
 
         let event = PublicEvent::new(
             event_receiver,
+            Some(receiver_role),
             EventPayload::NewRequest(public_request.clone()),
         );
 
@@ -642,6 +643,7 @@ impl RequestService {
 
         let event = PublicEvent::new(
             event_receiver,
+            Some(receiver_role),
             EventPayload::RequestDecline(public_request.id.clone()),
         );
 

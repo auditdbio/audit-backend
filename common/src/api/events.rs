@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     auth::Auth,
     context::GeneralContext,
+    entities::role::Role,
     error,
     entities::organization::PublicOrganization,
     services::{API_PREFIX, EVENTS_SERVICE, PROTOCOL},
@@ -57,15 +58,17 @@ impl EventPayload {
 #[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct PublicEvent {
     pub user_id: ObjectId,
+    pub user_role: Option<Role>,
     pub kind: String,
     pub payload: EventPayload,
 }
 
 impl PublicEvent {
-    pub fn new(user_id: ObjectId, payload: EventPayload) -> Self {
+    pub fn new(user_id: ObjectId, user_role: Option<Role>, payload: EventPayload) -> Self {
         let kind = payload.kind();
         Self {
             user_id,
+            user_role,
             kind,
             payload,
         }

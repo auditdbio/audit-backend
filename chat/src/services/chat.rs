@@ -165,7 +165,7 @@ impl ChatService {
                     .unwrap_or(vec![]);
 
                 for org_member in org_members {
-                    let event = PublicEvent::new(org_member.user_id.parse()?, payload.clone());
+                    let event = PublicEvent::new(org_member.user_id.parse()?, None, payload.clone());
                     self.context
                         .make_request()
                         .post(format!(
@@ -179,7 +179,7 @@ impl ChatService {
                         .await?;
                 }
             } else {
-                let event = PublicEvent::new(member.id, payload.clone());
+                let event = PublicEvent::new(member.id, None, payload.clone());
                 self.context
                     .make_request()
                     .post(format!(
@@ -388,7 +388,7 @@ impl ChatService {
         let payload = EventPayload::ChatDeleteMessage(message_id.to_hex());
 
         for member in chat_members {
-            let event = PublicEvent::new(member.id, payload.clone());
+            let event = PublicEvent::new(member.id, None, payload.clone());
             self.context
                 .make_request()
                 .post(format!(
