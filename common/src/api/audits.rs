@@ -142,8 +142,6 @@ impl PublicAudit {
         let auditor = request_auditor(&context, audit.auditor_id, context.server_auth()).await?;
         let customer = request_customer(&context, audit.customer_id, context.server_auth()).await?;
 
-        log::info!("after customer & auditor requests");
-
         let project = match audit.no_customer {
             true => None,
             _ => Some(
