@@ -71,7 +71,7 @@ pub fn services() -> Vec<Service> {
 }
 
 pub async fn update(context: &GeneralContext) -> error::Result<()> {
-    let event = PublicEvent::new(ObjectId::new(), EventPayload::VersionUpdate);
+    let event = PublicEvent::new(ObjectId::new(), None, EventPayload::VersionUpdate);
     post_event(context, event, context.server_auth()).await?;
     Ok(())
 }
