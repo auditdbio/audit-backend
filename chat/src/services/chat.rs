@@ -8,7 +8,7 @@ use common::{
         auditor::request_auditor,
         chat::{ChatId, CreateMessage, ChangeUnread, MessageKind, PublicReadId, PublicMessage, PublicChat},
         customer::request_customer,
-        events::{EventPayload, PublicEvent},
+        events::{EventPayload, PublicEvent, post_event},
         organization::{get_organization, get_my_organizations, GetOrganizationQuery},
     },
     context::GeneralContext,
@@ -63,6 +63,8 @@ impl ChatService {
         // TODO: check permissions
         let auth = self.context.auth();
         let current_id = auth.id().unwrap();
+
+        let mut is_new_chat = false;
 
         let repo = self
             .context
@@ -134,6 +136,7 @@ impl ChatService {
                     kind: message.kind,
                 }
             } else {
+                is_new_chat = true;
                 let stored_message = Message {
                     id: ObjectId::new(),
                     from,
@@ -150,8 +153,10 @@ impl ChatService {
         };
 
         let chat = repo.message(message.clone()).await?;
+        let public_chat = chat.publish();
 
-        let payload = EventPayload::ChatMessage(message.publish());
+        let message_payload = EventPayload::ChatMessage(message.publish());
+        let new_chat_payload = EventPayload::NewChat(public_chat.clone());
 
         for member in chat.members() {
             if member.id != current_id {
@@ -165,35 +170,44 @@ impl ChatService {
                     .unwrap_or(vec![]);
 
                 for org_member in org_members {
-                    let event = PublicEvent::new(org_member.user_id.parse()?, None, payload.clone());
-                    self.context
-                        .make_request()
-                        .post(format!(
-                            "{}://{}/{}/event",
-                            PROTOCOL.as_str(),
-                            EVENTS_SERVICE.as_str(),
-                            API_PREFIX.as_str(),
-                        ))
-                        .json(&event)
-                        .send()
-                        .await?;
+                    let org_user_id = org_member.user_id.parse()?;
+                    let message_event = PublicEvent::new(
+                        org_user_id,
+                        None,
+                        message_payload.clone(),
+                    );
+
+                    post_event(&self.context, message_event, auth).await?;
+
+                    if is_new_chat && org_member.user_id != current_id.to_hex() {
+                        let new_chat_event = PublicEvent::new(
+                            org_user_id,
+                            None,
+                            new_chat_payload.clone(),
+                        );
+                        post_event(&self.context, new_chat_event, auth).await?;
+                    }
                 }
             } else {
-                let event = PublicEvent::new(member.id, None, payload.clone());
-                self.context
-                    .make_request()
-                    .post(format!(
-                        "{}://{}/{}/event",
-                        PROTOCOL.as_str(),
-                        EVENTS_SERVICE.as_str(),
-                        API_PREFIX.as_str(),
-                    ))
-                    .json(&event)
-                    .send()
-                    .await?;
+                let message_event = PublicEvent::new(
+                    member.id,
+                    None,
+                    message_payload.clone(),
+                );
+                post_event(&self.context, message_event, auth).await?;
+
+                if is_new_chat && member.id != current_id {
+                    let new_chat_event = PublicEvent::new(
+                        member.id,
+                        None,
+                        new_chat_payload.clone(),
+                    );
+                    post_event(&self.context, new_chat_event, auth).await?;
+                }
             }
         }
-        Ok(chat.publish())
+
+        Ok(public_chat)
     }
 
     pub async fn preview(&self, role: ChatRole, org_id: Option<&String>) -> error::Result<Vec<PublicChat>> {

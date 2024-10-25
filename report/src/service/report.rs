@@ -470,7 +470,6 @@ pub async fn verify_report(
             }
             _ => (),
         }
-
     }
 
     let verification_code = sha256::digest(&report[..]);
