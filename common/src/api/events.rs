@@ -24,6 +24,7 @@ pub enum EventPayload {
     AuditUpdate(PublicAudit),
     ChatMessage(PublicMessage),
     ChatDeleteMessage(String),
+    NewIssue { issue: PublicIssue, audit: String },
     IssueUpdate { issue: PublicIssue, audit: String },
     VersionUpdate,
 }
@@ -39,6 +40,7 @@ impl EventPayload {
             EventPayload::ChatDeleteMessage(_) => "ChatDeleteMessage".to_owned(),
             EventPayload::RequestAccept(_) => "RequestAccept".to_owned(),
             EventPayload::RequestDecline(_) => "RequestDecline".to_owned(),
+            EventPayload::NewIssue { issue: _, audit: _ } => "NewIssue".to_owned(),
             EventPayload::IssueUpdate { issue: _, audit: _ } => "IssueUpdated".to_owned(),
             EventPayload::VersionUpdate => "VersionUpdate".to_owned(),
         }

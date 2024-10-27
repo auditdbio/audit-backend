@@ -140,7 +140,10 @@ impl PublicAudit {
         let auth = context.auth();
 
         let auditor = request_auditor(&context, audit.auditor_id, context.server_auth()).await?;
-        let customer = request_customer(&context, audit.customer_id, context.server_auth()).await?;
+        let customer = match audit.no_customer {
+            true => None,
+            _ => Some(request_customer(&context, audit.customer_id, context.server_auth()).await?),
+        };
 
         let project = match audit.no_customer {
             true => None,
@@ -195,14 +198,29 @@ impl PublicAudit {
             }
         }
 
-        let customer_contacts= if !customer.contacts.public_contacts && only_public {
-            Contacts {
+        let customer_contacts = customer
+            .clone()
+            .map(|customer| {
+                if !customer.contacts.public_contacts && only_public {
+                    Contacts {
+                        email: None,
+                        telegram: None,
+                        public_contacts: false,
+                    }
+                } else {
+                    customer.contacts
+                }
+            })
+            .unwrap_or_else(|| Contacts {
                 email: None,
                 telegram: None,
                 public_contacts: false,
-            }
+            });
+
+        let (customer_first_name, customer_last_name, customer_avatar) = if let Some(customer) = customer {
+            (customer.first_name, customer.last_name, customer.avatar)
         } else {
-            customer.contacts
+            ("".to_string(), "".to_string(), "".to_string())
         };
 
         let project_name = if let Some(project) = &project {
@@ -261,9 +279,9 @@ impl PublicAudit {
             auditor_last_name: auditor.last_name().clone(),
             avatar: auditor.avatar().clone(),
             auditor_contacts,
-            customer_first_name: customer.first_name,
-            customer_last_name: customer.last_name,
-            customer_avatar: customer.avatar,
+            customer_first_name,
+            customer_last_name,
+            customer_avatar,
             customer_contacts,
             project_name,
             description: audit.description,
