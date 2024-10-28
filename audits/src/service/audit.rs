@@ -746,7 +746,8 @@ impl AuditService {
             audit.customer_id
         };
 
-        if let Some(action) = change.status {
+        let mut is_new_issue_for_customer = false;
+        if let Some(action) = change.status.clone() {
             if audit.no_customer {
                 issue.status = match action {
                     Action::Fixed => Status::Fixed,
@@ -757,6 +758,10 @@ impl AuditService {
                 let Some(new_state) = issue.status.apply(&action, role) else {
                     return Err(anyhow::anyhow!("Invalid action").code(400));
                 };
+
+                if action == Action::Begin {
+                    is_new_issue_for_customer = true;
+                }
 
                 let mut new_notification: NewNotification = if role == Role::Customer {
                     serde_json::from_str(include_str!(
@@ -935,6 +940,18 @@ impl AuditService {
         );
 
         post_event(&self.context, event, self.context.server_auth()).await?;
+
+        if is_new_issue_for_customer {
+            let event = PublicEvent::new(
+                audit.customer_id,
+                Some(Role::Customer),
+                EventPayload::NewIssue {
+                    issue: public_issue.clone(),
+                    audit: audit_id.to_hex(),
+                },
+            );
+            post_event(&self.context, event, self.context.server_auth()).await?;
+        }
 
         Ok(public_issue)
     }
