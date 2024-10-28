@@ -92,7 +92,7 @@ pub struct Audit<Id: Eq + Hash> {
     pub conclusion: Option<String>,
 
     pub access_code: Option<String>,
-    pub verification_code: Option<String>,
+    pub report_sha: Option<String>,
 
     pub auditor_organization: Option<Id>,
     pub customer_organization: Option<Id>,
@@ -129,7 +129,7 @@ impl Audit<String> {
             approved_by: self.approved_by,
             unread_edits: self.unread_edits,
             access_code: self.access_code,
-            verification_code: self.verification_code,
+            report_sha: self.report_sha,
             auditor_organization: self.auditor_organization.map(|v| v.parse().unwrap()),
             customer_organization: self.customer_organization.map(|v| v.parse().unwrap()),
         }
@@ -165,7 +165,7 @@ impl Audit<ObjectId> {
             approved_by: self.approved_by,
             unread_edits: self.unread_edits,
             access_code: self.access_code,
-            verification_code: self.verification_code,
+            report_sha: self.report_sha,
             auditor_organization: self.auditor_organization.map(|v| v.to_hex()),
             customer_organization: self.customer_organization.map(|v| v.to_hex()),
         }
@@ -208,7 +208,7 @@ impl Audit<ObjectId> {
                 self.report = Some(public_report.path.clone());
                 self.report_name = Some(public_report.path);
                 self.report_type = Some(ReportType::Generated);
-                self.verification_code = public_report.verification_code;
+                self.report_sha = public_report.report_sha;
             } else {
                 return Err(
                     anyhow::anyhow!(
