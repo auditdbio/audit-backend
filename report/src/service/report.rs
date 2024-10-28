@@ -12,6 +12,7 @@ use common::{
         audit::ReportType,
         issue::Status,
     },
+    error::{self, AddCode},
     services::{API_PREFIX, FILES_SERVICE, FRONTEND, PROTOCOL, RENDERER_SERVICE, USERS_SERVICE},
 };
 use reqwest::multipart::{Form, Part};
@@ -20,7 +21,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct VerifyReportResponse {
     pub verified: bool,
-    pub verification_code: Option<String>,
+    pub report_sha: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -354,7 +355,7 @@ pub async fn create_report(
         .bytes()
         .await?;
 
-    let verification_code = if let Auth::Service(Service::Audits, _) = auth {
+    let report_sha = if let Auth::Service(Service::Audits, _) = auth {
         let mut combined_bytes = Vec::new();
         combined_bytes.extend_from_slice(&report);
         Some(sha256::digest(&combined_bytes[..]))
@@ -417,7 +418,7 @@ pub async fn create_report(
 
     Ok(PublicReport {
         path,
-        verification_code,
+        report_sha,
     })
 }
 
@@ -425,7 +426,7 @@ pub async fn verify_report(
     context: GeneralContext,
     audit_id: String,
     mut payload: Multipart,
-) -> anyhow::Result<VerifyReportResponse> {
+) -> error::Result<VerifyReportResponse> {
     let audit = context
         .make_request::<PublicAudit>()
         .auth(context.server_auth())
@@ -456,14 +457,21 @@ pub async fn verify_report(
             }
             _ => (),
         }
-
     }
 
-    let verification_code = sha256::digest(&report[..]);
-    let verified = Some(verification_code) == audit.verification_code;
+    if report.is_empty() {
+        return Err(anyhow::anyhow!("'file' field is required").code(400));
+    }
+
+    if audit.report_sha.is_none() {
+        return Err(anyhow::anyhow!("There is no verification code for this audit.").code(204));
+    }
+
+    let report_sha = sha256::digest(&report[..]);
+    let verified = Some(report_sha) == audit.report_sha;
 
     Ok(VerifyReportResponse {
         verified,
-        verification_code: audit.verification_code,
+        report_sha: audit.report_sha,
     })
 }
