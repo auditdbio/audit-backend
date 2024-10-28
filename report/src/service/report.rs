@@ -329,7 +329,7 @@ pub async fn create_report(
             audit.auditor_id,
         ),
         audit_link: format!(
-            "{}://{}/audit-info/{}{}",
+            "{}://{}/audit/{}{}",
             PROTOCOL.as_str(),
             FRONTEND.as_str(),
             audit.id,
