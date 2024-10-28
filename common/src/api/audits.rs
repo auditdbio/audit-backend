@@ -128,7 +128,7 @@ pub struct PublicAudit {
     pub no_customer: bool,
     pub conclusion: Option<String>,
     pub access_code: Option<String>,
-    pub verification_code: Option<String>,
+    pub report_sha: Option<String>,
 }
 
 impl PublicAudit {
@@ -300,7 +300,7 @@ impl PublicAudit {
             no_customer: audit.no_customer,
             conclusion: audit.conclusion,
             access_code,
-            verification_code: audit.verification_code,
+            report_sha: audit.report_sha,
         };
 
         Ok(public_audit)

@@ -5,7 +5,7 @@ pub struct PublicReport {
     pub file_id: String,
     pub report_name: String,
     pub is_draft: bool,
-    pub verification_code: Option<String>,
+    pub report_sha: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

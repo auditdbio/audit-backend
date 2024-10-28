@@ -103,7 +103,7 @@ impl AuditService {
                 (auditor_id.to_hex(), 0)
             ]),
             access_code: None,
-            verification_code: None,
+            report_sha: None,
         };
 
         let requests = self
@@ -210,7 +210,7 @@ impl AuditService {
             approved_by: HashMap::new(),
             unread_edits: HashMap::new(),
             access_code: Some(create_access_code()),
-            verification_code: None,
+            report_sha: None,
         };
 
         if !Edit.get_access(&auth, &audit) {
