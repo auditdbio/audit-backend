@@ -153,7 +153,33 @@ impl ChatService {
         };
 
         let chat = repo.message(message.clone()).await?;
-        let public_chat = chat.publish();
+        let mut public_chat = chat.publish();
+
+        let (chat_name, chat_avatar) = if is_new_chat {
+            if from.role == ChatRole::Organization {
+                let org = get_organization(&self.context, from.id, None).await?;
+                (org.name, org.avatar)
+            } else if from.role == ChatRole::Auditor {
+                let auditor = request_auditor(&self.context, from.id, auth.clone()).await?;
+                (
+                    auditor.first_name().clone() + " " + auditor.last_name(),
+                    Some(auditor.avatar().to_string()),
+                )
+            } else if from.role == ChatRole::Customer {
+                let customer = request_customer(&self.context, from.id, auth.clone()).await?;
+                (
+                    customer.first_name + " " + &customer.last_name,
+                    Some(customer.avatar),
+                )
+            } else {
+                ("Private chat".to_string(), None)
+            }
+        } else {
+            ("Private chat".to_string(), None)
+        };
+
+        public_chat.name = chat_name;
+        public_chat.avatar = chat_avatar;
 
         let message_payload = EventPayload::ChatMessage(message.publish());
         let new_chat_payload = EventPayload::NewChat(public_chat.clone());
