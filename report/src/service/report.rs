@@ -238,22 +238,28 @@ fn generate_audit_sections(audit: &PublicAudit, issues: Vec<Section>) -> Vec<Sec
                         include_in_toc: true,
                         ..Default::default()
                     },
-                    Section {
+                ];
+
+                if !audit.scope.is_empty() {
+                    subsections.push(Section {
                         typ: "scope".to_string(),
                         title: "Scope".to_string(),
                         links: Some(audit.scope.clone()),
                         include_in_toc: true,
                         ..Default::default()
-                    },
-                ];
-                if let Some(conclusion) = audit.conclusion.clone() {
-                    subsections.push(Section {
-                        typ: "markdown".to_string(),
-                        title: "Conclusion".to_string(),
-                        text: conclusion,
-                        include_in_toc: true,
-                        ..Default::default()
                     });
+                }
+
+                if let Some(conclusion) = audit.conclusion.clone() {
+                    if !conclusion.trim().is_empty() {
+                        subsections.push(Section {
+                            typ: "markdown".to_string(),
+                            title: "Conclusion".to_string(),
+                            text: conclusion,
+                            include_in_toc: true,
+                            ..Default::default()
+                        });
+                    }
                 }
                 subsections
             }),
