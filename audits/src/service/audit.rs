@@ -19,6 +19,7 @@ use common::{
             delete_message, AuditMessageStatus,
             CreateAuditMessage, AuditMessageId,
         },
+        file::ChangeFile,
         events::{post_event, EventPayload, PublicEvent},
         issue::PublicIssue,
         send_notification, NewNotification,
@@ -33,14 +34,13 @@ use common::{
             ReportType,
         },
         audit_request::{AuditRequest, TimeRange},
-        issue::{severity_to_integer, ChangeIssue, Event, EventKind, Issue, Status, Action},
+        issue::{severity_to_integer, ChangeIssue, Event, EventKind, Issue, Status, Action, IssueEditHistory},
         project::get_project,
         role::Role,
     },
     error::{self, AddCode},
     services::{FILES_SERVICE, PROTOCOL, API_PREFIX},
 };
-use common::api::file::ChangeFile;
 
 use super::audit_request::PublicRequest;
 
@@ -636,6 +636,7 @@ impl AuditService {
             feedback: String::new(),
             last_modified: Utc::now().timestamp_micros(),
             read: HashMap::new(),
+            edit_history: Vec::new(),
         };
 
         audit.issues.push(issue.clone());
@@ -711,6 +712,8 @@ impl AuditService {
             else {
                 return Err(anyhow::anyhow!("No issue found").code(404));
             };
+
+        let mut is_history_changed = false;
 
         if let Some(name) = change.name {
             issue.name = name;
@@ -848,6 +851,7 @@ impl AuditService {
             };
 
             issue.feedback = feedback;
+            is_history_changed = true;
 
             Self::create_event(&self.context, &mut issue, kind, message);
         }
@@ -905,6 +909,18 @@ impl AuditService {
         }
 
         issue.last_modified = Utc::now().timestamp_micros();
+
+        if is_history_changed {
+            let edit_history_item = IssueEditHistory {
+                id: issue.edit_history.len(),
+                date: issue.last_modified.clone(),
+                author: auth.id().unwrap().to_hex(),
+                issue: serde_json::to_string(&json!({
+                    "feedback": issue.feedback,
+                })).unwrap(),
+            };
+            issue.edit_history.push(edit_history_item);
+        }
 
         if let Some(idx) = audit.issues.iter().position(|issue| issue.id == issue_id) {
             audit.issues[idx] = issue.clone();
