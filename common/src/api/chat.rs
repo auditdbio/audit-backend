@@ -29,7 +29,12 @@ impl ChatId {
         PublicChatId {
             role: self.role,
             id: self.id.to_hex(),
-            org_user_id: self.org_user_id.map(|id| id.to_hex()),
+            org_user: self.org_user_id.map(|id| {
+                PublicChatIdOrgUser {
+                    id: id.to_hex(),
+                    name: "".to_string(),
+                }
+            }),
         }
     }
 }
@@ -59,10 +64,16 @@ pub struct ChangeUnread {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PublicChatIdOrgUser {
+    pub id: String,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PublicChatId {
     pub role: ChatRole,
     pub id: String,
-    pub org_user_id: Option<String>,
+    pub org_user: Option<PublicChatIdOrgUser>,
 }
 
 impl PublicChatId {
@@ -70,7 +81,7 @@ impl PublicChatId {
         Ok(ChatId {
             role: self.role,
             id: self.id.parse()?,
-            org_user_id: self.org_user_id.map(|id| id.parse().unwrap()),
+            org_user_id: self.org_user.map(|user| user.id.parse().unwrap()),
         })
     }
 }
@@ -227,7 +238,7 @@ pub fn create_audit_message(
                 to: Some(PublicChatId {
                     role: receiver_role.into(),
                     id: receiver_id.to_hex(),
-                    org_user_id: None,
+                    org_user: None,
                 }),
                 role: last_changer.into(),
                 from_org_id: None,
@@ -265,7 +276,7 @@ pub fn create_audit_message(
                 to: Some(PublicChatId {
                     role: receiver_role.into(),
                     id: receiver_id.to_hex(),
-                    org_user_id: None,
+                    org_user: None,
                 }),
                 role: last_changer.into(),
                 from_org_id: None,

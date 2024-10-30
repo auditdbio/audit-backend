@@ -6,7 +6,13 @@ use chrono::Utc;
 use common::{
     api::{
         auditor::request_auditor,
-        chat::{ChatId, CreateMessage, ChangeUnread, MessageKind, PublicReadId, PublicMessage, PublicChat},
+        chat::{
+            ChatId, CreateMessage,
+            ChangeUnread, MessageKind,
+            PublicReadId, PublicMessage,
+            PublicChat, PublicChatId,
+            PublicChatIdOrgUser,
+        },
         customer::request_customer,
         events::{EventPayload, PublicEvent, post_event},
         organization::{get_organization, get_my_organizations, GetOrganizationQuery},
@@ -282,6 +288,12 @@ impl ChatService {
                     }
                 }
 
+                let mut chat_members: Vec<PublicChatId> = private
+                    .members
+                    .into_iter()
+                    .map(ChatId::publish)
+                    .collect();
+
                 let (name, avatar) = if member.role == ChatRole::Auditor {
                     let auditor = match request_auditor(&self.context, member.id, auth.clone()).await {
                         Ok(auditor) => auditor,
@@ -308,12 +320,28 @@ impl ChatService {
                     )
                 } else {
                     let query = GetOrganizationQuery {
-                        with_members: Some(false),
+                        with_members: Some(true),
                     };
                     let organization = match get_organization(&self.context, member.id, Some(query)).await {
                         Ok(org) => org,
                         _ => continue
                     };
+
+                    if let Some(org_member) = organization
+                        .members
+                        .unwrap_or(vec![])
+                        .iter()
+                        .find(|m| m.user_id == member.id.to_hex()) {
+                        if let Some(chat_member) = chat_members
+                            .iter_mut()
+                            .find(|cm| cm.id == org_member.user_id) {
+                            chat_member.org_user = Some(PublicChatIdOrgUser {
+                                id: org_member.user_id.clone(),
+                                name: org_member.username.clone(),
+                            });
+                        }
+                    }
+
                     (organization.name, organization.avatar.unwrap_or("".to_string()))
                 };
 
@@ -334,7 +362,7 @@ impl ChatService {
                     id: private.id.to_hex(),
                     name,
                     avatar: Some(avatar),
-                    members: private.members.into_iter().map(ChatId::publish).collect(),
+                    members: chat_members,
                     last_modified: private.last_modified,
                     last_message: private.last_message.clone().publish(),
                     unread,
