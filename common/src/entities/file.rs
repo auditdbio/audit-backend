@@ -95,6 +95,7 @@ pub enum FileEntity {
     Avatar,
     ChatAttachment,
     Report,
+    Temporary,
     Other,
 }
 
@@ -105,6 +106,7 @@ impl FromStr for FileEntity {
             "avatar" => Ok(FileEntity::Avatar),
             "chatattachment" => Ok(FileEntity::ChatAttachment),
             "report" => Ok(FileEntity::Report),
+            "temporary" => Ok(FileEntity::Temporary),
             _ => Ok(FileEntity::Other),
         }
     }
@@ -116,6 +118,7 @@ impl FileEntity {
             FileEntity::Avatar => "Avatar".to_string(),
             FileEntity::ChatAttachment => "ChatAttachment".to_string(),
             FileEntity::Report => "Report".to_string(),
+            FileEntity::Temporary => "Temporary".to_string(),
             FileEntity::Other => "Other".to_string(),
         }
     }

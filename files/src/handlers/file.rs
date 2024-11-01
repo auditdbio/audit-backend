@@ -93,26 +93,25 @@ pub async fn delete_file(
 pub async fn delete_file_by_id(
     context: GeneralContext,
     file_id: Path<String>,
-    query: Query<HashMap<String, String>>,
+) -> error::Result<HttpResponse> {
+    FileService::new(context)
+        .delete_file_by_id(file_id.parse()?)
+        .await?;
+
+    Ok(HttpResponse::Ok().finish())
+}
+
+#[post("/file/get_and_delete/{id}")]
+pub async fn get_and_delete_by_id(
+    context: GeneralContext,
+    file_id: Path<String>,
     req: HttpRequest,
 ) -> error::Result<HttpResponse> {
-    let get_file = if let Some(get_file) = query.get("get_file") {
-        get_file == "true"
-    } else { false };
+    let file = FileService::new(context)
+        .get_and_delete_by_id(file_id.parse()?)
+        .await?;
 
-    if get_file {
-        let file = FileService::new(context)
-            .get_and_delete_by_id(file_id.parse()?)
-            .await?;
-
-        Ok(file.into_response(&req))
-    } else {
-        FileService::new(context)
-            .delete_file_by_id(file_id.parse()?)
-            .await?;
-
-        Ok(HttpResponse::Ok().finish())
-    }
+    Ok(file.into_response(&req))
 }
 
 #[patch("/file/name/{filename:.*}")]

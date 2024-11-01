@@ -160,11 +160,7 @@ impl Statistics {
 }
 
 fn generate_issue_section(issue: &PublicIssue, is_draft: bool) -> Option<Section> {
-    if !issue.include {
-        return None;
-    }
-
-    if !is_draft && issue.status != Status::Fixed && issue.status != Status::WillNotFix {
+    if !issue.include || (issue.status == Status::Draft && !is_draft) {
         return None;
     }
 
@@ -377,7 +373,7 @@ pub async fn create_report(
     };
 
     let file_entity = if is_draft {
-        FileEntity::Other
+        FileEntity::Temporary
     } else {
         FileEntity::Report
     };

@@ -43,6 +43,7 @@ pub fn create_app(
                 .service(get_meta_by_id)
                 .service(delete_file)
                 .service(delete_file_by_id)
+                .service(get_and_delete_by_id)
                 .service(change_file_meta)
                 .service(change_file_meta_by_id)
                 .service(ping),
