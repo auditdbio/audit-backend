@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::collections::HashMap;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
@@ -10,8 +11,7 @@ use common::{
             ChatId, CreateMessage,
             ChangeUnread, MessageKind,
             PublicReadId, PublicMessage,
-            PublicChat, PublicChatId,
-            PublicChatIdOrgUser,
+            PublicChat,
         },
         customer::request_customer,
         events::{EventPayload, PublicEvent, post_event},
@@ -19,12 +19,13 @@ use common::{
     },
     context::GeneralContext,
     entities::{
-        organization::OrganizationMember,
+        organization::{OrganizationMember, PublicOrganization},
         role::ChatRole,
     },
     error::{self, AddCode},
     services::{API_PREFIX, EVENTS_SERVICE, PROTOCOL, USERS_SERVICE},
 };
+use common::entities::role::Role;
 
 use crate::repositories::chat::{ChatRepository, Group, ReadId};
 
@@ -162,6 +163,12 @@ impl ChatService {
         let mut public_chat = chat.publish();
 
         let (chat_name, chat_avatar) = if is_new_chat {
+            for mut unread in public_chat.unread.clone() {
+                if unread.id != current_id.to_hex() {
+                    unread.unread = 1;
+                }
+            }
+
             if from.role == ChatRole::Organization {
                 let org = get_organization(&self.context, from.id, None).await?;
                 (org.name, org.avatar)
@@ -209,8 +216,6 @@ impl ChatService {
                         message_payload.clone(),
                     );
 
-                    post_event(&self.context, message_event, auth).await?;
-
                     if is_new_chat && org_member.user_id != current_id.to_hex() {
                         let new_chat_event = PublicEvent::new(
                             org_user_id,
@@ -219,6 +224,8 @@ impl ChatService {
                         );
                         post_event(&self.context, new_chat_event, auth).await?;
                     }
+
+                    post_event(&self.context, message_event, auth).await?;
                 }
             } else {
                 let message_event = PublicEvent::new(
@@ -288,12 +295,6 @@ impl ChatService {
                     }
                 }
 
-                let mut chat_members: Vec<PublicChatId> = private
-                    .members
-                    .into_iter()
-                    .map(ChatId::publish)
-                    .collect();
-
                 let (name, avatar) = if member.role == ChatRole::Auditor {
                     let auditor = match request_auditor(&self.context, member.id, auth.clone()).await {
                         Ok(auditor) => auditor,
@@ -320,27 +321,12 @@ impl ChatService {
                     )
                 } else {
                     let query = GetOrganizationQuery {
-                        with_members: Some(true),
+                        with_members: Some(false),
                     };
                     let organization = match get_organization(&self.context, member.id, Some(query)).await {
                         Ok(org) => org,
                         _ => continue
                     };
-
-                    if let Some(org_member) = organization
-                        .members
-                        .unwrap_or(vec![])
-                        .iter()
-                        .find(|m| m.user_id == member.id.to_hex()) {
-                        if let Some(chat_member) = chat_members
-                            .iter_mut()
-                            .find(|cm| cm.id == org_member.user_id) {
-                            chat_member.org_user = Some(PublicChatIdOrgUser {
-                                id: org_member.user_id.clone(),
-                                name: org_member.username.clone(),
-                            });
-                        }
-                    }
 
                     (organization.name, organization.avatar.unwrap_or("".to_string()))
                 };
@@ -362,7 +348,7 @@ impl ChatService {
                     id: private.id.to_hex(),
                     name,
                     avatar: Some(avatar),
-                    members: chat_members,
+                    members: private.members.into_iter().map(ChatId::publish).collect(),
                     last_modified: private.last_modified,
                     last_message: private.last_message.clone().publish(),
                     unread,
@@ -388,14 +374,109 @@ impl ChatService {
         let chat = repo.find(group).await?;
         let chat_members = chat.members();
 
+        let mut organizations: HashMap<String, PublicOrganization> = HashMap::new();
+
+        let repo_messages = repo
+            .messages(group)
+            .await?;
+        let mut messages = vec![];
+
+        for message in repo_messages {
+            let mut public_message = PublicMessage {
+                id: message.id.to_hex(),
+                from: message.from.publish(),
+                chat: message.chat.to_hex(),
+                time: message.time,
+                text: message.text,
+                kind: message.kind,
+            };
+
+            if let Some(ref mut org_user) = public_message.from.org_user {
+                if let Some(org) = organizations.get(&public_message.from.id) {
+                    if let Some(member) = org
+                        .members
+                        .clone()
+                        .unwrap_or(vec![])
+                        .iter()
+                        .find(|m| m.user_id == org_user.id) {
+                        org_user.name = member.username.clone();
+                    } else if org.organization_type == Role::Auditor {
+                        let auditor = match request_auditor(
+                            &self.context,
+                            org_user.id.parse()?,
+                            auth.clone()
+                        ).await {
+                            Ok(auditor) => auditor,
+                            _ => continue
+                        };
+                        if auditor.is_empty() {
+                            continue;
+                        }
+                        org_user.name = auditor.first_name().clone() + " " + auditor.last_name();
+                    } else {
+                        let customer = match request_customer(
+                            &self.context,
+                            org_user.id.parse()?,
+                            auth.clone()
+                        ).await {
+                            Ok(customer) => customer,
+                            _ => continue
+                        };
+                        if customer.user_id.is_empty() {
+                            continue;
+                        }
+                        org_user.name = customer.first_name + " " + &customer.last_name;
+                    }
+                } else {
+                    let org = get_organization(
+                        &self.context,
+                        public_message.from.id.parse()?,
+                        None
+                    ).await?;
+
+                    organizations.insert(org.id.clone(), org.clone());
+                    if let Some(member) = org
+                        .members
+                        .clone()
+                        .unwrap_or(vec![])
+                        .iter()
+                        .find(|m| m.user_id == org_user.id) {
+                        org_user.name = member.username.clone();
+                    } else if org.organization_type == Role::Auditor {
+                        let auditor = match request_auditor(
+                            &self.context,
+                            org_user.id.parse()?,
+                            auth.clone()
+                        ).await {
+                            Ok(auditor) => auditor,
+                            _ => continue
+                        };
+                        if auditor.is_empty() {
+                            continue;
+                        }
+                        org_user.name = auditor.first_name().clone() + " " + auditor.last_name();
+                    } else {
+                        let customer = match request_customer(
+                            &self.context,
+                            org_user.id.parse()?,
+                            auth.clone()
+                        ).await {
+                            Ok(customer) => customer,
+                            _ => continue
+                        };
+                        if customer.user_id.is_empty() {
+                            continue;
+                        }
+                        org_user.name = customer.first_name + " " + &customer.last_name;
+                    }
+                }
+            }
+
+            messages.push(public_message);
+        }
+
         for member in chat_members {
             if member.id == current_id || member.org_user_id == Some(current_id) {
-                let messages = repo
-                    .messages(group)
-                    .await?
-                    .into_iter()
-                    .map(Message::publish)
-                    .collect();
                 return Ok(messages)
             } else if member.role == ChatRole::Organization {
                 let org_members = get_organization(&self.context, member.id, None)
@@ -407,12 +488,6 @@ impl ChatService {
                     .collect::<Vec<String>>();
 
                 if org_members.contains(&current_id.to_hex()) {
-                    let messages = repo
-                        .messages(group)
-                        .await?
-                        .into_iter()
-                        .map(Message::publish)
-                        .collect();
                     return Ok(messages)
                 }
             }
