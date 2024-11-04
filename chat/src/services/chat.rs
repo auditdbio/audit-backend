@@ -400,6 +400,7 @@ impl ChatService {
                         .iter()
                         .find(|m| m.user_id == org_user.id) {
                         org_user.name = member.username.clone();
+                        org_user.role = Some(org.organization_type);
                     } else if org.organization_type == Role::Auditor {
                         let auditor = match request_auditor(
                             &self.context,
@@ -413,6 +414,7 @@ impl ChatService {
                             continue;
                         }
                         org_user.name = auditor.first_name().clone() + " " + auditor.last_name();
+                        org_user.role = Some(Role::Auditor);
                     } else {
                         let customer = match request_customer(
                             &self.context,
@@ -426,6 +428,7 @@ impl ChatService {
                             continue;
                         }
                         org_user.name = customer.first_name + " " + &customer.last_name;
+                        org_user.role = Some(Role::Customer);
                     }
                 } else {
                     let org = get_organization(
@@ -442,6 +445,7 @@ impl ChatService {
                         .iter()
                         .find(|m| m.user_id == org_user.id) {
                         org_user.name = member.username.clone();
+                        org_user.role = Some(org.organization_type);
                     } else if org.organization_type == Role::Auditor {
                         let auditor = match request_auditor(
                             &self.context,
@@ -455,6 +459,7 @@ impl ChatService {
                             continue;
                         }
                         org_user.name = auditor.first_name().clone() + " " + auditor.last_name();
+                        org_user.role = Some(Role::Auditor);
                     } else {
                         let customer = match request_customer(
                             &self.context,
@@ -468,6 +473,7 @@ impl ChatService {
                             continue;
                         }
                         org_user.name = customer.first_name + " " + &customer.last_name;
+                        org_user.role = Some(Role::Customer);
                     }
                 }
             }

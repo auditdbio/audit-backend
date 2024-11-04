@@ -33,6 +33,7 @@ impl ChatId {
                 PublicChatIdOrgUser {
                     id: id.to_hex(),
                     name: "".to_string(),
+                    role: None,
                 }
             }),
         }
@@ -67,6 +68,7 @@ pub struct ChangeUnread {
 pub struct PublicChatIdOrgUser {
     pub id: String,
     pub name: String,
+    pub role: Option<Role>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
