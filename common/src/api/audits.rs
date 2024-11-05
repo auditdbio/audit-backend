@@ -5,7 +5,11 @@ use std::collections::HashMap;
 use rand::{distributions::Alphanumeric, Rng};
 
 use crate::{
-    api::{auditor::request_auditor, customer::request_customer},
+    api::{
+        auditor::request_auditor,
+        customer::request_customer,
+        file::request_file_metadata,
+    },
     context::GeneralContext,
     entities::{
         audit::{Audit, AuditStatus, PublicAuditStatus, ReportType},
@@ -38,7 +42,6 @@ pub struct AuditChange {
     pub tags: Option<Vec<String>>,
     pub price: Option<i64>,
     pub total_cost: Option<i64>,
-    pub report_name: Option<String>,
     pub report_type: Option<ReportType>,
     pub report: Option<String>,
     pub time: Option<TimeRange>,
@@ -186,7 +189,6 @@ impl PublicAudit {
             AuditStatus::Resolved => PublicAuditStatus::Resolved,
         };
 
-
         let mut auditor_contacts = auditor.contacts().clone();
 
         if !auditor_contacts.public_contacts && only_public {
@@ -254,6 +256,21 @@ impl PublicAudit {
             issues.retain(|issue| issue.include)
         }
 
+        let report_name = if let Some(report) = audit.report.clone() {
+            let meta = request_file_metadata(&context, report, context.server_auth()).await?;
+            if let Some(meta) = meta {
+                Some(format!(
+                    "{}.{}",
+                    meta.original_name.unwrap_or("Report".to_string()),
+                    meta.extension,
+                ))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
         let public_audit = PublicAudit {
             id: audit.id.to_hex(),
             auditor_id: audit.auditor_id.to_hex(),
@@ -278,7 +295,7 @@ impl PublicAudit {
             last_modified: audit.last_modified,
             resolved_at: audit.resolved_at,
             report: audit.report,
-            report_name: audit.report_name,
+            report_name,
             issues,
             public: audit.public,
             no_customer: audit.no_customer,
@@ -302,8 +319,8 @@ pub struct NoCustomerAuditRequest {
     pub project_name: String,
     pub description: String,
     pub status: AuditStatus,
-    pub scope: Vec<String>,
-    pub tags: Vec<String>,
+    pub scope: Option<Vec<String>>,
+    pub tags: Option<Vec<String>>,
     pub last_modified: i64,
     pub report: Option<String>,
     pub report_name: Option<String>,
