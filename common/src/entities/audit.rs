@@ -72,7 +72,6 @@ pub struct Audit<Id: Eq + Hash> {
     pub last_modified: i64,
     pub resolved_at: Option<i64>,
     pub report: Option<String>,
-    pub report_name: Option<String>,
     pub report_type: Option<ReportType>,
     pub time: TimeRange,
 
@@ -117,7 +116,6 @@ impl Audit<String> {
             last_modified: self.last_modified,
             resolved_at: self.resolved_at,
             report: self.report,
-            report_name: self.report_name,
             report_type: self.report_type,
             time: self.time,
             issues: Issue::parse_map(self.issues),
@@ -153,7 +151,6 @@ impl Audit<ObjectId> {
             last_modified: self.last_modified,
             resolved_at: self.resolved_at,
             report: self.report,
-            report_name: self.report_name,
             report_type: self.report_type,
             time: self.time,
             issues: Issue::to_string_map(self.issues),
@@ -205,8 +202,7 @@ impl Audit<ObjectId> {
                     return Err(anyhow::anyhow!(format!("Error in report response json: {}", e)).code(404));
                 }
                 let public_report = public_report.unwrap();
-                self.report = Some(public_report.path.clone());
-                self.report_name = Some(public_report.path);
+                self.report = Some(public_report.file_id.clone());
                 self.report_type = Some(ReportType::Generated);
                 self.report_sha = public_report.report_sha;
             } else {

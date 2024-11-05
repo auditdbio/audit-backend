@@ -19,6 +19,7 @@ use common::{
             delete_message, AuditMessageStatus,
             CreateAuditMessage, AuditMessageId,
         },
+        file::ChangeFile,
         events::{post_event, EventPayload, PublicEvent},
         issue::PublicIssue,
         organization::{
@@ -37,7 +38,7 @@ use common::{
             ReportType,
         },
         audit_request::{AuditRequest, TimeRange},
-        issue::{severity_to_integer, ChangeIssue, Event, EventKind, Issue, Status, Action},
+        issue::{severity_to_integer, ChangeIssue, Event, EventKind, Issue, Status, Action, IssueEditHistory},
         project::get_project,
         role::Role,
         organization::OrgAccessLevel,
@@ -45,7 +46,6 @@ use common::{
     error::{self, AddCode},
     services::{FILES_SERVICE, PROTOCOL, API_PREFIX},
 };
-use common::api::file::ChangeFile;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MyAuditResult {
@@ -123,7 +123,6 @@ impl AuditService {
             last_modified: Utc::now().timestamp_micros(),
             resolved_at: None,
             report: None,
-            report_name: None,
             report_type: None,
             time: request.time,
             issues: Vec::new(),
@@ -251,14 +250,13 @@ impl AuditService {
             project_name: request.project_name,
             description: request.description,
             status: request.status,
-            scope: request.scope,
-            tags: request.tags,
+            scope: request.scope.unwrap_or(vec![]),
+            tags: request.tags.unwrap_or(vec![]),
             price: None,
             total_cost: None,
             last_modified: Utc::now().timestamp_micros(),
             resolved_at: None,
             report: None,
-            report_name: None,
             report_type: None,
             time,
             public: false,
@@ -489,10 +487,6 @@ impl AuditService {
             audit.report_type = Some(change.report_type.unwrap_or(ReportType::Custom));
         }
 
-        if let Some(ref report_name) = change.report_name {
-            audit.report_name = Some(report_name.clone());
-        }
-
         let is_audit_approved = if audit.edit_history.is_empty() || audit.approved_by.is_empty() {
             true
         } else {
@@ -527,7 +521,7 @@ impl AuditService {
                         .context
                         .make_request()
                         .patch(format!(
-                            "{}://{}/{}/file/{}",
+                            "{}://{}/{}/file/id/{}",
                             PROTOCOL.as_str(),
                             FILES_SERVICE.as_str(),
                             API_PREFIX.as_str(),
@@ -645,7 +639,7 @@ impl AuditService {
         }
 
         if !audit.no_customer
-           && (change.report.is_some() || change.report_name.is_some() || change.action.is_some())
+           && (change.report.is_some() || change.action.is_some())
         {
             if let Some(chat_id) = audit.chat_id {
                 delete_message(chat_id.chat_id, chat_id.message_id, auth.clone())?
@@ -753,6 +747,7 @@ impl AuditService {
             feedback: String::new(),
             last_modified: Utc::now().timestamp_micros(),
             read: HashMap::new(),
+            edit_history: Vec::new(),
         };
 
         audit.issues.push(issue.clone());
@@ -843,6 +838,8 @@ impl AuditService {
             else {
                 return Err(anyhow::anyhow!("No issue found").code(404));
             };
+
+        let mut is_history_changed = false;
 
         if let Some(name) = change.name {
             issue.name = name;
@@ -982,6 +979,7 @@ impl AuditService {
             };
 
             issue.feedback = feedback;
+            is_history_changed = true;
 
             Self::create_event(&self.context, &mut issue, kind, message);
         }
@@ -1039,6 +1037,18 @@ impl AuditService {
         }
 
         issue.last_modified = Utc::now().timestamp_micros();
+
+        if is_history_changed {
+            let edit_history_item = IssueEditHistory {
+                id: issue.edit_history.len(),
+                date: issue.last_modified.clone(),
+                author: auth.id().unwrap().to_hex(),
+                issue: serde_json::to_string(&json!({
+                    "feedback": issue.feedback,
+                })).unwrap(),
+            };
+            issue.edit_history.push(edit_history_item);
+        }
 
         if let Some(idx) = audit.issues.iter().position(|issue| issue.id == issue_id) {
             audit.issues[idx] = issue.clone();

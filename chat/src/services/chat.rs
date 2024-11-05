@@ -2,8 +2,9 @@ use std::sync::Arc;
 use std::collections::HashMap;
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-
+use serde_json::json;
 use chrono::Utc;
+
 use common::{
     api::{
         auditor::request_auditor,
@@ -15,17 +16,17 @@ use common::{
         },
         customer::request_customer,
         events::{EventPayload, PublicEvent, post_event},
+        file::request_file_metadata,
         organization::{get_organization, get_my_organizations, GetOrganizationQuery},
     },
     context::GeneralContext,
     entities::{
         organization::{OrganizationMember, PublicOrganization},
-        role::ChatRole,
+        role::{ChatRole, Role},
     },
     error::{self, AddCode},
     services::{API_PREFIX, EVENTS_SERVICE, PROTOCOL, USERS_SERVICE},
 };
-use common::entities::role::Role;
 
 use crate::repositories::chat::{ChatRepository, Group, ReadId};
 
@@ -116,13 +117,37 @@ impl ChatService {
             }
         };
 
+        let message_text = if message
+            .kind
+            .clone()
+            .map_or(false, |k| k == MessageKind::File)
+        {
+            let meta = request_file_metadata(&self.context, message.text.clone(), auth).await?;
+            let filename = if let Some(meta) = meta {
+                format!(
+                    "{}{}",
+                    meta.original_name.unwrap_or("Unnamed file".to_string()),
+                    if meta.extension.is_empty() { "".to_string() } else { format!(".{}", meta.extension) }
+                )
+            } else {
+                return Err(anyhow::anyhow!("File sending error").code(400));
+            };
+
+            serde_json::to_string(&json!({
+                "file_id": message.text,
+                "filename": filename,
+            })).unwrap()
+        } else {
+            message.text
+        };
+
         let message = if let Some(chat) = message.chat {
             Message {
                 id: ObjectId::new(),
                 from,
                 chat: chat.parse()?,
                 time: Utc::now().timestamp_micros(),
-                text: message.text,
+                text: message_text,
                 kind: message.kind,
             }
         } else {
@@ -139,7 +164,7 @@ impl ChatService {
                     from,
                     chat: existing_private.id,
                     time: Utc::now().timestamp_micros(),
-                    text: message.text,
+                    text: message_text,
                     kind: message.kind,
                 }
             } else {
@@ -149,7 +174,7 @@ impl ChatService {
                     from,
                     chat: ObjectId::new(),
                     time: Utc::now().timestamp_micros(),
-                    text: message.text,
+                    text: message_text,
                     kind: message.kind,
                 };
 

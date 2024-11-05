@@ -40,7 +40,7 @@ impl ChatId {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum MessageKind {
     Text,
     Image,
