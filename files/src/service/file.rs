@@ -177,63 +177,15 @@ impl FileService {
             None
         };
 
-        let last_modified = chrono::Utc::now().timestamp_micros();
-        let object_id = ObjectId::new();
-
-        if original_name.is_empty() {
-            original_name = object_id.to_hex();
-        }
-
-        let extension = if original_name.contains('.') {
-            original_name.split('.').last().unwrap().to_string()
-        } else {
-            String::new()
-        };
-        original_name = original_name.rsplitn(2, '.').last().unwrap().to_string();
-
-        let path = format!(
-            "/{}/{}_{}{}",
-            FILES_PATH_PREFIX,
-            original_name,
-            last_modified,
-            if extension.is_empty() { "".to_string() } else { format!(".{}", extension) }
-        );
-
         if file_entity == Some(FileEntity::Avatar) || file_entity == Some(FileEntity::Report) {
             is_rewritable = true;
         }
 
-        let os_path = Path::new(&path);
-
-        let Some(prefix) = os_path.parent() else {
-            return Err(anyhow::anyhow!("No parent directory").code(500));
-        };
-
-        std::fs::create_dir_all(prefix)?;
-
-        let mut file = File::create(path.clone())?;
-        let content = content.concat();
-        file.write_all(&content).unwrap();
-
-        let meta = Metadata {
-            id: object_id,
-            last_modified,
-            path,
-            extension,
-            private,
-            allowed_users: full_access,
-            author: current_id,
-            access_code,
-            original_name: Some(original_name),
-            parent_entity: parent_entity.clone(),
-            file_entity: file_entity.clone(),
-            is_rewritable,
-        };
-
         let metas = self.context.try_get_repository::<Metadata>()?;
+        let mut object_id = ObjectId::new();
 
         if is_rewritable {
-            if let Some(parent_entity) = parent_entity {
+            if let Some(parent_entity) = parent_entity.clone() {
                 if !auth.full_access() {
                     if file_entity == Some(FileEntity::Avatar) {
                         if parent_entity.source == ParentEntitySource::Organization {
@@ -271,27 +223,79 @@ impl FileService {
 
                 let found_metas = metas
                     .find_many("parent_entity.id", &Bson::ObjectId(parent_entity.clone().id))
-                    .await?;
-
-                if let Some(meta) = found_metas
-                    .iter()
-                    .find(|m: &&Metadata| {
-                        if let Some(parent) = &m.parent_entity {
+                    .await?
+                    .into_iter()
+                    .filter(|meta| {
+                        if let Some(parent) = &meta.parent_entity {
                             parent.source == parent_entity.clone().source
                         } else { false }
                     })
-                {
-                    std::fs::remove_file(meta.path.clone()).map_or_else(
-                        |e| log::info!("Failed to delete file '{}'. Error: {:?}", meta.path, e),
-                        |_| log::info!("File '{}' successfully deleted.", meta.path),
-                    );
-                    metas.delete("id", &meta.id).await?;
+                    .collect::<Vec<Metadata>>();
+
+                if let Some(meta) = found_metas.last() {
+                    object_id = meta.id;
+                }
+
+                for meta in found_metas {
+                        std::fs::remove_file(meta.path.clone()).map_or_else(
+                            |e| log::info!("Failed to delete file '{}'. Error: {:?}", meta.path, e),
+                            |_| log::info!("File '{}' successfully deleted.", meta.path),
+                        );
+                        metas.delete("id", &meta.id).await?;
                 }
             } else {
                 return Err(anyhow::anyhow!("Parent entity fields is required for rewritable files").code(400));
             }
         }
 
+        let last_modified = chrono::Utc::now().timestamp_micros();
+
+        if original_name.is_empty() {
+            original_name = object_id.to_hex();
+        }
+
+        let extension = if original_name.contains('.') {
+            original_name.split('.').last().unwrap().to_string()
+        } else {
+            String::new()
+        };
+        original_name = original_name.rsplitn(2, '.').last().unwrap().to_string();
+
+        let path = format!(
+            "/{}/{}_{}{}",
+            FILES_PATH_PREFIX,
+            original_name,
+            last_modified,
+            if extension.is_empty() { "".to_string() } else { format!(".{}", extension) }
+        );
+
+        let os_path = Path::new(&path);
+
+        let Some(prefix) = os_path.parent() else {
+            return Err(anyhow::anyhow!("No parent directory").code(500));
+        };
+
+        std::fs::create_dir_all(prefix)?;
+
+        let mut file = File::create(path.clone())?;
+        let content = content.concat();
+
+        let meta = Metadata {
+            id: object_id,
+            last_modified,
+            path,
+            extension,
+            private,
+            allowed_users: full_access,
+            author: current_id,
+            access_code,
+            original_name: Some(original_name),
+            parent_entity,
+            file_entity: file_entity.clone(),
+            is_rewritable,
+        };
+
+        file.write_all(&content).unwrap();
         metas.insert(&meta).await?;
 
         Ok(meta.into())
