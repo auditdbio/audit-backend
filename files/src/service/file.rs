@@ -182,7 +182,6 @@ impl FileService {
         }
 
         let metas = self.context.try_get_repository::<Metadata>()?;
-        let mut object_id = ObjectId::new();
 
         if is_rewritable {
             if let Some(parent_entity) = parent_entity.clone() {
@@ -232,10 +231,6 @@ impl FileService {
                     })
                     .collect::<Vec<Metadata>>();
 
-                if let Some(meta) = found_metas.last() {
-                    object_id = meta.id;
-                }
-
                 for meta in found_metas {
                         std::fs::remove_file(meta.path.clone()).map_or_else(
                             |e| log::info!("Failed to delete file '{}'. Error: {:?}", meta.path, e),
@@ -249,6 +244,7 @@ impl FileService {
         }
 
         let last_modified = chrono::Utc::now().timestamp_micros();
+        let object_id = ObjectId::new();
 
         if original_name.is_empty() {
             original_name = object_id.to_hex();
@@ -292,7 +288,6 @@ impl FileService {
             original_name: Some(original_name),
             parent_entity,
             file_entity: file_entity.clone(),
-            is_rewritable,
         };
 
         file.write_all(&content).unwrap();

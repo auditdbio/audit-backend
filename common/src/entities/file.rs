@@ -20,8 +20,6 @@ pub struct Metadata {
     pub original_name: Option<String>,
     pub parent_entity: Option<ParentEntity<ObjectId>>,
     pub file_entity: Option<FileEntity>,
-    #[serde(default)]
-    pub is_rewritable: bool,
 }
 
 impl_has_last_modified!(Metadata);
