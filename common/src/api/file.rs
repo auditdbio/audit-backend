@@ -23,7 +23,6 @@ pub struct PublicMetadata {
     pub original_name: Option<String>,
     pub parent_entity: Option<ParentEntity<String>>,
     pub file_entity: Option<FileEntity>,
-    pub is_rewritable: bool,
 }
 
 impl From<Metadata> for PublicMetadata {
@@ -37,7 +36,6 @@ impl From<Metadata> for PublicMetadata {
             original_name: meta.original_name,
             parent_entity: meta.parent_entity.map(|e| e.stringify()),
             file_entity: meta.file_entity,
-            is_rewritable: meta.is_rewritable,
         }
     }
 }
