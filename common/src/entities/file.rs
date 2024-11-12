@@ -58,7 +58,7 @@ pub enum ParentEntitySource {
 }
 
 impl FromStr for ParentEntitySource {
-    type Err = ();
+    type Err = anyhow::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "audit" => Ok(ParentEntitySource::Audit),
@@ -68,7 +68,10 @@ impl FromStr for ParentEntitySource {
             "project" => Ok(ParentEntitySource::Project),
             "user" => Ok(ParentEntitySource::User),
             "organization" => Ok(ParentEntitySource::Organization),
-            _ => Ok(ParentEntitySource::Other),
+            "other" => Ok(ParentEntitySource::Other),
+            _ => Err(anyhow::anyhow!(
+                "Parent entity source invalid value. Accepted values are: Audit, Auditor, Customer, Chat, Project, User, Organization, Other"
+            ))
         }
     }
 }
@@ -98,14 +101,17 @@ pub enum FileEntity {
 }
 
 impl FromStr for FileEntity {
-    type Err = ();
+    type Err = anyhow::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "avatar" => Ok(FileEntity::Avatar),
             "chatattachment" => Ok(FileEntity::ChatAttachment),
             "report" => Ok(FileEntity::Report),
             "temporary" => Ok(FileEntity::Temporary),
-            _ => Ok(FileEntity::Other),
+            "other" => Ok(FileEntity::Other),
+            _ => Err(anyhow::anyhow!(
+                "File entity invalid value. Accepted values are: Avatar, ChatAttachment, Report, Other"
+            ))
         }
     }
 }

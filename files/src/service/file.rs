@@ -116,9 +116,8 @@ impl FileService {
                         let data = chunk.unwrap();
                         str.push_str(&String::from_utf8(data.to_vec()).unwrap());
                     }
-                    parent_entity_id = match str.parse::<ObjectId>() {
-                        Ok(id) => Some(id),
-                        Err(_) => None
+                    if !str.is_empty() {
+                        parent_entity_id = Some(str.parse::<ObjectId>()?);
                     }
                 }
                 "parent_entity_source" => {
@@ -127,9 +126,8 @@ impl FileService {
                         let data = chunk.unwrap();
                         str.push_str(&String::from_utf8(data.to_vec()).unwrap());
                     }
-                    parent_entity_source = match str.parse::<ParentEntitySource>() {
-                        Ok(source) => Some(source),
-                        Err(_) => None
+                    if !str.is_empty() {
+                        parent_entity_source = Some(str.parse::<ParentEntitySource>()?);
                     }
                 }
                 "file_entity" => {
@@ -138,7 +136,11 @@ impl FileService {
                         let data = chunk.unwrap();
                         str.push_str(&String::from_utf8(data.to_vec()).unwrap());
                     }
-                    file_entity = Some(str.parse().unwrap());
+                    if !str.is_empty() {
+                        file_entity = Some(str.parse()?);
+                    } else {
+                        file_entity = Some(FileEntity::Other);
+                    }
                 }
                 _ => (),
             }
