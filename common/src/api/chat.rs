@@ -11,7 +11,7 @@ use crate::{
         audit::AuditStatus,
         audit_request::TimeRange,
         contacts::Contacts,
-        role::Role,
+        role::{Role, ChatRole},
     },
     error::{self, AddCode},
     services::{API_PREFIX, CHAT_SERVICE, PROTOCOL},
@@ -19,8 +19,9 @@ use crate::{
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct ChatId {
-    pub role: Role,
+    pub role: ChatRole,
     pub id: ObjectId,
+    pub org_user_id: Option<ObjectId>,
 }
 
 impl ChatId {
@@ -28,6 +29,13 @@ impl ChatId {
         PublicChatId {
             role: self.role,
             id: self.id.to_hex(),
+            org_user: self.org_user_id.map(|id| {
+                PublicChatIdOrgUser {
+                    id: id.to_hex(),
+                    name: "".to_string(),
+                    role: None,
+                }
+            }),
         }
     }
 }
@@ -45,15 +53,29 @@ pub enum MessageKind {
 pub struct CreateMessage {
     pub chat: Option<String>,
     pub to: Option<PublicChatId>,
-    pub role: Role,
+    pub role: ChatRole,
+    pub from_org_id: Option<String>,
     pub text: String,
     pub kind: Option<MessageKind>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PublicChatId {
-    pub role: Role,
+pub struct ChangeUnread {
+    pub org_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PublicChatIdOrgUser {
     pub id: String,
+    pub name: String,
+    pub role: Option<Role>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PublicChatId {
+    pub role: ChatRole,
+    pub id: String,
+    pub org_user: Option<PublicChatIdOrgUser>,
 }
 
 impl PublicChatId {
@@ -61,6 +83,7 @@ impl PublicChatId {
         Ok(ChatId {
             role: self.role,
             id: self.id.parse()?,
+            org_user_id: self.org_user.map(|user| user.id.parse().unwrap()),
         })
     }
 }
@@ -90,6 +113,7 @@ pub struct PublicChat {
     pub last_message: PublicMessage,
     pub avatar: Option<String>,
     pub unread: Vec<PublicReadId>,
+    pub creator: Option<PublicChatId>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -214,10 +238,12 @@ pub fn create_audit_message(
             let message = CreateMessage {
                 chat: None,
                 to: Some(PublicChatId {
-                    role: receiver_role,
+                    role: receiver_role.into(),
                     id: receiver_id.to_hex(),
+                    org_user: None,
                 }),
-                role: last_changer,
+                role: last_changer.into(),
+                from_org_id: None,
                 text: serde_json::to_string(&message_text).unwrap(),
                 kind: Some(MessageKind::Audit),
             };
@@ -250,10 +276,12 @@ pub fn create_audit_message(
             let message = CreateMessage {
                 chat: None,
                 to: Some(PublicChatId {
-                    role: receiver_role,
+                    role: receiver_role.into(),
                     id: receiver_id.to_hex(),
+                    org_user: None,
                 }),
-                role: last_changer,
+                role: last_changer.into(),
+                from_org_id: None,
                 text: serde_json::to_string(&message_text).unwrap(),
                 kind: Some(MessageKind::Audit),
             };

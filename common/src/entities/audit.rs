@@ -92,6 +92,9 @@ pub struct Audit<Id: Eq + Hash> {
 
     pub access_code: Option<String>,
     pub report_sha: Option<String>,
+
+    pub auditor_organization: Option<Id>,
+    pub customer_organization: Option<Id>,
 }
 
 impl_has_last_modified!(Audit<ObjectId>);
@@ -125,6 +128,8 @@ impl Audit<String> {
             unread_edits: self.unread_edits,
             access_code: self.access_code,
             report_sha: self.report_sha,
+            auditor_organization: self.auditor_organization.map(|v| v.parse().unwrap()),
+            customer_organization: self.customer_organization.map(|v| v.parse().unwrap()),
         }
     }
 }
@@ -158,6 +163,8 @@ impl Audit<ObjectId> {
             unread_edits: self.unread_edits,
             access_code: self.access_code,
             report_sha: self.report_sha,
+            auditor_organization: self.auditor_organization.map(|v| v.to_hex()),
+            customer_organization: self.customer_organization.map(|v| v.to_hex()),
         }
     }
 

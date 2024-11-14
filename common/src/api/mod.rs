@@ -16,3 +16,4 @@ pub mod requests;
 pub mod seartch;
 pub mod user;
 pub mod linked_accounts;
+pub mod organization;

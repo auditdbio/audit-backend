@@ -30,11 +30,11 @@ pub async fn request_auditor(
         let auditor: ExtendedAuditor = response.json().await?;
 
         if auditor.is_empty() {
-            return Err(anyhow::anyhow!("No auditor found").code(400))
+            return Err(anyhow::anyhow!("No auditor found").code(404))
         }
 
         Ok(auditor)
     } else {
-        Err(anyhow::anyhow!("No auditor found").code(400))
+        Err(anyhow::anyhow!("No auditor found").code(404))
     }
 }
