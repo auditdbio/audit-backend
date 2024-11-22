@@ -6,7 +6,10 @@ use utoipa::ToSchema;
 use crate::{
     impl_has_last_modified,
     api::chat::AuditMessageId,
-    entities::audit::AuditEditHistory,
+    entities::{
+        audit::AuditEditHistory,
+        scope::Scope,
+    },
     repository::{Entity, HasLastModified},
 };
 
@@ -33,7 +36,7 @@ pub struct AuditRequest<Id> {
 
     pub description: String,
     pub tags: Option<Vec<String>>,
-    pub scope: Option<Vec<String>>,
+    pub scope: Option<Scope>,
 
     pub price: Option<i64>,
     pub total_cost: Option<i64>,

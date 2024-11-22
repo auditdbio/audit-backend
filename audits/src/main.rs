@@ -1,30 +1,32 @@
-use std::env;
-use std::sync::Arc;
-
+use std::{env, sync::Arc};
 use actix_web::HttpServer;
-use audits::create_app;
-
-use audits::migrations::up_migrations;
-use common::auth::Service;
-use common::context::effectfull_context::ServiceState;
-use common::entities::audit::Audit;
-use common::entities::audit_request::AuditRequest;
-use common::repository::mongo_repository::MongoRepository;
-use common::verification::verify;
 use mongodb::bson::oid::ObjectId;
+
+use common::{
+    auth::Service,
+    context::effectfull_context::ServiceState,
+    entities::{audit::Audit, audit_request::AuditRequest},
+    repository::mongo_repository::MongoRepository,
+    verification::verify,
+};
+use audits::{create_app, migrations::up_migrations};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv::dotenv().ok();
-
     env_logger::init();
 
     let mongo_uri = env::var("MONGOURI").unwrap();
 
-    up_migrations(mongo_uri.as_str()).await.unwrap();
+    up_migrations(mongo_uri.as_str()).await.expect("Migration error");
+
     verify::<Audit<ObjectId>>(mongo_uri.as_str(), "audits", "audits", true)
         .await
-        .unwrap();
+        .expect("Audits collection verification fail");
+
+    verify::<AuditRequest<ObjectId>>(mongo_uri.as_str(), "audits", "requests", true)
+        .await
+        .expect("Audit requests collection verification fail");
 
     let audit_repo: MongoRepository<Audit<ObjectId>> =
         MongoRepository::new(&mongo_uri, "audits", "audits").await;
