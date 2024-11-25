@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 pub struct Scope {
     #[serde(rename = "type")]
     pub typ: ScopeType,
-    #[serde(flatten)]
+    #[serde(rename = "content")]
     pub content: ScopeContent,
 }
 
@@ -15,6 +15,7 @@ pub enum ScopeType {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(untagged)]
 pub enum ScopeContent {
     Links(Vec<String>),
     GitBlock(GitBlock),

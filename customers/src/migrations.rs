@@ -36,7 +36,10 @@ impl Migration for NewScopeProjectMigration {
                     .iter()
                     .filter_map(|bson| bson.as_str().map(|s| s.to_string()))
                     .collect::<Vec<String>>(),
-                _ => continue,
+                _ => {
+                    println!("Skipping project {:?} with invalid or missing scope field.", project_id);
+                    continue
+                }
             };
 
             let new_scope = Scope {
@@ -67,6 +70,7 @@ pub async fn up_migrations(mongo_uri: &str) -> anyhow::Result<()> {
     let client = Client::with_uri_str(mongo_uri).await.unwrap();
     let db = client.database("customers");
 
+    println!("Customers: Starting migrations...");
     let migrations: Vec<Box<dyn Migration>> = vec![
         Box::new(NewScopeProjectMigration {}),
     ];
@@ -75,5 +79,6 @@ pub async fn up_migrations(mongo_uri: &str) -> anyhow::Result<()> {
         .with_migrations_vec(migrations)
         .up()
         .await?;
+    println!("Customers: Migrations completed.");
     Ok(())
 }

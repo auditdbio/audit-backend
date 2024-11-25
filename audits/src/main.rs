@@ -24,9 +24,9 @@ async fn main() -> std::io::Result<()> {
         .await
         .expect("Audits collection verification fail");
 
-    verify::<AuditRequest<ObjectId>>(mongo_uri.as_str(), "audits", "requests", true)
-        .await
-        .expect("Audit requests collection verification fail");
+    // verify::<AuditRequest<ObjectId>>(mongo_uri.as_str(), "audits", "requests", true)
+    //     .await
+    //     .expect("Audit requests collection verification fail");
 
     let audit_repo: MongoRepository<Audit<ObjectId>> =
         MongoRepository::new(&mongo_uri, "audits", "audits").await;
