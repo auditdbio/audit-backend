@@ -61,24 +61,28 @@ impl Migration for NewScopeProjectMigration {
             updated_documents_count += 1;
         }
 
-        println!("Project scope: Updated {} documents", updated_documents_count);
+        println!("Customers Migrator: Project scope: Updated {} documents", updated_documents_count);
         Ok(())
     }
 }
 
 pub async fn up_migrations(mongo_uri: &str) -> anyhow::Result<()> {
-    let client = Client::with_uri_str(mongo_uri).await.unwrap();
+    println!("Customers Migrator: Connecting to MongoDB...");
+    let client = Client::with_uri_str(mongo_uri)
+        .await
+        .expect("Customers Migrator: Error connecting to MongoDB");
     let db = client.database("customers");
 
-    println!("Customers: Starting migrations...");
+    println!("Customers Migrator: Starting migrations...");
     let migrations: Vec<Box<dyn Migration>> = vec![
         Box::new(NewScopeProjectMigration {}),
     ];
+
     migrator::default::DefaultMigrator::new()
         .with_conn(db.clone())
         .with_migrations_vec(migrations)
         .up()
         .await?;
-    println!("Customers: Migrations completed.");
+    println!("Customers Migrator: Migrations completed.");
     Ok(())
 }

@@ -232,7 +232,7 @@ impl Migration for NewScopeRequestMigration {
             let request = request?;
             let request_id = request.get_object_id("_id")?;
 
-            let scope = match request.get("project_scope") {
+            let scope = match request.get("scope") {
                 Some(Bson::Array(array)) => array
                     .iter()
                     .filter_map(|bson| bson.as_str().map(|s| s.to_string()))
@@ -252,7 +252,7 @@ impl Migration for NewScopeRequestMigration {
 
             conn.update_one(
                 doc! {"_id": request_id},
-                doc! {"$set": {"project_scope": new_scope_bson}},
+                doc! {"$set": {"scope": new_scope_bson}},
                 None,
             )
                 .await?;
