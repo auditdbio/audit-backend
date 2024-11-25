@@ -82,7 +82,9 @@ pub async fn up_migrations(mongo_uri: &str) -> anyhow::Result<()> {
         .with_conn(db.clone())
         .with_migrations_vec(migrations)
         .up()
-        .await?;
+        .await
+        .expect("Customers Migrator: Migration error");
+
     println!("Customers Migrator: Migrations completed.");
     Ok(())
 }
