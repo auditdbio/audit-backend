@@ -321,7 +321,6 @@ pub struct NoCustomerAuditRequest {
     pub status: AuditStatus,
     pub scope: Option<Vec<String>>,
     pub tags: Option<Vec<String>>,
-    pub last_modified: i64,
     pub report: Option<String>,
     pub report_name: Option<String>,
     #[serde(rename = "isPublic")]

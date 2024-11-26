@@ -179,9 +179,10 @@ impl AuditService {
         let auditor_id: ObjectId = request.auditor_id.parse()?;
         let customer_id: ObjectId = auditor_id;
 
+        let timestamp = Utc::now().timestamp_micros();
         let time = TimeRange {
-            from: Utc::now().timestamp_micros(),
-            to: Utc::now().timestamp_micros(),
+            from: timestamp.clone(),
+            to: timestamp.clone(),
         };
 
         let audit = Audit {
@@ -196,7 +197,7 @@ impl AuditService {
             tags: request.tags.unwrap_or(vec![]),
             price: None,
             total_cost: None,
-            last_modified: Utc::now().timestamp_micros(),
+            last_modified: timestamp,
             resolved_at: None,
             report: None,
             report_type: None,
