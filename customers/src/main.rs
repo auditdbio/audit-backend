@@ -19,9 +19,9 @@ async fn main() -> std::io::Result<()> {
     let mongo_uri = env::var("MONGOURI").unwrap();
 
     up_migrations(mongo_uri.as_str()).await.expect("Migration error");
-    // verify::<Project<ObjectId>>(mongo_uri.as_str(), "customers", "projects", true)
-    //     .await
-    //     .expect("Projects collection verification fail");
+    verify::<Project<ObjectId>>(mongo_uri.as_str(), "customers", "projects", true)
+        .await
+        .expect("Projects collection verification fail");
 
     let customer_repo: MongoRepository<Customer<ObjectId>> =
         MongoRepository::new(&mongo_uri, "customers", "customers").await;

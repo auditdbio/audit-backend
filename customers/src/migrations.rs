@@ -31,8 +31,8 @@ impl Migration for NewScopeProjectMigration {
 
         let mut updated_documents_count = 0;
         for project in projects {
-            let project = project.expect("Project document error");
-            let project_id = project.get_object_id("_id").expect("get_object_id error");
+            let project = project?;
+            let project_id = project.get_object_id("_id")?;
 
             let scope = match project.get("scope") {
                 Some(Bson::Array(array)) => array
@@ -50,7 +50,7 @@ impl Migration for NewScopeProjectMigration {
                 content: ScopeContent::Links(scope),
             };
 
-            let new_scope_bson = to_bson(&new_scope).expect("New scope to bson error")
+            let new_scope_bson = to_bson(&new_scope)?
                 .as_document()
                 .cloned()
                 .expect("Expected BSON document");
@@ -60,8 +60,7 @@ impl Migration for NewScopeProjectMigration {
                 doc! {"$set": {"scope": new_scope_bson}},
                 None,
             )
-                .await
-                .expect("conn update_one error");
+                .await?;
             updated_documents_count += 1;
         }
 
@@ -70,18 +69,24 @@ impl Migration for NewScopeProjectMigration {
     }
 }
 
+pub struct InitMigration {}
+
+#[async_trait]
+impl Migration for InitMigration {
+    async fn up(&self, _env: Env) -> anyhow::Result<()> {
+        Ok(())
+    }
+}
+
 pub async fn up_migrations(mongo_uri: &str) -> anyhow::Result<()> {
-    println!("Customers Migrator: Connecting to MongoDB...");
-    println!("Customers Migrator: Using MongoDB URI: {}", mongo_uri);
     let client = Client::with_uri_str(mongo_uri)
         .await
         .expect("Customers Migrator: Error connecting to MongoDB");
 
     let db = client.database("customers");
-    println!("Customers Migrator: Database name: {}", db.name());
-
     println!("Customers Migrator: Starting migrations...");
     let migrations: Vec<Box<dyn Migration>> = vec![
+        Box::new(InitMigration {}),
         Box::new(NewScopeProjectMigration {}),
     ];
 
