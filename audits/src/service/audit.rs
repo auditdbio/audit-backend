@@ -948,7 +948,9 @@ impl AuditService {
                 audit.approved_by.insert(audit.auditor_id.to_hex(), edit_history_item.id.clone());
                 audit.approved_by.insert(audit.customer_id.to_hex(), edit_history_item.id.clone());
             } else {
-                audit.approved_by.insert(current_id.to_hex(), edit_history_item.id.clone());
+                if audit.approved_by.get(&current_id.to_hex()) == Some(&(audit.edit_history.len() - 1)) {
+                    audit.approved_by.insert(current_id.to_hex(), edit_history_item.id.clone());
+                }
             }
         }
 
