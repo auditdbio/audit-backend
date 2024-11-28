@@ -78,7 +78,6 @@ impl CreateIssue {
             feedback: self.feedback.unwrap_or_default(),
             last_modified: Utc::now().timestamp_micros(),
             read: HashMap::new(),
-            edit_history: Vec::new(),
         }
     }
 

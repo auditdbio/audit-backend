@@ -224,6 +224,8 @@ pub struct AuditEditHistory {
     pub author: String,
     pub comment: Option<String>,
     pub audit: String,
+    #[serde(default)]
+    pub issues: HashMap<usize, Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]

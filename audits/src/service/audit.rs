@@ -34,7 +34,7 @@ use common::{
             ReportType,
         },
         audit_request::{AuditRequest, TimeRange},
-        issue::{severity_to_integer, ChangeIssue, Event, EventKind, Issue, Status, Action, IssueEditHistory},
+        issue::{severity_to_integer, ChangeIssue, Event, EventKind, Issue, Status, Action},
         project::get_project,
         role::Role,
     },
@@ -476,6 +476,11 @@ impl AuditService {
                     "time": audit.time,
                     "conclusion": audit.conclusion,
                 })).unwrap(),
+                issues: audit
+                    .edit_history
+                    .iter()
+                    .last()
+                    .map_or(HashMap::new(), |history| history.issues.clone()),
             };
 
             audit.edit_history.push(edit_history_item.clone());
@@ -630,7 +635,6 @@ impl AuditService {
             feedback: String::new(),
             last_modified: Utc::now().timestamp_micros(),
             read: HashMap::new(),
-            edit_history: Vec::new(),
         };
 
         audit.issues.push(issue.clone());
@@ -690,6 +694,8 @@ impl AuditService {
         change: ChangeIssue,
     ) -> error::Result<PublicIssue> {
         let auth = self.context.auth();
+        let current_id = auth.id().unwrap();
+
         let Some(mut audit) = self.get_audit(audit_id).await? else {
             return Err(anyhow::anyhow!("No audit found").code(404));
         };
@@ -711,6 +717,7 @@ impl AuditService {
 
         if let Some(name) = change.name {
             issue.name = name;
+            is_history_changed = true;
 
             Self::create_event(
                 &self.context,
@@ -731,7 +738,7 @@ impl AuditService {
             );
         }
 
-        let role = if auth.id().unwrap() == audit.customer_id {
+        let role = if current_id == audit.customer_id {
             Role::Customer
         } else {
             Role::Auditor
@@ -852,11 +859,9 @@ impl AuditService {
 
         if !audit.no_customer {
             if let Some(events) = change.events {
-                let sender_id = auth.id().unwrap();
-
                 let project = get_project(&self.context, audit.project_id).await?;
 
-                let role = if sender_id == audit.customer_id {
+                let role = if current_id == audit.customer_id {
                     Role::Customer
                 } else {
                     Role::Auditor
@@ -896,24 +901,53 @@ impl AuditService {
                     issue.events.push(event);
                 }
 
-                issue
-                    .read
-                    .insert(sender_id.to_hex(), issue.events.len() as u64);
+                issue.read.insert(current_id.to_hex(), issue.events.len() as u64);
             }
         }
 
         issue.last_modified = Utc::now().timestamp_micros();
 
         if is_history_changed {
-            let edit_history_item = IssueEditHistory {
-                id: issue.edit_history.len(),
-                date: issue.last_modified.clone(),
-                author: auth.id().unwrap().to_hex(),
-                issue: serde_json::to_string(&json!({
+            let mut issues_history_map = audit
+                .edit_history
+                .iter()
+                .last()
+                .map_or(HashMap::new(), |history| history.issues.clone());
+
+            issues_history_map
+                .entry(issue_id)
+                .or_insert_with(Vec::new)
+                .push(serde_json::to_string(&json!({
+                    "issue_name": issue.name,
                     "feedback": issue.feedback,
-                })).unwrap(),
+                })).unwrap());
+
+            let edit_history_item = AuditEditHistory {
+                id: audit.edit_history.len(),
+                date: issue.last_modified.clone(),
+                author: current_id.to_hex(),
+                comment: None,
+                audit: audit
+                    .edit_history
+                    .iter()
+                    .last()
+                    .map_or("{}".to_string(), |history| history.audit.clone()),
+                issues: issues_history_map,
             };
-            issue.edit_history.push(edit_history_item);
+
+            let is_audit_approved = if audit.edit_history.is_empty() || audit.approved_by.is_empty() {
+                true
+            } else {
+                let first = audit.approved_by.values().next().unwrap();
+                audit.approved_by.values().all(|v| v == first)
+            };
+
+            if is_audit_approved {
+                audit.approved_by.insert(audit.auditor_id.to_hex(), edit_history_item.id.clone());
+                audit.approved_by.insert(audit.customer_id.to_hex(), edit_history_item.id.clone());
+            } else {
+                audit.approved_by.insert(current_id.to_hex(), edit_history_item.id.clone());
+            }
         }
 
         if let Some(idx) = audit.issues.iter().position(|issue| issue.id == issue_id) {
@@ -1271,6 +1305,7 @@ impl AuditService {
                         author: user_id.to_hex(),
                         comment: None,
                         audit: history.audit.clone(),
+                        issues: history.issues.clone(),
                     };
                     audit.edit_history.push(new_history_item.clone());
 
