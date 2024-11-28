@@ -12,3 +12,4 @@ pub mod project;
 pub mod rating;
 pub mod role;
 pub mod user;
+pub mod scope;

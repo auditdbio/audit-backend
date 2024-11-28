@@ -17,6 +17,7 @@ use crate::{
         contacts::Contacts,
         issue::{Issue, Status},
         project::PublicProject,
+        scope::{Scope, ScopeContent},
     },
     error,
     services::{API_PREFIX, CUSTOMERS_SERVICE, PROTOCOL},
@@ -38,7 +39,7 @@ pub struct AuditChange {
     pub action: Option<AuditAction>,
     pub project_name: Option<String>,
     pub description: Option<String>,
-    pub scope: Option<Vec<String>>,
+    pub scope: Option<Scope>,
     pub tags: Option<Vec<String>>,
     pub price: Option<i64>,
     pub total_cost: Option<i64>,
@@ -109,7 +110,7 @@ pub struct PublicAudit {
 
     pub project_name: String,
     pub description: String,
-    pub scope: Vec<String>,
+    pub scope: Scope,
     pub tags: Vec<String>,
     pub status: PublicAuditStatus,
     pub price: Option<i64>,
@@ -138,6 +139,7 @@ impl PublicAudit {
         audit: Audit<ObjectId>,
         only_public: bool,
     ) -> error::Result<PublicAudit> {
+        let mut audit = audit.clone();
         let auth = context.auth();
 
         let auditor = request_auditor(&context, audit.auditor_id, context.server_auth()).await?;
@@ -271,6 +273,19 @@ impl PublicAudit {
             None
         };
 
+        if let ScopeContent::GitBlock(ref mut git_block) = audit.scope.content {
+            for file in &mut git_block.files {
+                if file.display_url.is_none() {
+                    file.display_url = Some(format!(
+                        "{}/blob/{}/{}",
+                        git_block.repository.clone_url,
+                        git_block.commit,
+                        file.path,
+                    ));
+                }
+            }
+        }
+
         let public_audit = PublicAudit {
             id: audit.id.to_hex(),
             auditor_id: audit.auditor_id.to_hex(),
@@ -319,7 +334,7 @@ pub struct NoCustomerAuditRequest {
     pub project_name: String,
     pub description: String,
     pub status: AuditStatus,
-    pub scope: Option<Vec<String>>,
+    pub scope: Option<Scope>,
     pub tags: Option<Vec<String>>,
     pub report: Option<String>,
     pub report_name: Option<String>,

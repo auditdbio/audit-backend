@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{json, to_string};
 use chrono::Utc;
 use rand::Rng;
 use mongodb::bson::{oid::ObjectId, Bson, doc};
@@ -37,10 +37,12 @@ use common::{
         issue::{severity_to_integer, ChangeIssue, Event, EventKind, Issue, Status, Action, IssueEditHistory},
         project::get_project,
         role::Role,
+        scope::Scope,
     },
     error::{self, AddCode},
     services::{FILES_SERVICE, PROTOCOL, API_PREFIX},
 };
+use common::entities::scope::{ScopeContent, ScopeType};
 
 use super::audit_request::PublicRequest;
 
@@ -193,7 +195,10 @@ impl AuditService {
             project_name: request.project_name,
             description: request.description,
             status: request.status,
-            scope: request.scope.unwrap_or(vec![]),
+            scope: request.scope.unwrap_or(Scope {
+                typ: ScopeType::Links,
+                content: ScopeContent::Links(vec![])
+            }),
             tags: request.tags.unwrap_or(vec![]),
             price: None,
             total_cost: None,
@@ -337,9 +342,9 @@ impl AuditService {
         let mut is_approve_needed = false;
 
         if audit.status != AuditStatus::Resolved || audit.no_customer {
-            if let Some(scope) = change.scope.clone() {
-                if audit.scope != scope {
-                    audit.scope = scope;
+            if let Some(new_scope) = change.scope.clone() {
+                if audit.scope.typ != new_scope.typ || audit.scope.content != new_scope.content {
+                    audit.scope = new_scope;
                     is_history_changed = true;
                     is_approve_needed = true;
                 }
@@ -467,7 +472,7 @@ impl AuditService {
                 date: Utc::now().timestamp_micros(),
                 author: user_id.to_hex(),
                 comment: change.comment,
-                audit: serde_json::to_string(&json!({
+                audit: to_string(&json!({
                     "project_name": audit.project_name,
                     "description": audit.description,
                     "scope": audit.scope,
@@ -493,15 +498,25 @@ impl AuditService {
                         .iter()
                         .find(|h| h.id == *v)
                     {
-                        let history: AuditChange = serde_json::from_str(&history.audit).unwrap();
-                        let history_scope = history.scope.unwrap_or_default().join("");
+                        let history = serde_json::from_str::<AuditChange>(&history.audit);
 
-                        if history.price == change.price
-                            && history.total_cost == change.total_cost
-                            && history_scope == audit.scope.join("")
-                        {
-                            true
-                        } else { false }
+                        match history {
+                            Ok(history) => {
+                                let is_scope_match = if let Some(history_scope) = history.scope {
+                                    to_string(&history_scope).unwrap() == to_string(&audit.scope).unwrap()
+                                } else {
+                                    false
+                                };
+
+                                if history.price == change.price
+                                    && history.total_cost == change.total_cost
+                                    && is_scope_match
+                                {
+                                    true
+                                } else { false }
+                            }
+                            Err(_) => false
+                        }
                     } else { false }
                 });
 
@@ -910,7 +925,7 @@ impl AuditService {
                 id: issue.edit_history.len(),
                 date: issue.last_modified.clone(),
                 author: auth.id().unwrap().to_hex(),
-                issue: serde_json::to_string(&json!({
+                issue: to_string(&json!({
                     "feedback": issue.feedback,
                 })).unwrap(),
             };
