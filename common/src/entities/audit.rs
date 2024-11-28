@@ -243,6 +243,7 @@ pub struct PublicAuditEditHistory {
     pub author: EditHistoryAuthor,
     pub comment: Option<String>,
     pub audit: String,
+    pub issues: HashMap<usize, Vec<String>>,
 }
 
 impl PublicAuditEditHistory {
@@ -303,6 +304,7 @@ impl PublicAuditEditHistory {
             author,
             comment: history.comment,
             audit: history.audit,
+            issues: history.issues,
         })
     }
 }
