@@ -935,6 +935,8 @@ impl AuditService {
                 issues: issues_history_map,
             };
 
+            audit.edit_history.push(edit_history_item.clone());
+
             let is_audit_approved = if audit.edit_history.is_empty() || audit.approved_by.is_empty() {
                 true
             } else {
