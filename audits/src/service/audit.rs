@@ -915,7 +915,7 @@ impl AuditService {
                 .map_or(HashMap::new(), |history| history.issues.clone());
 
             issues_history_map
-                .entry(issue_id)
+                .entry(issue_id.to_string())
                 .or_insert_with(Vec::new)
                 .push(serde_json::to_string(&json!({
                     "issue_name": issue.name,
