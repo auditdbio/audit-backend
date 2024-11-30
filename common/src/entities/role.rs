@@ -20,8 +20,8 @@ impl Role {
 
     pub fn stringify(&self) -> &'static str {
         match self {
-            Role::Customer => "customer",
-            Role::Auditor => "auditor",
+            Role::Customer => "Customer",
+            Role::Auditor => "Auditor",
         }
     }
 }
