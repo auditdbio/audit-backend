@@ -205,9 +205,15 @@ impl ChatRepository {
 
     pub async fn groups_by_user(
         &self,
-        user_id: ChatId,
+        chat_id: ChatId,
     ) -> error::Result<(Vec<Group>, Vec<PrivateChat>)> {
-        let document = to_document(&user_id)?;
+        let document = doc! {
+            "$elemMatch": {
+                "role": chat_id.role.stringify(),
+                "id": chat_id.id,
+            }
+        };
+
         let groups = self
             .groups
             .find_many("members", &Bson::Document(document.clone()))
@@ -222,7 +228,14 @@ impl ChatRepository {
     pub async fn find_by_members(&self, members: Vec<ChatId>) -> error::Result<Option<PrivateChat>> {
         let values: Vec<Bson> = members
             .into_iter()
-            .map(|chat_id| Bson::Document(to_document(&chat_id).unwrap()))
+            .map(|chat_id| {
+                Bson::Document(doc! {
+                "$elemMatch": {
+                    "role": chat_id.role.stringify(),
+                    "id": chat_id.id,
+                }
+            })
+            })
             .collect();
 
         let document = Bson::Document(doc! {"$all": Bson::Array(values)});
@@ -231,6 +244,7 @@ impl ChatRepository {
             .private_chats
             .find("members", &document)
             .await?;
+
         Ok(chat)
     }
 
