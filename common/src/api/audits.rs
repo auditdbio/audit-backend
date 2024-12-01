@@ -24,7 +24,7 @@ use crate::{
 
 use super::issue::PublicIssue;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum AuditAction {
     #[serde(alias = "start")]
     Start,
@@ -32,7 +32,7 @@ pub enum AuditAction {
     Resolve,
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct AuditChange {
     pub avatar: Option<String>,
     pub action: Option<AuditAction>,
@@ -45,7 +45,6 @@ pub struct AuditChange {
     pub report_type: Option<ReportType>,
     pub report: Option<String>,
     pub time: Option<TimeRange>,
-    pub start_audit: Option<bool>,
     pub public: Option<bool>,
     pub conclusion: Option<String>,
     pub comment: Option<String>,
