@@ -172,7 +172,7 @@ impl ChatService {
             .unwrap();
 
         let id = ChatId {
-            role,
+            role: role.into(),
             id: auth.id().unwrap(),
         };
 
@@ -186,7 +186,7 @@ impl ChatService {
                     continue;
                 }
 
-                let (name, avatar) = if id.role == Role::Auditor {
+                let (name, avatar) = if id.role == Role::Auditor.into() {
                     let auditor = match request_auditor(&self.context, id.id, auth.clone()).await {
                         Ok(auditor) => auditor,
                         _ => continue
@@ -198,7 +198,7 @@ impl ChatService {
                         auditor.first_name().clone() + " " + auditor.last_name(),
                         auditor.avatar().to_string(),
                     )
-                } else {
+                } else if id.role == Role::Customer.into() {
                     let customer = match request_customer(&self.context, id.id, auth.clone()).await {
                         Ok(customer) => customer,
                         _ => continue
@@ -210,6 +210,9 @@ impl ChatService {
                         customer.first_name + " " + &customer.last_name,
                         customer.avatar,
                     )
+                } else {
+                    // todo: fix after update with organizations
+                    continue;
                 };
 
                 let unread = if let Some(unread) = private.unread.clone() {
