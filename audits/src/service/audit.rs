@@ -144,11 +144,17 @@ impl AuditService {
         let chat = send_message(message, auth)?;
 
         audit.chat_id = Some(AuditMessageId {
-            chat_id: chat.id,
-            message_id: chat.last_message.id,
+            chat_id: chat.id.clone(),
+            message_id: chat.last_message.id.clone(),
         });
 
-        audits.insert(&audit).await?;
+        audits
+            .insert(&audit)
+            .await
+            .map_err(|err| {
+                delete_message(chat.id, chat.last_message.id, auth.clone()).ok();
+                err
+            })?;
 
         let event = PublicEvent::new(
             event_receiver,
