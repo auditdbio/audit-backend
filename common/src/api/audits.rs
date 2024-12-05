@@ -119,6 +119,7 @@ pub struct PublicAudit {
     pub resolved_at: Option<i64>,
     pub report: Option<String>,
     pub report_name: Option<String>,
+    pub report_type: Option<ReportType>,
     #[serde(rename = "isPublic")]
     pub public: bool,
 
@@ -295,6 +296,7 @@ impl PublicAudit {
             resolved_at: audit.resolved_at,
             report: audit.report,
             report_name,
+            report_type: audit.report_type,
             issues,
             public: audit.public,
             no_customer: audit.no_customer,
