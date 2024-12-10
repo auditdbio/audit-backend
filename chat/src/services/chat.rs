@@ -13,7 +13,7 @@ use common::{
         file::request_file_metadata,
     },
     context::GeneralContext,
-    entities::role::Role,
+    entities::role::{Role, ChatRole},
     error::{self, AddCode},
     services::{API_PREFIX, EVENTS_SERVICE, PROTOCOL},
 };
@@ -60,6 +60,8 @@ impl ChatService {
     pub async fn send_message(&self, message: CreateMessage) -> error::Result<PublicChat> {
         // TODO: check permissions
         let auth = self.context.auth();
+
+        let mut is_new_chat = false;
 
         let repo = self
             .context
@@ -122,6 +124,7 @@ impl ChatService {
                     kind: message.kind,
                 }
             } else {
+                is_new_chat = true;
                 let stored_message = Message {
                     id: ObjectId::new(),
                     from,
@@ -138,8 +141,43 @@ impl ChatService {
         };
 
         let chat = repo.message(message.clone()).await?;
+        let mut public_chat = chat.publish();
+
+        let (chat_name, chat_avatar) = if is_new_chat {
+            for mut unread in public_chat.unread.clone() {
+                if unread.id != auth.id().unwrap().to_hex() {
+                    unread.unread = 1;
+                }
+            }
+
+            if from.role == ChatRole::Organization {
+                // let org = get_organization(&self.context, from.id, None).await?;
+                // (org.name, org.avatar)
+                ("Organization".to_string(), None) // TODO: update this after merge with organizations
+            } else if from.role == ChatRole::Auditor {
+                let auditor = request_auditor(&self.context, from.id, auth.clone()).await?;
+                (
+                    auditor.first_name().clone() + " " + auditor.last_name(),
+                    Some(auditor.avatar().to_string()),
+                )
+            } else if from.role == ChatRole::Customer {
+                let customer = request_customer(&self.context, from.id, auth.clone()).await?;
+                (
+                    customer.first_name + " " + &customer.last_name,
+                    Some(customer.avatar),
+                )
+            } else {
+                ("Private chat".to_string(), None)
+            }
+        } else {
+            ("Private chat".to_string(), None)
+        };
+
+        public_chat.name = chat_name;
+        public_chat.avatar = chat_avatar;
 
         let payload = EventPayload::ChatMessage(message.publish());
+        let new_chat_payload = EventPayload::NewChat(public_chat.clone());
 
         for user_id in chat.members() {
             if user_id.id != auth.id().unwrap() {
@@ -159,8 +197,31 @@ impl ChatService {
                 .json(&event)
                 .send()
                 .await?;
+
+            // TODO: update this after merge with organizations
+            if is_new_chat && user_id.id != auth.id().unwrap() {
+                let new_chat_event = PublicEvent::new(
+                    user_id.id,
+                    None,
+                    new_chat_payload.clone(),
+                );
+                self.context
+                    .make_request()
+                    .post(format!(
+                        "{}://{}/{}/event",
+                        PROTOCOL.as_str(),
+                        EVENTS_SERVICE.as_str(),
+                        API_PREFIX.as_str(),
+                    ))
+                    .json(&new_chat_event)
+                    .send()
+                    .await?;
+            }
+            // ---
+
         }
-        Ok(chat.publish())
+
+        Ok(public_chat)
     }
 
     pub async fn preview(&self, role: Role) -> error::Result<Vec<PublicChat>> {
