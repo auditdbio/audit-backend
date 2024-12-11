@@ -144,7 +144,7 @@ impl ChatService {
         let mut public_chat = chat.publish();
 
         let (chat_name, chat_avatar) = if is_new_chat {
-            for mut unread in public_chat.unread.clone() {
+            for unread in &mut public_chat.unread {
                 if unread.id != auth.id().unwrap().to_hex() {
                     unread.unread = 1;
                 }
