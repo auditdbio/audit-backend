@@ -202,7 +202,7 @@ impl ChatService {
             if is_new_chat && user_id.id != auth.id().unwrap() {
                 let new_chat_event = PublicEvent::new(
                     user_id.id,
-                    None,
+                    Some(user_id.role.to_role()?),
                     new_chat_payload.clone(),
                 );
                 self.context
