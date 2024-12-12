@@ -188,7 +188,7 @@ impl ChatService {
         let mut public_chat = chat.publish();
 
         let (chat_name, chat_avatar) = if is_new_chat {
-            for mut unread in public_chat.unread.clone() {
+            for unread in &mut public_chat.unread {
                 if unread.id != current_id.to_hex() {
                     unread.unread = 1;
                 }
@@ -228,8 +228,9 @@ impl ChatService {
             }
 
             if member.role == ChatRole::Organization {
-                let org_members = get_organization(&self.context, member.id, None)
-                    .await?
+                let organization = get_organization(&self.context, member.id, None)
+                    .await?;
+                let org_members = organization
                     .members
                     .unwrap_or(vec![]);
 
@@ -237,7 +238,7 @@ impl ChatService {
                     let org_user_id = org_member.user_id.parse()?;
                     let message_event = PublicEvent::new(
                         org_user_id,
-                        None,
+                        Some(organization.organization_type),
                         message_payload.clone(),
                     );
 

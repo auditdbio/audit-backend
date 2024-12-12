@@ -54,4 +54,12 @@ impl ChatRole {
             ChatRole::Organization => "Organization",
         }
     }
+
+    pub fn to_role(self) -> error::Result<Role>  {
+        match self {
+            ChatRole::Auditor => Ok(Role::Auditor),
+            ChatRole::Customer => Ok(Role::Customer),
+            _ => Err(anyhow::anyhow!("Invalid role: {:?}", self).code(400)),
+        }
+    }
 }
