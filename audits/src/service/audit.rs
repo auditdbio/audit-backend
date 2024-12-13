@@ -11,7 +11,7 @@ use common::{
         audits::{
             AuditAction, AuditChange,
             CreateIssue, PublicAudit,
-            NoCustomerAuditRequest,
+            NoCustomerAuditRequest, CreateAudit,
             create_access_code,
         },
         chat::{
@@ -22,6 +22,10 @@ use common::{
         file::ChangeFile,
         events::{post_event, EventPayload, PublicEvent},
         issue::PublicIssue,
+        organization::{
+            get_organization, check_is_organization_user,
+            check_editor_rights, get_my_organizations,
+        },
         send_notification, NewNotification,
         seartch::PaginationParams,
     },
@@ -37,12 +41,11 @@ use common::{
         issue::{severity_to_integer, ChangeIssue, Event, EventKind, Issue, Status, Action, IssueEditHistory},
         project::get_project,
         role::Role,
+        organization::OrgAccessLevel,
     },
     error::{self, AddCode},
     services::{FILES_SERVICE, PROTOCOL, API_PREFIX},
 };
-
-use super::audit_request::PublicRequest;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MyAuditResult {
@@ -60,7 +63,7 @@ impl AuditService {
         Self { context }
     }
 
-    pub async fn create(&self, request: PublicRequest) -> error::Result<PublicAudit> {
+    pub async fn create(&self, request: CreateAudit) -> error::Result<PublicAudit> {
         let auth = self.context.auth();
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
@@ -73,6 +76,37 @@ impl AuditService {
         } else {
             Vec::new()
         };
+
+        if request.auditor_organization.is_some() {
+            let org = get_organization(
+                &self.context,
+                request.auditor_organization.clone().unwrap().parse()?,
+                None,
+            ).await?;
+            if org.organization_type != Role::Auditor {
+                return Err(
+                    anyhow::anyhow!("The type for the auditor's organization does not match").code(400)
+                );
+            }
+            if let Some(members) = org.members {
+                check_editor_rights(members, user_id).await?;
+            }
+        }
+        if request.customer_organization.is_some() {
+            let org = get_organization(
+                &self.context,
+                request.customer_organization.clone().unwrap().parse()?,
+                None,
+            ).await?;
+            if org.organization_type != Role::Customer {
+                return Err(
+                    anyhow::anyhow!("The type for the customer's organization does not match").code(400)
+                );
+            }
+            if let Some(members) = org.members {
+                check_editor_rights(members, user_id).await?;
+            }
+        }
 
         let mut audit = Audit {
             id: request.id.parse()?,
@@ -104,6 +138,8 @@ impl AuditService {
             ]),
             access_code: None,
             report_sha: None,
+            auditor_organization: request.auditor_organization.clone().map(|id| id.parse().unwrap()),
+            customer_organization: request.customer_organization.clone().map(|id| id.parse().unwrap()),
         };
 
         let requests = self
@@ -180,10 +216,32 @@ impl AuditService {
         request: NoCustomerAuditRequest,
     ) -> error::Result<PublicAudit> {
         let auth = self.context.auth();
+        let user_id = auth.id().unwrap();
+
         let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
 
         let auditor_id: ObjectId = request.auditor_id.parse()?;
         let customer_id: ObjectId = auditor_id;
+
+        if user_id != auditor_id {
+            return Err(anyhow::anyhow!("Auditor ID doesn't match current user").code(403));
+        }
+
+        if request.auditor_organization.is_some() {
+            let org = get_organization(
+                &self.context,
+                request.auditor_organization.clone().unwrap().parse()?,
+                None,
+            ).await?;
+            if org.organization_type != Role::Auditor {
+                return Err(
+                    anyhow::anyhow!("The type for the auditor's organization does not match").code(400)
+                );
+            }
+            if let Some(members) = org.members {
+                check_editor_rights(members, user_id).await?;
+            }
+        }
 
         let timestamp = Utc::now().timestamp_micros();
         let time = TimeRange {
@@ -218,6 +276,8 @@ impl AuditService {
             unread_edits: HashMap::new(),
             access_code: Some(create_access_code()),
             report_sha: None,
+            auditor_organization: request.auditor_organization.clone().map(|id| id.parse().unwrap()),
+            customer_organization: None
         };
 
         if !Edit.get_access(&auth, &audit) {
@@ -238,8 +298,22 @@ impl AuditService {
             return Ok(None);
         };
 
-        if !Read.get_access(&auth, &audit) {
+        let user_access = Read.get_access(&auth, &audit);
+        if !user_access && audit.auditor_organization.is_none() {
             return Err(anyhow::anyhow!("User is not available to read this audit").code(403));
+        }
+
+        if !user_access {
+            if let Some(auditor_organization) = audit.auditor_organization {
+                let is_organization_auditor = check_is_organization_user(
+                    &self.context,
+                    auditor_organization,
+                    None,
+                ).await?;
+                if !is_organization_auditor {
+                    return Err(anyhow::anyhow!("User is not available to read this audit").code(403));
+                }
+            }
         }
 
         Ok(Some(audit))
@@ -315,6 +389,9 @@ impl AuditService {
         let mut public_audits = Vec::new();
 
         for audit in audits {
+            if audit.auditor_organization.is_some() || audit.customer_organization.is_some() {
+                continue
+            }
             public_audits.push(PublicAudit::new(&self.context, audit, false).await?);
         }
 
@@ -335,8 +412,23 @@ impl AuditService {
             return Err(anyhow::anyhow!("No audit found").code(404));
         };
 
-        if !Edit.get_access(&auth, &audit) {
+        let user_access = Edit.get_access(&auth, &audit);
+        if !user_access && audit.auditor_organization.is_none() {
             return Err(anyhow::anyhow!("User is not available to change this audit").code(403));
+        }
+
+        let mut is_organization_auditor = false;
+        if !user_access {
+            if let Some(auditor_organization) = audit.auditor_organization {
+                is_organization_auditor = check_is_organization_user(
+                    &self.context,
+                    auditor_organization,
+                    Some(OrgAccessLevel::Editor),
+                ).await?;
+                if !is_organization_auditor {
+                    return Err(anyhow::anyhow!("User is not available to change this audit").code(403));
+                }
+            }
         }
 
         if !auth.full_access() && !audit.no_customer && audit.status == AuditStatus::Resolved {
@@ -476,17 +568,20 @@ impl AuditService {
             event_receiver,
             receiver_role,
             last_changer_role,
+            last_changer_id,
         ) = if user_id == audit.customer_id {
-            (audit.auditor_id, Role::Auditor, Role::Customer)
+            (audit.auditor_id, Role::Auditor, Role::Customer, audit.customer_id)
+        } else if user_id == audit.auditor_id || is_organization_auditor {
+            (audit.customer_id, Role::Customer, Role::Auditor, audit.auditor_id)
         } else {
-            (audit.customer_id, Role::Customer, Role::Auditor)
+            return Err(anyhow::anyhow!("User is not available to change this audit").code(403));
         };
 
         if is_history_changed {
             let edit_history_item = AuditEditHistory {
                 id: audit.edit_history.len(),
                 date: Utc::now().timestamp_micros(),
-                author: user_id.to_hex(),
+                author: last_changer_id.to_hex(),
                 comment: change.comment,
                 audit: serde_json::to_string(&json!({
                     "project_name": audit.project_name,
@@ -502,12 +597,20 @@ impl AuditService {
 
             audit.edit_history.push(edit_history_item.clone());
 
+            let current_approve_id = if last_changer_role == Role::Customer {
+                audit.customer_id.to_hex()
+            } else if last_changer_role == Role::Auditor {
+                audit.auditor_id.to_hex()
+            } else {
+                return Err(anyhow::anyhow!("Unknown role").code(400));
+            };
+
             if is_audit_approved && !is_approve_needed {
                 audit.approved_by.insert(audit.auditor_id.to_hex(), edit_history_item.id.clone());
                 audit.approved_by.insert(audit.customer_id.to_hex(), edit_history_item.id.clone());
             } else {
                 let mut approved_by = audit.approved_by.clone();
-                approved_by.remove(&user_id.to_hex());
+                approved_by.remove(&current_approve_id);
                 let is_values_match = approved_by.values().all(|v| {
                     if let Some(history) = audit
                         .edit_history
@@ -530,12 +633,12 @@ impl AuditService {
                     audit.approved_by.insert(audit.auditor_id.to_hex(), edit_history_item.id.clone());
                     audit.approved_by.insert(audit.customer_id.to_hex(), edit_history_item.id.clone());
                 } else {
-                    audit.approved_by.insert(user_id.to_hex(), edit_history_item.id.clone());
+                    audit.approved_by.insert(current_approve_id.clone(), edit_history_item.id.clone());
                 }
             }
 
             *audit.unread_edits.entry(event_receiver.to_hex()).or_insert(0) += 1;
-            audit.unread_edits.insert(user_id.to_hex(), 0);
+            audit.unread_edits.insert(current_approve_id, 0);
         }
 
         let public_audit = PublicAudit::new(&self.context, audit.clone(), false).await?;
@@ -549,7 +652,6 @@ impl AuditService {
         post_event(&self.context, event, self.context.server_auth()).await?;
 
         if change.report.is_some() && audit.status != AuditStatus::Resolved {
-
             audits.delete("_id", &id).await?;
             audits.insert(&audit).await?;
 
@@ -599,9 +701,24 @@ impl AuditService {
             return Err(anyhow::anyhow!("No audit found").code(404));
         };
 
-        if !Edit.get_access(&auth, &audit) {
+        let user_access = Edit.get_access(&auth, &audit);
+        if !user_access && audit.auditor_organization.is_none() {
             audits.insert(&audit).await?;
             return Err(anyhow::anyhow!("User is not available to delete this audit").code(403));
+        }
+
+        if !user_access {
+            if let Some(auditor_organization) = audit.auditor_organization {
+                let is_organization_auditor = check_is_organization_user(
+                    &self.context,
+                    auditor_organization,
+                    Some(OrgAccessLevel::Editor),
+                ).await?;
+                if !is_organization_auditor {
+                    audits.insert(&audit).await?;
+                    return Err(anyhow::anyhow!("User is not available to delete this audit").code(403));
+                }
+            }
         }
 
         let public_audit = PublicAudit::new(&self.context, audit.clone(), false).await?;
@@ -724,7 +841,8 @@ impl AuditService {
             return Err(anyhow::anyhow!("No audit found").code(404));
         };
 
-        if !change.get_access(&audit, &auth) && !audit.no_customer {
+        let user_access = change.get_access(&audit, &auth);
+        if !user_access && !audit.no_customer && audit.auditor_organization.is_none() {
             return Err(anyhow::anyhow!("User is not available to change this issue").code(403));
         }
 
@@ -739,6 +857,20 @@ impl AuditService {
                             key,
                         )).code(400));
                     }
+                }
+            }
+        }
+
+        let mut is_organization_auditor = false;
+        if !user_access {
+            if let Some(auditor_organization) = audit.auditor_organization {
+                is_organization_auditor = check_is_organization_user(
+                    &self.context,
+                    auditor_organization,
+                    Some(OrgAccessLevel::Editor),
+                ).await?;
+                if !is_organization_auditor {
+                    return Err(anyhow::anyhow!("User is not available to change this issue").code(403));
                 }
             }
         }
@@ -778,8 +910,10 @@ impl AuditService {
 
         let role = if auth.id().unwrap() == audit.customer_id {
             Role::Customer
-        } else {
+        } else if auth.id().unwrap() == audit.auditor_id || is_organization_auditor {
             Role::Auditor
+        } else {
+            return Err(anyhow::anyhow!("Unknown user role").code(400));
         };
 
         let receiver_id = if role == Role::Customer {
@@ -1021,8 +1155,6 @@ impl AuditService {
         let auth = self.context.auth();
         let audit = self.get_audit(audit_id).await?;
 
-        // TODO: make auth
-
         if let Some(mut audit) = audit {
             audit.issues.iter_mut().for_each(|issue| {
                 if issue.status == Status::Draft {
@@ -1055,10 +1187,6 @@ impl AuditService {
         let audit = self.get_audit(audit_id).await?;
 
         if let Some(audit) = audit {
-            if !Read.get_access(&auth, &audit) {
-                return Err(anyhow::anyhow!("User is not available to read this audit").code(403));
-            }
-
             let is_customer = auth.id().unwrap() == audit.customer_id && !audit.no_customer;
 
             let issues = audit.issues;
@@ -1111,7 +1239,7 @@ impl AuditService {
             return Err(anyhow::anyhow!("No audit found").code(404));
         };
 
-        if !Edit.get_access(&auth, &audit) || !audit.no_customer {
+        if !Edit.get_access(&auth, &audit) {
             return Err(anyhow::anyhow!("User is not available to delete this issue").code(403));
         }
 
@@ -1244,6 +1372,55 @@ impl AuditService {
         Ok(result)
     }
 
+    pub async fn find_my_organization_audits(&self) -> error::Result<Vec<PublicAudit>> {
+        let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
+        let organizations = get_my_organizations(&self.context).await?;
+
+        let mut result = vec![];
+        for org in organizations.owner {
+            let org_audits = audits
+                .find_many("auditor_organization", &Bson::ObjectId(org.id.parse()?))
+                .await?;
+            for audit in org_audits {
+                result.push(PublicAudit::new(&self.context, audit, false).await?);
+            }
+        }
+
+        for org in organizations.member {
+            let org_audits = audits
+                .find_many("auditor_organization", &Bson::ObjectId(org.id.parse()?))
+                .await?;
+            for audit in org_audits {
+                result.push(PublicAudit::new(&self.context, audit, false).await?);
+            }
+        }
+
+        Ok(result)
+    }
+
+    pub async fn find_organization_audits(&self, org_id: ObjectId) -> error::Result<Vec<PublicAudit>> {
+        let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
+
+        let is_organization_member = check_is_organization_user(&self.context, org_id, None)
+            .await?;
+        if !is_organization_member {
+            return Err(
+                anyhow::anyhow!("User is not a member of this organization or the user is not able to view audits"
+            ).code(403));
+        }
+
+        let org_audits = audits
+            .find_many("auditor_organization", &Bson::ObjectId(org_id))
+            .await?;
+
+        let mut result = vec![];
+        for audit in org_audits {
+            result.push(PublicAudit::new(&self.context, audit, false).await?);
+        }
+
+        Ok(result)
+    }
+
     pub async fn get_audit_edit_history(
         &self,
         id: ObjectId,
@@ -1292,6 +1469,8 @@ impl AuditService {
             else {
                 return Err(anyhow::anyhow!("History not found").code(404));
             };
+
+        // TODO: check for organizations
 
         if let Some(comment) = change.comment {
             if user_id == history.author.parse()? {

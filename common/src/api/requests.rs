@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     auth::Auth,
+    api::organization::get_organization,
     context::GeneralContext,
     entities::{
         audit_request::{AuditRequest, TimeRange},
@@ -14,6 +15,8 @@ use crate::{
     error,
     services::{API_PREFIX, AUDITORS_SERVICE, AUDITS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL},
 };
+use crate::api::organization::GetOrganizationQuery;
+use crate::entities::organization::PublicOrganization;
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct PublicRequest {
@@ -34,6 +37,8 @@ pub struct PublicRequest {
     pub auditor_contacts: Contacts,
     pub customer_contacts: Contacts,
     pub last_changer: Role,
+    pub auditor_organization: Option<PublicOrganization>,
+    pub customer_organization: Option<PublicOrganization>,
 }
 
 impl PublicRequest {
@@ -119,6 +124,30 @@ impl PublicRequest {
             project.scope
         };
 
+        let organization_query = GetOrganizationQuery {
+            with_members: Some(false),
+        };
+
+        let auditor_organization = if let Some(
+            auditor_organization
+        ) = request.auditor_organization {
+            Some(get_organization(
+                &context,
+                auditor_organization,
+                Some(organization_query.clone())
+            ).await?)
+        } else {
+            None
+        };
+
+        let customer_organization = if let Some(
+            customer_organization
+        ) = request.customer_organization {
+            Some(get_organization(&context, customer_organization, Some(organization_query)).await?)
+        } else {
+            None
+        };
+
         Ok(PublicRequest {
             id: request.id.to_hex(),
             customer_id: request.customer_id.to_hex(),
@@ -137,6 +166,8 @@ impl PublicRequest {
             auditor_contacts: auditor.contacts,
             customer_contacts: project.creator_contacts,
             last_changer: request.last_changer,
+            auditor_organization,
+            customer_organization,
         })
     }
 }
@@ -170,6 +201,9 @@ pub struct CreateRequest {
     pub total_cost: Option<i64>,
     pub description: String,
     pub time: TimeRange,
+
+    pub auditor_organization: Option<String>,
+    pub customer_organization: Option<String>,
 }
 
 pub async fn create_request(

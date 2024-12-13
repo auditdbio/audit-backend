@@ -2,7 +2,7 @@ use chrono::Utc;
 use mongodb::bson::{oid::ObjectId, Bson};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
-use reqwest::{header, Client, StatusCode};
+use reqwest::StatusCode;
 use std::env::var;
 use actix_web::HttpResponse;
 use web3::signing::{keccak256, recover};
@@ -13,11 +13,9 @@ use common::{
         badge::merge,
         linked_accounts::{
             AddLinkedAccount, LinkedService,
-            GetXAccessToken, XAccessResponse,
-            XUserResponse, GetLinkedInAccessToken,
-            LinkedInAccessResponse, LinkedInUserResponse,
             GetGithubAccessToken, UpdateLinkedAccount,
-            AddWallet,
+            AddWallet, create_x_account,
+            create_linked_in_account, create_github_account
         },
         user::{get_access_token, create_request_with_token},
     },
@@ -29,8 +27,6 @@ use common::{
     error::{self, AddCode},
     services::{PROTOCOL, USERS_SERVICE, API_PREFIX},
 };
-
-use crate::service::auth::AuthService;
 
 use super::auth::ChangePassword;
 
@@ -251,9 +247,6 @@ impl UserService {
         data: AddLinkedAccount,
     ) -> error::Result<PublicLinkedAccount> {
         let auth = self.context.auth();
-        let client = Client::new();
-        let protocol = var("PROTOCOL").unwrap();
-        let frontend = var("FRONTEND").unwrap();
 
         if data.service == LinkedService::GitHub {
             let github_auth = GetGithubAccessToken {
@@ -262,8 +255,7 @@ impl UserService {
                 client_secret: var("GITHUB_CLIENT_SECRET").unwrap(),
             };
 
-            let (_, linked_account) = AuthService::new(self.context.clone())
-                .github_get_user(github_auth, data.clone().current_role).await?;
+            let linked_account = create_github_account(github_auth).await?;
 
             if Self::find_user_by_linked_account(
                 &self,
@@ -295,7 +287,7 @@ impl UserService {
                     }
                 }
 
-                return Err(anyhow::anyhow!("Account has already been added").code(404))
+                return Err(anyhow::anyhow!("Account has already been added").code(400))
             }
 
             Self::add_linked_account(&self, id, linked_account.clone(), auth).await?;
@@ -304,60 +296,14 @@ impl UserService {
         }
 
         if data.service == LinkedService::X {
-            let client_id = var("X_CLIENT_ID").unwrap();
-            let client_secret = var("X_CLIENT_SECRET").unwrap();
-
-            let x_auth = GetXAccessToken {
-                code: data.code,
-                client_id: client_id.clone(),
-                grant_type: "authorization_code".to_string(),
-                redirect_uri: format!("{}://{}/oauth/callback", protocol, frontend),
-                code_verifier: "challenge".to_string(),
-            };
-
-            let access_response = client
-                .post("https://api.twitter.com/2/oauth2/token")
-                .header(header::ACCEPT, "application/json")
-                .header(header::CONTENT_TYPE, "application/json")
-                .basic_auth(client_id, Some(client_secret))
-                .json(&x_auth)
-                .send()
-                .await?
-                .text()
-                .await?;
-
-            let access_json: XAccessResponse = serde_json::from_str(&access_response)?;
-            let access_token = access_json.access_token;
-
-            let user_response = client
-                .get("https://api.twitter.com/2/users/me?user.fields=profile_image_url,url")
-                .header(header::ACCEPT, "application/json")
-                .bearer_auth(access_token)
-                .send()
-                .await?
-                .text()
-                .await?;
-
-            let account_data: XUserResponse = serde_json::from_str(&user_response)?;
-
-            let linked_account = LinkedAccount {
-                id: account_data.data.id,
-                name: LinkedService::X,
-                email: "".to_string(),
-                url: format!("https://twitter.com/{}", account_data.data.username),
-                avatar: account_data.data.profile_image_url.unwrap_or_default(),
-                is_public: false,
-                username: account_data.data.username,
-                token: None,
-                scope: None,
-            };
+            let linked_account = create_x_account(data).await?;
 
             if Self::find_user_by_linked_account(
                 &self,
                 linked_account.id.clone(),
                 &LinkedService::X
             ).await?.is_some() {
-                return Err(anyhow::anyhow!("Account has already been added").code(404))
+                return Err(anyhow::anyhow!("Account has already been added").code(400))
             }
 
             Self::add_linked_account(&self, id, linked_account.clone(), auth).await?;
@@ -366,57 +312,14 @@ impl UserService {
         }
 
         if data.service == LinkedService::LinkedIn {
-            let client_id = var("LINKEDIN_CLIENT_ID").unwrap();
-            let client_secret = var("LINKEDIN_CLIENT_SECRET").unwrap();
-
-            let linkedin_auth = GetLinkedInAccessToken {
-                code: data.code,
-                client_id: client_id.clone(),
-                client_secret,
-                grant_type: "authorization_code".to_string(),
-                redirect_uri: format!("{}://{}/oauth/callback", protocol, frontend),
-            };
-
-            let access_response = client
-                .post("https://www.linkedin.com/oauth/v2/accessToken")
-                .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
-                .form(&linkedin_auth)
-                .send()
-                .await?
-                .text()
-                .await?;
-
-            let access_json: LinkedInAccessResponse = serde_json::from_str(&access_response)?;
-            let access_token = access_json.access_token;
-
-            let user_response = client
-                .get("https://api.linkedin.com/v2/userinfo")
-                .bearer_auth(access_token)
-                .send()
-                .await?
-                .text()
-                .await?;
-
-            let account_data: LinkedInUserResponse = serde_json::from_str(&user_response)?;
-
-            let linked_account = LinkedAccount {
-                id: account_data.sub,
-                name: LinkedService::LinkedIn,
-                email: account_data.email.unwrap_or_default(),
-                url: "".to_string(),
-                avatar: account_data.picture.unwrap_or_default(),
-                is_public: false,
-                username: account_data.name,
-                token: None,
-                scope: None,
-            };
+            let linked_account = create_linked_in_account(data).await?;
 
             if Self::find_user_by_linked_account(
                 &self,
                 linked_account.id.clone(),
                 &LinkedService::LinkedIn,
             ).await?.is_some() {
-                return Err(anyhow::anyhow!("Account has already been added").code(404))
+                return Err(anyhow::anyhow!("Account has already been added").code(400))
             }
 
             Self::add_linked_account(&self, id, linked_account.clone(), auth).await?;
