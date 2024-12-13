@@ -884,7 +884,7 @@ impl AuditService {
         }
 
         if let Some(feedback) = change.feedback {
-            let message = if feedback.is_empty() {
+            let message = if issue.feedback.is_empty() {
                 "added feedback".to_string()
             } else {
                 "changed feedback".to_string()
