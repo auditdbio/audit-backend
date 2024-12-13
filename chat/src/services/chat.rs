@@ -245,7 +245,7 @@ impl ChatService {
                     if is_new_chat && org_member.user_id != current_id.to_hex() {
                         let new_chat_event = PublicEvent::new(
                             org_user_id,
-                            None,
+                            Some(organization.organization_type),
                             new_chat_payload.clone(),
                         );
                         post_event(&self.context, new_chat_event, auth).await?;

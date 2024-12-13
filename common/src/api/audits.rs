@@ -27,7 +27,7 @@ use crate::{
 
 use super::issue::PublicIssue;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum AuditAction {
     #[serde(alias = "start")]
     Start,
@@ -35,7 +35,7 @@ pub enum AuditAction {
     Resolve,
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct AuditChange {
     pub avatar: Option<String>,
     pub action: Option<AuditAction>,
@@ -48,7 +48,6 @@ pub struct AuditChange {
     pub report_type: Option<ReportType>,
     pub report: Option<String>,
     pub time: Option<TimeRange>,
-    pub start_audit: Option<bool>,
     pub public: Option<bool>,
     pub conclusion: Option<String>,
     pub comment: Option<String>,
@@ -123,6 +122,7 @@ pub struct PublicAudit {
     pub resolved_at: Option<i64>,
     pub report: Option<String>,
     pub report_name: Option<String>,
+    pub report_type: Option<ReportType>,
     #[serde(rename = "isPublic")]
     pub public: bool,
 
@@ -319,6 +319,7 @@ impl PublicAudit {
             resolved_at: audit.resolved_at,
             report: audit.report,
             report_name,
+            report_type: audit.report_type,
             issues,
             public: audit.public,
             no_customer: audit.no_customer,
@@ -346,7 +347,6 @@ pub struct NoCustomerAuditRequest {
     pub status: AuditStatus,
     pub scope: Option<Vec<String>>,
     pub tags: Option<Vec<String>>,
-    pub last_modified: i64,
     pub report: Option<String>,
     pub report_name: Option<String>,
     #[serde(rename = "isPublic")]

@@ -235,11 +235,11 @@ impl ChatRepository {
             .into_iter()
             .map(|chat_id| {
                 Bson::Document(doc! {
-                "$elemMatch": {
-                    "role": chat_id.role.stringify(),
-                    "id": chat_id.id,
-                }
-            })
+                    "$elemMatch": {
+                        "role": chat_id.role.stringify(),
+                        "id": chat_id.id,
+                    }
+                })
             })
             .collect();
 

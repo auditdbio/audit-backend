@@ -15,7 +15,7 @@ use crate::{
     error::{self, AddCode},
     context::GeneralContext,
     repository::{Entity, HasLastModified},
-    services::{API_PREFIX, PROTOCOL, AUDITORS_SERVICE, CUSTOMERS_SERVICE, REPORT_SERVICE},
+    services::{API_PREFIX, PROTOCOL, AUDITORS_SERVICE, CUSTOMERS_SERVICE, REPORT_SERVICE, FILES_SERVICE},
 };
 
 use super::{audit_request::TimeRange, issue::Issue};
@@ -211,6 +211,30 @@ impl Audit<ObjectId> {
                         format!("Report receiving error: {}", report_response.status())
                     ).code(502)
                 );
+            }
+        } else if self.report_type.clone().unwrap() == ReportType::Custom && self.report.is_some() {
+            let report_response = context
+                .make_request::<()>()
+                .get(format!(
+                    "{}://{}/{}/file/id/{}",
+                    PROTOCOL.as_str(),
+                    FILES_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
+                    self.report.clone().unwrap(),
+                ))
+                .send()
+                .await;
+
+            if let Err(e) = report_response {
+                return Err(anyhow::anyhow!(format!("Error in report request: {}", e)).code(502));
+            }
+
+            let report_response = report_response.unwrap();
+            if report_response.status().is_success() {
+                let report = report_response.bytes().await?;
+                let mut combined_bytes = Vec::new();
+                combined_bytes.extend_from_slice(&report);
+                self.report_sha = Some(sha256::digest(&combined_bytes[..]));
             }
         }
 
