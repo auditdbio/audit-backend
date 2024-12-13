@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{json, Value};
 use chrono::Utc;
 use rand::Rng;
 use mongodb::bson::{oid::ObjectId, Bson, doc};
@@ -144,11 +144,17 @@ impl AuditService {
         let chat = send_message(message, auth)?;
 
         audit.chat_id = Some(AuditMessageId {
-            chat_id: chat.id,
-            message_id: chat.last_message.id,
+            chat_id: chat.id.clone(),
+            message_id: chat.last_message.id.clone(),
         });
 
-        audits.insert(&audit).await?;
+        audits
+            .insert(&audit)
+            .await
+            .map_err(|err| {
+                delete_message(chat.id, chat.last_message.id, auth.clone()).ok();
+                err
+            })?;
 
         let event = PublicEvent::new(
             event_receiver,
@@ -179,9 +185,10 @@ impl AuditService {
         let auditor_id: ObjectId = request.auditor_id.parse()?;
         let customer_id: ObjectId = auditor_id;
 
+        let timestamp = Utc::now().timestamp_micros();
         let time = TimeRange {
-            from: Utc::now().timestamp_micros(),
-            to: Utc::now().timestamp_micros(),
+            from: timestamp.clone(),
+            to: timestamp.clone(),
         };
 
         let audit = Audit {
@@ -196,7 +203,7 @@ impl AuditService {
             tags: request.tags.unwrap_or(vec![]),
             price: None,
             total_cost: None,
-            last_modified: Utc::now().timestamp_micros(),
+            last_modified: timestamp,
             resolved_at: None,
             report: None,
             report_type: None,
@@ -330,6 +337,21 @@ impl AuditService {
 
         if !Edit.get_access(&auth, &audit) {
             return Err(anyhow::anyhow!("User is not available to change this audit").code(403));
+        }
+
+        if !auth.full_access() && !audit.no_customer && audit.status == AuditStatus::Resolved {
+            let json_value = serde_json::to_value(change.clone())?;
+            let allowed_fields = ["public"];
+            if let Value::Object(map) = json_value {
+                for (key, value) in map {
+                    if !allowed_fields.contains(&key.as_str()) && !value.is_null() {
+                        return Err(anyhow::anyhow!(format!(
+                            "Only 'public' field can be modified in resolved audits. Found change in '{}'.",
+                            key,
+                        )).code(400));
+                    }
+                }
+            }
         }
 
         let mut is_history_changed = false;
@@ -622,6 +644,14 @@ impl AuditService {
             return Err(anyhow::anyhow!("No audit found").code(404));
         };
 
+        if !Edit.get_access(&auth, &audit) {
+            return Err(anyhow::anyhow!("User is not available to change this audit.").code(403));
+        }
+
+        if !audit.no_customer && audit.status == AuditStatus::Resolved {
+            return Err(anyhow::anyhow!("Is not available to add issue to resolved audit.").code(400));
+        }
+
         let issue: Issue<ObjectId> = Issue {
             id: rand::thread_rng().gen_range(10000..=99999) + audit.issues.len(),
             name: issue.name,
@@ -702,6 +732,21 @@ impl AuditService {
 
         if !change.get_access(&audit, &auth) && !audit.no_customer {
             return Err(anyhow::anyhow!("User is not available to change this issue").code(403));
+        }
+
+        if !auth.full_access() && !audit.no_customer && audit.status == AuditStatus::Resolved {
+            let json_value = serde_json::to_value(change.clone())?;
+            let allowed_fields = ["events"];
+            if let Value::Object(map) = json_value {
+                for (key, value) in map {
+                    if !allowed_fields.contains(&key.as_str()) && !value.is_null() {
+                        return Err(anyhow::anyhow!(format!(
+                            "Only 'events comment' field can be modified in resolved audits. Found change in '{}'.",
+                            key,
+                        )).code(400));
+                    }
+                }
+            }
         }
 
         let Some(mut issue) = audit
@@ -868,6 +913,12 @@ impl AuditService {
                 };
 
                 for create_event in events {
+                    if audit.status == AuditStatus::Resolved && !auth.full_access() {
+                        if create_event.kind != EventKind::Comment {
+                            return Err(anyhow::anyhow!("Only 'comment' can be modified in resolved audits.").code(400));
+                        }
+                    }
+
                     let event = Event {
                         timestamp: Utc::now().timestamp_micros(),
                         user: self.context.auth().id().unwrap(),

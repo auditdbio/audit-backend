@@ -10,7 +10,10 @@ use crate::{
 };
 
 use super::{
-    audits::PublicAudit, chat::PublicMessage, issue::PublicIssue, requests::PublicRequest,
+    audits::PublicAudit,
+    chat::{PublicMessage, PublicChat},
+    issue::PublicIssue,
+    requests::PublicRequest,
     PublicNotification,
 };
 
@@ -22,6 +25,7 @@ pub enum EventPayload {
     RequestDecline(String),
     NewAudit(PublicAudit),
     AuditUpdate(PublicAudit),
+    NewChat(PublicChat),
     ChatMessage(PublicMessage),
     ChatDeleteMessage(String),
     NewIssue { issue: PublicIssue, audit: String },
@@ -36,6 +40,7 @@ impl EventPayload {
             EventPayload::NewRequest(_) => "NewRequest".to_owned(),
             EventPayload::NewAudit(_) => "NewAudit".to_owned(),
             EventPayload::AuditUpdate(_) => "AuditUpdate".to_owned(),
+            EventPayload::NewChat(_) => "NewChat".to_owned(),
             EventPayload::ChatMessage(_) => "ChatMessage".to_owned(),
             EventPayload::ChatDeleteMessage(_) => "ChatDeleteMessage".to_owned(),
             EventPayload::RequestAccept(_) => "RequestAccept".to_owned(),

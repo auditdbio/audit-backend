@@ -11,7 +11,7 @@ use crate::{
         audit::AuditStatus,
         audit_request::TimeRange,
         contacts::Contacts,
-        role::Role,
+        role::{Role, ChatRole},
     },
     error::{self, AddCode},
     services::{API_PREFIX, CHAT_SERVICE, PROTOCOL},
@@ -19,7 +19,7 @@ use crate::{
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct ChatId {
-    pub role: Role,
+    pub role: ChatRole,
     pub id: ObjectId,
 }
 
@@ -45,14 +45,14 @@ pub enum MessageKind {
 pub struct CreateMessage {
     pub chat: Option<String>,
     pub to: Option<PublicChatId>,
-    pub role: Role,
+    pub role: ChatRole,
     pub text: String,
     pub kind: Option<MessageKind>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PublicChatId {
-    pub role: Role,
+    pub role: ChatRole,
     pub id: String,
 }
 
@@ -214,10 +214,10 @@ pub fn create_audit_message(
             let message = CreateMessage {
                 chat: None,
                 to: Some(PublicChatId {
-                    role: receiver_role,
+                    role: receiver_role.into(),
                     id: receiver_id.to_hex(),
                 }),
-                role: last_changer,
+                role: last_changer.into(),
                 text: serde_json::to_string(&message_text).unwrap(),
                 kind: Some(MessageKind::Audit),
             };
@@ -250,10 +250,10 @@ pub fn create_audit_message(
             let message = CreateMessage {
                 chat: None,
                 to: Some(PublicChatId {
-                    role: receiver_role,
+                    role: receiver_role.into(),
                     id: receiver_id.to_hex(),
                 }),
-                role: last_changer,
+                role: last_changer.into(),
                 text: serde_json::to_string(&message_text).unwrap(),
                 kind: Some(MessageKind::Audit),
             };
