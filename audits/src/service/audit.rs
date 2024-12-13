@@ -761,26 +761,30 @@ impl AuditService {
         let mut is_history_changed = false;
 
         if let Some(name) = change.name {
-            issue.name = name;
-            is_history_changed = true;
+            if issue.name != name {
+                issue.name = name;
+                is_history_changed = true;
 
-            Self::create_event(
-                &self.context,
-                &mut issue,
-                EventKind::IssueName,
-                "changed name of the issue".to_string(),
-            );
+                Self::create_event(
+                    &self.context,
+                    &mut issue,
+                    EventKind::IssueName,
+                    "changed name of the issue".to_string(),
+                );
+            }
         }
 
         if let Some(description) = change.description {
-            issue.description = description;
+            if issue.description != description {
+                issue.description = description;
 
-            Self::create_event(
-                &self.context,
-                &mut issue,
-                EventKind::IssueDescription,
-                "changed description".to_string(),
-            );
+                Self::create_event(
+                    &self.context,
+                    &mut issue,
+                    EventKind::IssueDescription,
+                    "changed description".to_string(),
+                );
+            }
         }
 
         let role = if current_id == audit.customer_id {
@@ -845,25 +849,29 @@ impl AuditService {
         }
 
         if let Some(severity) = change.severity.clone() {
-            issue.severity = severity.clone();
+            if issue.severity != severity {
+                issue.severity = severity.clone();
 
-            Self::create_event(
-                &self.context,
-                &mut issue,
-                EventKind::IssueSeverity,
-                severity,
-            );
+                Self::create_event(
+                    &self.context,
+                    &mut issue,
+                    EventKind::IssueSeverity,
+                    severity,
+                );
+            }
         }
 
         if let Some(category) = change.category {
-            issue.category = category.clone();
+            if issue.category != category {
+                issue.category = category.clone();
 
-            Self::create_event(
-                &self.context,
-                &mut issue,
-                EventKind::IssueCategory,
-                format!("changed category to {}", category),
-            );
+                Self::create_event(
+                    &self.context,
+                    &mut issue,
+                    EventKind::IssueCategory,
+                    format!("changed category to {}", category),
+                );
+            }
         }
 
         if let Some(links) = change.links {
@@ -884,22 +892,24 @@ impl AuditService {
         }
 
         if let Some(feedback) = change.feedback {
-            let message = if issue.feedback.is_empty() {
-                "added feedback".to_string()
-            } else {
-                "changed feedback".to_string()
-            };
+            if issue.feedback != feedback {
+                let message = if issue.feedback.is_empty() {
+                    "added feedback".to_string()
+                } else {
+                    "changed feedback".to_string()
+                };
 
-            let kind = if feedback.is_empty() {
-                EventKind::FeedbackAdded
-            } else {
-                EventKind::FeedbackChanged
-            };
+                let kind = if feedback.is_empty() {
+                    EventKind::FeedbackAdded
+                } else {
+                    EventKind::FeedbackChanged
+                };
 
-            issue.feedback = feedback;
-            is_history_changed = true;
+                issue.feedback = feedback;
+                is_history_changed = true;
 
-            Self::create_event(&self.context, &mut issue, kind, message);
+                Self::create_event(&self.context, &mut issue, kind, message);
+            }
         }
 
         if !audit.no_customer {
