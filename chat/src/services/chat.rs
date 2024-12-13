@@ -184,7 +184,11 @@ impl ChatService {
                 repo.unread(chat.chat_id(), user_id.id, None).await?;
             }
 
-            let event = PublicEvent::new(user_id.id, None, payload.clone());
+            let event = PublicEvent::new(
+                user_id.id,
+                Some(user_id.role.to_role()?),
+                payload.clone(),
+                );
 
             self.context
                 .make_request()
