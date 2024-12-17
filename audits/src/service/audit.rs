@@ -315,7 +315,11 @@ impl AuditService {
         let mut public_audits = Vec::new();
 
         for audit in audits {
-            public_audits.push(PublicAudit::new(&self.context, audit, false).await?);
+            let public_audit = PublicAudit::new(&self.context, audit, false).await;
+            match public_audit {
+                Ok(audit) => public_audits.push(audit),
+                Err(e) => log::error!("{}", e),
+            }
         }
 
         // Ok(MyAuditResult {

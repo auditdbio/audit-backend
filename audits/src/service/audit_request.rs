@@ -362,9 +362,12 @@ impl RequestService {
         let mut public_requests = Vec::new();
 
         for req in result {
-            let public_request = PublicRequest::new(&self.context, req).await?;
+            let public_request = PublicRequest::new(&self.context, req).await;
 
-            public_requests.push(public_request);
+            match public_request {
+                Ok(req) => public_requests.push(req),
+                Err(e) => log::error!("{}", e),
+            }
         }
 
         // Ok(MyAuditRequestResult {
