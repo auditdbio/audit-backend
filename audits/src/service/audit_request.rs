@@ -135,6 +135,7 @@ impl RequestService {
                     "time": request.time,
                     "conclusion": "".to_string(),
                 })).unwrap(),
+            issues: HashMap::new(),
         };
 
         request.edit_history.push(edit_history_item);
@@ -475,6 +476,7 @@ impl RequestService {
                     "time": request.time,
                     "conclusion": "".to_string(),
                 })).unwrap(),
+                issues: HashMap::new(),
             };
 
             request.edit_history.push(edit_history_item);

@@ -231,7 +231,6 @@ impl Auth {
             events: Event::to_string_map(issue.events),
             last_modified: issue.last_modified,
             read,
-            edit_history: issue.edit_history,
         }
     }
 }
