@@ -34,7 +34,7 @@ use common::{
             ReportType,
         },
         audit_request::{AuditRequest, TimeRange},
-        issue::{severity_to_integer, ChangeIssue, Event, EventKind, Issue, Status, Action, IssueEditHistory},
+        issue::{severity_to_integer, ChangeIssue, Event, EventKind, Issue, Status, Action},
         project::get_project,
         role::Role,
     },
@@ -502,6 +502,11 @@ impl AuditService {
                     "time": audit.time,
                     "conclusion": audit.conclusion,
                 })).unwrap(),
+                issues: audit
+                    .edit_history
+                    .iter()
+                    .last()
+                    .map_or(HashMap::new(), |history| history.issues.clone()),
             };
 
             audit.edit_history.push(edit_history_item.clone());
@@ -664,7 +669,6 @@ impl AuditService {
             feedback: String::new(),
             last_modified: Utc::now().timestamp_micros(),
             read: HashMap::new(),
-            edit_history: Vec::new(),
         };
 
         audit.issues.push(issue.clone());
@@ -724,6 +728,8 @@ impl AuditService {
         change: ChangeIssue,
     ) -> error::Result<PublicIssue> {
         let auth = self.context.auth();
+        let current_id = auth.id().unwrap();
+
         let Some(mut audit) = self.get_audit(audit_id).await? else {
             return Err(anyhow::anyhow!("No audit found").code(404));
         };
@@ -759,28 +765,33 @@ impl AuditService {
         let mut is_history_changed = false;
 
         if let Some(name) = change.name {
-            issue.name = name;
+            if issue.name != name {
+                issue.name = name;
+                is_history_changed = true;
 
-            Self::create_event(
-                &self.context,
-                &mut issue,
-                EventKind::IssueName,
-                "changed name of the issue".to_string(),
-            );
+                Self::create_event(
+                    &self.context,
+                    &mut issue,
+                    EventKind::IssueName,
+                    "changed name of the issue".to_string(),
+                );
+            }
         }
 
         if let Some(description) = change.description {
-            issue.description = description;
+            if issue.description != description {
+                issue.description = description;
 
-            Self::create_event(
-                &self.context,
-                &mut issue,
-                EventKind::IssueDescription,
-                "changed description".to_string(),
-            );
+                Self::create_event(
+                    &self.context,
+                    &mut issue,
+                    EventKind::IssueDescription,
+                    "changed description".to_string(),
+                );
+            }
         }
 
-        let role = if auth.id().unwrap() == audit.customer_id {
+        let role = if current_id == audit.customer_id {
             Role::Customer
         } else {
             Role::Auditor
@@ -842,25 +853,29 @@ impl AuditService {
         }
 
         if let Some(severity) = change.severity.clone() {
-            issue.severity = severity.clone();
+            if issue.severity != severity {
+                issue.severity = severity.clone();
 
-            Self::create_event(
-                &self.context,
-                &mut issue,
-                EventKind::IssueSeverity,
-                severity,
-            );
+                Self::create_event(
+                    &self.context,
+                    &mut issue,
+                    EventKind::IssueSeverity,
+                    severity,
+                );
+            }
         }
 
         if let Some(category) = change.category {
-            issue.category = category.clone();
+            if issue.category != category {
+                issue.category = category.clone();
 
-            Self::create_event(
-                &self.context,
-                &mut issue,
-                EventKind::IssueCategory,
-                format!("changed category to {}", category),
-            );
+                Self::create_event(
+                    &self.context,
+                    &mut issue,
+                    EventKind::IssueCategory,
+                    format!("changed category to {}", category),
+                );
+            }
         }
 
         if let Some(links) = change.links {
@@ -881,31 +896,31 @@ impl AuditService {
         }
 
         if let Some(feedback) = change.feedback {
-            let message = if feedback.is_empty() {
-                "added feedback".to_string()
-            } else {
-                "changed feedback".to_string()
-            };
+            if issue.feedback != feedback {
+                let message = if issue.feedback.is_empty() {
+                    "added feedback".to_string()
+                } else {
+                    "changed feedback".to_string()
+                };
 
-            let kind = if feedback.is_empty() {
-                EventKind::FeedbackAdded
-            } else {
-                EventKind::FeedbackChanged
-            };
+                let kind = if feedback.is_empty() {
+                    EventKind::FeedbackAdded
+                } else {
+                    EventKind::FeedbackChanged
+                };
 
-            issue.feedback = feedback;
-            is_history_changed = true;
+                issue.feedback = feedback;
+                is_history_changed = true;
 
-            Self::create_event(&self.context, &mut issue, kind, message);
+                Self::create_event(&self.context, &mut issue, kind, message);
+            }
         }
 
         if !audit.no_customer {
             if let Some(events) = change.events {
-                let sender_id = auth.id().unwrap();
-
                 let project = get_project(&self.context, audit.project_id).await?;
 
-                let role = if sender_id == audit.customer_id {
+                let role = if current_id == audit.customer_id {
                     Role::Customer
                 } else {
                     Role::Auditor
@@ -951,24 +966,58 @@ impl AuditService {
                     issue.events.push(event);
                 }
 
-                issue
-                    .read
-                    .insert(sender_id.to_hex(), issue.events.len() as u64);
+                issue.read.insert(current_id.to_hex(), issue.events.len() as u64);
             }
         }
 
         issue.last_modified = Utc::now().timestamp_micros();
 
         if is_history_changed {
-            let edit_history_item = IssueEditHistory {
-                id: issue.edit_history.len(),
-                date: issue.last_modified.clone(),
-                author: auth.id().unwrap().to_hex(),
-                issue: serde_json::to_string(&json!({
+            let mut issues_history_map = audit
+                .edit_history
+                .iter()
+                .last()
+                .map_or(HashMap::new(), |history| history.issues.clone());
+
+            issues_history_map.insert(
+                issue_id.to_string(),
+                serde_json::to_string(&json!({
+                    "issue_name": issue.name,
                     "feedback": issue.feedback,
-                })).unwrap(),
+                })).unwrap()
+            );
+
+
+            let edit_history_item = AuditEditHistory {
+                id: audit.edit_history.len(),
+                date: issue.last_modified.clone(),
+                author: current_id.to_hex(),
+                comment: None,
+                audit: audit
+                    .edit_history
+                    .iter()
+                    .last()
+                    .map_or("{}".to_string(), |history| history.audit.clone()),
+                issues: issues_history_map,
             };
-            issue.edit_history.push(edit_history_item);
+
+            audit.edit_history.push(edit_history_item.clone());
+
+            let is_audit_approved = if audit.edit_history.is_empty() || audit.approved_by.is_empty() {
+                true
+            } else {
+                let first = audit.approved_by.values().next().unwrap();
+                audit.approved_by.values().all(|v| v == first)
+            };
+
+            if is_audit_approved {
+                audit.approved_by.insert(audit.auditor_id.to_hex(), edit_history_item.id.clone());
+                audit.approved_by.insert(audit.customer_id.to_hex(), edit_history_item.id.clone());
+            } else {
+                if audit.approved_by.get(&current_id.to_hex()) == Some(&(audit.edit_history.len() - 1)) {
+                    audit.approved_by.insert(current_id.to_hex(), edit_history_item.id.clone());
+                }
+            }
         }
 
         if let Some(idx) = audit.issues.iter().position(|issue| issue.id == issue_id) {
@@ -1326,6 +1375,7 @@ impl AuditService {
                         author: user_id.to_hex(),
                         comment: None,
                         audit: history.audit.clone(),
+                        issues: history.issues.clone(),
                     };
                     audit.edit_history.push(new_history_item.clone());
 
