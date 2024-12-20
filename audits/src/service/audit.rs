@@ -975,13 +975,14 @@ impl AuditService {
                 .last()
                 .map_or(HashMap::new(), |history| history.issues.clone());
 
-            issues_history_map
-                .entry(issue_id.to_string())
-                .or_insert_with(Vec::new)
-                .push(serde_json::to_string(&json!({
+            issues_history_map.insert(
+                issue_id.to_string(),
+                serde_json::to_string(&json!({
                     "issue_name": issue.name,
                     "feedback": issue.feedback,
-                })).unwrap());
+                })).unwrap()
+            );
+
 
             let edit_history_item = AuditEditHistory {
                 id: audit.edit_history.len(),
