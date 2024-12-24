@@ -29,7 +29,7 @@ use common::{
         letter::CreateLetter,
         project::get_project,
         role::Role,
-        scope::Scope,
+        scope::{Scope, set_file_display_url},
     },
     error::{self, AddCode},
     services::{API_PREFIX, CUSTOMERS_SERVICE, EVENTS_SERVICE, FRONTEND, PROTOCOL},
@@ -410,10 +410,12 @@ impl RequestService {
         if let Some(new_scope) = change.scope {
             if let Some(request_scope) = request.scope.clone() {
                 if request_scope.typ != new_scope.typ || request_scope.content != new_scope.content {
+                    let new_scope = set_file_display_url(new_scope);
                     request.scope = Some(new_scope);
                     is_history_changed = true;
                 }
             } else {
+                let new_scope = set_file_display_url(new_scope);
                 request.scope = Some(new_scope);
                 is_history_changed = true;
             }

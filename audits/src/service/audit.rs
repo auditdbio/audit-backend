@@ -37,12 +37,11 @@ use common::{
         issue::{severity_to_integer, ChangeIssue, Event, EventKind, Issue, Status, Action, IssueEditHistory},
         project::get_project,
         role::Role,
-        scope::Scope,
+        scope::{Scope, ScopeContent, ScopeType, set_file_display_url},
     },
     error::{self, AddCode},
     services::{FILES_SERVICE, PROTOCOL, API_PREFIX},
 };
-use common::entities::scope::{ScopeContent, ScopeType};
 
 use super::audit_request::PublicRequest;
 
@@ -369,6 +368,7 @@ impl AuditService {
         if audit.status != AuditStatus::Resolved || audit.no_customer {
             if let Some(new_scope) = change.scope.clone() {
                 if audit.scope.typ != new_scope.typ || audit.scope.content != new_scope.content {
+                    let new_scope = set_file_display_url(new_scope);
                     audit.scope = new_scope;
                     is_history_changed = true;
                     is_approve_needed = true;

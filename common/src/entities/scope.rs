@@ -63,3 +63,22 @@ pub struct GitBlockFile {
     pub path: String,
     pub display_url: Option<String>,
 }
+
+pub fn set_file_display_url(scope: Scope) -> Scope {
+    let mut scope = scope.clone();
+    if scope.typ == ScopeType::GitBlock {
+        if let ScopeContent::GitBlock(ref mut git_block) = scope.content {
+            for file in git_block.files.iter_mut() {
+                if file.display_url.is_none() {
+                    file.display_url = Some(format!(
+                        "{}/{}/{}",
+                        git_block.repository.clone_url,
+                        git_block.commit,
+                        file.path,
+                    ));
+                }
+            }
+        }
+    }
+    scope
+}
