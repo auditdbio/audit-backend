@@ -16,4 +16,5 @@ members = [
     "rating",
     "chat",
     "cloc",
+    "fts"
 ]
