@@ -392,7 +392,11 @@ impl AuditService {
             if audit.auditor_organization.is_some() || audit.customer_organization.is_some() {
                 continue
             }
-            public_audits.push(PublicAudit::new(&self.context, audit, false).await?);
+            let public_audit = PublicAudit::new(&self.context, audit, false).await;
+            match public_audit {
+                Ok(audit) => public_audits.push(audit),
+                Err(e) => log::error!("{}", e),
+            }
         }
 
         // Ok(MyAuditResult {

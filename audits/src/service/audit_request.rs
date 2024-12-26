@@ -419,7 +419,11 @@ impl RequestService {
             if req.auditor_organization.is_some() || req.customer_organization.is_some() {
                 continue
             }
-            public_requests.push(PublicRequest::new(&self.context, req).await?);
+            let public_request = PublicRequest::new(&self.context, req).await;
+            match public_request {
+                Ok(req) => public_requests.push(req),
+                Err(e) => log::error!("{}", e),
+            }
         }
 
         // Ok(MyAuditRequestResult {
