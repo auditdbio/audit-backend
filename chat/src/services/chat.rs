@@ -256,7 +256,7 @@ impl ChatService {
             } else {
                 let message_event = PublicEvent::new(
                     member.id,
-                    None,
+                    Some(member.role.to_role()?),
                     message_payload.clone(),
                 );
                 post_event(&self.context, message_event, auth).await?;
@@ -264,7 +264,7 @@ impl ChatService {
                 if is_new_chat && member.id != current_id {
                     let new_chat_event = PublicEvent::new(
                         member.id,
-                        None,
+                        Some(member.role.to_role()?),
                         new_chat_payload.clone(),
                     );
                     post_event(&self.context, new_chat_event, auth).await?;
