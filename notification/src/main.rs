@@ -1,20 +1,25 @@
 use std::{env, sync::Arc};
 
 use actix_web::HttpServer;
-use common::repository::mongo_repository::MongoRepository;
-use common::{auth::Service, context::effectfull_context::ServiceState};
-use notification::{create_app, repositories::notifications::NotificationsRepository};
+use common::{
+    auth::Service,
+    context::effectfull_context::ServiceState,
+    repository::mongo_repository::MongoRepository,
+};
+use notification::{
+    create_app, repositories::notifications::NotificationsRepository, migrations::up_migrations,
+};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv::dotenv().ok();
-
     env_logger::init();
 
     let mongo_uri = env::var("MONGOURI").expect("MONGOURI must be set");
 
-    let state = ServiceState::new(Service::Notification);
+    up_migrations(mongo_uri.as_str()).await.expect("Migration error");
 
+    let state = ServiceState::new(Service::Notification);
     let state = Arc::new(state);
 
     let repo = Arc::new(NotificationsRepository::new(
