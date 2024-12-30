@@ -2,14 +2,14 @@ use async_trait::async_trait;
 use futures::StreamExt;
 use mongodb_migrator::{migration::Migration, migrator::{self, Env}};
 use mongodb::{
-    bson::{doc, Bson, Document, to_bson},
+    bson::{doc, Document},
     Client,
 };
 
-pub struct NotificationAuditLinkMigration {}
+pub struct AuditNotificationLinkMigration {}
 
 #[async_trait]
-impl Migration for NotificationAuditLinkMigration {
+impl Migration for AuditNotificationLinkMigration {
     async fn up(&self, env: Env) -> anyhow::Result<()> {
         println!("Notification Migrator: Start NotificationAuditLinkMigration");
         let conn = env
@@ -46,15 +46,12 @@ impl Migration for NotificationAuditLinkMigration {
                         })
                         .collect();
 
-                    if updated_links.len() != links.len() {
                         conn.update_one(
                             doc! {"_id": notification_id},
                             doc! {"$set": {"inner.links": updated_links}},
                             None,
-                        )
-                            .await?;
+                        ).await?;
                         updated_documents_count += 1;
-                    }
                 }
             }
         }
@@ -81,7 +78,7 @@ pub async fn up_migrations(mongo_uri: &str) -> anyhow::Result<()> {
     println!("Notification Migrator: Starting migrations...");
     let migrations: Vec<Box<dyn Migration>> = vec![
         Box::new(InitMigration {}),
-        Box::new(NotificationAuditLinkMigration {}),
+        Box::new(AuditNotificationLinkMigration {}),
     ];
 
     let result = migrator::default::DefaultMigrator::new()
