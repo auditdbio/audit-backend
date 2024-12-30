@@ -2440,6 +2440,7 @@ dependencies = [
  "futures",
  "log",
  "mongodb",
+ "mongodb-migrator",
  "serde",
  "serde_json",
  "tokio",
