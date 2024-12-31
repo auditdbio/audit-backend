@@ -22,7 +22,7 @@ use common::{
     error::{self, AddCode},
     services::{FRONTEND, PROTOCOL},
 };
-use mongodb::bson::{oid::ObjectId, Bson};
+use mongodb::bson::{oid::ObjectId, Bson, doc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -229,6 +229,7 @@ impl BadgeService {
 
         badges.delete("user_id", &id).await?;
         badges.insert(&badge).await?;
+        // badges.update_one(doc! {"user_id": &id}, &badge).await?;
 
         Ok(badge.stringify())
     }

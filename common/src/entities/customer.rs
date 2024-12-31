@@ -3,7 +3,8 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::{
-    repository::Entity,
+    impl_has_last_modified,
+    repository::{Entity, HasLastModified},
     services::{API_PREFIX, CUSTOMERS_SERVICE, PROTOCOL},
 };
 
@@ -24,6 +25,8 @@ pub struct Customer<Id> {
     pub link_id: Option<String>,
     pub rating: Option<f32>,
 }
+
+impl_has_last_modified!(Customer<ObjectId>);
 
 impl Customer<String> {
     pub fn parse(self) -> Customer<ObjectId> {

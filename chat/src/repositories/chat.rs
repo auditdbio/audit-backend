@@ -4,9 +4,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::services::chat::{Message};
 use common::{
+    default_timestamp,
     api::chat::{ChatId, PublicChat, PublicReadId},
     error,
-    repository::{Entity, Repository, mongo_repository::MongoRepository}
+    repository::{Entity, Repository, mongo_repository::MongoRepository, HasLastModified},
+    impl_has_last_modified,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -19,6 +21,8 @@ pub struct Group {
     last_message: Message,
     unread: Vec<ReadId>,
 }
+
+impl_has_last_modified!(Group);
 
 impl Group {
     pub fn publish(self) -> PublicChat {
@@ -45,7 +49,11 @@ pub struct Messages {
     #[serde(rename = "_id")]
     id: ObjectId,
     messages: Vec<Message>,
+    #[serde(default = "default_timestamp")]
+    last_modified: i64,
 }
+
+impl_has_last_modified!(Messages);
 
 impl Entity for Messages {
     fn id(&self) -> ObjectId {
@@ -77,6 +85,8 @@ pub struct PrivateChat {
     pub last_message: Message,
     pub unread: Option<[ReadId; 2]>,
 }
+
+impl_has_last_modified!(PrivateChat);
 
 impl Entity for PrivateChat {
     fn id(&self) -> ObjectId {
@@ -195,9 +205,15 @@ impl ChatRepository {
 
     pub async fn groups_by_user(
         &self,
-        user_id: ChatId,
+        chat_id: ChatId,
     ) -> error::Result<(Vec<Group>, Vec<PrivateChat>)> {
-        let document = to_document(&user_id)?;
+        let document = doc! {
+            "$elemMatch": {
+                "role": chat_id.role.stringify(),
+                "id": chat_id.id,
+            }
+        };
+
         let groups = self
             .groups
             .find_many("members", &Bson::Document(document.clone()))
@@ -212,7 +228,14 @@ impl ChatRepository {
     pub async fn find_by_members(&self, members: Vec<ChatId>) -> error::Result<Option<PrivateChat>> {
         let values: Vec<Bson> = members
             .into_iter()
-            .map(|chat_id| Bson::Document(to_document(&chat_id).unwrap()))
+            .map(|chat_id| {
+                Bson::Document(doc! {
+                    "$elemMatch": {
+                        "role": chat_id.role.stringify(),
+                        "id": chat_id.id,
+                    }
+                })
+            })
             .collect();
 
         let document = Bson::Document(doc! {"$all": Bson::Array(values)});
@@ -221,6 +244,7 @@ impl ChatRepository {
             .private_chats
             .find("members", &document)
             .await?;
+
         Ok(chat)
     }
 
@@ -243,6 +267,7 @@ impl ChatRepository {
         let messages = Messages {
             id: message.chat,
             messages: vec![],
+            last_modified: Utc::now().timestamp_micros(),
         };
 
         self.messages.insert(&messages).await?;

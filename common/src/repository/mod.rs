@@ -5,7 +5,7 @@ pub mod test_repository;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use mongodb::bson::{oid::ObjectId, Bson};
+use mongodb::bson::{oid::ObjectId, Bson, Document};
 
 use crate::error;
 
@@ -18,6 +18,7 @@ pub trait Repository<T> {
     async fn insert(&self, item: &T) -> error::Result<bool>;
     async fn find(&self, field: &str, value: &Bson) -> error::Result<Option<T>>;
     async fn delete(&self, field: &str, item: &ObjectId) -> error::Result<Option<T>>;
+    async fn update_one(&self, old: Document, update: &T) -> error::Result<T>;
     async fn find_many(&self, field: &str, value: &Bson) -> error::Result<Vec<T>>;
     async fn find_many_limit(
         &self,
@@ -32,3 +33,23 @@ pub trait Repository<T> {
 }
 
 pub type RepositoryObject<T> = Arc<dyn Repository<T> + Send + Sync + 'static>;
+
+pub trait HasLastModified {
+    fn last_modified(&self) -> i64;
+    fn set_last_modified(&mut self, timestamp: i64);
+}
+
+#[macro_export]
+macro_rules! impl_has_last_modified {
+    ($struct_name:path) => {
+        impl HasLastModified for $struct_name {
+            fn last_modified(&self) -> i64 {
+                self.last_modified
+            }
+
+            fn set_last_modified(&mut self, timestamp: i64) {
+                self.last_modified = timestamp;
+            }
+        }
+    };
+}

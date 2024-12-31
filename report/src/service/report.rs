@@ -1,19 +1,31 @@
+use actix_multipart::Multipart;
+use futures::StreamExt;
+use reqwest::multipart::{Form, Part};
+use serde::{Deserialize, Serialize};
+
 use common::{
     api::{
         audits::{AuditChange, PublicAudit},
         issue::PublicIssue,
-        report::PublicReport,
+        file::PublicMetadata,
+        report::{PublicReport, CreateReport},
     },
     auth::{Auth, Service},
     context::GeneralContext,
     entities::{
-        audit::ReportType,
+        audit::{PublicAuditStatus, ReportType},
+        file::{FileEntity, ParentEntitySource},
         issue::Status,
     },
-    services::{API_PREFIX, FILES_SERVICE, FRONTEND, PROTOCOL, RENDERER_SERVICE, USERS_SERVICE},
+    error::{self, AddCode},
+    services::{API_PREFIX, AUDITS_SERVICE, FILES_SERVICE, FRONTEND, PROTOCOL, RENDERER_SERVICE},
 };
-use reqwest::multipart::{Form, Part};
-use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct VerifyReportResponse {
+    pub verified: bool,
+    pub report_sha: Option<String>,
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct IssueData {
@@ -41,6 +53,7 @@ pub struct Section {
 pub struct RendererInput {
     pub auditor_name: String,
     pub profile_link: String,
+    pub audit_link: String,
     pub project_name: String,
     pub scope: Vec<String>,
     pub report_data: Vec<Section>,
@@ -60,8 +73,8 @@ pub struct IssueCollector {
 }
 
 impl IssueCollector {
-    pub fn add_issue(mut self, issue: &PublicIssue) -> Self {
-        let Some(section) = generate_issue_section(issue) else {
+    pub fn add_issue(mut self, issue: &PublicIssue, is_draft: bool) -> Self {
+        let Some(section) = generate_issue_section(issue, is_draft) else {
             return self;
         };
 
@@ -118,9 +131,8 @@ impl Statistics {
 
         for issue in issues {
             if issue.include {
-                statistics.total += 1;
-
                 if issue.status == Status::Fixed {
+                    statistics.total += 1;
                     match issue.severity.as_str() {
                         "Critical" => statistics.fixed.critical += 1,
                         "Major" => statistics.fixed.major += 1,
@@ -128,7 +140,8 @@ impl Statistics {
                         "Minor" => statistics.fixed.minor += 1,
                         _ => {}
                     }
-                } else {
+                } else if issue.status == Status::WillNotFix {
+                    statistics.total += 1;
                     match issue.severity.as_str() {
                         "Critical" => statistics.not_fixed.critical += 1,
                         "Major" => statistics.not_fixed.major += 1,
@@ -136,6 +149,8 @@ impl Statistics {
                         "Minor" => statistics.not_fixed.minor += 1,
                         _ => {}
                     }
+                } else {
+                    continue
                 }
             }
         }
@@ -144,8 +159,8 @@ impl Statistics {
     }
 }
 
-fn generate_issue_section(issue: &PublicIssue) -> Option<Section> {
-    if !issue.include {
+fn generate_issue_section(issue: &PublicIssue, is_draft: bool) -> Option<Section> {
+    if !issue.include || (issue.status == Status::Draft && !is_draft) {
         return None;
     }
 
@@ -158,13 +173,6 @@ fn generate_issue_section(issue: &PublicIssue) -> Option<Section> {
         severity,
         ..
     } = issue;
-
-    let status = if status == &Status::Fixed {
-        "Fixed"
-    } else {
-        "WillNotFix"
-    }
-    .to_string();
 
     let feedback = if !feedback.is_empty() {
         Some(feedback.clone())
@@ -192,7 +200,7 @@ fn generate_issue_section(issue: &PublicIssue) -> Option<Section> {
         feedback,
         issue_data: Some(IssueData {
             severity,
-            status,
+            status: status.to_string(),
             category,
             links: issue.links.clone(),
         }),
@@ -203,14 +211,6 @@ fn generate_issue_section(issue: &PublicIssue) -> Option<Section> {
 fn generate_audit_sections(audit: &PublicAudit, issues: Vec<Section>) -> Vec<Section> {
     let statistics = Statistics::new(&audit.issues);
 
-    /*
-     * Table of contests
-     * Disclamer
-     * Summary
-     *     Project description
-     *     Scope
-     *     Conclusion
-     */
     let disclaimer = include_str!("../../templates/disclaimer.md").to_string();
 
     vec![
@@ -234,22 +234,28 @@ fn generate_audit_sections(audit: &PublicAudit, issues: Vec<Section>) -> Vec<Sec
                         include_in_toc: true,
                         ..Default::default()
                     },
-                    Section {
+                ];
+
+                if !audit.scope.is_empty() {
+                    subsections.push(Section {
                         typ: "scope".to_string(),
                         title: "Scope".to_string(),
                         links: Some(audit.scope.clone()),
                         include_in_toc: true,
                         ..Default::default()
-                    },
-                ];
-                if let Some(conclusion) = audit.conclusion.clone() {
-                    subsections.push(Section {
-                        typ: "markdown".to_string(),
-                        title: "Conclusion".to_string(),
-                        text: conclusion,
-                        include_in_toc: true,
-                        ..Default::default()
                     });
+                }
+
+                if let Some(conclusion) = audit.conclusion.clone() {
+                    if !conclusion.trim().is_empty() {
+                        subsections.push(Section {
+                            typ: "markdown".to_string(),
+                            title: "Conclusion".to_string(),
+                            text: conclusion,
+                            include_in_toc: true,
+                            ..Default::default()
+                        });
+                    }
                 }
                 subsections
             }),
@@ -272,12 +278,12 @@ fn generate_audit_sections(audit: &PublicAudit, issues: Vec<Section>) -> Vec<Sec
     ]
 }
 
-fn generate_data(audit: &PublicAudit) -> Vec<Section> {
+fn generate_data(audit: &PublicAudit, is_draft: bool) -> Vec<Section> {
     let issues = audit
         .issues
         .iter()
         .fold(IssueCollector::default(), |collector, i| {
-            collector.add_issue(i)
+            collector.add_issue(i, is_draft)
         })
         .into_issues();
     generate_audit_sections(audit, issues)
@@ -286,16 +292,20 @@ fn generate_data(audit: &PublicAudit) -> Vec<Section> {
 pub async fn create_report(
     context: GeneralContext,
     audit_id: String,
-) -> anyhow::Result<PublicReport> {
+    data: CreateReport,
+    code: Option<&String>
+) -> error::Result<PublicReport> {
+    let auth = context.auth();
+
     let audit = context
         .make_request::<PublicAudit>()
-        .auth(context.auth())
+        .auth(auth)
         .get(format!(
             "{}://{}/{}/audit/{}",
             PROTOCOL.as_str(),
-            USERS_SERVICE.as_str(),
+            AUDITS_SERVICE.as_str(),
             API_PREFIX.as_str(),
-            audit_id
+            audit_id,
         ))
         .send()
         .await
@@ -303,14 +313,36 @@ pub async fn create_report(
         .json::<PublicAudit>()
         .await?;
 
-    let report_data = generate_data(&audit);
+    if !audit.no_customer && audit.status == PublicAuditStatus::Resolved && audit.report.is_some() {
+        return Err(anyhow::anyhow!("Cannot generate report for resolved audit").code(400));
+    }
+
+    let mut is_draft = data.is_draft.unwrap_or(false);
+    if let Some(id) = auth.id() {
+        if !audit.no_customer && audit.customer_id == id.to_hex() {
+            is_draft = false;
+        }
+    }
+
+    let report_data = generate_data(&audit, is_draft);
+    let access_code = if let Some(code) = code {
+        format!("?code={}", code)
+    } else { "".to_string() };
+
     let input = RendererInput {
         auditor_name: audit.auditor_first_name + " " + &audit.auditor_last_name,
         profile_link: format!(
-            "{}://{}/user/{}/auditor",
+            "{}://{}/a/{}",
             PROTOCOL.as_str(),
             FRONTEND.as_str(),
-            audit.auditor_id
+            audit.auditor_id,
+        ),
+        audit_link: format!(
+            "{}://{}/audit/{}{}",
+            PROTOCOL.as_str(),
+            FRONTEND.as_str(),
+            audit.id,
+            access_code,
         ),
         project_name: audit.project_name.clone(),
         scope: audit.scope,
@@ -332,52 +364,142 @@ pub async fn create_report(
         .bytes()
         .await?;
 
-    let path = audit.id.clone() + ".pdf";
+    let report_sha = if let Auth::Service(Service::Audits, _) = auth {
+        let mut combined_bytes = Vec::new();
+        combined_bytes.extend_from_slice(&report);
+        Some(sha256::digest(&combined_bytes[..]))
+    } else {
+        None
+    };
+
+    let file_entity = if is_draft {
+        FileEntity::Temporary
+    } else {
+        FileEntity::Report
+    };
+
+    let original_name = format!("{} report.pdf", audit.project_name);
 
     let client = &context.client();
-    let form = Form::new()
+    let mut form = Form::new()
         .part("file", Part::bytes(report.to_vec()))
-        .part("path", Part::text(path.clone()))
-        .part("original_name", Part::text("report.pdf"))
+        .part("original_name", Part::text(original_name))
+        .part("file_entity", Part::text(file_entity.to_string()))
+        .part("parent_entity_id", Part::text(audit.id.clone()))
+        .part("parent_entity_source", Part::text(ParentEntitySource::Audit.to_string()))
         .part("private", Part::text("true"))
         .part("customerId", Part::text(audit.auditor_id))
         .part("auditorId", Part::text(audit.customer_id));
 
-    let _ = client
+    if let Some(code) = code {
+        form = form.part("access_code", Part::text(code.to_string()));
+    }
+
+    let file_meta_str = client
         .post(format!(
             "{}://{}/{}/file",
             PROTOCOL.as_str(),
             FILES_SERVICE.as_str(),
             API_PREFIX.as_str(),
         ))
+        .bearer_auth(auth.to_token().unwrap())
         .multipart(form)
         .send()
+        .await?
+        .text()
         .await?;
 
-    if let Auth::Service(Service::Audits, _) = context.auth() {
-    } else {
-        let audit_change = AuditChange {
-            report: Some(path.clone()),
-            report_name: Some(format!("{} report.pdf", audit.project_name)),
-            report_type: Some(ReportType::Generated),
-            ..AuditChange::default()
-        };
+    let file_meta: PublicMetadata = serde_json::from_str(&file_meta_str)?;
+    let report_name = format!(
+        "{}.{}",
+        file_meta.original_name.unwrap_or("Report".to_string()),
+        file_meta.extension,
+    );
 
-        let _ = context
-            .make_request()
-            .patch(format!(
-                "{}://{}/{}/audit/{}",
-                PROTOCOL.as_str(),
-                USERS_SERVICE.as_str(),
-                API_PREFIX.as_str(),
-                audit.id
-            ))
-            .auth(context.auth())
-            .json(&audit_change)
-            .send()
-            .await
-            .unwrap();
+    if let Auth::Service(Service::Audits, _) = auth {
+    } else {
+        if !is_draft && audit.status != PublicAuditStatus::Resolved {
+            let audit_change = AuditChange {
+                report: Some(file_meta.id.clone()),
+                report_type: Some(ReportType::Generated),
+                ..AuditChange::default()
+            };
+
+            let _ = context
+                .make_request()
+                .patch(format!(
+                    "{}://{}/{}/audit/{}",
+                    PROTOCOL.as_str(),
+                    AUDITS_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
+                    audit.id
+                ))
+                .auth(auth)
+                .json(&audit_change)
+                .send()
+                .await
+                .unwrap();
+        }
     }
 
-    Ok(PublicReport { path })
+    Ok(PublicReport {
+        file_id: file_meta.id,
+        report_name,
+        is_draft,
+        report_sha,
+    })
+}
+
+pub async fn verify_report(
+    context: GeneralContext,
+    audit_id: String,
+    mut payload: Multipart,
+) -> error::Result<VerifyReportResponse> {
+    let audit = context
+        .make_request::<PublicAudit>()
+        .auth(context.server_auth())
+        .get(format!(
+            "{}://{}/{}/audit/{}",
+            PROTOCOL.as_str(),
+            AUDITS_SERVICE.as_str(),
+            API_PREFIX.as_str(),
+            audit_id,
+        ))
+        .send()
+        .await
+        .unwrap()
+        .json::<PublicAudit>()
+        .await?;
+
+    let mut report = vec![];
+
+    while let Some(item) = payload.next().await {
+        let mut field = item.unwrap();
+
+        match field.name() {
+            "file" => {
+                while let Some(chunk) = field.next().await {
+                    let data = chunk.unwrap();
+                    report.extend_from_slice(&data);
+                }
+            }
+            _ => (),
+        }
+    }
+
+    if report.is_empty() {
+        return Err(anyhow::anyhow!("'file' field is required").code(400));
+    }
+
+    if audit.report_sha.is_none() {
+        return Err(anyhow::anyhow!("There is no verification code for this audit.").code(204));
+    }
+
+    let report_sha = sha256::digest(&report[..]);
+    let verified = Some(report_sha) == audit.report_sha;
+
+    Ok(VerifyReportResponse {
+        verified,
+        report_sha: audit.report_sha,
+    })
 }

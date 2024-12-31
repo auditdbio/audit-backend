@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use chrono::Utc;
-use mongodb::bson::{oid::ObjectId, Bson};
+use mongodb::bson::{oid::ObjectId, Bson, doc};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -279,6 +279,7 @@ impl RequestService {
 
         let event = PublicEvent::new(
             event_receiver,
+            Some(receiver_role),
             EventPayload::NewRequest(public_request.clone()),
         );
 
@@ -361,9 +362,12 @@ impl RequestService {
         let mut public_requests = Vec::new();
 
         for req in result {
-            let public_request = PublicRequest::new(&self.context, req).await?;
+            let public_request = PublicRequest::new(&self.context, req).await;
 
-            public_requests.push(public_request);
+            match public_request {
+                Ok(req) => public_requests.push(req),
+                Err(e) => log::error!("{}", e),
+            }
         }
 
         // Ok(MyAuditRequestResult {
@@ -453,14 +457,12 @@ impl RequestService {
 
         request.last_changer = last_changer_role;
 
-        request.last_modified = Utc::now().timestamp_micros();
-
         if is_history_changed {
             let project = get_project(&self.context, request.project_id).await?;
 
             let edit_history_item = AuditEditHistory {
                 id: request.edit_history.len(),
-                date: request.last_modified.clone(),
+                date: Utc::now().timestamp_micros(),
                 author: user_id.to_hex(),
                 comment: change.comment,
                 audit: serde_json::to_string(&json!({
@@ -502,7 +504,8 @@ impl RequestService {
             message_id: chat.last_message.id,
         });
 
-        requests.delete("id", &id).await?;
+        // requests.update_one(doc! {"_id": &request.id}, &request).await?;
+        requests.delete("_id", &request.id).await?;
         requests.insert(&request).await?;
 
         Ok(public_request)
@@ -557,6 +560,7 @@ impl RequestService {
 
         let event = PublicEvent::new(
             event_receiver,
+            Some(receiver_role),
             EventPayload::RequestDecline(public_request.id.clone()),
         );
 
@@ -660,7 +664,8 @@ impl RequestService {
             .context
             .try_get_repository::<AuditRequest<ObjectId>>()?;
 
-        requests.delete("_id", &request_id).await?;
+        // requests.update_one(doc! {"_id": &request.id}, &request).await?;
+        requests.delete("_id", &request.id).await?;
         requests.insert(&request).await?;
 
         Ok(())

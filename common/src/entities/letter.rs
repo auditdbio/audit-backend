@@ -1,7 +1,12 @@
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-use crate::repository::Entity;
+use crate::{
+    default_timestamp,
+    impl_has_last_modified,
+    repository::{Entity, HasLastModified},
+};
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Letter {
@@ -10,7 +15,11 @@ pub struct Letter {
     pub message: String,
     pub subject: String,
     pub sender: Option<String>,
+    #[serde(default = "default_timestamp")]
+    pub last_modified: i64,
 }
+
+impl_has_last_modified!(Letter);
 
 impl Entity for Letter {
     fn id(&self) -> ObjectId {

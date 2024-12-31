@@ -1,4 +1,4 @@
-FROM mongo:latest
+FROM mongo:7.0.14
 RUN apt-get update && apt-get install -y cron
 COPY auto_dump.sh /auto_dump.sh
 COPY crontab.txt /crontab.txt

@@ -37,7 +37,7 @@ const StatisticsBlock = ({ data, num, subsectionLevel }) => {
             <td>{data?.statistics?.fixed?.minor}</td>
           </tr>
           <tr>
-            <td className="table-heading">Not Fixed</td>
+            <td className="table-heading">Will Not Fix</td>
             <td>{data?.statistics?.not_fixed?.critical}</td>
             <td>{data?.statistics?.not_fixed?.major}</td>
             <td>{data?.statistics?.not_fixed?.medium}</td>

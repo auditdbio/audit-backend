@@ -2,10 +2,7 @@ use mongodb::bson::{doc, oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::{
-    repository::Entity,
-    services::{API_PREFIX, AUDITORS_SERVICE, PROTOCOL},
-};
+use crate::{impl_has_last_modified, repository::{Entity, HasLastModified}, services::{API_PREFIX, AUDITORS_SERVICE, PROTOCOL}};
 
 use super::{audit_request::PriceRange, badge::PublicBadge, contacts::Contacts};
 
@@ -26,6 +23,8 @@ pub struct Auditor<Id> {
     pub link_id: Option<String>,
     pub rating: Option<f32>,
 }
+
+impl_has_last_modified!(Auditor<ObjectId>);
 
 impl Auditor<String> {
     pub fn parse(self) -> Auditor<ObjectId> {

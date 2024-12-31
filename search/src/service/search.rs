@@ -177,6 +177,16 @@ impl SearchService {
             responces.extend_from_slice(&docs);
         }
 
+        responces.sort_by_key(|doc| {
+            let id = doc
+                .get_str("id")
+                .or_else(|_| doc.get_str("_id"))
+                .or_else(|_| doc.get_str("user_id"))
+                .unwrap();
+            let object_id = ObjectId::from_str(id).unwrap();
+            indexes[&object_id]
+        });
+
         Ok((responces, total_documents))
     }
 

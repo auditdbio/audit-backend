@@ -3,8 +3,9 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::{
-    repository::Entity,
-    services::{API_PREFIX, AUDITORS_SERVICE, PROTOCOL},
+    impl_has_last_modified,
+    repository::{Entity, HasLastModified},
+    services::{API_PREFIX, AUDITORS_SERVICE, PROTOCOL}
 };
 
 use super::{audit_request::PriceRange, contacts::Contacts};
@@ -25,6 +26,8 @@ pub struct Badge<Id> {
     pub created_at: Option<i64>,
     pub link_id: Option<String>,
 }
+
+impl_has_last_modified!(Badge<ObjectId>);
 
 impl Badge<String> {
     pub fn parse(self) -> Badge<ObjectId> {

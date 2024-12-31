@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::Arc;
+use chrono::Utc;
 
-use common::error;
+use common::{error, impl_has_last_modified, default_timestamp};
 use common::repository::mongo_repository::MongoRepository;
-use common::repository::Entity;
+use common::repository::{Entity, HasLastModified};
 use common::services::{API_PREFIX, AUDITORS_SERVICE, CUSTOMERS_SERVICE, PROTOCOL};
 use mongodb::bson::oid::ObjectId;
 use mongodb::bson::{doc, Bson, Document};
@@ -15,7 +16,11 @@ pub struct Since {
     pub id: ObjectId,
     pub name: String,
     pub dict: HashMap<String, i64>,
+    #[serde(default = "default_timestamp")]
+    pub last_modified: i64,
 }
+
+impl_has_last_modified!(Since);
 
 impl Entity for Since {
     fn id(&self) -> ObjectId {
@@ -28,6 +33,7 @@ impl Default for Since {
         Self {
             id: ObjectId::new(),
             name: "since".to_string(),
+            last_modified: Utc::now().timestamp_micros(),
             dict: {
                 let mut map = HashMap::new();
                 map.insert(

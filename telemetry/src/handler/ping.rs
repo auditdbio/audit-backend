@@ -21,7 +21,7 @@ pub async fn status(context: GeneralContext, services: web::Data<Vec<Service>>) 
 pub async fn update(context: GeneralContext) -> HttpResponse {
     match ping::update(&context).await {
         Ok(_) => {
-            let event = PublicEvent::new(ObjectId::new(), EventPayload::VersionUpdate);
+            let event = PublicEvent::new(ObjectId::new(), None, EventPayload::VersionUpdate);
             post_event(&context, event, context.server_auth())
                 .await
                 .unwrap();
