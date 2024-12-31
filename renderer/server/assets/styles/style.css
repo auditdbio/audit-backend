@@ -150,6 +150,16 @@ td {
   margin: 10px 0 20px;
 }
 
+.verify-button {
+  padding: 5px 24px;
+  font-weight: 500;
+  font-size: 30px;
+  color: #434242;
+  background-color: #e3e3e3;
+  border-radius: 5px;
+  width: 130px;
+}
+
 .report-block {
   margin-bottom: 100px;
 }

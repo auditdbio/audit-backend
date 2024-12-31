@@ -238,7 +238,7 @@ impl RatingService {
             .find(|fb| fb.audit_id == audit_id) {
             Ok(feedback.clone().stringify())
         } else {
-            Err(anyhow::anyhow!("Feedback not found").code(404))
+            Err(anyhow::anyhow!("Feedback not found").code(204))
         }
     }
 }

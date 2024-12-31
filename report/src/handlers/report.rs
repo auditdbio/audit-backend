@@ -1,15 +1,38 @@
+use std::collections::HashMap;
+use actix_multipart::Multipart;
 use actix_web::{
     post,
-    web::{Json, Path},
+    web::{Json, Path, Query},
 };
-use common::{api::report::PublicReport, context::GeneralContext, error};
 
-#[post("/report/{id}")]
+use common::{
+    api::report::{PublicReport, CreateReport},
+    context::GeneralContext,
+    error,
+};
+
+use crate::service::report::{self, VerifyReportResponse};
+
+#[post("/report/{audit_id}")]
 pub async fn create_report(
     context: GeneralContext,
-    id: Path<String>,
+    audit_id: Path<String>,
+    Json(data): Json<CreateReport>,
+    query: Query<HashMap<String, String>>,
 ) -> error::Result<Json<PublicReport>> {
+    let code = query.get("code");
     Ok(Json(
-        crate::service::report::create_report(context, id.into_inner()).await?,
+        report::create_report(context, audit_id.into_inner(), data, code).await?,
+    ))
+}
+
+#[post("/report/{audit_id}/verify")]
+pub async fn verify_report(
+    context: GeneralContext,
+    audit_id: Path<String>,
+    payload: Multipart,
+) -> error::Result<Json<VerifyReportResponse>> {
+    Ok(Json(
+        report::verify_report(context, audit_id.into_inner(), payload).await?,
     ))
 }

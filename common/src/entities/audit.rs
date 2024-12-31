@@ -1,5 +1,5 @@
-use std::collections::HashMap;
-use std::hash::Hash;
+use std::{collections::HashMap, hash::Hash};
+use chrono::Utc;
 
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
@@ -7,14 +7,15 @@ use serde::{Deserialize, Serialize};
 use crate::{
     impl_has_last_modified,
     api::{
+        audits::create_access_code,
         chat::AuditMessageId,
-        report::PublicReport,
+        report::{PublicReport, CreateReport},
     },
     entities::{auditor::ExtendedAuditor, customer::PublicCustomer, role::Role},
     error::{self, AddCode},
     context::GeneralContext,
     repository::{Entity, HasLastModified},
-    services::{API_PREFIX, PROTOCOL, AUDITORS_SERVICE, CUSTOMERS_SERVICE, REPORT_SERVICE},
+    services::{API_PREFIX, PROTOCOL, AUDITORS_SERVICE, CUSTOMERS_SERVICE, REPORT_SERVICE, FILES_SERVICE},
 };
 
 use super::{audit_request::TimeRange, issue::Issue};
@@ -71,7 +72,6 @@ pub struct Audit<Id: Eq + Hash> {
     pub last_modified: i64,
     pub resolved_at: Option<i64>,
     pub report: Option<String>,
-    pub report_name: Option<String>,
     pub report_type: Option<ReportType>,
     pub time: TimeRange,
 
@@ -89,6 +89,9 @@ pub struct Audit<Id: Eq + Hash> {
     pub no_customer: bool,
     pub chat_id: Option<AuditMessageId>,
     pub conclusion: Option<String>,
+
+    pub access_code: Option<String>,
+    pub report_sha: Option<String>,
 }
 
 impl_has_last_modified!(Audit<ObjectId>);
@@ -110,7 +113,6 @@ impl Audit<String> {
             last_modified: self.last_modified,
             resolved_at: self.resolved_at,
             report: self.report,
-            report_name: self.report_name,
             report_type: self.report_type,
             time: self.time,
             issues: Issue::parse_map(self.issues),
@@ -121,6 +123,8 @@ impl Audit<String> {
             edit_history: self.edit_history,
             approved_by: self.approved_by,
             unread_edits: self.unread_edits,
+            access_code: self.access_code,
+            report_sha: self.report_sha,
         }
     }
 }
@@ -142,7 +146,6 @@ impl Audit<ObjectId> {
             last_modified: self.last_modified,
             resolved_at: self.resolved_at,
             report: self.report,
-            report_name: self.report_name,
             report_type: self.report_type,
             time: self.time,
             issues: Issue::to_string_map(self.issues),
@@ -153,21 +156,31 @@ impl Audit<ObjectId> {
             edit_history: self.edit_history,
             approved_by: self.approved_by,
             unread_edits: self.unread_edits,
+            access_code: self.access_code,
+            report_sha: self.report_sha,
         }
     }
 
     pub async fn resolve(&mut self, context: &GeneralContext) -> error::Result<()> {
+        self.resolved_at = Some(Utc::now().timestamp_micros());
+        let access_code = create_access_code();
+        self.access_code = Some(access_code.clone());
+
         if self.report_type.is_none() || self.report_type.clone().unwrap() == ReportType::Generated {
             let report_response = context
-                .make_request::<PublicReport>()
+                .make_request()
                 .post(format!(
-                    "{}://{}/{}/report/{}",
+                    "{}://{}/{}/report/{}?code={}",
                     PROTOCOL.as_str(),
                     REPORT_SERVICE.as_str(),
                     API_PREFIX.as_str(),
                     self.id,
+                    access_code,
                 ))
                 .auth(context.server_auth())
+                .json(&CreateReport {
+                    is_draft: Some(false),
+                })
                 .send()
                 .await;
 
@@ -182,15 +195,39 @@ impl Audit<ObjectId> {
                     return Err(anyhow::anyhow!(format!("Error in report response json: {}", e)).code(404));
                 }
                 let public_report = public_report.unwrap();
-                self.report = Some(public_report.path.clone());
-                self.report_name = Some(public_report.path);
+                self.report = Some(public_report.file_id.clone());
                 self.report_type = Some(ReportType::Generated);
+                self.report_sha = public_report.report_sha;
             } else {
                 return Err(
                     anyhow::anyhow!(
                         format!("Report receiving error: {}", report_response.status())
                     ).code(502)
                 );
+            }
+        } else if self.report_type.clone().unwrap() == ReportType::Custom && self.report.is_some() {
+            let report_response = context
+                .make_request::<()>()
+                .get(format!(
+                    "{}://{}/{}/file/id/{}",
+                    PROTOCOL.as_str(),
+                    FILES_SERVICE.as_str(),
+                    API_PREFIX.as_str(),
+                    self.report.clone().unwrap(),
+                ))
+                .send()
+                .await;
+
+            if let Err(e) = report_response {
+                return Err(anyhow::anyhow!(format!("Error in report request: {}", e)).code(502));
+            }
+
+            let report_response = report_response.unwrap();
+            if report_response.status().is_success() {
+                let report = report_response.bytes().await?;
+                let mut combined_bytes = Vec::new();
+                combined_bytes.extend_from_slice(&report);
+                self.report_sha = Some(sha256::digest(&combined_bytes[..]));
             }
         }
 

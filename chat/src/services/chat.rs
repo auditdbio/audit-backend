@@ -1,20 +1,22 @@
 use std::sync::Arc;
-
+use mongodb::bson::oid::ObjectId;
+use serde::{Deserialize, Serialize};
+use serde_json::json;
 use chrono::Utc;
+
 use common::{
     api::{
         auditor::request_auditor,
         chat::{ChatId, CreateMessage, MessageKind, PublicReadId, PublicMessage, PublicChat},
         customer::request_customer,
         events::{EventPayload, PublicEvent},
+        file::request_file_metadata,
     },
     context::GeneralContext,
-    entities::role::Role,
+    entities::role::{Role, ChatRole},
     error::{self, AddCode},
     services::{API_PREFIX, EVENTS_SERVICE, PROTOCOL},
 };
-use mongodb::bson::oid::ObjectId;
-use serde::{Deserialize, Serialize};
 
 use crate::repositories::chat::{ChatRepository, Group, ReadId};
 
@@ -59,6 +61,8 @@ impl ChatService {
         // TODO: check permissions
         let auth = self.context.auth();
 
+        let mut is_new_chat = false;
+
         let repo = self
             .context
             .get_repository_manual::<Arc<ChatRepository>>()
@@ -69,13 +73,37 @@ impl ChatService {
             role: message.role,
         };
 
+        let message_text = if message
+            .kind
+            .clone()
+            .map_or(false, |k| k == MessageKind::File)
+        {
+            let meta = request_file_metadata(&self.context, message.text.clone(), auth).await?;
+            let filename = if let Some(meta) = meta {
+                format!(
+                    "{}{}",
+                    meta.original_name.unwrap_or("Unnamed file".to_string()),
+                    if meta.extension.is_empty() { "".to_string() } else { format!(".{}", meta.extension) }
+                )
+            } else {
+                return Err(anyhow::anyhow!("File sending error").code(400));
+            };
+
+            serde_json::to_string(&json!({
+                "file_id": message.text,
+                "filename": filename,
+            })).unwrap()
+        } else {
+            message.text
+        };
+
         let message = if let Some(chat) = message.chat {
             Message {
                 id: ObjectId::new(),
                 from,
                 chat: chat.parse()?,
                 time: Utc::now().timestamp_micros(),
-                text: message.text,
+                text: message_text,
                 kind: message.kind,
             }
         } else {
@@ -92,16 +120,17 @@ impl ChatService {
                     from,
                     chat: existing_private.id,
                     time: Utc::now().timestamp_micros(),
-                    text: message.text,
+                    text: message_text,
                     kind: message.kind,
                 }
             } else {
+                is_new_chat = true;
                 let stored_message = Message {
                     id: ObjectId::new(),
                     from,
                     chat: ObjectId::new(),
                     time: Utc::now().timestamp_micros(),
-                    text: message.text,
+                    text: message_text,
                     kind: message.kind,
                 };
 
@@ -112,15 +141,54 @@ impl ChatService {
         };
 
         let chat = repo.message(message.clone()).await?;
+        let mut public_chat = chat.publish();
+
+        let (chat_name, chat_avatar) = if is_new_chat {
+            for unread in &mut public_chat.unread {
+                if unread.id != auth.id().unwrap().to_hex() {
+                    unread.unread = 1;
+                }
+            }
+
+            if from.role == ChatRole::Organization {
+                // let org = get_organization(&self.context, from.id, None).await?;
+                // (org.name, org.avatar)
+                ("Organization".to_string(), None) // TODO: update this after merge with organizations
+            } else if from.role == ChatRole::Auditor {
+                let auditor = request_auditor(&self.context, from.id, auth.clone()).await?;
+                (
+                    auditor.first_name().clone() + " " + auditor.last_name(),
+                    Some(auditor.avatar().to_string()),
+                )
+            } else if from.role == ChatRole::Customer {
+                let customer = request_customer(&self.context, from.id, auth.clone()).await?;
+                (
+                    customer.first_name + " " + &customer.last_name,
+                    Some(customer.avatar),
+                )
+            } else {
+                ("Private chat".to_string(), None)
+            }
+        } else {
+            ("Private chat".to_string(), None)
+        };
+
+        public_chat.name = chat_name;
+        public_chat.avatar = chat_avatar;
 
         let payload = EventPayload::ChatMessage(message.publish());
+        let new_chat_payload = EventPayload::NewChat(public_chat.clone());
 
         for user_id in chat.members() {
             if user_id.id != auth.id().unwrap() {
                 repo.unread(chat.chat_id(), user_id.id, None).await?;
             }
 
-            let event = PublicEvent::new(user_id.id, payload.clone());
+            let event = PublicEvent::new(
+                user_id.id,
+                Some(user_id.role.to_role()?),
+                payload.clone(),
+                );
 
             self.context
                 .make_request()
@@ -133,8 +201,31 @@ impl ChatService {
                 .json(&event)
                 .send()
                 .await?;
+
+            // TODO: update this after merge with organizations
+            if is_new_chat && user_id.id != auth.id().unwrap() {
+                let new_chat_event = PublicEvent::new(
+                    user_id.id,
+                    Some(user_id.role.to_role()?),
+                    new_chat_payload.clone(),
+                );
+                self.context
+                    .make_request()
+                    .post(format!(
+                        "{}://{}/{}/event",
+                        PROTOCOL.as_str(),
+                        EVENTS_SERVICE.as_str(),
+                        API_PREFIX.as_str(),
+                    ))
+                    .json(&new_chat_event)
+                    .send()
+                    .await?;
+            }
+            // ---
+
         }
-        Ok(chat.publish())
+
+        Ok(public_chat)
     }
 
     pub async fn preview(&self, role: Role) -> error::Result<Vec<PublicChat>> {
@@ -146,7 +237,7 @@ impl ChatService {
             .unwrap();
 
         let id = ChatId {
-            role,
+            role: role.into(),
             id: auth.id().unwrap(),
         };
 
@@ -160,7 +251,7 @@ impl ChatService {
                     continue;
                 }
 
-                let (name, avatar) = if id.role == Role::Auditor {
+                let (name, avatar) = if id.role == Role::Auditor.into() {
                     let auditor = match request_auditor(&self.context, id.id, auth.clone()).await {
                         Ok(auditor) => auditor,
                         _ => continue
@@ -172,7 +263,7 @@ impl ChatService {
                         auditor.first_name().clone() + " " + auditor.last_name(),
                         auditor.avatar().to_string(),
                     )
-                } else {
+                } else if id.role == Role::Customer.into() {
                     let customer = match request_customer(&self.context, id.id, auth.clone()).await {
                         Ok(customer) => customer,
                         _ => continue
@@ -184,6 +275,9 @@ impl ChatService {
                         customer.first_name + " " + &customer.last_name,
                         customer.avatar,
                     )
+                } else {
+                    // todo: fix after update with organizations
+                    continue;
                 };
 
                 let unread = if let Some(unread) = private.unread.clone() {
@@ -261,7 +355,7 @@ impl ChatService {
         let payload = EventPayload::ChatDeleteMessage(message_id.to_hex());
 
         for member in chat_members {
-            let event = PublicEvent::new(member.id, payload.clone());
+            let event = PublicEvent::new(member.id, None, payload.clone());
             self.context
                 .make_request()
                 .post(format!(

@@ -44,6 +44,16 @@ impl Status {
             _ => None,
         }
     }
+
+    pub fn to_string(&self) -> String {
+        match self {
+            Status::Draft => "Draft".to_string(),
+            Status::InProgress => "InProgress".to_string(),
+            Status::Verification => "Verification".to_string(),
+            Status::WillNotFix => "WillNotFix".to_string(),
+            Status::Fixed => "Fixed".to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -76,6 +86,14 @@ pub fn severity_to_integer(severity: &str) -> usize {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct IssueEditHistory {
+    pub id: usize,
+    pub date: i64,
+    pub author: String,
+    pub issue: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Issue<Id> {
     pub id: usize,
     pub name: String,
@@ -95,6 +113,9 @@ pub struct Issue<Id> {
     pub last_modified: i64,
     #[serde(default)]
     pub read: HashMap<String, u64>,
+
+    #[serde(default)]
+    pub edit_history: Vec<IssueEditHistory>,
 }
 
 impl<T> Issue<T> {
@@ -118,6 +139,7 @@ impl Issue<String> {
             events: Event::parse_map(self.events),
             last_modified: self.last_modified,
             read: self.read,
+            edit_history: self.edit_history,
         }
     }
 
@@ -141,6 +163,7 @@ impl Issue<ObjectId> {
             events: Event::to_string_map(self.events),
             last_modified: self.last_modified,
             read: self.read,
+            edit_history: self.edit_history,
         }
     }
 

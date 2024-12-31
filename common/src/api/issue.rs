@@ -4,6 +4,7 @@ use crate::{
     default_timestamp,
     entities::issue::{Event, Status},
 };
+use crate::entities::issue::IssueEditHistory;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct PublicIssue {
@@ -24,4 +25,5 @@ pub struct PublicIssue {
     #[serde(default = "default_timestamp")]
     pub last_modified: i64,
     pub read: u64,
+    pub edit_history: Vec<IssueEditHistory>,
 }

@@ -39,7 +39,8 @@ export const generateReport = async (req, res, next) => {
       pdfDoc,
       tableOfContentsWithCoords,
       tocPagesCounter,
-      project?.profile_link || `${PROTOCOL}://${FRONTEND}/disclaimer/`
+      project?.profile_link || `${PROTOCOL}://${FRONTEND}/disclaimer/`,
+      project?.audit_link || `${PROTOCOL}://${FRONTEND}/disclaimer/`,
     )
 
     const pdfBytes = await pdfDoc.save()

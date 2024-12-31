@@ -9,6 +9,7 @@ pub mod customer;
 pub mod events;
 pub mod issue;
 pub mod mail;
+pub mod file;
 pub mod project;
 pub mod report;
 pub mod requests;

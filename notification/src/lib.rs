@@ -17,6 +17,7 @@ pub mod access_rules;
 pub mod handlers;
 pub mod repositories;
 pub mod service;
+pub mod migrations;
 
 pub fn create_app(
     state: Arc<ServiceState>,

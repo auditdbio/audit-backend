@@ -859,6 +859,7 @@ dependencies = [
  "rust-crypto",
  "serde",
  "serde_json",
+ "sha256",
  "tokio",
  "type-map",
  "ureq",
@@ -2439,6 +2440,7 @@ dependencies = [
  "futures",
  "log",
  "mongodb",
+ "mongodb-migrator",
  "serde",
  "serde_json",
  "tokio",
@@ -2976,6 +2978,8 @@ dependencies = [
  "log",
  "reqwest",
  "serde",
+ "serde_json",
+ "sha256",
  "tokio",
 ]
 
@@ -4279,6 +4283,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha256",
+ "time 0.3.17",
  "uuid",
  "web3",
 ]

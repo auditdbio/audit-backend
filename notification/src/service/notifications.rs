@@ -70,6 +70,7 @@ pub async fn send_notification(
 
     let event = PublicEvent::new(
         notif.user_id,
+        None,
         EventPayload::Notification(notification.into()),
     );
 

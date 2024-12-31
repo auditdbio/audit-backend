@@ -279,6 +279,7 @@ impl RequestService {
 
         let event = PublicEvent::new(
             event_receiver,
+            Some(receiver_role),
             EventPayload::NewRequest(public_request.clone()),
         );
 
@@ -361,9 +362,12 @@ impl RequestService {
         let mut public_requests = Vec::new();
 
         for req in result {
-            let public_request = PublicRequest::new(&self.context, req).await?;
+            let public_request = PublicRequest::new(&self.context, req).await;
 
-            public_requests.push(public_request);
+            match public_request {
+                Ok(req) => public_requests.push(req),
+                Err(e) => log::error!("{}", e),
+            }
         }
 
         // Ok(MyAuditRequestResult {
@@ -556,6 +560,7 @@ impl RequestService {
 
         let event = PublicEvent::new(
             event_receiver,
+            Some(receiver_role),
             EventPayload::RequestDecline(public_request.id.clone()),
         );
 
