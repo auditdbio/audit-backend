@@ -1,3 +1,20 @@
-taget
-.git
+# Rust build artifacts
+target/
+**/target/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Git
+.git/
 .gitignore
+
+# Docker
+.dockerignore
+Dockerfile
+
+# Test artifacts
+**/*.rs.bk 
