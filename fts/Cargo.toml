@@ -14,8 +14,12 @@ common = { path = "../common" }
 tempfile = { version = "3", optional = true }
 futures = "0.3"
 mongodb = "2.8"
+sled = "0.34"
+log = "0.4"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full", "test-util"] }
 tempfile = "3"
 testcontainers-modules = { version = "0.11.5", features = ["mongo"] }
+env_logger="0.11"
+ctor="0.2.9"

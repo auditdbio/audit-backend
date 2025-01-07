@@ -5,11 +5,11 @@ use mongodb::{
     Client, Collection,
 };
 
-pub struct Database {
+pub struct MongoDatabase {
     collection: Collection<Auditor<ObjectId>>,
 }
 
-impl Database {
+impl MongoDatabase {
     pub fn new(client: Client) -> Self {
         let collection = client
             .database("auditors")
@@ -19,13 +19,13 @@ impl Database {
 }
 
 #[async_trait]
-pub trait DatabaseTrait {
+pub trait Database {
     async fn check_presence(&self, user_ids: Vec<String>) -> anyhow::Result<Vec<bool>>;
     async fn get_modified_since(&self, timestamp: i64) -> anyhow::Result<Vec<Auditor<ObjectId>>>;
 }
 
 #[async_trait]
-impl DatabaseTrait for Database {
+impl Database for MongoDatabase {
     async fn check_presence(&self, user_ids: Vec<String>) -> anyhow::Result<Vec<bool>> {
         let mut result = Vec::with_capacity(user_ids.len());
         
@@ -106,7 +106,7 @@ mod tests {
         let container = Mongo::default().start().await?;
         let connection_string = get_connection_string(&container).await?;
         let client = Client::with_uri_str(&connection_string).await?;
-        let db = Database::new(client);
+        let db = MongoDatabase::new(client);
         
         let id1 = ObjectId::new();
         let id2 = ObjectId::new();
@@ -127,7 +127,7 @@ mod tests {
         let container = Mongo::default().start().await?;
         let connection_string = get_connection_string(&container).await?;
         let client = Client::with_uri_str(&connection_string).await?;
-        let db = Database::new(client);
+        let db = MongoDatabase::new(client);
         
         let id1 = ObjectId::new();
         let id2 = ObjectId::new();

@@ -20,7 +20,7 @@ dependencies = [
  "futures-util",
  "log",
  "once_cell",
- "parking_lot",
+ "parking_lot 0.12.3",
  "pin-project-lite",
  "smallvec",
  "tokio",
@@ -439,6 +439,55 @@ dependencies = [
 ]
 
 [[package]]
+name = "anstream"
+version = "0.6.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8acc5369981196006228e28809f761875c0327210a891e941f4c683b3a99529b"
+dependencies = [
+ "anstyle",
+ "anstyle-parse",
+ "anstyle-query",
+ "anstyle-wincon",
+ "colorchoice",
+ "is_terminal_polyfill",
+ "utf8parse",
+]
+
+[[package]]
+name = "anstyle"
+version = "1.0.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "55cc3b69f167a1ef2e161439aa98aed94e6028e5f9a59be9a6ffb47aef1651f9"
+
+[[package]]
+name = "anstyle-parse"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3b2d16507662817a6a20a9ea92df6652ee4f94f914589377d69f3b21bc5798a9"
+dependencies = [
+ "utf8parse",
+]
+
+[[package]]
+name = "anstyle-query"
+version = "1.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "79947af37f4177cfead1110013d678905c37501914fba0efea834c3fe9a8d60c"
+dependencies = [
+ "windows-sys 0.59.0",
+]
+
+[[package]]
+name = "anstyle-wincon"
+version = "3.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2109dbce0e72be3ec00bed26e6a7479ca384ad226efdd66db8fa2e3a38c83125"
+dependencies = [
+ "anstyle",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
 name = "anyhow"
 version = "1.0.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -492,7 +541,7 @@ dependencies = [
  "common",
  "derive_more",
  "dotenv",
- "env_logger",
+ "env_logger 0.10.2",
  "futures",
  "log",
  "mongodb",
@@ -515,7 +564,7 @@ dependencies = [
  "common",
  "derive_more",
  "dotenv",
- "env_logger",
+ "env_logger 0.10.2",
  "futures",
  "log",
  "mongodb",
@@ -868,7 +917,7 @@ dependencies = [
  "common",
  "derive_more",
  "dotenv",
- "env_logger",
+ "env_logger 0.10.2",
  "futures",
  "log",
  "mongodb",
@@ -908,7 +957,7 @@ dependencies = [
  "common",
  "derive_more",
  "dotenv",
- "env_logger",
+ "env_logger 0.10.2",
  "futures",
  "log",
  "mongodb",
@@ -919,6 +968,12 @@ dependencies = [
  "utoipa",
  "utoipa-swagger-ui",
 ]
+
+[[package]]
+name = "colorchoice"
+version = "1.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5b63caa9aa9397e2d9480a9b13673856c78d8ac123288526c37d7839f2a86990"
 
 [[package]]
 name = "common"
@@ -1083,6 +1138,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ctor"
+version = "0.2.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32a2785755761f3ddc1492979ce1e48d2c00d09311c39e4466429188f3dd6501"
+dependencies = [
+ "quote",
+ "syn 2.0.91",
+]
+
+[[package]]
 name = "customers"
 version = "0.1.0"
 dependencies = [
@@ -1094,7 +1159,7 @@ dependencies = [
  "common",
  "derive_more",
  "dotenv",
- "env_logger",
+ "env_logger 0.10.2",
  "futures",
  "log",
  "mongodb",
@@ -1395,6 +1460,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "env_filter"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "186e05a59d4c50738528153b83b0b0194d3a29507dfec16eccd4b342903397d0"
+dependencies = [
+ "log",
+ "regex",
+]
+
+[[package]]
 name = "env_logger"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1405,6 +1480,19 @@ dependencies = [
  "log",
  "regex",
  "termcolor",
+]
+
+[[package]]
+name = "env_logger"
+version = "0.11.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dcaee3d8e3cfc3fd92428d477bc97fc29ec8716d180c0d74c643bb26166660e0"
+dependencies = [
+ "anstream",
+ "anstyle",
+ "env_filter",
+ "humantime",
+ "log",
 ]
 
 [[package]]
@@ -1489,7 +1577,7 @@ dependencies = [
  "anyhow",
  "common",
  "dotenv",
- "env_logger",
+ "env_logger 0.10.2",
  "futures",
  "log",
  "mongodb",
@@ -1545,7 +1633,7 @@ dependencies = [
  "common",
  "derive_more",
  "dotenv",
- "env_logger",
+ "env_logger 0.10.2",
  "futures",
  "futures-util",
  "jsonwebtoken",
@@ -1628,6 +1716,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fs2"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9564fc758e15025b46aa6643b1b77d047d1a56a1aea6e01002ac0c7026876213"
+dependencies = [
+ "libc",
+ "winapi",
+]
+
+[[package]]
 name = "fs4"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1644,10 +1742,14 @@ dependencies = [
  "anyhow",
  "async-trait",
  "common",
+ "ctor",
+ "env_logger 0.11.6",
  "futures",
+ "log",
  "mongodb",
  "serde",
  "serde_json",
+ "sled",
  "tantivy",
  "tempfile",
  "testcontainers-modules",
@@ -1759,6 +1861,15 @@ dependencies = [
  "pin-project-lite",
  "pin-utils",
  "slab",
+]
+
+[[package]]
+name = "fxhash"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c31b6d751ae2c7f11320402d34e41349dd1016f8d5d45e48c4312bc8625af50c"
+dependencies = [
+ "byteorder",
 ]
 
 [[package]]
@@ -2444,6 +2555,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "is_terminal_polyfill"
+version = "1.70.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7943c866cc5cd64cbc25b2e01621d07fa8eb2a1a23160ee81ce38704e97b8ecf"
+
+[[package]]
 name = "itertools"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2686,7 +2803,7 @@ dependencies = [
  "common",
  "derive_more",
  "dotenv",
- "env_logger",
+ "env_logger 0.10.2",
  "futures",
  "futures-util",
  "jsonwebtoken",
@@ -2925,7 +3042,7 @@ dependencies = [
  "chrono",
  "common",
  "dotenv",
- "env_logger",
+ "env_logger 0.10.2",
  "futures",
  "log",
  "mongodb",
@@ -3114,12 +3231,37 @@ dependencies = [
 
 [[package]]
 name = "parking_lot"
+version = "0.11.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7d17b78036a60663b797adeaee46f5c9dfebb86948d1255007a1d6be0271ff99"
+dependencies = [
+ "instant",
+ "lock_api",
+ "parking_lot_core 0.8.6",
+]
+
+[[package]]
+name = "parking_lot"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1bf18183cf54e8d6059647fc3063646a1801cf30896933ec2311622cc4b9a27"
 dependencies = [
  "lock_api",
- "parking_lot_core",
+ "parking_lot_core 0.9.10",
+]
+
+[[package]]
+name = "parking_lot_core"
+version = "0.8.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "60a2cfe6f0ad2bfc16aefa463b497d5c7a5ecd44a23efa72aa342d90177356dc"
+dependencies = [
+ "cfg-if",
+ "instant",
+ "libc",
+ "redox_syscall 0.2.16",
+ "smallvec",
+ "winapi",
 ]
 
 [[package]]
@@ -3430,7 +3572,7 @@ dependencies = [
  "common",
  "derive_more",
  "dotenv",
- "env_logger",
+ "env_logger 0.10.2",
  "lazy_static",
  "log",
  "mongodb",
@@ -3465,6 +3607,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "678054eb77286b51581ba43620cc911abf02758c91f93f479767aed0f90458b2"
 dependencies = [
  "rand_core 0.3.1",
+]
+
+[[package]]
+name = "redox_syscall"
+version = "0.2.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb5a58c1855b4b6819d59012155603f0b22ad30cad752600aadfcb695265519a"
+dependencies = [
+ "bitflags 1.3.2",
 ]
 
 [[package]]
@@ -3558,7 +3709,7 @@ dependencies = [
  "anyhow",
  "common",
  "dotenv",
- "env_logger",
+ "env_logger 0.10.2",
  "futures",
  "log",
  "reqwest",
@@ -3927,7 +4078,7 @@ dependencies = [
  "derive_more",
  "dotenv",
  "elasticsearch",
- "env_logger",
+ "env_logger 0.10.2",
  "futures",
  "futures-util",
  "jsonwebtoken",
@@ -4295,6 +4446,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "sled"
+version = "0.34.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f96b4737c2ce5987354855aed3797279def4ebf734436c6aa4552cf8e169935"
+dependencies = [
+ "crc32fast",
+ "crossbeam-epoch",
+ "crossbeam-utils",
+ "fs2",
+ "fxhash",
+ "libc",
+ "log",
+ "parking_lot 0.11.2",
+]
+
+[[package]]
 name = "smallvec"
 version = "1.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4645,7 +4812,7 @@ dependencies = [
  "common",
  "derive_more",
  "dotenv",
- "env_logger",
+ "env_logger 0.10.2",
  "futures",
  "futures-util",
  "jsonwebtoken",
@@ -4835,7 +5002,7 @@ dependencies = [
  "bytes",
  "libc",
  "mio",
- "parking_lot",
+ "parking_lot 0.12.3",
  "pin-project-lite",
  "signal-hook-registry",
  "socket2 0.5.8",
@@ -5079,7 +5246,7 @@ dependencies = [
  "lazy_static",
  "log",
  "lru-cache",
- "parking_lot",
+ "parking_lot 0.12.3",
  "resolv-conf",
  "smallvec",
  "thiserror",
@@ -5218,7 +5385,7 @@ dependencies = [
  "common",
  "derive_more",
  "dotenv",
- "env_logger",
+ "env_logger 0.10.2",
  "futures",
  "futures-util",
  "hex",
@@ -5256,6 +5423,12 @@ name = "utf8_iter"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
+
+[[package]]
+name = "utf8parse"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "utoipa"
@@ -5466,7 +5639,7 @@ dependencies = [
  "jsonrpc-core",
  "log",
  "once_cell",
- "parking_lot",
+ "parking_lot 0.12.3",
  "pin-project",
  "reqwest",
  "rlp",

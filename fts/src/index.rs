@@ -7,6 +7,7 @@ use common::entities::{
     contacts::Contacts,
     audit_request::PriceRange,
 };
+use log::{debug, info, warn};
 use tantivy::{
     schema::{Schema, STORED, TEXT, FAST, IndexRecordOption},
     Index, IndexReader, IndexWriter, TantivyDocument, Term,
@@ -31,6 +32,12 @@ pub struct RatingFilter {
 }
 
 #[derive(Debug, Clone)]
+pub struct DateRangeFilter {
+    pub from: Option<String>,
+    pub to: Option<String>,
+}
+
+#[derive(Debug, Clone)]
 pub struct SearchFilter {
     pub query: Option<String>,
     pub first_name: Option<String>,
@@ -41,6 +48,7 @@ pub struct SearchFilter {
     pub price: Option<i64>,
     pub price_range: Option<PriceRangeFilter>,
     pub rating: Option<RatingFilter>,
+    pub free_at_range: Option<DateRangeFilter>,
     pub offset: Option<usize>,
     pub limit: Option<usize>,
 }
@@ -55,11 +63,15 @@ pub struct AuditorIndex {
     user_id: tantivy::schema::Field,
     avatar: tantivy::schema::Field,
     first_name: tantivy::schema::Field,
+    first_name_lowercase: tantivy::schema::Field,
     last_name: tantivy::schema::Field,
+    last_name_lowercase: tantivy::schema::Field,
     about: tantivy::schema::Field,
     company: tantivy::schema::Field,
+    company_lowercase: tantivy::schema::Field,
     free_at: tantivy::schema::Field,
     tags: tantivy::schema::Field,
+    tags_lowercase: tantivy::schema::Field,
     contacts: tantivy::schema::Field,
     price_range: tantivy::schema::Field,
     last_modified: tantivy::schema::Field,
@@ -84,12 +96,16 @@ impl AuditorIndex {
         // Define schema fields
         let user_id = schema_builder.add_text_field("user_id", TEXT | STORED);
         let avatar = schema_builder.add_text_field("avatar", STORED);
-        let first_name = schema_builder.add_text_field("first_name", TEXT | STORED | FAST);
-        let last_name = schema_builder.add_text_field("last_name", TEXT | STORED | FAST);
+        let first_name = schema_builder.add_text_field("first_name", STORED);
+        let first_name_lowercase = schema_builder.add_text_field("first_name_lowercase", TEXT | FAST);
+        let last_name = schema_builder.add_text_field("last_name", STORED);
+        let last_name_lowercase = schema_builder.add_text_field("last_name_lowercase", TEXT | FAST);
         let about = schema_builder.add_text_field("about", TEXT | STORED);
-        let company = schema_builder.add_text_field("company", TEXT | STORED | FAST);
+        let company = schema_builder.add_text_field("company", STORED);
+        let company_lowercase = schema_builder.add_text_field("company_lowercase", TEXT | FAST);
         let free_at = schema_builder.add_text_field("free_at", STORED);
-        let tags = schema_builder.add_text_field("tags", TEXT | STORED | FAST);
+        let tags = schema_builder.add_text_field("tags", STORED);
+        let tags_lowercase = schema_builder.add_text_field("tags_lowercase", TEXT | FAST);
         let contacts = schema_builder.add_text_field("contacts", STORED);
         let price_range = schema_builder.add_text_field("price_range", STORED);
         let last_modified = schema_builder.add_text_field("last_modified", STORED);
@@ -111,11 +127,15 @@ impl AuditorIndex {
             user_id,
             avatar,
             first_name,
+            first_name_lowercase,
             last_name,
+            last_name_lowercase,
             about,
             company,
+            company_lowercase,
             free_at,
             tags,
+            tags_lowercase,
             contacts,
             price_range,
             last_modified,
@@ -130,16 +150,21 @@ impl AuditorIndex {
         let mut doc = TantivyDocument::new();
 
         let company_lower = auditor.company.to_lowercase();
-        println!("Indexing company: {} -> {}", auditor.company, company_lower);
+        debug!("Indexing company: {} -> {}", auditor.company, company_lower);
 
         doc.add_text(self.user_id, &auditor.user_id);
         doc.add_text(self.avatar, &auditor.avatar);
-        doc.add_text(self.first_name, &auditor.first_name.to_lowercase());
-        doc.add_text(self.last_name, &auditor.last_name.to_lowercase());
+        doc.add_text(self.first_name, &auditor.first_name);
+        doc.add_text(self.first_name_lowercase, &auditor.first_name.to_lowercase());
+        doc.add_text(self.last_name, &auditor.last_name);
+        doc.add_text(self.last_name_lowercase, &auditor.last_name.to_lowercase());
         doc.add_text(self.about, &auditor.about);
-        doc.add_text(self.company, &company_lower);
+        doc.add_text(self.company, &auditor.company);
+        doc.add_text(self.company_lowercase, &company_lower);
         doc.add_text(self.free_at, &auditor.free_at);
-        doc.add_text(self.tags, &auditor.tags.iter().map(|t| t.to_lowercase()).collect::<Vec<_>>().join(" "));
+        let tags_joined = auditor.tags.join(" ");
+        doc.add_text(self.tags, &tags_joined);
+        doc.add_text(self.tags_lowercase, &tags_joined.to_lowercase());
         doc.add_text(self.contacts, &serde_json::to_string(&auditor.contacts).unwrap());
         doc.add_text(self.price_range, &serde_json::to_string(&auditor.price_range).unwrap());
         doc.add_text(self.last_modified, &auditor.last_modified.to_string());
@@ -153,7 +178,6 @@ impl AuditorIndex {
             doc.add_text(self.rating, &rating.to_string());
         }
 
-        // Create full text field for searching
         let full_text = format!(
             "{} {} {} {} {}",
             auditor.first_name.to_lowercase(),
@@ -207,63 +231,66 @@ impl AuditorSearch for AuditorIndex {
         let mut query_terms: Vec<(Occur, Box<dyn Query>)> = Vec::new();
 
         // Full text search
-        if let Some(query) = filter.query {
+        if let Some(query) = &filter.query {
+            debug!("Performing full text search with query: {}", query);
             let mut query_parser = QueryParser::for_index(&self.index, vec![self.full_text]);
-            query_parser.set_conjunction_by_default(); // Make all terms required by default
-            query_terms.push((Occur::Must, Box::new(query_parser.parse_query(&query)?)));
+            query_parser.set_conjunction_by_default();
+            query_terms.push((Occur::Must, Box::new(query_parser.parse_query(query)?)));
         }
 
         // First name exact match
-        if let Some(first_name) = filter.first_name {
-            println!("Searching for first name: {}", first_name);
+        if let Some(first_name) = &filter.first_name {
+            debug!("Searching for first name: {}", first_name);
             query_terms.push((
                 Occur::Must,
                 Box::new(TermQuery::new(
-                    Term::from_field_text(self.first_name, &first_name.to_lowercase()),
+                    Term::from_field_text(self.first_name_lowercase, &first_name.to_lowercase()),
                     IndexRecordOption::Basic,
                 )),
             ));
         }
 
         // Last name exact match
-        if let Some(last_name) = filter.last_name {
-            println!("Searching for last name: {}", last_name);
+        if let Some(last_name) = &filter.last_name {
+            debug!("Searching for last name: {}", last_name);
             query_terms.push((
                 Occur::Must,
                 Box::new(TermQuery::new(
-                    Term::from_field_text(self.last_name, &last_name.to_lowercase()),
+                    Term::from_field_text(self.last_name_lowercase, &last_name.to_lowercase()),
                     IndexRecordOption::Basic,
                 )),
             ));
         }
 
         // Full name exact match
-        if let Some(full_name) = filter.full_name {
-            println!("Searching for full name: {}", full_name);
+        if let Some(full_name) = &filter.full_name {
+            debug!("Searching for full name: {}", full_name);
             let parts: Vec<&str> = full_name.split_whitespace().collect();
             if parts.len() == 2 {
                 query_terms.push((
                     Occur::Must,
                     Box::new(TermQuery::new(
-                        Term::from_field_text(self.first_name, &parts[0].to_lowercase()),
+                        Term::from_field_text(self.first_name_lowercase, &parts[0].to_lowercase()),
                         IndexRecordOption::Basic,
                     )),
                 ));
                 query_terms.push((
                     Occur::Must,
                     Box::new(TermQuery::new(
-                        Term::from_field_text(self.last_name, &parts[1].to_lowercase()),
+                        Term::from_field_text(self.last_name_lowercase, &parts[1].to_lowercase()),
                         IndexRecordOption::Basic,
                     )),
                 ));
+            } else {
+                warn!("Invalid full name format: {}", full_name);
             }
         }
 
         // Company exact match
-        if let Some(company) = filter.company {
+        if let Some(company) = &filter.company {
             let company_lower = company.to_lowercase();
-            println!("Searching for company: {} -> {}", company, company_lower);
-            let mut company_parser = QueryParser::for_index(&self.index, vec![self.company]);
+            debug!("Searching for company: {} -> {}", company, company_lower);
+            let mut company_parser = QueryParser::for_index(&self.index, vec![self.company_lowercase]);
             company_parser.set_conjunction_by_default();
             query_terms.push((
                 Occur::Must,
@@ -272,13 +299,13 @@ impl AuditorSearch for AuditorIndex {
         }
 
         // Tags filter
-        if let Some(tags) = filter.tags {
-            println!("Searching for tags: {:?}", tags);
+        if let Some(tags) = &filter.tags {
+            debug!("Searching for tags: {:?}", tags);
             for tag in tags {
                 query_terms.push((
                     Occur::Must,
                     Box::new(TermQuery::new(
-                        Term::from_field_text(self.tags, &tag.to_lowercase()),
+                        Term::from_field_text(self.tags_lowercase, &tag.to_lowercase()),
                         IndexRecordOption::Basic,
                     )),
                 ));
@@ -296,26 +323,27 @@ impl AuditorSearch for AuditorIndex {
         let limit = filter.limit.unwrap_or(MAX_LIMIT);
         let offset = filter.offset.unwrap_or(0);
         let total_limit = offset + limit;
+        debug!("Pagination: offset={}, limit={}, total_limit={}", offset, limit, total_limit);
 
         let top_docs = searcher.search(&query, &TopDocs::with_limit(total_limit))?;
-        println!("Found {} documents", top_docs.len());
+        info!("Found {} documents before pagination", top_docs.len());
 
         // Post-process results for price range and rating filters
         let mut results = Vec::new();
-        for (_score, doc_address) in top_docs.iter().skip(offset) {
+        for (idx, (_score, doc_address)) in top_docs.iter().enumerate() {
+            debug!("Processing document {} of {}", idx + 1, top_docs.len());
             let doc = searcher.doc::<TantivyDocument>(*doc_address)?;
             let auditor = self.document_to_auditor(doc)?;
-            println!("Processing document: {} {} (company: {}, price: {}-{})", 
+            debug!("Document {}: {} {} (user_id: {})", 
+                idx + 1, 
                 auditor.first_name, 
-                auditor.last_name, 
-                auditor.company,
-                auditor.price_range.from,
-                auditor.price_range.to
+                auditor.last_name,
+                auditor.user_id
             );
 
             // Apply price range filter
             if let Some(price_filter) = &filter.price_range {
-                println!("Checking price range filter: {:?} against auditor's range: {}-{}", 
+                debug!("Checking price range filter: {:?} against auditor's range: {}-{}", 
                     price_filter, auditor.price_range.from, auditor.price_range.to);
 
                 let price_range = &auditor.price_range;
@@ -324,7 +352,7 @@ impl AuditorSearch for AuditorIndex {
 
                 // Check if auditor's range is fully contained within filter range
                 if price_range.from < filter_from || price_range.to > filter_to {
-                    println!("Skipping: auditor's range {}-{} is not fully contained within filter range {}-{}", 
+                    debug!("Skipping: auditor's range {}-{} is not fully contained within filter range {}-{}", 
                         price_range.from, price_range.to, filter_from, filter_to);
                     continue;
                 }
@@ -332,12 +360,12 @@ impl AuditorSearch for AuditorIndex {
 
             // Apply price filter (single value)
             if let Some(price) = filter.price {
-                println!("Checking price {} against auditor's range: {}-{}", 
+                debug!("Checking price {} against auditor's range: {}-{}", 
                     price, auditor.price_range.from, auditor.price_range.to);
 
                 // Check if price is within auditor's range (inclusive from, exclusive to)
                 if price < auditor.price_range.from || price >= auditor.price_range.to {
-                    println!("Skipping: price {} is not within auditor's range {}-{}", 
+                    debug!("Skipping: price {} is not within auditor's range {}-{}", 
                         price, auditor.price_range.from, auditor.price_range.to);
                     continue;
                 }
@@ -348,29 +376,53 @@ impl AuditorSearch for AuditorIndex {
                 if let Some(rating) = auditor.rating {
                     if let Some(from) = rating_filter.from {
                         if rating < from {
-                            println!("Skipping due to rating (from)");
+                            debug!("Skipping due to rating below minimum ({})", from);
                             continue;
                         }
                     }
                     if let Some(to) = rating_filter.to {
                         if rating > to {
-                            println!("Skipping due to rating (to)");
+                            debug!("Skipping due to rating above maximum ({})", to);
                             continue;
                         }
                     }
                 } else {
-                    println!("Skipping due to missing rating");
+                    debug!("Skipping due to missing rating");
                     continue;
                 }
             }
 
-            results.push(auditor);
-            if results.len() >= limit {
-                break;
+            // Apply free_at date range filter
+            if let Some(date_filter) = &filter.free_at_range {
+                debug!("Checking free_at date filter: {:?} against auditor's free_at: {}", 
+                    date_filter, auditor.free_at);
+
+                if let Some(from) = &date_filter.from {
+                    if auditor.free_at < *from {
+                        debug!("Skipping: auditor's free_at {} is before filter from date {}", 
+                            auditor.free_at, from);
+                        continue;
+                    }
+                }
+                if let Some(to) = &date_filter.to {
+                    if auditor.free_at > *to {
+                        debug!("Skipping: auditor's free_at {} is after filter to date {}", 
+                            auditor.free_at, to);
+                        continue;
+                    }
+                }
             }
+
+            results.push(auditor);
         }
 
-        println!("Returning {} results", results.len());
+        // Apply offset and limit after all filters
+        let start = offset.min(results.len());
+        let end = (offset + limit).min(results.len());
+        debug!("Applying pagination: start={}, end={}, total_results={}", start, end, results.len());
+        results = results.into_iter().skip(start).take(end - start).collect();
+
+        info!("Returning {} results", results.len());
         Ok(results)
     }
 
@@ -476,6 +528,11 @@ mod tests {
     use tempfile::TempDir;
     use futures::StreamExt;
 
+    #[ctor::ctor]
+    fn setup() {
+        env_logger::init();
+    }
+
     fn create_sample_auditor(
         user_id: &str,
         first_name: &str,
@@ -539,6 +596,7 @@ mod tests {
                 price: None,
                 price_range: None,
                 rating: None,
+                free_at_range: None,
                 offset: None,
                 limit: None,
             })
@@ -603,6 +661,7 @@ mod tests {
                 price: None,
                 price_range: None,
                 rating: None,
+                free_at_range: None,
                 offset: None,
                 limit: None,
             })
@@ -622,6 +681,7 @@ mod tests {
                 price: None,
                 price_range: None,
                 rating: None,
+                free_at_range: None,
                 offset: None,
                 limit: None,
             })
@@ -640,6 +700,7 @@ mod tests {
                 price: None,
                 price_range: None,
                 rating: None,
+                free_at_range: None,
                 offset: None,
                 limit: None,
             })
@@ -658,6 +719,7 @@ mod tests {
                 price: None,
                 price_range: None,
                 rating: None,
+                free_at_range: None,
                 offset: None,
                 limit: None,
             })
@@ -676,6 +738,7 @@ mod tests {
                 price: Some(150),
                 price_range: None,
                 rating: None,
+                free_at_range: None,
                 offset: None,
                 limit: None,
             })
@@ -693,6 +756,7 @@ mod tests {
                 price: Some(250),
                 price_range: None,
                 rating: None,
+                free_at_range: None,
                 offset: None,
                 limit: None,
             })
@@ -714,6 +778,7 @@ mod tests {
                     to: Some(200),
                 }),
                 rating: None,
+                free_at_range: None,
                 offset: None,
                 limit: None,
             })
@@ -735,11 +800,56 @@ mod tests {
                     from: Some(4.5),
                     to: None,
                 }),
+                free_at_range: None,
                 offset: None,
                 limit: None,
             })
             .await?;
         assert_eq!(results.len(), 2);
+
+        // Test date range filter
+        let results = index
+            .search(SearchFilter {
+                query: None,
+                first_name: None,
+                last_name: None,
+                full_name: None,
+                company: None,
+                tags: None,
+                price: None,
+                price_range: None,
+                rating: None,
+                free_at_range: Some(DateRangeFilter {
+                    from: Some("2024-01-01".to_string()),
+                    to: Some("2024-12-31".to_string()),
+                }),
+                offset: None,
+                limit: None,
+            })
+            .await?;
+        assert_eq!(results.len(), 3); // All test auditors have free_at: "2024-01-01"
+
+        // Test date range filter with no matches
+        let results = index
+            .search(SearchFilter {
+                query: None,
+                first_name: None,
+                last_name: None,
+                full_name: None,
+                company: None,
+                tags: None,
+                price: None,
+                price_range: None,
+                rating: None,
+                free_at_range: Some(DateRangeFilter {
+                    from: Some("2025-01-01".to_string()),
+                    to: None,
+                }),
+                offset: None,
+                limit: None,
+            })
+            .await?;
+        assert_eq!(results.len(), 0); // No auditors available after 2025-01-01
 
         // Test combined filters
         let results = index
@@ -753,6 +863,10 @@ mod tests {
                 price: None,
                 price_range: None,
                 rating: None,
+                free_at_range: Some(DateRangeFilter {
+                    from: Some("2024-01-01".to_string()),
+                    to: Some("2024-12-31".to_string()),
+                }),
                 offset: None,
                 limit: None,
             })
@@ -797,6 +911,7 @@ mod tests {
                 price: None,
                 price_range: None,
                 rating: None,
+                free_at_range: None,
                 offset: None,
                 limit: None,
             })
@@ -850,4 +965,174 @@ mod tests {
 
         Ok(())
     } 
+
+    #[tokio::test]
+    async fn test_search_pagination() -> anyhow::Result<()> {
+        let temp_dir = TempDir::new()?;
+        let index = AuditorIndex::new(temp_dir.path())?;
+
+        // Create 5 auditors with different names for easy identification
+        let auditors = vec![
+            create_sample_auditor(
+                "user1",
+                "Alice",
+                "Smith",
+                "Tech Corp",
+                "Developer",
+                vec!["rust".to_string()],
+                Some(4.5),
+                PriceRange { from: 100, to: 200 },
+            ),
+            create_sample_auditor(
+                "user2",
+                "Bob",
+                "Johnson",
+                "Tech Corp",
+                "Developer",
+                vec!["rust".to_string()],
+                Some(4.5),
+                PriceRange { from: 100, to: 200 },
+            ),
+            create_sample_auditor(
+                "user3",
+                "Charlie",
+                "Brown",
+                "Tech Corp",
+                "Developer",
+                vec!["rust".to_string()],
+                Some(4.5),
+                PriceRange { from: 100, to: 200 },
+            ),
+            create_sample_auditor(
+                "user4",
+                "David",
+                "Wilson",
+                "Tech Corp",
+                "Developer",
+                vec!["rust".to_string()],
+                Some(4.5),
+                PriceRange { from: 100, to: 200 },
+            ),
+            create_sample_auditor(
+                "user5",
+                "Eve",
+                "Davis",
+                "Tech Corp",
+                "Developer",
+                vec!["rust".to_string()],
+                Some(4.5),
+                PriceRange { from: 100, to: 200 },
+            ),
+        ];
+
+        // Add auditors to index
+        index.add_or_update(auditors.clone()).await?;
+
+        // Test with limit only
+        let results = index
+            .search(SearchFilter {
+                query: None,
+                first_name: None,
+                last_name: None,
+                full_name: None,
+                company: None,
+                tags: None,
+                price: None,
+                price_range: None,
+                rating: None,
+                free_at_range: None,
+                offset: None,
+                limit: Some(3),
+            })
+            .await?;
+        assert_eq!(results.len(), 3);
+
+        // Test with offset only
+        let results = index
+            .search(SearchFilter {
+                query: None,
+                first_name: None,
+                last_name: None,
+                full_name: None,
+                company: None,
+                tags: None,
+                price: None,
+                price_range: None,
+                rating: None,
+                free_at_range: None,
+                offset: Some(2),
+                limit: None,
+            })
+            .await?;
+        assert_eq!(results.len(), 3); // Should return remaining 3 auditors
+
+        // Test with both offset and limit
+        let results = index
+            .search(SearchFilter {
+                query: None,
+                first_name: None,
+                last_name: None,
+                full_name: None,
+                company: None,
+                tags: None,
+                price: None,
+                price_range: None,
+                rating: None,
+                free_at_range: None,
+                offset: Some(1),
+                limit: Some(2),
+            })
+            .await?;
+        assert_eq!(results.len(), 2);
+
+        // Test offset beyond available results
+        let results = index
+            .search(SearchFilter {
+                query: None,
+                first_name: None,
+                last_name: None,
+                full_name: None,
+                company: None,
+                tags: None,
+                price: None,
+                price_range: None,
+                rating: None,
+                free_at_range: None,
+                offset: Some(5),
+                limit: None,
+            })
+            .await?;
+        assert_eq!(results.len(), 0);
+
+        // Test pagination with filters
+        let results = index
+            .search(SearchFilter {
+                query: None,
+                first_name: None,
+                last_name: None,
+                full_name: None,
+                company: Some("Tech Corp".to_string()),
+                tags: Some(vec!["rust".to_string()]),
+                price: None,
+                price_range: None,
+                rating: None,
+                free_at_range: None,
+                offset: Some(2),
+                limit: Some(2),
+            })
+            .await?;
+        assert_eq!(results.len(), 2);
+        // Verify that all results have correct company and tags
+        for result in &results {
+            assert_eq!(result.company, "Tech Corp");
+            assert!(result.tags.contains(&"rust".to_string()));
+        }
+        // Verify that user_ids are unique
+        let mut user_ids: Vec<_> = results.iter().map(|r| &r.user_id).collect();
+        user_ids.sort();
+        user_ids.dedup();
+        assert_eq!(user_ids.len(), results.len());
+
+        Ok(())
+    }
 }
