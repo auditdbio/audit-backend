@@ -11,7 +11,7 @@ pub struct AuditNotificationLinkMigration {}
 #[async_trait]
 impl Migration for AuditNotificationLinkMigration {
     async fn up(&self, env: Env) -> anyhow::Result<()> {
-        println!("Notification Migrator: Start NotificationAuditLinkMigration");
+        println!("Notification Migrator: Start AuditNotificationLinkMigration");
         let conn = env
             .db
             .expect("db is unavailable")

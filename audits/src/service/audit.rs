@@ -1045,6 +1045,16 @@ impl AuditService {
                     let variables = vec![("audit".to_owned(), project.name)];
 
                     send_notification(&self.context, true, true, new_notification, variables).await?;
+
+                    let event = PublicEvent::new(
+                        audit.customer_id,
+                        Some(Role::Customer),
+                        EventPayload::NewIssue {
+                            issue: auth.public_issue(issue.clone()),
+                            audit: audit_id.to_hex(),
+                        },
+                    );
+                    post_event(&self.context, event, self.context.server_auth()).await?;
                 }
             }
 
