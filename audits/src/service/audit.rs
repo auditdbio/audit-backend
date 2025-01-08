@@ -1005,7 +1005,6 @@ impl AuditService {
 
         post_event(&self.context, event, self.context.server_auth()).await?;
 
-        // todo: add this to disclose all
         if is_new_issue_for_customer {
             let event = PublicEvent::new(
                 audit.customer_id,
