@@ -796,25 +796,6 @@ impl AuditService {
         audits.delete("_id", &audit.id).await?;
         audits.insert(&audit).await?;
 
-        if audit.no_customer {
-            return Ok(auth.public_issue(issue));
-        }
-
-        let mut new_notification: NewNotification =
-            serde_json::from_str(include_str!("../../templates/audit_issue_disclosed.txt"))?;
-
-        new_notification
-            .links
-            .push(format!("/audit-info/{}/customer", audit.id));
-
-        new_notification.user_id = Some(audit.customer_id);
-
-        let project = get_project(&self.context, audit.project_id).await?;
-
-        let variables = vec![("audit".to_owned(), project.name)];
-
-        send_notification(&self.context, true, true, new_notification, variables).await?;
-
         Ok(auth.public_issue(issue))
     }
 
@@ -943,7 +924,11 @@ impl AuditService {
                     is_new_issue_for_customer = true;
                 }
 
-                let mut new_notification: NewNotification = if role == Role::Customer {
+                let mut new_notification: NewNotification = if is_new_issue_for_customer {
+                    serde_json::from_str(include_str!(
+                        "../../templates/audit_issue_disclosed.txt"
+                    ))?
+                } else if role == Role::Customer {
                     serde_json::from_str(include_str!(
                         "../../templates/audit_issue_status_change_auditor.txt"
                     ))?
@@ -953,14 +938,28 @@ impl AuditService {
                     ))?
                 };
 
+                if is_new_issue_for_customer {
+                    new_notification
+                        .links
+                        .push(format!("/audit/{}", audit.id));
+                } else {
+                    new_notification
+                        .links
+                        .push(format!("/issues/audit-issue/{}/{}", audit.id, issue_id));
+                }
+
                 new_notification.user_id = Some(receiver_id);
 
                 let project = get_project(&self.context, audit.project_id).await?;
 
-                let variables = vec![
-                    ("issue".to_owned(), issue.name.clone()),
-                    ("audit".to_owned(), project.name),
-                ];
+                let variables = if is_new_issue_for_customer {
+                    vec![("audit".to_owned(), project.name)]
+                } else {
+                    vec![
+                        ("issue".to_owned(), issue.name.clone()),
+                        ("audit".to_owned(), project.name),
+                    ]
+                };
 
                 send_notification(&self.context, true, true, new_notification, variables).await?;
 
@@ -1160,12 +1159,38 @@ impl AuditService {
         let audit = self.get_audit(audit_id).await?;
 
         if let Some(mut audit) = audit {
-            audit.issues.iter_mut().for_each(|issue| {
+            // TODO: Check with organizations
+            if !auth.full_access() && auth.id().unwrap() != audit.auditor_id {
+                return Err(anyhow::anyhow!("User is not available to change this audit.").code(403));
+            }
+
+            for issue in audit.issues.iter_mut() {
                 if issue.status == Status::Draft {
                     issue.status = Status::InProgress;
                     issue.last_modified = Utc::now().timestamp_micros();
+
+                    let mut new_notification: NewNotification = serde_json::from_str(include_str!(
+                        "../../templates/audit_issue_disclosed.txt"
+                    ))?;
+                    new_notification.links.push(format!("/audit/{}", audit.id));
+                    new_notification.user_id = Some(audit.customer_id);
+
+                    let project = get_project(&self.context, audit.project_id).await?;
+                    let variables = vec![("audit".to_owned(), project.name)];
+
+                    send_notification(&self.context, true, true, new_notification, variables).await?;
+
+                    let event = PublicEvent::new(
+                        audit.customer_id,
+                        Some(Role::Customer),
+                        EventPayload::NewIssue {
+                            issue: auth.public_issue(issue.clone()),
+                            audit: audit_id.to_hex(),
+                        },
+                    );
+                    post_event(&self.context, event, self.context.server_auth()).await?;
                 }
-            });
+            }
 
             let audits = self.context.try_get_repository::<Audit<ObjectId>>()?;
             // audits.update_one(doc! {"_id": &audit.id}, &audit).await?;
