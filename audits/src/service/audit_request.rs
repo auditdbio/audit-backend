@@ -34,6 +34,7 @@ use common::{
         project::get_project,
         role::Role,
         organization::OrgAccessLevel,
+        scope::{Scope, set_file_display_url},
     },
     error::{self, AddCode},
     services::{API_PREFIX, CUSTOMERS_SERVICE, EVENTS_SERVICE, FRONTEND, PROTOCOL},
@@ -45,7 +46,7 @@ pub use common::api::requests::PublicRequest;
 pub struct RequestChange {
     description: Option<String>,
     time: Option<TimeRange>,
-    scope: Option<Vec<String>>,
+    scope: Option<Scope>,
     tags: Option<Vec<String>>,
     price: Option<i64>,
     total_cost: Option<i64>,
@@ -477,9 +478,16 @@ impl RequestService {
             }
         }
 
-        if change.scope.is_some() {
-            if request.scope != change.scope {
-                request.scope = change.scope;
+        if let Some(new_scope) = change.scope {
+            if let Some(request_scope) = request.scope.clone() {
+                if request_scope.typ != new_scope.typ || request_scope.content != new_scope.content {
+                    let new_scope = set_file_display_url(new_scope);
+                    request.scope = Some(new_scope);
+                    is_history_changed = true;
+                }
+            } else {
+                let new_scope = set_file_display_url(new_scope);
+                request.scope = Some(new_scope);
                 is_history_changed = true;
             }
         }
@@ -575,8 +583,8 @@ impl RequestService {
             message_id: chat.last_message.id,
         });
 
-        // requests.update_one(doc! {"_id": &request.id}, &request).await?;
-        requests.delete("_id", &request.id).await?;
+        // requests.update_one(doc! {"id": &request.id}, &request).await?;
+        requests.delete("id", &request.id).await?;
         requests.insert(&request).await?;
 
         Ok(public_request)
@@ -804,8 +812,8 @@ impl RequestService {
             .context
             .try_get_repository::<AuditRequest<ObjectId>>()?;
 
-        // requests.update_one(doc! {"_id": &request.id}, &request).await?;
-        requests.delete("_id", &request.id).await?;
+        // requests.update_one(doc! {"id": &request.id}, &request).await?;
+        requests.delete("id", &request.id).await?;
         requests.insert(&request).await?;
 
         Ok(())
