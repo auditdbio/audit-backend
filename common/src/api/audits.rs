@@ -19,7 +19,7 @@ use crate::{
         issue::{Issue, Status},
         project::PublicProject,
         role::Role,
-        organization::PublicOrganization
+        organization::PublicOrganization,
         scope::{Scope, ScopeContent},
     },
     error,
@@ -384,7 +384,7 @@ pub struct CreateAudit {
     pub time: TimeRange,
     pub project_name: String,
     pub avatar: String,
-    pub project_scope: Vec<String>,
+    pub project_scope: Scope,
     pub tags: Option<Vec<String>>,
     pub price: Option<i64>,
     pub total_cost: Option<i64>,
