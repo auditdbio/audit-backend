@@ -1,11 +1,15 @@
 use async_trait::async_trait;
-use common::entities::audit::{Audit, AuditStatus};
 use futures::StreamExt;
+use mongodb_migrator::{migration::Migration, migrator::{self, Env}};
 use mongodb::{
-    bson::{doc, from_document, oid::ObjectId, to_document, Bson, Document},
+    bson::{doc, from_document, oid::ObjectId, to_document, Bson, Document, to_bson},
     Client,
 };
-use mongodb_migrator::{migration::Migration, migrator::Env};
+
+use common::entities::{
+    audit::{Audit, AuditStatus},
+    scope::{Scope, ScopeContent, ScopeType},
+};
 
 pub struct NewAuditStatusMigration {}
 
@@ -154,17 +158,125 @@ impl Migration for IssuesChangeNotFixedToWillNotFix {
     }
 }
 
+pub struct NewScopeAuditMigration {}
+
+#[async_trait]
+impl Migration for NewScopeAuditMigration {
+    async fn up(&self, env: Env) -> anyhow::Result<()> {
+        let conn = env
+            .db
+            .expect("db is unavailable")
+            .collection::<Document>("audits");
+        use mongodb::error::Result;
+        let audits = conn
+            .find(None, None)
+            .await?
+            .collect::<Vec<Result<Document>>>()
+            .await;
+
+        let mut updated_documents_count = 0;
+        for audit in audits {
+            let audit = audit?;
+            let audit_id = audit.get_object_id("_id")?;
+
+            let scope = match audit.get("scope") {
+                Some(Bson::Array(array)) => array
+                    .iter()
+                    .filter_map(|bson| bson.as_str().map(|s| s.to_string()))
+                    .collect::<Vec<String>>(),
+                _ => continue,
+            };
+
+            let new_scope = Scope {
+                typ: ScopeType::Links,
+                content: ScopeContent::Links(scope),
+            };
+
+            let new_scope_bson = to_bson(&new_scope)?
+                .as_document()
+                .cloned()
+                .expect("Expected BSON document");
+
+            conn.update_one(
+                doc! {"_id": audit_id},
+                doc! {"$set": {"scope": new_scope_bson}},
+                None,
+            )
+            .await?;
+            updated_documents_count += 1;
+        }
+
+        println!("Audit scope: Updated {} documents", updated_documents_count);
+        Ok(())
+    }
+}
+
+pub struct NewScopeRequestMigration {}
+
+#[async_trait]
+impl Migration for NewScopeRequestMigration {
+    async fn up(&self, env: Env) -> anyhow::Result<()> {
+        let conn = env
+            .db
+            .expect("db is unavailable")
+            .collection::<Document>("requests");
+        use mongodb::error::Result;
+        let requests = conn
+            .find(None, None)
+            .await?
+            .collect::<Vec<Result<Document>>>()
+            .await;
+
+        let mut updated_documents_count = 0;
+        for request in requests {
+            let request = request?;
+            let request_id = request.get_object_id("_id")?;
+
+            let scope = match request.get("scope") {
+                Some(Bson::Array(array)) => array
+                    .iter()
+                    .filter_map(|bson| bson.as_str().map(|s| s.to_string()))
+                    .collect::<Vec<String>>(),
+                _ => continue,
+            };
+
+            let new_scope = Scope {
+                typ: ScopeType::Links,
+                content: ScopeContent::Links(scope),
+            };
+
+            let new_scope_bson = to_bson(&new_scope)?
+                .as_document()
+                .cloned()
+                .expect("Expected BSON document");
+
+            conn.update_one(
+                doc! {"_id": request_id},
+                doc! {"$set": {"scope": new_scope_bson}},
+                None,
+            )
+                .await?;
+            updated_documents_count += 1;
+        }
+
+        println!("Request scope: Updated {} documents", updated_documents_count);
+        Ok(())
+    }
+}
+
 pub async fn up_migrations(mongo_uri: &str) -> anyhow::Result<()> {
     let client = Client::with_uri_str(mongo_uri).await.unwrap();
     let db = client.database("audits");
 
     let migrations: Vec<Box<dyn Migration>> = vec![
+        Box::new(NewScopeRequestMigration {}),
+        Box::new(NewScopeAuditMigration {}),
         Box::new(NewAuditStatusMigration {}),
         Box::new(SecondAttemptToMutateStatus {}),
         Box::new(AuditStatusCorrection {}),
         Box::new(IssuesChangeNotFixedToWillNotFix {}),
     ];
-    mongodb_migrator::migrator::default::DefaultMigrator::new()
+    migrator::default::DefaultMigrator::new()
         .with_conn(db.clone())
         .with_migrations_vec(migrations)
         .up()

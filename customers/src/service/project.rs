@@ -1,27 +1,26 @@
 use chrono::Utc;
-use common::api::seartch::delete_from_search;
-use common::entities::customer::PublicCustomer;
-use common::services::API_PREFIX;
+use mongodb::bson::{oid::ObjectId, Bson};
+use serde::{Deserialize, Serialize};
+
 use common::{
     access_rules::{AccessRules, Edit, Read},
-    api::seartch::PaginationParams,
+    api::seartch::{PaginationParams, delete_from_search},
     context::GeneralContext,
     entities::{
         contacts::Contacts,
-        customer::Customer,
+        customer::{Customer, PublicCustomer},
         project::{Project, PublicProject, PublishOptions},
+        scope::Scope,
     },
     error::{self, AddCode},
-    services::{CUSTOMERS_SERVICE, PROTOCOL},
+    services::{API_PREFIX, CUSTOMERS_SERVICE, PROTOCOL},
 };
-use mongodb::bson::{oid::ObjectId, Bson};
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateProject {
     pub name: String,
     pub description: String,
-    pub scope: Vec<String>,
+    pub scope: Scope,
     pub tags: Vec<String>,
     pub publish_options: PublishOptions,
     pub status: String,
@@ -33,7 +32,7 @@ pub struct CreateProject {
 pub struct ProjectChange {
     pub name: Option<String>,
     pub description: Option<String>,
-    pub scope: Option<Vec<String>>,
+    pub scope: Option<Scope>,
     pub tags: Option<Vec<String>>,
     pub publish_options: Option<PublishOptions>,
     pub status: Option<String>,
