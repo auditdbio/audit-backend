@@ -253,6 +253,8 @@ pub struct AuditEditHistory {
     pub author: String,
     pub comment: Option<String>,
     pub audit: String,
+    #[serde(default)]
+    pub issues: HashMap<String, String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -270,6 +272,7 @@ pub struct PublicAuditEditHistory {
     pub author: EditHistoryAuthor,
     pub comment: Option<String>,
     pub audit: String,
+    pub issues: HashMap<String, String>,
 }
 
 impl PublicAuditEditHistory {
@@ -330,6 +333,7 @@ impl PublicAuditEditHistory {
             author,
             comment: history.comment,
             audit: history.audit,
+            issues: history.issues,
         })
     }
 }
