@@ -20,3 +20,4 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 futures = "0.3"
 async-trait = "0.1"
 bson = { version = "2.8.1", features = ["chrono-0_4"] }
+common = { path = "../common" }

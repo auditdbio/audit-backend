@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use actix_cors::Cors;
-use actix_web::{middleware::Logger, web::Data, App, HttpServer};
+use actix_web::{middleware::Logger, web::{Data, scope}, App, HttpServer};
 
 mod api;
 mod db;
@@ -14,20 +14,22 @@ mod storage;
 use error::ServiceResult;
 use search::SearchService;
 
+use common::services::API_PREFIX;
+
 #[actix_web::main]
 async fn main() -> ServiceResult<()> {
     // Initialize logging
     tracing_subscriber::fmt::init();
 
     // Get configuration from environment
-    let mongo_uri = std::env::var("MONGODB_URI")
+    let mongo_uri = std::env::var("MONGOURI")
         .unwrap_or_else(|_| "mongodb://localhost:27017".to_string());
     let db_name = std::env::var("DB_NAME").unwrap_or_else(|_| "auditors".to_string());
-    let host = std::env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+    let host = std::env::var("FRONTEND").unwrap_or_else(|_| "0.0.0.0".to_string());
     let port = std::env::var("PORT")
-        .unwrap_or_else(|_| "8080".to_string())
+        .unwrap_or_else(|_| "3020".to_string())
         .parse::<u16>()
-        .unwrap_or(8080);
+        .unwrap_or(3020);
 
     // Create data directories
     let data_dir = PathBuf::from("data");

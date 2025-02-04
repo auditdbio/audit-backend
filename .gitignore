@@ -12,3 +12,5 @@ docker-compose.yml*
 
 .github
 .devcontainer
+
+/fts/data/storage
