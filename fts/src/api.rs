@@ -1,6 +1,6 @@
 use actix_web::{
     get, post,
-    web::{Data, Json, Query},
+    web::{self, Data, Json, Query},
     HttpResponse,
 };
 use serde::Deserialize;
@@ -43,8 +43,11 @@ pub async fn search(
     Ok(Json(response))
 }
 
-pub fn configure(cfg: &mut actix_web::web::ServiceConfig) {
-    cfg.service(sync)
-        .service(cleanup)
-        .service(search);
-} 
+pub fn configure(cfg: &mut web::ServiceConfig) {
+    cfg.service(
+        web::scope("api/v2")
+            .service(sync)
+            .service(cleanup)
+            .service(search),
+    );
+}
