@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::env;
 
 use actix_cors::Cors;
 use actix_web::{middleware::Logger, web::{Data, scope}, App, HttpServer};
@@ -20,22 +21,25 @@ use common::services::API_PREFIX;
 async fn main() -> ServiceResult<()> {
     // Initialize logging
     tracing_subscriber::fmt::init();
+    let current_dir = env::current_dir().unwrap();
+    tracing::info!("Current working directory: {:?}", current_dir);
 
     // Get configuration from environment
-    let mongo_uri = std::env::var("MONGOURI")
+    let mongo_uri = env::var("MONGOURI")
         .unwrap_or_else(|_| "mongodb://localhost:27017".to_string());
-    let db_name = std::env::var("DB_NAME").unwrap_or_else(|_| "auditors".to_string());
-    let host = std::env::var("FRONTEND").unwrap_or_else(|_| "0.0.0.0".to_string());
-    let port = std::env::var("PORT")
+    let db_name = env::var("DB_NAME").unwrap_or_else(|_| "auditors".to_string());
+    let host = env::var("FRONTEND").unwrap_or_else(|_| "0.0.0.0".to_string());
+    let port = env::var("PORT")
         .unwrap_or_else(|_| "3020".to_string())
         .parse::<u16>()
         .unwrap_or(3020);
 
     // Create data directories
-    let data_dir = PathBuf::from("data");
+    let data_dir = current_dir.join("data");
     std::fs::create_dir_all(&data_dir)?;
 
     let index_path = data_dir.join("index");
+    std::fs::create_dir_all(&index_path)?;
     let storage_path = data_dir.join("storage");
 
     // Initialize search service
