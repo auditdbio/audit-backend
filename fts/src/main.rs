@@ -1,8 +1,7 @@
-use std::path::PathBuf;
 use std::env;
 
 use actix_cors::Cors;
-use actix_web::{middleware::Logger, web::{Data, scope}, App, HttpServer};
+use actix_web::{middleware::Logger, web::Data, App, HttpServer};
 
 mod api;
 mod db;
@@ -15,8 +14,6 @@ mod storage;
 use error::ServiceResult;
 use search::SearchService;
 
-use common::services::API_PREFIX;
-
 #[actix_web::main]
 async fn main() -> ServiceResult<()> {
     // Initialize logging
@@ -28,11 +25,6 @@ async fn main() -> ServiceResult<()> {
     let mongo_uri = env::var("MONGOURI")
         .unwrap_or_else(|_| "mongodb://localhost:27017".to_string());
     let db_name = env::var("DB_NAME").unwrap_or_else(|_| "auditors".to_string());
-    let host = env::var("FRONTEND").unwrap_or_else(|_| "0.0.0.0".to_string());
-    let port = env::var("PORT")
-        .unwrap_or_else(|_| "3020".to_string())
-        .parse::<u16>()
-        .unwrap_or(3020);
 
     // Create data directories
     let data_dir = current_dir.join("data");
@@ -47,7 +39,6 @@ async fn main() -> ServiceResult<()> {
     let service = Data::new(service);
 
     // Start HTTP server
-    tracing::info!("Starting server at http://{}:{}", host, port);
 
     HttpServer::new(move || {
         let cors = Cors::default()
@@ -62,7 +53,7 @@ async fn main() -> ServiceResult<()> {
             .app_data(service.clone())
             .configure(api::configure)
     })
-    .bind((host, port))?
+    .bind(("0.0.0.0", 3020))?
     .run()
     .await?;
 
