@@ -354,6 +354,18 @@ preset = {
         "proxy_address": "preprod.auditdb.io",
         "api_prefix": "api",
         "proxy_network": "nginx-proxy"
+    },
+    "branchtest": {
+        "open_database": False,
+        "with_proxy": True,
+        "is_test_server": True,
+        "container_namespace": "branchtest",
+        "volume_namespace": "branchtest",
+        "network_namespace": "branchtest",
+        "proxy_address": "test.auditdb.io",
+        "features": '"test_server"',
+        "api_prefix": "api",
+        "proxy_network": "nginx-proxy"
     }
 }
 
