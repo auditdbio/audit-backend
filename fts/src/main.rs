@@ -18,8 +18,6 @@ use search::SearchService;
 async fn main() -> ServiceResult<()> {
     // Initialize logging
     tracing_subscriber::fmt::init();
-    let current_dir = env::current_dir().unwrap();
-    tracing::info!("Current working directory: {:?}", current_dir);
 
     // Get configuration from environment
     let mongo_uri = env::var("MONGOURI")
@@ -27,6 +25,8 @@ async fn main() -> ServiceResult<()> {
     let db_name = env::var("DB_NAME").unwrap_or_else(|_| "auditors".to_string());
 
     // Create data directories
+    let current_dir = env::current_dir().unwrap();
+    tracing::info!("Current working directory: {:?}", current_dir);
     let data_dir = current_dir.join("data");
     std::fs::create_dir_all(&data_dir)?;
 
@@ -39,7 +39,6 @@ async fn main() -> ServiceResult<()> {
     let service = Data::new(service);
 
     // Start HTTP server
-
     HttpServer::new(move || {
         let cors = Cors::default()
             .allow_any_origin()

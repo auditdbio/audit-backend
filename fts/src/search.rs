@@ -92,12 +92,16 @@ impl SearchService {
     }
 
     pub async fn search(&self, query: SearchQuery) -> ServiceResult<SearchResponse> {
+        tracing::info!("Start search");
         let index = self.index.read().await;
         let page = query.page.unwrap_or(1);
         let per_page = query.per_page.unwrap_or(10);
 
         let (ids, total) = index.search(&query)?;
+        tracing::info!("Total found id's: {}", total);
+        tracing::info!("Id list: {:?}", ids);
         let auditors = self.db.get_auditors_by_ids(&ids).await?;
+        tracing::info!("Found auditors: {:?}", auditors);
 
         Ok(SearchResponse {
             auditors,
@@ -113,4 +117,4 @@ impl SearchService {
         index.commit()?;
         Ok(())
     }
-} 
+}

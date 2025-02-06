@@ -43,11 +43,11 @@ impl SearchIndex {
     pub fn new<P: AsRef<Path>>(path: P) -> ServiceResult<Self> {
         let schema = Self::create_schema();
         let fields = Self::get_fields(&schema);
-        
+
         let index = Index::create_in_dir(path, schema.clone())?;
         let reader = index.reader()?;
         let writer = index.writer(50_000_000)?; // 50MB buffer
-        
+
         Ok(Self {
             index,
             reader,
@@ -146,7 +146,7 @@ impl SearchIndex {
 
     pub fn search(&self, query: &SearchQuery) -> ServiceResult<(Vec<String>, usize)> {
         let mut subqueries = Vec::new();
-        
+
         // Full-text search across multiple fields
         if let Some(text) = &query.text {
             let parser = QueryParser::for_index(
@@ -174,7 +174,7 @@ impl SearchIndex {
 
         let boolean_query = BooleanQuery::new(subqueries);
         let searcher: Searcher = self.reader.searcher();
-        
+
         let limit = query.per_page.unwrap_or(10) as usize;
         let offset = ((query.page.unwrap_or(1) - 1) * query.per_page.unwrap_or(10)) as usize;
 
@@ -185,7 +185,7 @@ impl SearchIndex {
         let mut ids = Vec::with_capacity(top_docs.len());
         for (_, doc_address) in top_docs {
             let retrieved_doc: TantivyDocument = searcher.doc(doc_address).map_err(|e| {
-                ServiceError::Internal(format!("Failed to retrieve document: {}", e))
+                ServiceError::Internal(format!("Failed to retrieve document: {:?}", e))
             })?;
             if let Some(field_value) = retrieved_doc.get_first(self.fields.id) {
                 let text = format!("{:?}", field_value);
@@ -308,4 +308,4 @@ impl SearchIndex {
         }
         Ok(())
     }
-} 
+}
