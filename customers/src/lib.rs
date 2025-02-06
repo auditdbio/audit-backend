@@ -1,5 +1,6 @@
 pub mod handlers;
 pub mod service;
+pub mod migrations;
 
 use std::sync::Arc;
 

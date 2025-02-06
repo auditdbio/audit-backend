@@ -146,20 +146,20 @@ impl<'a, 'b> AccessRules<&'a Auth, &'b AuditRequest<ObjectId>> for Edit {
 }
 
 impl<'a, 'b> AccessRules<&'a Auth, &'b Audit<ObjectId>> for Read {
-    fn get_access(&self, auth: &'a Auth, request: &'b Audit<ObjectId>) -> bool {
+    fn get_access(&self, auth: &'a Auth, audit: &'b Audit<ObjectId>) -> bool {
         match auth {
             Auth::Service(_, _) | Auth::Admin(_) => true,
-            Auth::User(id) => &request.customer_id == id || &request.auditor_id == id,
+            Auth::User(id) => &audit.customer_id == id || &audit.auditor_id == id,
             Auth::None => false,
         }
     }
 }
 
 impl<'a, 'b> AccessRules<&'a Auth, &'b Audit<ObjectId>> for Edit {
-    fn get_access(&self, auth: &'a Auth, request: &'b Audit<ObjectId>) -> bool {
+    fn get_access(&self, auth: &'a Auth, audit: &'b Audit<ObjectId>) -> bool {
         match auth {
             Auth::Service(_, _) | Auth::Admin(_) => true,
-            Auth::User(id) => &request.customer_id == id || &request.auditor_id == id,
+            Auth::User(id) => &audit.customer_id == id || &audit.auditor_id == id,
             Auth::None => false,
         }
     }

@@ -11,7 +11,12 @@ use crate::{
         chat::AuditMessageId,
         report::{PublicReport, CreateReport},
     },
-    entities::{auditor::ExtendedAuditor, customer::PublicCustomer, role::Role},
+    entities::{
+        auditor::ExtendedAuditor,
+        customer::PublicCustomer,
+        role::Role,
+        scope::Scope,
+    },
     error::{self, AddCode},
     context::GeneralContext,
     repository::{Entity, HasLastModified},
@@ -63,7 +68,7 @@ pub struct Audit<Id: Eq + Hash> {
     pub project_name: String,
     pub description: String,
     pub status: AuditStatus,
-    pub scope: Vec<String>,
+    pub scope: Scope,
     #[serde(default)]
     pub tags: Vec<String>,
     pub price: Option<i64>,
@@ -248,6 +253,8 @@ pub struct AuditEditHistory {
     pub author: String,
     pub comment: Option<String>,
     pub audit: String,
+    #[serde(default)]
+    pub issues: HashMap<String, String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -265,6 +272,7 @@ pub struct PublicAuditEditHistory {
     pub author: EditHistoryAuthor,
     pub comment: Option<String>,
     pub audit: String,
+    pub issues: HashMap<String, String>,
 }
 
 impl PublicAuditEditHistory {
@@ -325,6 +333,7 @@ impl PublicAuditEditHistory {
             author,
             comment: history.comment,
             audit: history.audit,
+            issues: history.issues,
         })
     }
 }

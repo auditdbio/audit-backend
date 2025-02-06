@@ -55,7 +55,6 @@ pub struct RendererInput {
     pub profile_link: String,
     pub audit_link: String,
     pub project_name: String,
-    pub scope: Vec<String>,
     pub report_data: Vec<Section>,
 }
 
@@ -213,6 +212,8 @@ fn generate_audit_sections(audit: &PublicAudit, issues: Vec<Section>) -> Vec<Sec
 
     let disclaimer = include_str!("../../templates/disclaimer.md").to_string();
 
+    let scope = audit.scope.content.links();
+
     vec![
         Section {
             typ: "markdown".to_owned(),
@@ -236,11 +237,11 @@ fn generate_audit_sections(audit: &PublicAudit, issues: Vec<Section>) -> Vec<Sec
                     },
                 ];
 
-                if !audit.scope.is_empty() {
+                if !scope.is_empty() {
                     subsections.push(Section {
                         typ: "scope".to_string(),
                         title: "Scope".to_string(),
-                        links: Some(audit.scope.clone()),
+                        links: Some(scope),
                         include_in_toc: true,
                         ..Default::default()
                     });
@@ -345,7 +346,6 @@ pub async fn create_report(
             access_code,
         ),
         project_name: audit.project_name.clone(),
-        scope: audit.scope,
         report_data,
     };
 
