@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Auditor {
-    pub id: ObjectId,
+    pub _id: ObjectId,
     pub user_id: ObjectId,
     pub avatar: String,
     pub first_name: String,
@@ -79,4 +79,4 @@ pub struct SearchResponse {
     pub total: usize,
     pub page: u32,
     pub per_page: u32,
-} 
+}

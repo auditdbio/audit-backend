@@ -114,7 +114,7 @@ impl SearchIndex {
 
     pub fn index_auditor(&mut self, auditor: &Auditor) -> ServiceResult<()> {
         let doc = doc!(
-            self.fields.id => auditor.id.to_string(),
+            self.fields.id => auditor._id.to_string(),
             self.fields.user_id => auditor.user_id.to_string(),
             self.fields.avatar => auditor.avatar.clone(),
             self.fields.first_name => auditor.first_name.clone(),

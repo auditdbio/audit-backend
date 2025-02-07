@@ -47,12 +47,20 @@ impl MongoDb {
     pub async fn get_auditors_by_ids(&self, ids: &[String]) -> ServiceResult<Vec<Auditor>> {
         let object_ids: Vec<ObjectId> = ids
             .iter()
-            .filter_map(|id| ObjectId::parse_str(id).ok())
+            .filter_map(|id| {
+                let parsed = ObjectId::parse_str(id).map_err(|e| {
+                    tracing::error!("Failed to parse ObjectId {}: {:?}", id, e);
+                }).ok();
+                tracing::info!("Parsed ObjectId: {:?}", parsed);
+                parsed
+            })
             .collect();
 
         let filter = doc! {
             "_id": { "$in": object_ids }
         };
+
+        tracing::info!("MongoDB query filter: {:?}", filter);
 
         let options = FindOptions::builder()
             .sort(doc! { "last_modified": -1 })
@@ -81,4 +89,4 @@ impl MongoDb {
 
         Ok(self.collection.count_documents(filter, None).await? > 0)
     }
-} 
+}
