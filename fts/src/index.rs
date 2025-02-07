@@ -4,7 +4,7 @@ use tantivy::{
     doc,
     query::{BooleanQuery, Occur, QueryParser, RangeQuery, TermQuery},
     schema::{
-        Field, IndexRecordOption, Schema, FAST, INDEXED, STORED, TEXT,
+        Field, IndexRecordOption, Schema, Value, FAST, INDEXED, STORED, TEXT,
     },
     Index, IndexReader, IndexWriter, Searcher, TantivyDocument, Term,
 };
@@ -188,9 +188,9 @@ impl SearchIndex {
                 ServiceError::Internal(format!("Failed to retrieve document: {:?}", e))
             })?;
             if let Some(field_value) = retrieved_doc.get_first(self.fields.id) {
-                let text = format!("{:?}", field_value);
-                let text = text.trim_matches('"');
-                ids.push(text.to_string());
+                if let Some(id_str) = field_value.as_str() {
+                    ids.push(id_str.to_string());
+                }
             }
         }
 
