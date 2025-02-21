@@ -117,8 +117,8 @@ impl SearchIndex {
             self.fields.id => auditor._id.to_string(),
             self.fields.user_id => auditor.user_id.to_string(),
             self.fields.avatar => auditor.avatar.clone(),
-            self.fields.first_name => auditor.first_name.clone(),
-            self.fields.last_name => auditor.last_name.clone(),
+            self.fields.first_name => auditor.first_name.to_lowercase(),
+            self.fields.last_name => auditor.last_name.to_lowercase(),
             self.fields.about => auditor.about.clone(),
             self.fields.company => auditor.company.clone(),
             self.fields.free_at => auditor.free_at.clone(),
@@ -208,20 +208,29 @@ impl SearchIndex {
     ) -> ServiceResult<()> {
         if let Some(name) = name {
             let name = name.to_lowercase();
-            let parser = QueryParser::for_index(&self.index, vec![
-                self.fields.first_name,
-                self.fields.last_name,
-            ]);
             
-            let query_str = if partial_match {
-                format!("{}*", name)
-            } else {
-                name
-            };
+            let first_name_query = TermQuery::new(
+                Term::from_field_text(
+                    self.fields.first_name, 
+                    &if partial_match { format!("{}*", name) } else { name.clone() }
+                ),
+                IndexRecordOption::Basic,
+            );
+            let last_name_query = TermQuery::new(
+                Term::from_field_text(
+                    self.fields.last_name, 
+                    &if partial_match { format!("{}*", name) } else { name.clone() }
+                ),
+                IndexRecordOption::Basic,
+            );
+    
+            let name_queries = vec![
+                (Occur::Should, Box::new(first_name_query) as Box<dyn tantivy::query::Query>),
+                (Occur::Should, Box::new(last_name_query) as Box<dyn tantivy::query::Query>),
+            ];
             
-            if let Ok(name_query) = parser.parse_query(&query_str) {
-                subqueries.push((Occur::Must, Box::new(name_query)));
-            }
+            let bool_query = BooleanQuery::new(name_queries);
+            subqueries.push((Occur::Must, Box::new(bool_query)));
         }
         Ok(())
     }
@@ -262,19 +271,12 @@ impl SearchIndex {
         tags: &Option<Vec<String>>,
     ) -> ServiceResult<()> {
         if let Some(tags) = tags {
-            let mut tag_queries = Vec::new();
-            
             for tag in tags {
-                let tag_query = TermQuery::new(
+                let term_query = TermQuery::new(
                     Term::from_field_text(self.fields.tags, &tag.to_lowercase()),
                     IndexRecordOption::Basic,
                 );
-                tag_queries.push((Occur::Must, Box::new(tag_query) as Box<dyn tantivy::query::Query>));
-            }
-            
-            if !tag_queries.is_empty() {
-                let bool_query = BooleanQuery::new(tag_queries);
-                subqueries.push((Occur::Must, Box::new(bool_query)));
+                subqueries.push((Occur::Must, Box::new(term_query)));
             }
         }
         Ok(())
