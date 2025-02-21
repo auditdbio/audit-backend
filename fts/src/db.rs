@@ -51,7 +51,6 @@ impl MongoDb {
                 let parsed = ObjectId::parse_str(id).map_err(|e| {
                     tracing::error!("Failed to parse ObjectId {}: {:?}", id, e);
                 }).ok();
-                tracing::info!("Parsed ObjectId: {:?}", parsed);
                 parsed
             })
             .collect();
@@ -59,8 +58,6 @@ impl MongoDb {
         let filter = doc! {
             "_id": { "$in": object_ids }
         };
-
-        tracing::info!("MongoDB query filter: {:?}", filter);
 
         let options = FindOptions::builder()
             .sort(doc! { "last_modified": -1 })

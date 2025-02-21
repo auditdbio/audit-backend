@@ -113,7 +113,7 @@ impl SearchIndex {
     }
 
     pub fn index_auditor(&mut self, auditor: &Auditor) -> ServiceResult<()> {
-        let doc = doc!(
+        let mut doc = doc!(
             self.fields.id => auditor._id.to_string(),
             self.fields.user_id => auditor.user_id.to_string(),
             self.fields.avatar => auditor.avatar.clone(),
@@ -122,12 +122,15 @@ impl SearchIndex {
             self.fields.about => auditor.about.clone(),
             self.fields.company => auditor.company.clone(),
             self.fields.free_at => auditor.free_at.clone(),
-            self.fields.tags => auditor.tags.join(" ").to_lowercase(),
             self.fields.price_from => auditor.price_range.from,
             self.fields.price_to => auditor.price_range.to,
             self.fields.rating => auditor.rating.unwrap_or(0.0) as f64,
             self.fields.last_modified => auditor.last_modified
         );
+
+        for tag in &auditor.tags {
+            doc.add_text(self.fields.tags, &tag.to_lowercase());
+        }
 
         self.writer.add_document(doc)?;
         Ok(())
@@ -204,15 +207,16 @@ impl SearchIndex {
         partial_match: bool,
     ) -> ServiceResult<()> {
         if let Some(name) = name {
+            let name = name.to_lowercase();
             let parser = QueryParser::for_index(&self.index, vec![
                 self.fields.first_name,
                 self.fields.last_name,
             ]);
             
             let query_str = if partial_match {
-                format!("*{}*", name.to_lowercase())
+                format!("{}*", name)
             } else {
-                name.to_lowercase()
+                name
             };
             
             if let Ok(name_query) = parser.parse_query(&query_str) {
@@ -258,11 +262,19 @@ impl SearchIndex {
         tags: &Option<Vec<String>>,
     ) -> ServiceResult<()> {
         if let Some(tags) = tags {
-            let parser = QueryParser::for_index(&self.index, vec![self.fields.tags]);
+            let mut tag_queries = Vec::new();
+            
             for tag in tags {
-                if let Ok(tag_query) = parser.parse_query(&tag.to_lowercase()) {
-                    subqueries.push((Occur::Must, Box::new(tag_query)));
-                }
+                let tag_query = TermQuery::new(
+                    Term::from_field_text(self.fields.tags, &tag.to_lowercase()),
+                    IndexRecordOption::Basic,
+                );
+                tag_queries.push((Occur::Must, Box::new(tag_query) as Box<dyn tantivy::query::Query>));
+            }
+            
+            if !tag_queries.is_empty() {
+                let bool_query = BooleanQuery::new(tag_queries);
+                subqueries.push((Occur::Must, Box::new(bool_query)));
             }
         }
         Ok(())

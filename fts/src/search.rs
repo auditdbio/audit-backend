@@ -98,7 +98,6 @@ impl SearchService {
         let per_page = query.per_page.unwrap_or(10);
 
         let (ids, total) = index.search(&query)?;
-        tracing::info!("Id list: {:?}", ids);
         let auditors = self.db.get_auditors_by_ids(&ids).await?;
 
         Ok(SearchResponse {
