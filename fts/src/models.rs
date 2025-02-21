@@ -45,6 +45,7 @@ pub struct SearchQuery {
     pub sort: Option<SortOption>,
     pub page: Option<u32>,
     pub per_page: Option<u32>,
+    pub partial_match: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

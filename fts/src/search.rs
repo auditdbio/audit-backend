@@ -69,6 +69,7 @@ impl SearchService {
             sort: None,
             page: Some(1),
             per_page: Some(1000), // Process in batches of 1000
+            partial_match: Some(false),
         };
 
         let (ids, _) = index.search(&query)?;

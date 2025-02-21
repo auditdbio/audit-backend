@@ -122,7 +122,7 @@ impl SearchIndex {
             self.fields.about => auditor.about.clone(),
             self.fields.company => auditor.company.clone(),
             self.fields.free_at => auditor.free_at.clone(),
-            self.fields.tags => auditor.tags.join(" "),
+            self.fields.tags => auditor.tags.join(" ").to_lowercase(),
             self.fields.price_from => auditor.price_range.from,
             self.fields.price_to => auditor.price_range.to,
             self.fields.rating => auditor.rating.unwrap_or(0.0) as f64,
@@ -165,7 +165,7 @@ impl SearchIndex {
         }
 
         // Add filters
-        self.add_name_filter(&mut subqueries, &query.name)?;
+        self.add_name_filter(&mut subqueries, &query.name, query.partial_match.unwrap_or(false))?;
         self.add_company_filter(&mut subqueries, &query.company)?;
         self.add_free_from_filter(&mut subqueries, &query.free_from)?;
         self.add_tags_filter(&mut subqueries, &query.tags)?;
@@ -201,13 +201,21 @@ impl SearchIndex {
         &self,
         subqueries: &mut Vec<(Occur, Box<dyn tantivy::query::Query>)>,
         name: &Option<String>,
+        partial_match: bool,
     ) -> ServiceResult<()> {
         if let Some(name) = name {
-            let parser = QueryParser::for_index(
-                &self.index,
-                vec![self.fields.first_name, self.fields.last_name],
-            );
-            if let Ok(name_query) = parser.parse_query(name) {
+            let parser = QueryParser::for_index(&self.index, vec![
+                self.fields.first_name,
+                self.fields.last_name,
+            ]);
+            
+            let query_str = if partial_match {
+                format!("*{}*", name.to_lowercase())
+            } else {
+                name.to_lowercase()
+            };
+            
+            if let Ok(name_query) = parser.parse_query(&query_str) {
                 subqueries.push((Occur::Must, Box::new(name_query)));
             }
         }
@@ -250,12 +258,11 @@ impl SearchIndex {
         tags: &Option<Vec<String>>,
     ) -> ServiceResult<()> {
         if let Some(tags) = tags {
+            let parser = QueryParser::for_index(&self.index, vec![self.fields.tags]);
             for tag in tags {
-                let term_query = TermQuery::new(
-                    Term::from_field_text(self.fields.tags, tag),
-                    IndexRecordOption::Basic,
-                );
-                subqueries.push((Occur::Must, Box::new(term_query)));
+                if let Ok(tag_query) = parser.parse_query(&tag.to_lowercase()) {
+                    subqueries.push((Occur::Must, Box::new(tag_query)));
+                }
             }
         }
         Ok(())
