@@ -16,8 +16,10 @@ use search::SearchService;
 
 #[actix_web::main]
 async fn main() -> ServiceResult<()> {
-    // Initialize logging
-    tracing_subscriber::fmt::init();
+    // Initialize logging with debug level
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::DEBUG)
+        .init();
 
     // Get configuration from environment
     let mongo_uri = env::var("MONGOURI")
