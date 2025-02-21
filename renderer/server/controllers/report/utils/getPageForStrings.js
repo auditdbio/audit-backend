@@ -1,4 +1,4 @@
-import pdfjsLib from 'pdfjs-dist/legacy/build/pdf.js'
+import * as pdfjsLib from 'pdfjs-dist'
 
 async function getPageForStrings(pdfBuffer, titlesArray) {
   const tableOfContents = []

@@ -20,8 +20,8 @@
     "joi": "^17.13.3",
     "katex": "^0.16.8",
     "pdf-lib": "^1.17.1",
-    "pdfjs-dist": "^2.16.105",
-    "puppeteer": "^19.7.4",
+    "pdfjs-dist": "^4.10.38",
+    "puppeteer": "^24.2.1",
     "qrcode.react": "^3.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -38,7 +38,7 @@
     "@babel/preset-react": "^7.22.5",
     "babel-plugin-add-import-extension": "^1.6.0",
     "concurrently": "^8.2.0",
-    "nodemon": "^2.0.22",
+    "nodemon": "^3.1.9",
     "prettier": "^2.8.8"
   },
   "nodemonConfig": {
