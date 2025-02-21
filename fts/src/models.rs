@@ -34,12 +34,14 @@ pub struct PriceRange {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct SearchQuery {
     pub text: Option<String>,
     pub name: Option<String>,
     pub company: Option<String>,
     pub free_from: Option<String>,
     #[serde(default)]
+    #[serde(deserialize_with = "deserialize_string_array")]
     pub tags: Option<Vec<String>>,
     pub price_range: Option<PriceRangeFilter>,
     pub rating: Option<RangeFilter<f32>>,
@@ -47,6 +49,48 @@ pub struct SearchQuery {
     pub page: Option<u32>,
     pub per_page: Option<u32>,
     pub partial_match: Option<bool>,
+}
+
+// Добавим функцию для десериализации массива строк
+fn deserialize_string_array<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    struct Helper(#[serde(deserialize_with = "string_or_array")] Vec<String>);
+
+    Ok(Option::deserialize(deserializer)?.map(|Helper(vec)| vec))
+}
+
+fn string_or_array<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    struct StringOrVec;
+
+    impl<'de> serde::de::Visitor<'de> for StringOrVec {
+        type Value = Vec<String>;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("string or array of strings")
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(vec![value.to_string()])
+        }
+
+        fn visit_seq<S>(self, visitor: S) -> Result<Self::Value, S::Error>
+        where
+            S: serde::de::SeqAccess<'de>,
+        {
+            Deserialize::deserialize(serde::de::value::SeqAccessDeserializer::new(visitor))
+        }
+    }
+
+    deserializer.deserialize_any(StringOrVec)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -2,7 +2,7 @@ use std::path::Path;
 use tantivy::{
     collector::{Count, TopDocs},
     doc,
-    query::{BooleanQuery, Occur, QueryParser, RangeQuery, TermQuery},
+    query::{BooleanQuery, Occur, QueryParser, RangeQuery, TermQuery, RegexQuery},
     schema::{
         Field, IndexRecordOption, Schema, Value, FAST, INDEXED, STORED, TEXT,
     },
@@ -13,6 +13,8 @@ use crate::{
     error::{ServiceError, ServiceResult},
     models::{Auditor, PriceRangeFilter, RangeFilter, SearchQuery},
 };
+
+use regex;
 
 pub struct SearchIndex {
     index: Index,
@@ -195,7 +197,6 @@ impl SearchIndex {
         let collector = TopDocs::with_limit(limit).and_offset(offset);
         let mut top_docs = searcher.search(&boolean_query, &collector)?;
 
-        // Сортируем результаты после поиска, если нужно
         if let Some("rating") = query.sort.as_deref() {
             top_docs.sort_by(|a, b| {
                 let doc_a: TantivyDocument = searcher.doc(a.1).unwrap();
@@ -235,21 +236,39 @@ impl SearchIndex {
     ) -> ServiceResult<()> {
         if let Some(name) = name {
             tracing::debug!("Adding name filter: {}, partial_match: {}", name, partial_match);
-            let parser = QueryParser::for_index(
-                &self.index,
-                vec![self.fields.first_name, self.fields.last_name],
-            );
             
-            let query_str = if partial_match {
-                format!("{}*", name.to_lowercase())
+            let name = name.to_lowercase();
+            let mut name_queries: Vec<(Occur, Box<dyn tantivy::query::Query>)> = Vec::new();
+
+            if partial_match {
+                let first_name_query = RegexQuery::from_pattern(
+                    &format!("{}.*", regex::escape(&name)),
+                    self.fields.first_name,
+                )?;
+                let last_name_query = RegexQuery::from_pattern(
+                    &format!("{}.*", regex::escape(&name)),
+                    self.fields.last_name,
+                )?;
+                
+                name_queries.push((Occur::Should, Box::new(first_name_query)));
+                name_queries.push((Occur::Should, Box::new(last_name_query)));
             } else {
-                name.to_lowercase()
-            };
-            
-            tracing::debug!("Name query string: {}", query_str);
-            if let Ok(name_query) = parser.parse_query(&query_str) {
-                subqueries.push((Occur::Must, Box::new(name_query)));
+                let first_name_query = TermQuery::new(
+                    Term::from_field_text(self.fields.first_name, &name),
+                    IndexRecordOption::Basic,
+                );
+                let last_name_query = TermQuery::new(
+                    Term::from_field_text(self.fields.last_name, &name),
+                    IndexRecordOption::Basic,
+                );
+                
+                name_queries.push((Occur::Should, Box::new(first_name_query)));
+                name_queries.push((Occur::Should, Box::new(last_name_query)));
             }
+
+            let bool_query = BooleanQuery::new(name_queries);
+            subqueries.push((Occur::Must, Box::new(bool_query)));
+            tracing::debug!("Name filter added");
         }
         Ok(())
     }
