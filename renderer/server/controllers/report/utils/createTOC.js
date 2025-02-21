@@ -13,7 +13,7 @@ const createTOC = async (project, pdfDoc, pdfBuffer) => {
         subsections = tocReducer(item.subsections, numeration)
       }
       const title = `${numeration}. ${item?.title}`
-      if (item?.include_in_toc) {
+      if (item?.include_in_toc ?? true) {
         idx += 1
         return [...acc, title, ...subsections]
       }

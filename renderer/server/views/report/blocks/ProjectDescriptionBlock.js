@@ -7,7 +7,7 @@ const ProjectDescriptionBlock = ({ data, num, subsectionLevel }) => {
     <div className="report-block">
       <h2 className={subsectionLevel ? 'subsection-title' : 'report-block-title'}>
         {num}. {data?.title}
-        <TitleLabel show={data?.include_in_toc} />
+        <TitleLabel show={data?.include_in_toc ?? true} />
       </h2>
       <div className="project-description page-break">
         <RenderMarkdown markdown={data?.text} />

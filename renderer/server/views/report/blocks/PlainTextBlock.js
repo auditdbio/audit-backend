@@ -6,7 +6,7 @@ const PlainTextBlock = ({ data, num, subsectionLevel }) => {
     <div className={data?.text ? 'report-block' : ''}>
       <h2 className={subsectionLevel ? 'subsection-title' : 'report-block-title'}>
         {num}. {data?.title}
-        <TitleLabel show={data?.include_in_toc} />
+        <TitleLabel show={data?.include_in_toc ?? true} />
       </h2>
       {data?.text && <div className="report-plain-text page-break">{data?.text}</div>}
     </div>

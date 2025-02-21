@@ -15,7 +15,7 @@ const IssueDataBlock = ({ data, num, subsectionLevel }) => {
     <div className="report-block">
       <h2 className={subsectionLevel ? 'subsection-title' : 'report-block-title'}>
         {num}. {data?.title}
-        <TitleLabel show={data?.include_in_toc} />
+        <TitleLabel show={data?.include_in_toc ?? true} />
       </h2>
 
       {!!data?.issue_data?.links?.length && (
@@ -35,6 +35,12 @@ const IssueDataBlock = ({ data, num, subsectionLevel }) => {
           <span className="issue-info-title">Severity:</span>
           <SeverityChip severity={data?.issue_data?.severity} />
         </div>
+        {data?.issue_data?.file && (
+          <div className="issue-info-wrapper">
+            <span className="issue-info-title">File:</span>
+            <span>{data.issue_data.file}</span>
+          </div>
+        )}
         {data?.issue_data?.category && (
           <div className="issue-info-wrapper">
             <span className="issue-info-title">Category:</span>
