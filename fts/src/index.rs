@@ -193,7 +193,23 @@ impl SearchIndex {
         let offset = ((query.page.unwrap_or(1) - 1) * query.per_page.unwrap_or(10)) as usize;
 
         let collector = TopDocs::with_limit(limit).and_offset(offset);
-        let top_docs = searcher.search(&boolean_query, &collector)?;
+        let mut top_docs = searcher.search(&boolean_query, &collector)?;
+
+        // Сортируем результаты после поиска, если нужно
+        if let Some("rating") = query.sort.as_deref() {
+            top_docs.sort_by(|a, b| {
+                let doc_a: TantivyDocument = searcher.doc(a.1).unwrap();
+                let doc_b: TantivyDocument = searcher.doc(b.1).unwrap();
+                let rating_a = doc_a.get_first(self.fields.rating)
+                    .and_then(|v| v.as_f64())
+                    .unwrap_or(0.0);
+                let rating_b = doc_b.get_first(self.fields.rating)
+                    .and_then(|v| v.as_f64())
+                    .unwrap_or(0.0);
+                rating_b.partial_cmp(&rating_a).unwrap_or(std::cmp::Ordering::Equal)
+            });
+        }
+
         let total = searcher.search(&boolean_query, &Count)?;
 
         let mut ids = Vec::with_capacity(top_docs.len());
@@ -218,18 +234,19 @@ impl SearchIndex {
         partial_match: bool,
     ) -> ServiceResult<()> {
         if let Some(name) = name {
-            let name = name.to_lowercase();
+            tracing::debug!("Adding name filter: {}, partial_match: {}", name, partial_match);
             let parser = QueryParser::for_index(
                 &self.index,
                 vec![self.fields.first_name, self.fields.last_name],
             );
             
             let query_str = if partial_match {
-                format!("{}*", name)
+                format!("{}*", name.to_lowercase())
             } else {
-                name
+                name.to_lowercase()
             };
             
+            tracing::debug!("Name query string: {}", query_str);
             if let Ok(name_query) = parser.parse_query(&query_str) {
                 subqueries.push((Occur::Must, Box::new(name_query)));
             }
@@ -320,15 +337,16 @@ impl SearchIndex {
         subqueries: &mut Vec<(Occur, Box<dyn tantivy::query::Query>)>,
         tags: &Option<Vec<String>>,
     ) -> ServiceResult<()> {
+        tracing::debug!("Adding tags filter: {:?}", tags);
         if let Some(tags) = tags {
-            tracing::debug!("Processing tags: {:?}", tags);
             let mut tag_queries: Vec<(Occur, Box<dyn tantivy::query::Query>)> = Vec::new();
             
             for tag in tags {
                 tracing::debug!("Processing tag: {}", tag);
-                let term = Term::from_field_text(self.fields.tags, &tag.to_lowercase());
-                tracing::debug!("Created term for tag: {:?}", term);
-                let term_query = TermQuery::new(term, IndexRecordOption::Basic);
+                let term_query = TermQuery::new(
+                    Term::from_field_text(self.fields.tags, &tag.to_lowercase()),
+                    IndexRecordOption::Basic,
+                );
                 tag_queries.push((Occur::Must, Box::new(term_query)));
             }
             

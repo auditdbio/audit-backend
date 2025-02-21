@@ -33,16 +33,17 @@ pub struct PriceRange {
     pub to: i64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct SearchQuery {
     pub text: Option<String>,
     pub name: Option<String>,
     pub company: Option<String>,
     pub free_from: Option<String>,
+    #[serde(default)]
     pub tags: Option<Vec<String>>,
     pub price_range: Option<PriceRangeFilter>,
     pub rating: Option<RangeFilter<f32>>,
-    pub sort: Option<SortOption>,
+    pub sort: Option<String>,
     pub page: Option<u32>,
     pub per_page: Option<u32>,
     pub partial_match: Option<bool>,
