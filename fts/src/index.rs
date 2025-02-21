@@ -129,6 +129,7 @@ impl SearchIndex {
         );
 
         for tag in &auditor.tags {
+            tracing::debug!("Indexing tag: {}", tag);
             doc.add_text(self.fields.tags, &tag.to_lowercase());
         }
 
@@ -148,7 +149,7 @@ impl SearchIndex {
     }
 
     pub fn search(&self, query: &SearchQuery) -> ServiceResult<(Vec<String>, usize)> {
-        let mut subqueries = Vec::new();
+        let mut subqueries: Vec<(Occur, Box<dyn tantivy::query::Query>)> = Vec::new();
 
         // Full-text search across multiple fields
         if let Some(text) = &query.text {
@@ -162,8 +163,35 @@ impl SearchIndex {
                     self.fields.tags,
                 ],
             );
-            if let Ok(text_query) = parser.parse_query(text) {
-                subqueries.push((Occur::Must, Box::new(text_query) as Box<dyn tantivy::query::Query>));
+            
+            let query_str = if query.partial_match.unwrap_or(false) {
+                format!("{}*", text.to_lowercase())
+            } else {
+                text.to_lowercase()
+            };
+            
+            tracing::debug!("Text search query: {}", query_str);
+            
+            if let Ok(text_query) = parser.parse_query(&query_str) {
+                subqueries.push((Occur::Must, text_query));
+            }
+        }
+
+        // Add tags filter
+        if let Some(tags) = &query.tags {
+            let mut tag_queries: Vec<(Occur, Box<dyn tantivy::query::Query>)> = Vec::new();
+            
+            for tag in tags {
+                tracing::debug!("Adding tag filter: {}", tag);
+                let term_query = TermQuery::new(
+                    Term::from_field_text(self.fields.tags, &tag.to_lowercase()),
+                    IndexRecordOption::Basic,
+                );
+                tag_queries.push((Occur::Must, Box::new(term_query)));
+            }
+            
+            if !tag_queries.is_empty() {
+                subqueries.push((Occur::Must, Box::new(BooleanQuery::new(tag_queries))));
             }
         }
 
@@ -171,7 +199,6 @@ impl SearchIndex {
         self.add_name_filter(&mut subqueries, &query.name, query.partial_match.unwrap_or(false))?;
         self.add_company_filter(&mut subqueries, &query.company)?;
         self.add_free_from_filter(&mut subqueries, &query.free_from)?;
-        self.add_tags_filter(&mut subqueries, &query.tags)?;
         self.add_price_range_filter(&mut subqueries, &query.price_range)?;
         self.add_rating_filter(&mut subqueries, &query.rating)?;
 
@@ -208,29 +235,20 @@ impl SearchIndex {
     ) -> ServiceResult<()> {
         if let Some(name) = name {
             let name = name.to_lowercase();
-            
-            let first_name_query = TermQuery::new(
-                Term::from_field_text(
-                    self.fields.first_name, 
-                    &if partial_match { format!("{}*", name) } else { name.clone() }
-                ),
-                IndexRecordOption::Basic,
+            let parser = QueryParser::for_index(
+                &self.index,
+                vec![self.fields.first_name, self.fields.last_name],
             );
-            let last_name_query = TermQuery::new(
-                Term::from_field_text(
-                    self.fields.last_name, 
-                    &if partial_match { format!("{}*", name) } else { name.clone() }
-                ),
-                IndexRecordOption::Basic,
-            );
-    
-            let name_queries = vec![
-                (Occur::Should, Box::new(first_name_query) as Box<dyn tantivy::query::Query>),
-                (Occur::Should, Box::new(last_name_query) as Box<dyn tantivy::query::Query>),
-            ];
             
-            let bool_query = BooleanQuery::new(name_queries);
-            subqueries.push((Occur::Must, Box::new(bool_query)));
+            let query_str = if partial_match {
+                format!("{}*", name)
+            } else {
+                name
+            };
+            
+            if let Ok(name_query) = parser.parse_query(&query_str) {
+                subqueries.push((Occur::Must, Box::new(name_query)));
+            }
         }
         Ok(())
     }
@@ -261,23 +279,6 @@ impl SearchIndex {
                 IndexRecordOption::Basic,
             );
             subqueries.push((Occur::Must, Box::new(term_query)));
-        }
-        Ok(())
-    }
-
-    fn add_tags_filter(
-        &self,
-        subqueries: &mut Vec<(Occur, Box<dyn tantivy::query::Query>)>,
-        tags: &Option<Vec<String>>,
-    ) -> ServiceResult<()> {
-        if let Some(tags) = tags {
-            for tag in tags {
-                let term_query = TermQuery::new(
-                    Term::from_field_text(self.fields.tags, &tag.to_lowercase()),
-                    IndexRecordOption::Basic,
-                );
-                subqueries.push((Occur::Must, Box::new(term_query)));
-            }
         }
         Ok(())
     }
