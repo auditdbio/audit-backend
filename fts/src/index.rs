@@ -28,7 +28,6 @@ pub struct SearchIndex {
 
 #[derive(Clone)]
 pub struct IndexFields {
-    id: Field,
     user_id: Field,
     avatar: Field,
     first_name: Field,
@@ -81,7 +80,6 @@ impl SearchIndex {
         let mut schema_builder = Schema::builder();
 
         // Add fields to schema
-        schema_builder.add_text_field("id", TEXT | STORED);
         schema_builder.add_text_field("user_id", TEXT | STORED);
         schema_builder.add_text_field("avatar", STORED);
         schema_builder.add_text_field("first_name", TEXT | STORED);
@@ -100,7 +98,6 @@ impl SearchIndex {
 
     fn get_fields(schema: &Schema) -> IndexFields {
         IndexFields {
-            id: schema.get_field("id").unwrap(),
             user_id: schema.get_field("user_id").unwrap(),
             avatar: schema.get_field("avatar").unwrap(),
             first_name: schema.get_field("first_name").unwrap(),
@@ -118,7 +115,6 @@ impl SearchIndex {
 
     pub fn index_auditor(&mut self, auditor: &Auditor<String>) -> ServiceResult<()> {
         let mut doc = doc!(
-            // self.fields.id => auditor._id.to_string(),
             self.fields.user_id => auditor.user_id.to_string(),
             self.fields.avatar => auditor.avatar.clone(),
             self.fields.first_name => auditor.first_name.to_lowercase(),
@@ -146,7 +142,7 @@ impl SearchIndex {
     }
 
     pub fn delete_by_id(&mut self, id: &str) -> ServiceResult<()> {
-        let term = Term::from_field_text(self.fields.id, id);
+        let term = Term::from_field_text(self.fields.user_id, id);
         self.writer.delete_term(term);
         Ok(())
     }
@@ -216,7 +212,7 @@ impl SearchIndex {
             let retrieved_doc: TantivyDocument = searcher.doc(doc_address).map_err(|e| {
                 ServiceError::Internal(format!("Failed to retrieve document: {:?}", e))
             })?;
-            if let Some(field_value) = retrieved_doc.get_first(self.fields.id) {
+            if let Some(field_value) = retrieved_doc.get_first(self.fields.user_id) {
                 if let Some(id_str) = field_value.as_str() {
                     ids.push(id_str.to_string());
                 }
