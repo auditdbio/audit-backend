@@ -29,10 +29,8 @@ A Rust-based full-text search service for blockchain security auditors, using Ta
 
 The service can be configured using environment variables:
 
-- `MONGODB_URI` - MongoDB connection URI (default: "mongodb://localhost:27017")
+- `MONGOURI` - MongoDB connection URI (default: "mongodb://localhost:27017")
 - `DB_NAME` - MongoDB database name (default: "auditors")
-- `HOST` - HTTP server host (default: "127.0.0.1")
-- `PORT` - HTTP server port (default: 8080)
 
 ## API Endpoints
 
@@ -46,17 +44,18 @@ Query parameters:
 - `company` - Filter by company name
 - `free_from` - Filter by availability date
 - `tags` - Filter by tags (comma-separated)
-- `price_range.from` - Minimum price
-- `price_range.to` - Maximum price
-- `rating.from` - Minimum rating
-- `rating.to` - Maximum rating
+- `price_from` - Minimum price
+- `price_to` - Maximum price
+- `rating_from` - Minimum rating
+- `rating_to` - Maximum rating
 - `sort` - Sorting option (relevance, price_asc, price_desc, rating_asc, rating_desc)
 - `page` - Page number (default: 1)
 - `per_page` - Results per page (default: 10)
+- `partial_match` - Enable partial match
 
 Example:
 ```
-GET /search?text=smart contract&tags=rust,solidity&price_range.from=100&price_range.to=500&sort=rating_desc
+GET /search?text=smart contract&tags=rust,solidity&price_from=100&price_to=500&sort=rating_desc
 ```
 
 ### POST /sync

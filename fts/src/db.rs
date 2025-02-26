@@ -66,7 +66,13 @@ impl MongoDb {
 
         while let Some(result) = cursor.next().await {
             match result {
-                Ok(auditor) => auditors.push(auditor),
+                Ok(mut auditor) => {
+                    if !auditor.contacts.public_contacts {
+                        auditor.contacts.email = None;
+                        auditor.contacts.telegram = None;
+                    }
+                    auditors.push(auditor)
+                },
                 Err(e) => tracing::error!("Error fetching auditor: {}", e),
             }
         }

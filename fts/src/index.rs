@@ -11,7 +11,7 @@ use tantivy::{
 
 use crate::{
     error::{ServiceError, ServiceResult},
-    models::{PriceRangeFilter, RangeFilter, SearchQuery},
+    models::{PriceRangeFilter, RangeFilter, SearchQuery, SortOption},
 };
 
 use common::entities::auditor::Auditor;
@@ -191,18 +191,62 @@ impl SearchIndex {
         let collector = TopDocs::with_limit(limit).and_offset(offset);
         let mut top_docs = searcher.search(&boolean_query, &collector)?;
 
-        if let Some("rating") = query.sort.as_deref() {
-            top_docs.sort_by(|a, b| {
-                let doc_a: TantivyDocument = searcher.doc(a.1).unwrap();
-                let doc_b: TantivyDocument = searcher.doc(b.1).unwrap();
-                let rating_a = doc_a.get_first(self.fields.rating)
-                    .and_then(|v| v.as_f64())
-                    .unwrap_or(0.0);
-                let rating_b = doc_b.get_first(self.fields.rating)
-                    .and_then(|v| v.as_f64())
-                    .unwrap_or(0.0);
-                rating_b.partial_cmp(&rating_a).unwrap_or(std::cmp::Ordering::Equal)
-            });
+        if let Some(sort_option) = &query.sort {
+            match sort_option {
+                SortOption::Relevance => {},
+                SortOption::PriceAsc => {
+                    top_docs.sort_by(|a, b| {
+                        let doc_a: TantivyDocument = searcher.doc(a.1).unwrap();
+                        let doc_b: TantivyDocument = searcher.doc(b.1).unwrap();
+                        let price_a = doc_a.get_first(self.fields.price_from)
+                            .and_then(|v| v.as_i64())
+                            .unwrap_or(0);
+                        let price_b = doc_b.get_first(self.fields.price_from)
+                            .and_then(|v| v.as_i64())
+                            .unwrap_or(0);
+                        price_a.cmp(&price_b)
+                    });
+                },
+                SortOption::PriceDesc => {
+                    top_docs.sort_by(|a, b| {
+                        let doc_a: TantivyDocument = searcher.doc(a.1).unwrap();
+                        let doc_b: TantivyDocument = searcher.doc(b.1).unwrap();
+                        let price_a = doc_a.get_first(self.fields.price_from)
+                            .and_then(|v| v.as_i64())
+                            .unwrap_or(0);
+                        let price_b = doc_b.get_first(self.fields.price_from)
+                            .and_then(|v| v.as_i64())
+                            .unwrap_or(0);
+                        price_b.cmp(&price_a)
+                    });
+                },
+                SortOption::RatingAsc => {
+                    top_docs.sort_by(|a, b| {
+                        let doc_a: TantivyDocument = searcher.doc(a.1).unwrap();
+                        let doc_b: TantivyDocument = searcher.doc(b.1).unwrap();
+                        let rating_a = doc_a.get_first(self.fields.rating)
+                            .and_then(|v| v.as_f64())
+                            .unwrap_or(0.0);
+                        let rating_b = doc_b.get_first(self.fields.rating)
+                            .and_then(|v| v.as_f64())
+                            .unwrap_or(0.0);
+                        rating_a.partial_cmp(&rating_b).unwrap_or(std::cmp::Ordering::Equal)
+                    });
+                },
+                SortOption::RatingDesc => {
+                    top_docs.sort_by(|a, b| {
+                        let doc_a: TantivyDocument = searcher.doc(a.1).unwrap();
+                        let doc_b: TantivyDocument = searcher.doc(b.1).unwrap();
+                        let rating_a = doc_a.get_first(self.fields.rating)
+                            .and_then(|v| v.as_f64())
+                            .unwrap_or(0.0);
+                        let rating_b = doc_b.get_first(self.fields.rating)
+                            .and_then(|v| v.as_f64())
+                            .unwrap_or(0.0);
+                        rating_b.partial_cmp(&rating_a).unwrap_or(std::cmp::Ordering::Equal)
+                    });
+                },
+            }
         }
 
         let total = searcher.search(&boolean_query, &Count)?;

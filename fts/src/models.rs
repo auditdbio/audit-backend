@@ -11,19 +11,16 @@ pub struct SearchQuery {
     #[serde(default)]
     #[serde(deserialize_with = "deserialize_tags")]
     pub tags: Option<Vec<String>>,
-    #[serde(rename = "price_range.from")]
     #[serde(default)]
-    pub price_range_from: Option<String>,
-    #[serde(rename = "price_range.to")]
+    pub price_from: Option<String>,
     #[serde(default)]
-    pub price_range_to: Option<String>,
-    #[serde(rename = "rating.from")]
+    pub price_to: Option<String>,
     #[serde(default)]
     pub rating_from: Option<String>,
-    #[serde(rename = "rating.to")]
     #[serde(default)]
     pub rating_to: Option<String>,
-    pub sort: Option<String>,
+    #[serde(deserialize_with = "deserialize_sort_option")]
+    pub sort: Option<SortOption>,
     pub page: Option<u32>,
     pub per_page: Option<u32>,
     pub partial_match: Option<bool>,
@@ -51,10 +48,28 @@ where
     }
 }
 
+fn deserialize_sort_option<'de, D>(deserializer: D) -> Result<Option<SortOption>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let option = Option::<String>::deserialize(deserializer)?;
+    match option {
+        None => Ok(None),
+        Some(s) => match s.as_str() {
+            "relevance" => Ok(Some(SortOption::Relevance)),
+            "price_asc" => Ok(Some(SortOption::PriceAsc)),
+            "price_desc" => Ok(Some(SortOption::PriceDesc)),
+            "rating_asc" => Ok(Some(SortOption::RatingAsc)),
+            "rating_desc" => Ok(Some(SortOption::RatingDesc)),
+            _ => Err(serde::de::Error::custom(format!("Invalid sort option: {}", s))),
+        },
+    }
+}
+
 impl SearchQuery {
     pub fn price_range(&self) -> Option<PriceRangeFilter> {
-        let from = self.price_range_from.as_ref().and_then(|s| s.parse::<i64>().ok());
-        let to = self.price_range_to.as_ref().and_then(|s| s.parse::<i64>().ok());
+        let from = self.price_from.as_ref().and_then(|s| s.parse::<i64>().ok());
+        let to = self.price_to.as_ref().and_then(|s| s.parse::<i64>().ok());
         
         if from.is_some() || to.is_some() {
             Some(PriceRangeFilter {
