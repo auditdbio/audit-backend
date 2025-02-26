@@ -131,7 +131,6 @@ impl SearchIndex {
         );
 
         for tag in &auditor.tags {
-            tracing::debug!("Indexing tag: {}", tag);
             doc.add_text(self.fields.tags, &tag.to_lowercase());
         }
 
@@ -151,7 +150,6 @@ impl SearchIndex {
     }
 
     pub fn search(&self, query: &SearchQuery) -> ServiceResult<(Vec<String>, usize)> {
-        tracing::debug!("Search query: {:?}", query);
         let mut subqueries: Vec<(Occur, Box<dyn tantivy::query::Query>)> = Vec::new();
 
         // Full-text search across multiple fields
@@ -173,7 +171,6 @@ impl SearchIndex {
                 text.to_lowercase()
             };
             
-            tracing::debug!("Text search query string: {}", query_str);
             if let Ok(text_query) = parser.parse_query(&query_str) {
                 subqueries.push((Occur::Must, text_query));
             }
@@ -188,7 +185,6 @@ impl SearchIndex {
         self.add_rating_filter(&mut subqueries, &query.rating())?;
 
         let boolean_query = BooleanQuery::new(subqueries);
-        tracing::debug!("Final query: {:?}", boolean_query);
 
         let searcher: Searcher = self.reader.searcher();
         let limit = query.per_page.unwrap_or(10) as usize;
@@ -235,8 +231,6 @@ impl SearchIndex {
         partial_match: bool,
     ) -> ServiceResult<()> {
         if let Some(name) = name {
-            tracing::debug!("Adding name filter: {}, partial_match: {}", name, partial_match);
-            
             let name = name.to_lowercase();
             let mut name_queries: Vec<(Occur, Box<dyn tantivy::query::Query>)> = Vec::new();
 
@@ -268,7 +262,6 @@ impl SearchIndex {
 
             let bool_query = BooleanQuery::new(name_queries);
             subqueries.push((Occur::Must, Box::new(bool_query)));
-            tracing::debug!("Name filter added");
         }
         Ok(())
     }
@@ -356,12 +349,10 @@ impl SearchIndex {
         subqueries: &mut Vec<(Occur, Box<dyn tantivy::query::Query>)>,
         tags: &Option<Vec<String>>,
     ) -> ServiceResult<()> {
-        tracing::debug!("Adding tags filter: {:?}", tags);
         if let Some(tags) = tags {
             let mut tag_queries: Vec<(Occur, Box<dyn tantivy::query::Query>)> = Vec::new();
             
             for tag in tags {
-                tracing::debug!("Processing tag: {}", tag);
                 let term_query = TermQuery::new(
                     Term::from_field_text(self.fields.tags, &tag.to_lowercase()),
                     IndexRecordOption::Basic,
@@ -370,7 +361,6 @@ impl SearchIndex {
             }
             
             if !tag_queries.is_empty() {
-                tracing::debug!("Adding {} tag queries to main query", tag_queries.len());
                 let bool_query = BooleanQuery::new(tag_queries);
                 subqueries.push((Occur::Must, Box::new(bool_query)));
             }

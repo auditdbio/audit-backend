@@ -44,8 +44,10 @@ pub struct SearchQuery {
     #[serde(deserialize_with = "deserialize_tags")]
     pub tags: Option<Vec<String>>,
     #[serde(flatten)]
+    #[serde(default)]
     pub price_range_params: PriceRangeParams,
     #[serde(flatten)]
+    #[serde(default)]
     pub rating_params: RatingParams,
     pub sort: Option<String>,
     pub page: Option<u32>,
@@ -206,8 +208,9 @@ pub enum SortOption {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchResponse {
-    pub auditors: Vec<Auditor>,
-    pub total: usize,
+    pub result: Vec<Auditor>,
+    #[serde(rename = "totalDocuments")]
+    pub total_documents: usize,
     pub page: u32,
     pub per_page: u32,
 }

@@ -97,12 +97,12 @@ impl SearchService {
         let page = query.page.unwrap_or(1);
         let per_page = query.per_page.unwrap_or(10);
 
-        let (ids, total) = index.search(&query)?;
+        let (ids, total_documents) = index.search(&query)?;
         let auditors = self.db.get_auditors_by_ids(&ids).await?;
 
         Ok(SearchResponse {
-            auditors,
-            total,
+            result: auditors,
+            total_documents,
             page,
             per_page,
         })
