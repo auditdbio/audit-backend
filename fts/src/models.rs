@@ -41,56 +41,56 @@ pub struct SearchQuery {
     pub company: Option<String>,
     pub free_from: Option<String>,
     #[serde(default)]
-    #[serde(deserialize_with = "deserialize_string_array")]
+    #[serde(rename = "tags[]")]
     pub tags: Option<Vec<String>>,
-    pub price_range: Option<PriceRangeFilter>,
-    pub rating: Option<RangeFilter<f32>>,
+    #[serde(flatten)]
+    pub price_range_params: PriceRangeParams,
+    #[serde(flatten)]
+    pub rating_params: RatingParams,
     pub sort: Option<String>,
     pub page: Option<u32>,
     pub per_page: Option<u32>,
     pub partial_match: Option<bool>,
 }
 
-// Добавим функцию для десериализации массива строк
-fn deserialize_string_array<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    #[derive(Deserialize)]
-    struct Helper(#[serde(deserialize_with = "string_or_array")] Vec<String>);
-
-    Ok(Option::deserialize(deserializer)?.map(|Helper(vec)| vec))
+#[derive(Debug, Deserialize, Default)]
+pub struct PriceRangeParams {
+    #[serde(rename = "price_range.from")]
+    pub from: Option<i64>,
+    #[serde(rename = "price_range.to")]
+    pub to: Option<i64>,
 }
 
-fn string_or_array<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    struct StringOrVec;
+#[derive(Debug, Deserialize, Default)]
+pub struct RatingParams {
+    #[serde(rename = "rating.from")]
+    pub from: Option<f32>,
+    #[serde(rename = "rating.to")]
+    pub to: Option<f32>,
+}
 
-    impl<'de> serde::de::Visitor<'de> for StringOrVec {
-        type Value = Vec<String>;
-
-        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            formatter.write_str("string or array of strings")
-        }
-
-        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-        where
-            E: serde::de::Error,
-        {
-            Ok(vec![value.to_string()])
-        }
-
-        fn visit_seq<S>(self, visitor: S) -> Result<Self::Value, S::Error>
-        where
-            S: serde::de::SeqAccess<'de>,
-        {
-            Deserialize::deserialize(serde::de::value::SeqAccessDeserializer::new(visitor))
+impl SearchQuery {
+    pub fn price_range(&self) -> Option<PriceRangeFilter> {
+        if self.price_range_params.from.is_some() || self.price_range_params.to.is_some() {
+            Some(PriceRangeFilter {
+                from: self.price_range_params.from,
+                to: self.price_range_params.to,
+            })
+        } else {
+            None
         }
     }
 
-    deserializer.deserialize_any(StringOrVec)
+    pub fn rating(&self) -> Option<RangeFilter<f32>> {
+        if self.rating_params.from.is_some() || self.rating_params.to.is_some() {
+            Some(RangeFilter {
+                from: self.rating_params.from,
+                to: self.rating_params.to,
+            })
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

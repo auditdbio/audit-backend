@@ -184,8 +184,8 @@ impl SearchIndex {
         self.add_company_filter(&mut subqueries, &query.company)?;
         self.add_free_from_filter(&mut subqueries, &query.free_from)?;
         self.add_tags_filter(&mut subqueries, &query.tags)?;
-        self.add_price_range_filter(&mut subqueries, &query.price_range)?;
-        self.add_rating_filter(&mut subqueries, &query.rating)?;
+        self.add_price_range_filter(&mut subqueries, &query.price_range())?;
+        self.add_rating_filter(&mut subqueries, &query.rating())?;
 
         let boolean_query = BooleanQuery::new(subqueries);
         tracing::debug!("Final query: {:?}", boolean_query);
@@ -370,8 +370,9 @@ impl SearchIndex {
             }
             
             if !tag_queries.is_empty() {
-                tracing::debug!("Adding tag queries to main query");
-                subqueries.push((Occur::Must, Box::new(BooleanQuery::new(tag_queries))));
+                tracing::debug!("Adding {} tag queries to main query", tag_queries.len());
+                let bool_query = BooleanQuery::new(tag_queries);
+                subqueries.push((Occur::Must, Box::new(bool_query)));
             }
         }
         Ok(())
