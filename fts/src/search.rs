@@ -64,8 +64,10 @@ impl SearchService {
             company: None,
             free_from: None,
             tags: None,
-            price_range_params: Default::default(),
-            rating_params: Default::default(),
+            price_range_from: None,
+            price_range_to: None,
+            rating_from: None,
+            rating_to: None,
             sort: None,
             page: Some(1),
             per_page: Some(1000), // Process in batches of 1000

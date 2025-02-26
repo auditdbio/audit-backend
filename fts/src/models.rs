@@ -43,10 +43,18 @@ pub struct SearchQuery {
     #[serde(default)]
     #[serde(deserialize_with = "deserialize_tags")]
     pub tags: Option<Vec<String>>,
-    #[serde(flatten)]
-    pub price_range_params: PriceRangeParams,
-    #[serde(flatten)]
-    pub rating_params: RatingParams,
+    #[serde(rename = "price_range.from")]
+    #[serde(default)]
+    pub price_range_from: Option<String>,
+    #[serde(rename = "price_range.to")]
+    #[serde(default)]
+    pub price_range_to: Option<String>,
+    #[serde(rename = "rating.from")]
+    #[serde(default)]
+    pub rating_from: Option<String>,
+    #[serde(rename = "rating.to")]
+    #[serde(default)]
+    pub rating_to: Option<String>,
     pub sort: Option<String>,
     pub page: Option<u32>,
     pub per_page: Option<u32>,
@@ -102,68 +110,15 @@ where
     deserializer.deserialize_any(TagsVisitor)
 }
 
-#[derive(Debug, Deserialize, Default)]
-pub struct PriceRangeParams {
-    #[serde(rename = "price_range.from")]
-    #[serde(deserialize_with = "deserialize_option_i64")]
-    #[serde(default)]
-    pub from: Option<i64>,
-    #[serde(rename = "price_range.to")]
-    #[serde(deserialize_with = "deserialize_option_i64")]
-    #[serde(default)]
-    pub to: Option<i64>,
-}
-
-#[derive(Debug, Deserialize, Default)]
-pub struct RatingParams {
-    #[serde(rename = "rating.from")]
-    #[serde(deserialize_with = "deserialize_option_f32")]
-    #[serde(default)]
-    pub from: Option<f32>,
-    #[serde(rename = "rating.to")]
-    #[serde(deserialize_with = "deserialize_option_f32")]
-    #[serde(default)]
-    pub to: Option<f32>,
-}
-
-fn deserialize_option_i64<'de, D>(deserializer: D) -> Result<Option<i64>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let s: Option<String> = Option::deserialize(deserializer)?;
-    match s {
-        Some(s) => {
-            match s.parse::<i64>() {
-                Ok(i) => Ok(Some(i)),
-                Err(_) => Err(serde::de::Error::custom(format!("Invalid i64: {}", s))),
-            }
-        }
-        None => Ok(None),
-    }
-}
-
-fn deserialize_option_f32<'de, D>(deserializer: D) -> Result<Option<f32>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let s: Option<String> = Option::deserialize(deserializer)?;
-    match s {
-        Some(s) => {
-            match s.parse::<f32>() {
-                Ok(f) => Ok(Some(f)),
-                Err(_) => Err(serde::de::Error::custom(format!("Invalid f32: {}", s))),
-            }
-        }
-        None => Ok(None),
-    }
-}
-
 impl SearchQuery {
     pub fn price_range(&self) -> Option<PriceRangeFilter> {
-        if self.price_range_params.from.is_some() || self.price_range_params.to.is_some() {
+        let from = self.price_range_from.as_ref().and_then(|s| s.parse::<i64>().ok());
+        let to = self.price_range_to.as_ref().and_then(|s| s.parse::<i64>().ok());
+        
+        if from.is_some() || to.is_some() {
             Some(PriceRangeFilter {
-                from: self.price_range_params.from,
-                to: self.price_range_params.to,
+                from,
+                to,
             })
         } else {
             None
@@ -171,10 +126,13 @@ impl SearchQuery {
     }
 
     pub fn rating(&self) -> Option<RangeFilter<f32>> {
-        if self.rating_params.from.is_some() || self.rating_params.to.is_some() {
+        let from = self.rating_from.as_ref().and_then(|s| s.parse::<f32>().ok());
+        let to = self.rating_to.as_ref().and_then(|s| s.parse::<f32>().ok());
+        
+        if from.is_some() || to.is_some() {
             Some(RangeFilter {
-                from: self.rating_params.from,
-                to: self.rating_params.to,
+                from,
+                to,
             })
         } else {
             None
