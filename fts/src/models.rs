@@ -41,7 +41,7 @@ pub struct SearchQuery {
     pub company: Option<String>,
     pub free_from: Option<String>,
     #[serde(default)]
-    #[serde(rename = "tags[]")]
+    #[serde(deserialize_with = "deserialize_tags")]
     pub tags: Option<Vec<String>>,
     #[serde(flatten)]
     pub price_range_params: PriceRangeParams,
@@ -53,20 +53,105 @@ pub struct SearchQuery {
     pub partial_match: Option<bool>,
 }
 
+fn deserialize_tags<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    struct TagsVisitor;
+
+    impl<'de> serde::de::Visitor<'de> for TagsVisitor {
+        type Value = Option<Vec<String>>;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("string or array of strings")
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(Some(vec![value.to_string()]))
+        }
+
+        fn visit_seq<S>(self, mut visitor: S) -> Result<Self::Value, S::Error>
+        where
+            S: serde::de::SeqAccess<'de>,
+        {
+            let mut values = Vec::new();
+            while let Some(value) = visitor.next_element()? {
+                values.push(value);
+            }
+            Ok(Some(values))
+        }
+
+        fn visit_none<E>(self) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(None)
+        }
+
+        fn visit_unit<E>(self) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(None)
+        }
+    }
+
+    deserializer.deserialize_any(TagsVisitor)
+}
+
 #[derive(Debug, Deserialize, Default)]
 pub struct PriceRangeParams {
     #[serde(rename = "price_range.from")]
+    #[serde(deserialize_with = "deserialize_option_i64")]
     pub from: Option<i64>,
     #[serde(rename = "price_range.to")]
+    #[serde(deserialize_with = "deserialize_option_i64")]
     pub to: Option<i64>,
 }
 
 #[derive(Debug, Deserialize, Default)]
 pub struct RatingParams {
     #[serde(rename = "rating.from")]
+    #[serde(deserialize_with = "deserialize_option_f32")]
     pub from: Option<f32>,
     #[serde(rename = "rating.to")]
+    #[serde(deserialize_with = "deserialize_option_f32")]
     pub to: Option<f32>,
+}
+
+fn deserialize_option_i64<'de, D>(deserializer: D) -> Result<Option<i64>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s: Option<String> = Option::deserialize(deserializer)?;
+    match s {
+        Some(s) => {
+            match s.parse::<i64>() {
+                Ok(i) => Ok(Some(i)),
+                Err(_) => Err(serde::de::Error::custom(format!("Invalid i64: {}", s))),
+            }
+        }
+        None => Ok(None),
+    }
+}
+
+fn deserialize_option_f32<'de, D>(deserializer: D) -> Result<Option<f32>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s: Option<String> = Option::deserialize(deserializer)?;
+    match s {
+        Some(s) => {
+            match s.parse::<f32>() {
+                Ok(f) => Ok(Some(f)),
+                Err(_) => Err(serde::de::Error::custom(format!("Invalid f32: {}", s))),
+            }
+        }
+        None => Ok(None),
+    }
 }
 
 impl SearchQuery {
