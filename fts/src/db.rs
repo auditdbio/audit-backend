@@ -5,13 +5,11 @@ use mongodb::{
     Client, Collection, Database,
 };
 
-use crate::{
-    error::{ServiceError, ServiceResult},
-    models::Auditor,
-};
+use crate::error::{ServiceError, ServiceResult};
+use common::entities::auditor::Auditor;
 
 pub struct MongoDb {
-    collection: Collection<Auditor>,
+    collection: Collection<Auditor<ObjectId>>,
 }
 
 impl MongoDb {
@@ -26,7 +24,7 @@ impl MongoDb {
         Ok(Self { collection })
     }
 
-    pub async fn get_auditors_since(&self, timestamp: i64) -> ServiceResult<Vec<Auditor>> {
+    pub async fn get_auditors_since(&self, timestamp: i64) -> ServiceResult<Vec<Auditor<ObjectId>>> {
         let filter = doc! {
             "last_modified": { "$gt": timestamp }
         };
@@ -44,7 +42,7 @@ impl MongoDb {
         Ok(auditors)
     }
 
-    pub async fn get_auditors_by_ids(&self, ids: &[String]) -> ServiceResult<Vec<Auditor>> {
+    pub async fn get_auditors_by_ids(&self, ids: &[String]) -> ServiceResult<Vec<Auditor<ObjectId>>> {
         let object_ids: Vec<ObjectId> = ids
             .iter()
             .filter_map(|id| {
@@ -56,7 +54,7 @@ impl MongoDb {
             .collect();
 
         let filter = doc! {
-            "_id": { "$in": object_ids }
+            "user_id": { "$in": object_ids }
         };
 
         let options = FindOptions::builder()
@@ -81,7 +79,7 @@ impl MongoDb {
             .map_err(|e| ServiceError::Query(format!("Invalid ObjectId: {}", e)))?;
 
         let filter = doc! {
-            "_id": object_id
+            "user_id": object_id
         };
 
         Ok(self.collection.count_documents(filter, None).await? > 0)

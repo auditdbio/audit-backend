@@ -11,8 +11,10 @@ use tantivy::{
 
 use crate::{
     error::{ServiceError, ServiceResult},
-    models::{Auditor, PriceRangeFilter, RangeFilter, SearchQuery},
+    models::{PriceRangeFilter, RangeFilter, SearchQuery},
 };
+
+use common::entities::auditor::Auditor;
 
 use regex;
 
@@ -114,9 +116,9 @@ impl SearchIndex {
         }
     }
 
-    pub fn index_auditor(&mut self, auditor: &Auditor) -> ServiceResult<()> {
+    pub fn index_auditor(&mut self, auditor: &Auditor<String>) -> ServiceResult<()> {
         let mut doc = doc!(
-            self.fields.id => auditor._id.to_string(),
+            // self.fields.id => auditor._id.to_string(),
             self.fields.user_id => auditor.user_id.to_string(),
             self.fields.avatar => auditor.avatar.clone(),
             self.fields.first_name => auditor.first_name.to_lowercase(),

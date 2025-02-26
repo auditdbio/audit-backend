@@ -10,6 +10,8 @@ use crate::{
     storage::Storage,
 };
 
+use common::entities::auditor::Auditor;
+
 pub struct SearchService {
     index: Arc<RwLock<SearchIndex>>,
     storage: Arc<Storage>,
@@ -47,7 +49,7 @@ impl SearchService {
 
         for auditor in auditors {
             max_timestamp = max_timestamp.max(auditor.last_modified);
-            index.index_auditor(&auditor)?;
+            index.index_auditor(&auditor.stringify())?;
         }
 
         index.commit()?;
@@ -101,6 +103,11 @@ impl SearchService {
 
         let (ids, total_documents) = index.search(&query)?;
         let auditors = self.db.get_auditors_by_ids(&ids).await?;
+
+        let auditors: Vec<Auditor<String>> = auditors
+            .into_iter()
+            .map(|auditor| auditor.stringify())
+            .collect();
 
         Ok(SearchResponse {
             result: auditors,

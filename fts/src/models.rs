@@ -1,37 +1,5 @@
-use bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Auditor {
-    pub _id: ObjectId,
-    pub user_id: ObjectId,
-    pub avatar: String,
-    pub first_name: String,
-    pub last_name: String,
-    pub about: String,
-    pub company: String,
-    pub free_at: String,
-    pub tags: Vec<String>,
-    pub contacts: Contacts,
-    pub price_range: PriceRange,
-    pub last_modified: i64,
-    pub created_at: Option<i64>,
-    pub link_id: Option<String>,
-    pub rating: Option<f32>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Contacts {
-    pub email: Option<String>,
-    pub telegram: Option<String>,
-    pub public_contacts: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PriceRange {
-    pub from: i64,
-    pub to: i64,
-}
+use common::entities::auditor::Auditor;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -141,7 +109,7 @@ pub enum SortOption {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchResponse {
-    pub result: Vec<Auditor>,
+    pub result: Vec<Auditor<String>>,
     #[serde(rename = "totalDocuments")]
     pub total_documents: usize,
     pub page: u32,
