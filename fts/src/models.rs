@@ -44,10 +44,8 @@ pub struct SearchQuery {
     #[serde(deserialize_with = "deserialize_tags")]
     pub tags: Option<Vec<String>>,
     #[serde(flatten)]
-    #[serde(default)]
     pub price_range_params: PriceRangeParams,
     #[serde(flatten)]
-    #[serde(default)]
     pub rating_params: RatingParams,
     pub sort: Option<String>,
     pub page: Option<u32>,
@@ -108,9 +106,11 @@ where
 pub struct PriceRangeParams {
     #[serde(rename = "price_range.from")]
     #[serde(deserialize_with = "deserialize_option_i64")]
+    #[serde(default)]
     pub from: Option<i64>,
     #[serde(rename = "price_range.to")]
     #[serde(deserialize_with = "deserialize_option_i64")]
+    #[serde(default)]
     pub to: Option<i64>,
 }
 
@@ -118,9 +118,11 @@ pub struct PriceRangeParams {
 pub struct RatingParams {
     #[serde(rename = "rating.from")]
     #[serde(deserialize_with = "deserialize_option_f32")]
+    #[serde(default)]
     pub from: Option<f32>,
     #[serde(rename = "rating.to")]
     #[serde(deserialize_with = "deserialize_option_f32")]
+    #[serde(default)]
     pub to: Option<f32>,
 }
 
