@@ -54,12 +54,10 @@ impl MongoDb {
             .collect();
 
         let filter = doc! {
-            "user_id": { "$in": object_ids }
+            "user_id": { "$in": object_ids.clone() }
         };
 
-        let options = FindOptions::builder()
-            .sort(doc! { "last_modified": -1 })
-            .build();
+        let options = FindOptions::builder().build();
 
         let mut cursor = self.collection.find(filter, options).await?;
         let mut auditors = Vec::new();
@@ -76,6 +74,12 @@ impl MongoDb {
                 Err(e) => tracing::error!("Error fetching auditor: {}", e),
             }
         }
+
+        auditors.sort_by(|a, b| {
+            let a_pos = ids.iter().position(|id| id == &a.user_id.to_string()).unwrap_or(usize::MAX);
+            let b_pos = ids.iter().position(|id| id == &b.user_id.to_string()).unwrap_or(usize::MAX);
+            a_pos.cmp(&b_pos)
+        });
 
         Ok(auditors)
     }

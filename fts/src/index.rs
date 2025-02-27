@@ -183,23 +183,15 @@ impl SearchIndex {
         self.add_rating_filter(&mut subqueries, &query.rating())?;
 
         let boolean_query = BooleanQuery::new(subqueries);
-
         let searcher: Searcher = self.reader.searcher();
         let limit = query.per_page.unwrap_or(10) as usize;
         let offset = ((query.page.unwrap_or(1) - 1) * query.per_page.unwrap_or(10)) as usize;
 
-        let collector = match query.sort.as_ref().unwrap_or(&SortOption::Relevance) {
-            SortOption::Relevance => TopDocs::with_limit(limit).and_offset(offset),
-            SortOption::PriceAsc | SortOption::PriceDesc | SortOption::RatingAsc | SortOption::RatingDesc => {
-                TopDocs::with_limit(limit).and_offset(offset)
-            }
-        };
-
-        let top_docs = searcher.search(&boolean_query, &collector)?;
+        let all_matching_docs = searcher.search(&boolean_query, &TopDocs::with_limit(1000))?;
         let total = searcher.search(&boolean_query, &Count)?;
 
-        let mut docs = Vec::with_capacity(top_docs.len());
-        for (_, doc_address) in top_docs {
+        let mut docs = Vec::with_capacity(all_matching_docs.len());
+        for (score, doc_address) in all_matching_docs {
             let retrieved_doc: TantivyDocument = searcher.doc(doc_address).map_err(|e| {
                 ServiceError::Internal(format!("Failed to retrieve document: {:?}", e))
             })?;
@@ -214,13 +206,15 @@ impl SearchIndex {
                         .and_then(|v| v.as_f64())
                         .unwrap_or(0.0);
                     
-                    docs.push((id_str.to_string(), price, rating));
+                    docs.push((id_str.to_string(), price, rating, score));
                 }
             }
         }
 
         match query.sort.as_ref().unwrap_or(&SortOption::Relevance) {
-            SortOption::Relevance => {}, // Уже отсортировано по релевантности
+            SortOption::Relevance => {
+                docs.sort_by(|a, b| b.3.partial_cmp(&a.3).unwrap_or(std::cmp::Ordering::Equal));
+            },
             SortOption::PriceAsc => {
                 docs.sort_by(|a, b| a.1.cmp(&b.1));
             },
@@ -235,7 +229,10 @@ impl SearchIndex {
             },
         }
 
-        let ids = docs.into_iter().map(|(id, _, _)| id).collect();
+        let start = offset.min(docs.len());
+        let end = (offset + limit).min(docs.len());
+        let paginated_docs = &docs[start..end];
+        let ids = paginated_docs.iter().map(|(id, _, _, _)| id.clone()).collect();
 
         Ok((ids, total))
     }
