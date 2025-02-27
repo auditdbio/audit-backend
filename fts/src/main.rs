@@ -4,6 +4,7 @@ use std::time::Duration;
 use actix_cors::Cors;
 use actix_web::{middleware::Logger, web::Data, App, HttpServer};
 use tokio::time;
+use dotenv::dotenv;
 
 mod api;
 mod db;
@@ -30,6 +31,7 @@ async fn sync_task(service: Data<SearchService>) {
 
 #[actix_web::main]
 async fn main() -> ServiceResult<()> {
+    dotenv().ok();
     // Initialize logging with debug level
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::DEBUG)

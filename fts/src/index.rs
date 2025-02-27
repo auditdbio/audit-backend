@@ -152,25 +152,38 @@ impl SearchIndex {
 
         // Full-text search across multiple fields
         if let Some(text) = &query.text {
-            let parser = QueryParser::for_index(
-                &self.index,
-                vec![
+            let text = text.to_lowercase();
+            let fields = vec![
                     self.fields.first_name,
                     self.fields.last_name,
                     self.fields.about,
                     self.fields.company,
                     self.fields.tags,
-                ],
-            );
+                ];
             
-            let query_str = if query.partial_match.unwrap_or(false) {
-                format!("*{}*", text.to_lowercase())
+            if query.partial_match.unwrap_or(false) {
+                let mut text_queries: Vec<(Occur, Box<dyn tantivy::query::Query>)> = Vec::new();
+                
+                for &field in &fields {
+                    let regex_query = RegexQuery::from_pattern(
+                        &format!(".*{}.*", regex::escape(&text)),
+                        field,
+                    )?;
+                    
+                    text_queries.push((Occur::Should, Box::new(regex_query)));
+                }
+                
+                let bool_query = BooleanQuery::new(text_queries);
+                subqueries.push((Occur::Must, Box::new(bool_query)));
             } else {
-                text.to_lowercase()
-            };
-            
-            if let Ok(text_query) = parser.parse_query(&query_str) {
-                subqueries.push((Occur::Must, text_query));
+                let parser = QueryParser::for_index(
+                    &self.index,
+                    fields,
+                );
+                
+                if let Ok(text_query) = parser.parse_query(&text) {
+                    subqueries.push((Occur::Must, text_query));
+                }
             }
         }
 
