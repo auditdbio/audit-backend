@@ -1,7 +1,9 @@
 use std::env;
+use std::time::Duration;
 
 use actix_cors::Cors;
 use actix_web::{middleware::Logger, web::Data, App, HttpServer};
+use tokio::time;
 
 mod api;
 mod db;
@@ -13,6 +15,18 @@ mod storage;
 
 use error::ServiceResult;
 use search::SearchService;
+
+async fn sync_task(service: Data<SearchService>) {
+    let mut interval = time::interval(Duration::from_secs(60));
+    loop {
+        interval.tick().await;
+        tracing::info!("Starting periodic sync...");
+        match service.sync().await {
+            Ok(_) => tracing::info!("Periodic sync completed successfully"),
+            Err(e) => tracing::error!("Periodic sync failed: {:?}", e),
+        }
+    }
+}
 
 #[actix_web::main]
 async fn main() -> ServiceResult<()> {
@@ -39,6 +53,12 @@ async fn main() -> ServiceResult<()> {
     // Initialize search service
     let service = SearchService::new(index_path, storage_path, &mongo_uri, &db_name).await?;
     let service = Data::new(service);
+
+    let service_for_task = service.clone();
+
+    tokio::spawn(async move {
+        sync_task(service_for_task).await;
+    });
 
     // Start HTTP server
     HttpServer::new(move || {

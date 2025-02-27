@@ -14,3 +14,4 @@ docker-compose.yml*
 .devcontainer
 
 /fts/data/storage
+/fts/data/index/*
