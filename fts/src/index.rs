@@ -188,80 +188,54 @@ impl SearchIndex {
         let limit = query.per_page.unwrap_or(10) as usize;
         let offset = ((query.page.unwrap_or(1) - 1) * query.per_page.unwrap_or(10)) as usize;
 
-        let collector = TopDocs::with_limit(limit).and_offset(offset);
-        let mut top_docs = searcher.search(&boolean_query, &collector)?;
-
-        if let Some(sort_option) = &query.sort {
-            match sort_option {
-                SortOption::Relevance => {},
-                SortOption::PriceAsc => {
-                    top_docs.sort_by(|a, b| {
-                        let doc_a: TantivyDocument = searcher.doc(a.1).unwrap();
-                        let doc_b: TantivyDocument = searcher.doc(b.1).unwrap();
-                        let price_a = doc_a.get_first(self.fields.price_from)
-                            .and_then(|v| v.as_i64())
-                            .unwrap_or(0);
-                        let price_b = doc_b.get_first(self.fields.price_from)
-                            .and_then(|v| v.as_i64())
-                            .unwrap_or(0);
-                        price_a.cmp(&price_b)
-                    });
-                },
-                SortOption::PriceDesc => {
-                    top_docs.sort_by(|a, b| {
-                        let doc_a: TantivyDocument = searcher.doc(a.1).unwrap();
-                        let doc_b: TantivyDocument = searcher.doc(b.1).unwrap();
-                        let price_a = doc_a.get_first(self.fields.price_from)
-                            .and_then(|v| v.as_i64())
-                            .unwrap_or(0);
-                        let price_b = doc_b.get_first(self.fields.price_from)
-                            .and_then(|v| v.as_i64())
-                            .unwrap_or(0);
-                        price_b.cmp(&price_a)
-                    });
-                },
-                SortOption::RatingAsc => {
-                    top_docs.sort_by(|a, b| {
-                        let doc_a: TantivyDocument = searcher.doc(a.1).unwrap();
-                        let doc_b: TantivyDocument = searcher.doc(b.1).unwrap();
-                        let rating_a = doc_a.get_first(self.fields.rating)
-                            .and_then(|v| v.as_f64())
-                            .unwrap_or(0.0);
-                        let rating_b = doc_b.get_first(self.fields.rating)
-                            .and_then(|v| v.as_f64())
-                            .unwrap_or(0.0);
-                        rating_a.partial_cmp(&rating_b).unwrap_or(std::cmp::Ordering::Equal)
-                    });
-                },
-                SortOption::RatingDesc => {
-                    top_docs.sort_by(|a, b| {
-                        let doc_a: TantivyDocument = searcher.doc(a.1).unwrap();
-                        let doc_b: TantivyDocument = searcher.doc(b.1).unwrap();
-                        let rating_a = doc_a.get_first(self.fields.rating)
-                            .and_then(|v| v.as_f64())
-                            .unwrap_or(0.0);
-                        let rating_b = doc_b.get_first(self.fields.rating)
-                            .and_then(|v| v.as_f64())
-                            .unwrap_or(0.0);
-                        rating_b.partial_cmp(&rating_a).unwrap_or(std::cmp::Ordering::Equal)
-                    });
-                },
+        let collector = match query.sort.as_ref().unwrap_or(&SortOption::Relevance) {
+            SortOption::Relevance => TopDocs::with_limit(limit).and_offset(offset),
+            SortOption::PriceAsc | SortOption::PriceDesc | SortOption::RatingAsc | SortOption::RatingDesc => {
+                TopDocs::with_limit(limit).and_offset(offset)
             }
-        }
+        };
 
+        let top_docs = searcher.search(&boolean_query, &collector)?;
         let total = searcher.search(&boolean_query, &Count)?;
 
-        let mut ids = Vec::with_capacity(top_docs.len());
+        let mut docs = Vec::with_capacity(top_docs.len());
         for (_, doc_address) in top_docs {
             let retrieved_doc: TantivyDocument = searcher.doc(doc_address).map_err(|e| {
                 ServiceError::Internal(format!("Failed to retrieve document: {:?}", e))
             })?;
+            
             if let Some(field_value) = retrieved_doc.get_first(self.fields.user_id) {
                 if let Some(id_str) = field_value.as_str() {
-                    ids.push(id_str.to_string());
+                    let price = retrieved_doc.get_first(self.fields.price_from)
+                        .and_then(|v| v.as_i64())
+                        .unwrap_or(0);
+                    
+                    let rating = retrieved_doc.get_first(self.fields.rating)
+                        .and_then(|v| v.as_f64())
+                        .unwrap_or(0.0);
+                    
+                    docs.push((id_str.to_string(), price, rating));
                 }
             }
         }
+
+        match query.sort.as_ref().unwrap_or(&SortOption::Relevance) {
+            SortOption::Relevance => {}, // Уже отсортировано по релевантности
+            SortOption::PriceAsc => {
+                docs.sort_by(|a, b| a.1.cmp(&b.1));
+            },
+            SortOption::PriceDesc => {
+                docs.sort_by(|a, b| b.1.cmp(&a.1));
+            },
+            SortOption::RatingAsc => {
+                docs.sort_by(|a, b| a.2.partial_cmp(&b.2).unwrap_or(std::cmp::Ordering::Equal));
+            },
+            SortOption::RatingDesc => {
+                docs.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap_or(std::cmp::Ordering::Equal));
+            },
+        }
+
+        let ids = docs.into_iter().map(|(id, _, _)| id).collect();
 
         Ok((ids, total))
     }

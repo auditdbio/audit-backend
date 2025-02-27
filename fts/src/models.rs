@@ -19,6 +19,7 @@ pub struct SearchQuery {
     pub rating_from: Option<String>,
     #[serde(default)]
     pub rating_to: Option<String>,
+    #[serde(default)]
     #[serde(deserialize_with = "deserialize_sort_option")]
     pub sort: Option<SortOption>,
     pub page: Option<u32>,
@@ -54,14 +55,18 @@ where
 {
     let option = Option::<String>::deserialize(deserializer)?;
     match option {
-        None => Ok(None),
-        Some(s) => match s.as_str() {
+        None => Ok(Some(SortOption::Relevance)),
+        Some(s) => match s.as_str().to_lowercase().as_str() {
             "relevance" => Ok(Some(SortOption::Relevance)),
             "price_asc" => Ok(Some(SortOption::PriceAsc)),
             "price_desc" => Ok(Some(SortOption::PriceDesc)),
             "rating_asc" => Ok(Some(SortOption::RatingAsc)),
             "rating_desc" => Ok(Some(SortOption::RatingDesc)),
-            _ => Err(serde::de::Error::custom(format!("Invalid sort option: {}", s))),
+            _ => Err(
+                serde::de::Error::custom(
+                    format!("Invalid sort option: {}. Acceptable values: relevance, price_asc, price_desc, rating_asc, rating_desc", s)
+                )
+            ),
         },
     }
 }
