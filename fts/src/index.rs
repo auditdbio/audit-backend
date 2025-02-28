@@ -5,7 +5,7 @@ use tantivy::{
     doc,
     query::{BooleanQuery, Occur, QueryParser, RangeQuery, TermQuery, RegexQuery},
     schema::{
-        Field, IndexRecordOption, Schema, Value, FAST, INDEXED, STORED, TEXT,
+        Field, IndexRecordOption, Schema, Value, FAST, INDEXED, STORED, TEXT, STRING,
     },
     Index, IndexReader, IndexWriter, Searcher, TantivyDocument, Term,
 };
@@ -97,7 +97,7 @@ impl SearchIndex {
         schema_builder.add_i64_field("price_to", INDEXED | STORED | FAST);
         schema_builder.add_f64_field("rating", INDEXED | STORED | FAST);
         schema_builder.add_i64_field("last_modified", INDEXED | STORED | FAST);
-        schema_builder.add_text_field("entity_kind", TEXT | STORED);
+        schema_builder.add_text_field("entity_kind", STRING | STORED);
 
         schema_builder.build()
     }
@@ -129,8 +129,8 @@ impl SearchIndex {
             self.fields.about => auditor.about.clone(),
             self.fields.company => auditor.company.clone(),
             self.fields.free_at => auditor.free_at.clone(),
-            self.fields.price_from => auditor.price_range.from,
-            self.fields.price_to => auditor.price_range.to,
+            self.fields.price_from => auditor.price_range.from as i64,
+            self.fields.price_to => auditor.price_range.to as i64,
             self.fields.rating => auditor.rating.unwrap_or(0.0) as f64,
             self.fields.last_modified => auditor.last_modified,
             self.fields.entity_kind => "auditor"
@@ -153,9 +153,9 @@ impl SearchIndex {
             self.fields.about => badge.about.clone(),
             self.fields.company => badge.company.clone(),
             self.fields.free_at => badge.free_at.clone(),
-            self.fields.price_from => badge.price_range.from,
-            self.fields.price_to => badge.price_range.to,
-            self.fields.rating => 0.0,
+            self.fields.price_from => badge.price_range.from as i64,
+            self.fields.price_to => badge.price_range.to as i64,
+            self.fields.rating => 0.0f64,
             self.fields.last_modified => badge.last_modified,
             self.fields.entity_kind => "badge"
         );
@@ -177,8 +177,8 @@ impl SearchIndex {
             self.fields.about => customer.about.clone(),
             self.fields.company => customer.company.clone(),
             self.fields.free_at => "",
-            self.fields.price_from => 0.0,
-            self.fields.price_to => 0.0,
+            self.fields.price_from => 0i64,
+            self.fields.price_to => 0i64,
             self.fields.rating => customer.rating.unwrap_or(0.0) as f64,
             self.fields.last_modified => customer.last_modified,
             self.fields.entity_kind => "customer"
@@ -201,9 +201,9 @@ impl SearchIndex {
             self.fields.about => project.description.clone(),
             self.fields.company => "",
             self.fields.free_at => "",
-            self.fields.price_from => project.price.unwrap_or(0),
-            self.fields.price_to => project.total_cost.unwrap_or(0),
-            self.fields.rating => 0.0,
+            self.fields.price_from => project.price.unwrap_or(0i64),
+            self.fields.price_to => project.total_cost.unwrap_or(0i64),
+            self.fields.rating => 0.0f64,
             self.fields.last_modified => project.last_modified,
             self.fields.entity_kind => "project"
         );
@@ -220,6 +220,12 @@ impl SearchIndex {
         self.writer.commit()?;
         Ok(())
     }
+
+    // pub fn clear(&mut self) -> ServiceResult<()> {
+    //     self.writer.delete_all_documents()?;
+    //     self.writer.commit()?;
+    //     Ok(())
+    // }
 
     pub fn delete_by_id(&mut self, id: &str) -> ServiceResult<()> {
         let term = Term::from_field_text(self.fields.user_id, id);
@@ -484,15 +490,20 @@ impl SearchIndex {
             let mut kind_queries: Vec<(Occur, Box<dyn tantivy::query::Query>)> = Vec::new();
             
             for kind in kinds {
+                let kind_str = kind.to_string().to_lowercase();
                 let term_query = TermQuery::new(
-                    Term::from_field_text(self.fields.entity_kind, &kind.to_string().to_lowercase()),
+                    Term::from_field_text(self.fields.entity_kind, &kind_str),
                     IndexRecordOption::Basic,
                 );
                 kind_queries.push((Occur::Should, Box::new(term_query)));
             }
             
-            let bool_query = BooleanQuery::new(kind_queries);
-            subqueries.push((Occur::Must, Box::new(bool_query)));
+            if !kind_queries.is_empty() {
+                let bool_query = BooleanQuery::new(kind_queries);
+                subqueries.push((Occur::Must, Box::new(bool_query)));
+            }
+        } else {
+            tracing::warn!("No entity kinds specified for filtering");
         }
         Ok(())
     }

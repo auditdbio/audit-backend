@@ -223,10 +223,25 @@ impl SearchService {
         })
     }
 
-    pub async fn clear(&self) -> ServiceResult<()> {
+    // pub async fn clear(&self) -> ServiceResult<()> {
+    //     self.storage.clear()?;
+    //     let mut index = self.index.write().await;
+    //     index.clear()?;
+    //     Ok(())
+    // }
+
+    pub async fn recreate_index(&self) -> ServiceResult<()> {
         self.storage.clear()?;
+        let index_path = std::env::current_dir()?.join("data").join("index");
+        if index_path.exists() {
+            std::fs::remove_dir_all(&index_path)?;
+            std::fs::create_dir_all(&index_path)?;
+        }
+
+        let new_index = SearchIndex::new(&index_path)?;
         let mut index = self.index.write().await;
-        index.commit()?;
+        *index = new_index;
+
         Ok(())
     }
 }

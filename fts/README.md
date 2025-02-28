@@ -52,10 +52,11 @@ Query parameters:
 - `page` - Page number (default: 1)
 - `per_page` - Results per page (default: 10)
 - `partial_match` - Enable partial match
+- `kind` - Search kind (auditor, badge, customer, project)
 
 Example:
 ```
-GET /search?text=smart contract&tags=rust,solidity&price_from=100&price_to=500&sort=rating_desc
+GET /search?text=smart contract&tags=rust,solidity&price_from=100&price_to=500&sort=rating_desc&kind=auditor
 ```
 
 ### POST /sync

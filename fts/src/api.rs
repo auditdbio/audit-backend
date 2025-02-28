@@ -21,8 +21,10 @@ pub async fn sync(
     service: Data<SearchService>,
     query: Query<SyncQuery>,
 ) -> ServiceResult<HttpResponse> {
-    if query.force.unwrap_or(false) {
-        service.clear().await?;
+    let force = query.force.unwrap_or(false);
+
+    if force {
+        service.recreate_index().await?;
     }
     service.sync().await?;
     Ok(HttpResponse::Ok().finish())

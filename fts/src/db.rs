@@ -273,8 +273,13 @@ impl MongoDb {
     }
 
     pub async fn check_entity_exists(&self, kind: &EntityKind, id: &str) -> ServiceResult<bool> {
-        let object_id = ObjectId::parse_str(id)
-            .map_err(|e| ServiceError::Query(format!("Invalid ObjectId: {}", e)))?;
+        let object_id = match ObjectId::parse_str(id) {
+            Ok(oid) => oid,
+            Err(e) => {
+                tracing::error!("Invalid ObjectId: {}, error: {}", id, e);
+                return Err(ServiceError::Query(format!("Invalid ObjectId: {}", e)));
+            }
+        };
 
         let filter = match kind {
             EntityKind::Auditor => doc! { "user_id": object_id },
