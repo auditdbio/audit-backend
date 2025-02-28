@@ -221,12 +221,6 @@ impl SearchIndex {
         Ok(())
     }
 
-    // pub fn clear(&mut self) -> ServiceResult<()> {
-    //     self.writer.delete_all_documents()?;
-    //     self.writer.commit()?;
-    //     Ok(())
-    // }
-
     pub fn delete_by_id(&mut self, id: &str) -> ServiceResult<()> {
         let term = Term::from_field_text(self.fields.user_id, id);
         self.writer.delete_term(term);

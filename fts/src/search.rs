@@ -223,13 +223,6 @@ impl SearchService {
         })
     }
 
-    // pub async fn clear(&self) -> ServiceResult<()> {
-    //     self.storage.clear()?;
-    //     let mut index = self.index.write().await;
-    //     index.clear()?;
-    //     Ok(())
-    // }
-
     pub async fn recreate_index(&self) -> ServiceResult<()> {
         self.storage.clear()?;
         let index_path = std::env::current_dir()?.join("data").join("index");

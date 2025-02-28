@@ -194,7 +194,13 @@ impl MongoDb {
 
         while let Some(result) = cursor.next().await {
             match result {
-                Ok(badge) => badges.push(badge),
+                Ok(mut badge) => {
+                    if !badge.contacts.public_contacts {
+                        badge.contacts.email = None;
+                        badge.contacts.telegram = None;
+                    }
+                    badges.push(badge)
+                },
                 Err(e) => tracing::error!("Error fetching badge: {}", e),
             }
         }
@@ -226,7 +232,13 @@ impl MongoDb {
 
         while let Some(result) = cursor.next().await {
             match result {
-                Ok(customer) => customers.push(customer),
+                Ok(mut customer) => {
+                    if !customer.contacts.public_contacts {
+                        customer.contacts.email = None;
+                        customer.contacts.telegram = None;
+                    }
+                    customers.push(customer)
+                },
                 Err(e) => tracing::error!("Error fetching customer: {}", e),
             }
         }
@@ -258,7 +270,13 @@ impl MongoDb {
 
         while let Some(result) = cursor.next().await {
             match result {
-                Ok(project) => projects.push(project),
+                Ok(mut project) => {
+                    if !project.creator_contacts.public_contacts {
+                        project.creator_contacts.email = None;
+                        project.creator_contacts.telegram = None;
+                    }
+                    projects.push(project)
+                },
                 Err(e) => tracing::error!("Error fetching project: {}", e),
             }
         }
