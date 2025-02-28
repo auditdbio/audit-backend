@@ -1,5 +1,4 @@
-use std::env;
-use std::time::Duration;
+use std::{env, time::Duration};
 
 use actix_cors::Cors;
 use actix_web::{middleware::Logger, web::Data, App, HttpServer};
@@ -40,7 +39,6 @@ async fn main() -> ServiceResult<()> {
     // Get configuration from environment
     let mongo_uri = env::var("MONGOURI")
         .unwrap_or_else(|_| "mongodb://localhost:27017".to_string());
-    let db_name = env::var("DB_NAME").unwrap_or_else(|_| "auditors".to_string());
 
     // Create data directories
     let current_dir = env::current_dir().unwrap();
@@ -53,7 +51,7 @@ async fn main() -> ServiceResult<()> {
     let storage_path = data_dir.join("storage");
 
     // Initialize search service
-    let service = SearchService::new(index_path, storage_path, &mongo_uri, &db_name).await?;
+    let service = SearchService::new(index_path, storage_path, &mongo_uri).await?;
     let service = Data::new(service);
 
     let service_for_task = service.clone();

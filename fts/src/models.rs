@@ -1,5 +1,10 @@
 use serde::{Deserialize, Serialize};
-use common::entities::auditor::Auditor;
+use common::entities::{
+    auditor::Auditor,
+    badge::Badge,
+    customer::Customer,
+    project::Project,
+};
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -25,6 +30,8 @@ pub struct SearchQuery {
     pub page: Option<u32>,
     pub per_page: Option<u32>,
     pub partial_match: Option<bool>,
+    #[serde(deserialize_with = "deserialize_kind")]
+    pub kind: Vec<EntityKind>,
 }
 
 fn deserialize_tags<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
@@ -129,9 +136,82 @@ pub enum SortOption {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchResponse {
-    pub result: Vec<Auditor<String>>,
+    pub result: Vec<SearchResult>,
     #[serde(rename = "totalDocuments")]
     pub total_documents: usize,
     pub page: u32,
     pub per_page: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind")]
+pub enum SearchResult {
+    #[serde(rename = "auditor")]
+    Auditor(Auditor<String>),
+    #[serde(rename = "badge")]
+    Badge(Badge<String>),
+    #[serde(rename = "customer")]
+    Customer(Customer<String>),
+    #[serde(rename = "project")]
+    Project(Project<String>),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum EntityKind {
+    Auditor,
+    Badge,
+    Customer,
+    Project,
+}
+
+impl Default for EntityKind {
+    fn default() -> Self {
+        EntityKind::Auditor
+    }
+}
+
+fn deserialize_kind<'de, D>(deserializer: D) -> Result<Vec<EntityKind>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value: Option<String> = Option::deserialize(deserializer)?;
+    
+    match value {
+        Some(s) => {
+            if s.contains(',') {
+                let kinds: Vec<EntityKind> = s.split(',')
+                    .map(|s| s.trim().to_lowercase())
+                    .filter(|s| !s.is_empty())
+                    .map(|s| match s.as_str() {
+                        "auditor" => Ok(EntityKind::Auditor),
+                        "badge" => Ok(EntityKind::Badge),
+                        "customer" => Ok(EntityKind::Customer),
+                        "project" => Ok(EntityKind::Project),
+                        _ => Err(serde::de::Error::custom(
+                            format!("Invalid entity kind: {}. Acceptable values: auditor, badge, customer, project", s)
+                        )),
+                    })
+                    .collect::<Result<Vec<_>, D::Error>>()?;
+                
+                if kinds.is_empty() {
+                    return Err(serde::de::Error::custom("At least one entity kind must be specified"));
+                }
+                
+                Ok(kinds)
+            } else {
+                let kind = match s.to_lowercase().as_str() {
+                    "auditor" => Ok(EntityKind::Auditor),
+                    "badge" => Ok(EntityKind::Badge),
+                    "customer" => Ok(EntityKind::Customer),
+                    "project" => Ok(EntityKind::Project),
+                    _ => Err(serde::de::Error::custom(
+                        format!("Invalid entity kind: {}. Acceptable values: auditor, badge, customer, project", s)
+                    )),
+                }?;
+                Ok(vec![kind])
+            }
+        }
+        None => Err(serde::de::Error::custom("Entity kind is required")),
+    }
 }

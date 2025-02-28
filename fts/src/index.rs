@@ -1,4 +1,5 @@
 use std::path::Path;
+use regex;
 use tantivy::{
     collector::{Count, TopDocs},
     doc,
@@ -11,12 +12,15 @@ use tantivy::{
 
 use crate::{
     error::{ServiceError, ServiceResult},
-    models::{PriceRangeFilter, RangeFilter, SearchQuery, SortOption},
+    models::{PriceRangeFilter, RangeFilter, SearchQuery, SortOption, EntityKind},
 };
 
-use common::entities::auditor::Auditor;
-
-use regex;
+use common::entities::{
+    auditor::Auditor,
+    badge::Badge,
+    customer::Customer,
+    project::Project,
+};
 
 pub struct SearchIndex {
     index: Index,
@@ -40,6 +44,7 @@ pub struct IndexFields {
     price_to: Field,
     rating: Field,
     last_modified: Field,
+    entity_kind: Field,
 }
 
 impl SearchIndex {
@@ -92,6 +97,7 @@ impl SearchIndex {
         schema_builder.add_i64_field("price_to", INDEXED | STORED | FAST);
         schema_builder.add_f64_field("rating", INDEXED | STORED | FAST);
         schema_builder.add_i64_field("last_modified", INDEXED | STORED | FAST);
+        schema_builder.add_text_field("entity_kind", TEXT | STORED);
 
         schema_builder.build()
     }
@@ -110,6 +116,7 @@ impl SearchIndex {
             price_to: schema.get_field("price_to").unwrap(),
             rating: schema.get_field("rating").unwrap(),
             last_modified: schema.get_field("last_modified").unwrap(),
+            entity_kind: schema.get_field("entity_kind").unwrap(),
         }
     }
 
@@ -125,10 +132,83 @@ impl SearchIndex {
             self.fields.price_from => auditor.price_range.from,
             self.fields.price_to => auditor.price_range.to,
             self.fields.rating => auditor.rating.unwrap_or(0.0) as f64,
-            self.fields.last_modified => auditor.last_modified
+            self.fields.last_modified => auditor.last_modified,
+            self.fields.entity_kind => "auditor"
         );
 
         for tag in &auditor.tags {
+            doc.add_text(self.fields.tags, &tag.to_lowercase());
+        }
+
+        self.writer.add_document(doc)?;
+        Ok(())
+    }
+
+    pub fn index_badge(&mut self, badge: &Badge<String>) -> ServiceResult<()> {
+        let mut doc = doc!(
+            self.fields.user_id => badge.user_id.to_string(),
+            self.fields.avatar => badge.avatar.clone(),
+            self.fields.first_name => badge.first_name.to_lowercase(),
+            self.fields.last_name => badge.last_name.to_lowercase(),
+            self.fields.about => badge.about.clone(),
+            self.fields.company => badge.company.clone(),
+            self.fields.free_at => badge.free_at.clone(),
+            self.fields.price_from => badge.price_range.from,
+            self.fields.price_to => badge.price_range.to,
+            self.fields.rating => 0.0,
+            self.fields.last_modified => badge.last_modified,
+            self.fields.entity_kind => "badge"
+        );
+
+        for tag in &badge.tags {
+            doc.add_text(self.fields.tags, &tag.to_lowercase());
+        }
+
+        self.writer.add_document(doc)?;
+        Ok(())
+    }
+
+    pub fn index_customer(&mut self, customer: &Customer<String>) -> ServiceResult<()> {
+        let mut doc = doc!(
+            self.fields.user_id => customer.user_id.to_string(),
+            self.fields.avatar => customer.avatar.clone(),
+            self.fields.first_name => customer.first_name.to_lowercase(),
+            self.fields.last_name => customer.last_name.to_lowercase(),
+            self.fields.about => customer.about.clone(),
+            self.fields.company => customer.company.clone(),
+            self.fields.free_at => "",
+            self.fields.price_from => 0.0,
+            self.fields.price_to => 0.0,
+            self.fields.rating => customer.rating.unwrap_or(0.0) as f64,
+            self.fields.last_modified => customer.last_modified,
+            self.fields.entity_kind => "customer"
+        );
+
+        for tag in &customer.tags {
+            doc.add_text(self.fields.tags, &tag.to_lowercase());
+        }
+
+        self.writer.add_document(doc)?;
+        Ok(())
+    }
+
+    pub fn index_project(&mut self, project: &Project<String>) -> ServiceResult<()> {
+        let mut doc = doc!(
+            self.fields.user_id => project.id.to_string(),
+            self.fields.avatar => "",
+            self.fields.first_name => project.name.to_lowercase(),
+            self.fields.last_name => "",
+            self.fields.about => project.description.clone(),
+            self.fields.company => "",
+            self.fields.free_at => "",
+            self.fields.price_from => project.price.unwrap_or(0),
+            self.fields.price_to => project.total_cost.unwrap_or(0),
+            self.fields.rating => 0.0,
+            self.fields.last_modified => project.last_modified,
+            self.fields.entity_kind => "project"
+        );
+
+        for tag in &project.tags {
             doc.add_text(self.fields.tags, &tag.to_lowercase());
         }
 
@@ -194,6 +274,7 @@ impl SearchIndex {
         self.add_tags_filter(&mut subqueries, &query.tags)?;
         self.add_price_range_filter(&mut subqueries, &query.price_range())?;
         self.add_rating_filter(&mut subqueries, &query.rating())?;
+        self.add_entity_kind_filter(&mut subqueries, &query.kind)?;
 
         let boolean_query = BooleanQuery::new(subqueries);
         let searcher: Searcher = self.reader.searcher();
@@ -245,7 +326,7 @@ impl SearchIndex {
         let start = offset.min(docs.len());
         let end = (offset + limit).min(docs.len());
         let paginated_docs = &docs[start..end];
-        let ids = paginated_docs.iter().map(|(id, _, _, _)| id.clone()).collect();
+        let ids: Vec<String> = paginated_docs.iter().map(|(id, _, _, _)| id.clone()).collect();
 
         Ok((ids, total))
     }
@@ -392,5 +473,38 @@ impl SearchIndex {
             }
         }
         Ok(())
+    }
+
+    fn add_entity_kind_filter(
+        &self,
+        subqueries: &mut Vec<(Occur, Box<dyn tantivy::query::Query>)>,
+        kinds: &[EntityKind],
+    ) -> ServiceResult<()> {
+        if !kinds.is_empty() {
+            let mut kind_queries: Vec<(Occur, Box<dyn tantivy::query::Query>)> = Vec::new();
+            
+            for kind in kinds {
+                let term_query = TermQuery::new(
+                    Term::from_field_text(self.fields.entity_kind, &kind.to_string().to_lowercase()),
+                    IndexRecordOption::Basic,
+                );
+                kind_queries.push((Occur::Should, Box::new(term_query)));
+            }
+            
+            let bool_query = BooleanQuery::new(kind_queries);
+            subqueries.push((Occur::Must, Box::new(bool_query)));
+        }
+        Ok(())
+    }
+}
+
+impl ToString for EntityKind {
+    fn to_string(&self) -> String {
+        match self {
+            EntityKind::Auditor => "auditor".to_string(),
+            EntityKind::Badge => "badge".to_string(),
+            EntityKind::Customer => "customer".to_string(),
+            EntityKind::Project => "project".to_string(),
+        }
     }
 }
