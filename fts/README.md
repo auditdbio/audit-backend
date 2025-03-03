@@ -17,6 +17,7 @@ A Rust-based full-text search service for blockchain security auditors, using Ta
   - Price (ascending/descending)
   - Rating (ascending/descending)
 - Incremental updates with MongoDB synchronization
+- Automatic synchronization
 - Automatic cleanup of removed documents
 
 ## Requirements
@@ -30,7 +31,6 @@ A Rust-based full-text search service for blockchain security auditors, using Ta
 The service can be configured using environment variables:
 
 - `MONGOURI` - MongoDB connection URI (default: "mongodb://localhost:27017")
-- `DB_NAME` - MongoDB database name (default: "auditors")
 
 ## API Endpoints
 
@@ -40,7 +40,7 @@ Search for auditors with various filters and sorting options.
 
 Query parameters:
 - `text` - Full-text search query
-- `name` - Filter by auditor name
+- `name` - Filter by name
 - `company` - Filter by company name
 - `free_from` - Filter by availability date
 - `tags` - Filter by tags (comma-separated)
@@ -52,7 +52,7 @@ Query parameters:
 - `page` - Page number (default: 1)
 - `per_page` - Results per page (default: 10)
 - `partial_match` - Enable partial match
-- `kind` - Search kind (auditor, badge, customer, project)
+- `kind` - Search kind. Required (comma-separated - auditor, badge, customer, project)
 
 Example:
 ```

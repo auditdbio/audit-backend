@@ -45,6 +45,7 @@ pub struct IndexFields {
     rating: Field,
     last_modified: Field,
     entity_kind: Field,
+    published: Field,
 }
 
 impl SearchIndex {
@@ -98,6 +99,7 @@ impl SearchIndex {
         schema_builder.add_f64_field("rating", INDEXED | STORED | FAST);
         schema_builder.add_i64_field("last_modified", INDEXED | STORED | FAST);
         schema_builder.add_text_field("entity_kind", STRING | STORED);
+        schema_builder.add_bool_field("published", INDEXED | STORED);
 
         schema_builder.build()
     }
@@ -117,6 +119,7 @@ impl SearchIndex {
             rating: schema.get_field("rating").unwrap(),
             last_modified: schema.get_field("last_modified").unwrap(),
             entity_kind: schema.get_field("entity_kind").unwrap(),
+            published: schema.get_field("published").unwrap(),
         }
     }
 
@@ -205,7 +208,8 @@ impl SearchIndex {
             self.fields.price_to => project.total_cost.unwrap_or(0i64),
             self.fields.rating => 0.0f64,
             self.fields.last_modified => project.last_modified,
-            self.fields.entity_kind => "project"
+            self.fields.entity_kind => "project",
+            self.fields.published => project.publish_options.publish
         );
 
         for tag in &project.tags {
@@ -276,6 +280,14 @@ impl SearchIndex {
         self.add_rating_filter(&mut subqueries, &query.rating())?;
         self.add_entity_kind_filter(&mut subqueries, &query.kind)?;
 
+        if query.kind.contains(&EntityKind::Project) {
+            let term_query = TermQuery::new(
+                Term::from_field_bool(self.fields.published, true),
+                IndexRecordOption::Basic,
+            );
+            subqueries.push((Occur::Must, Box::new(term_query)));
+        }
+
         let boolean_query = BooleanQuery::new(subqueries);
         let searcher: Searcher = self.reader.searcher();
         let limit = query.per_page.unwrap_or(10) as usize;
@@ -299,34 +311,56 @@ impl SearchIndex {
                     let rating = retrieved_doc.get_first(self.fields.rating)
                         .and_then(|v| v.as_f64())
                         .unwrap_or(0.0);
+
+                    let kind = retrieved_doc.get_first(self.fields.entity_kind)
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("");
                     
-                    docs.push((id_str.to_string(), price, rating, score));
+                    docs.push((id_str.to_string(), price, rating, score, kind.to_string()));
                 }
             }
         }
 
-        match query.sort.as_ref().unwrap_or(&SortOption::Relevance) {
-            SortOption::Relevance => {
-                docs.sort_by(|a, b| b.3.partial_cmp(&a.3).unwrap_or(std::cmp::Ordering::Equal));
-            },
-            SortOption::PriceAsc => {
-                docs.sort_by(|a, b| a.1.cmp(&b.1));
-            },
-            SortOption::PriceDesc => {
-                docs.sort_by(|a, b| b.1.cmp(&a.1));
-            },
-            SortOption::RatingAsc => {
-                docs.sort_by(|a, b| a.2.partial_cmp(&b.2).unwrap_or(std::cmp::Ordering::Equal));
-            },
-            SortOption::RatingDesc => {
-                docs.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap_or(std::cmp::Ordering::Equal));
-            },
+        if let Some(sort_option) = &query.sort {
+            match sort_option {
+                SortOption::Relevance => {
+                    docs.sort_by(|a, b| b.3.partial_cmp(&a.3).unwrap_or(std::cmp::Ordering::Equal));
+                },
+                SortOption::PriceAsc => {
+                    docs.sort_by(|a, b| a.1.cmp(&b.1));
+                },
+                SortOption::PriceDesc => {
+                    docs.sort_by(|a, b| b.1.cmp(&a.1));
+                },
+                SortOption::RatingAsc => {
+                    docs.sort_by(|a, b| a.2.partial_cmp(&b.2).unwrap_or(std::cmp::Ordering::Equal));
+                },
+                SortOption::RatingDesc => {
+                    docs.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap_or(std::cmp::Ordering::Equal));
+                },
+            }
+        } else {
+            docs.sort_by(|a, b| {
+                let a_kind_pos = query.kind.iter()
+                    .position(|k| k.to_string() == a.4)
+                    .unwrap_or(usize::MAX);
+                let b_kind_pos = query.kind.iter()
+                    .position(|k| k.to_string() == b.4)
+                    .unwrap_or(usize::MAX);
+
+                match a_kind_pos.cmp(&b_kind_pos) {
+                    std::cmp::Ordering::Equal => {
+                        b.3.partial_cmp(&a.3).unwrap_or(std::cmp::Ordering::Equal)
+                    },
+                    other => other
+                }
+            });
         }
 
         let start = offset.min(docs.len());
         let end = (offset + limit).min(docs.len());
         let paginated_docs = &docs[start..end];
-        let ids: Vec<String> = paginated_docs.iter().map(|(id, _, _, _)| id.clone()).collect();
+        let ids: Vec<String> = paginated_docs.iter().map(|(id, _, _, _, _)| id.clone()).collect();
 
         Ok((ids, total))
     }
