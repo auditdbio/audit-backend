@@ -93,7 +93,8 @@ impl SearchQuery {
                         match key {
                             "name" => {
                                 if self.name.is_none() {
-                                    self.name = Some(value.to_string());
+                                    let clean_value = value.trim_matches('"').to_string();
+                                    self.name = Some(clean_value);
                                 }
                             },
                             "company" => {

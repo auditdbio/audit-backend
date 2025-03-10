@@ -375,30 +375,94 @@ impl SearchIndex {
             let name = name.to_lowercase();
             let mut name_queries: Vec<(Occur, Box<dyn tantivy::query::Query>)> = Vec::new();
 
+            let name_parts: Vec<&str> = name.split_whitespace().collect();
+            
             if partial_match {
-                let first_name_query = RegexQuery::from_pattern(
-                    &format!("{}.*", regex::escape(&name)),
-                    self.fields.first_name,
-                )?;
-                let last_name_query = RegexQuery::from_pattern(
-                    &format!("{}.*", regex::escape(&name)),
-                    self.fields.last_name,
-                )?;
+                for part in &name_parts {
+                    let first_name_query = RegexQuery::from_pattern(
+                        &format!("{}.*", regex::escape(part)),
+                        self.fields.first_name,
+                    )?;
+                    name_queries.push((Occur::Should, Box::new(first_name_query)));
+                    
+                    let last_name_query = RegexQuery::from_pattern(
+                        &format!("{}.*", regex::escape(part)),
+                        self.fields.last_name,
+                    )?;
+                    name_queries.push((Occur::Should, Box::new(last_name_query)));
+                }
                 
-                name_queries.push((Occur::Should, Box::new(first_name_query)));
-                name_queries.push((Occur::Should, Box::new(last_name_query)));
+                if name_parts.len() > 1 {
+                    let first_word = name_parts[0];
+                    let rest = name_parts[1..].join(" ");
+                    
+                    let mut combined_query: Vec<(Occur, Box<dyn tantivy::query::Query>)> = Vec::new();
+                    
+                    let first_name_query = TermQuery::new(
+                        Term::from_field_text(self.fields.first_name, first_word),
+                        IndexRecordOption::Basic,
+                    );
+                    combined_query.push((Occur::Must, Box::new(first_name_query)));
+                    
+                    let last_name_query = TermQuery::new(
+                        Term::from_field_text(self.fields.last_name, &rest),
+                        IndexRecordOption::Basic,
+                    );
+                    combined_query.push((Occur::Must, Box::new(last_name_query)));
+                    
+                    let bool_query = BooleanQuery::new(combined_query);
+                    name_queries.push((Occur::Should, Box::new(bool_query)));
+                }
             } else {
-                let first_name_query = TermQuery::new(
-                    Term::from_field_text(self.fields.first_name, &name),
-                    IndexRecordOption::Basic,
-                );
-                let last_name_query = TermQuery::new(
-                    Term::from_field_text(self.fields.last_name, &name),
-                    IndexRecordOption::Basic,
-                );
+                for part in &name_parts {
+                    let first_name_query = TermQuery::new(
+                        Term::from_field_text(self.fields.first_name, part),
+                        IndexRecordOption::Basic,
+                    );
+                    name_queries.push((Occur::Should, Box::new(first_name_query)));
+                    
+                    let last_name_query = TermQuery::new(
+                        Term::from_field_text(self.fields.last_name, part),
+                        IndexRecordOption::Basic,
+                    );
+                    name_queries.push((Occur::Should, Box::new(last_name_query)));
+                }
                 
-                name_queries.push((Occur::Should, Box::new(first_name_query)));
-                name_queries.push((Occur::Should, Box::new(last_name_query)));
+                if name_parts.len() > 1 {
+                    let first_word = name_parts[0];
+                    let rest = name_parts[1..].join(" ");
+                    
+                    let mut combined_query: Vec<(Occur, Box<dyn tantivy::query::Query>)> = Vec::new();
+                    
+                    let first_name_query = TermQuery::new(
+                        Term::from_field_text(self.fields.first_name, first_word),
+                        IndexRecordOption::Basic,
+                    );
+                    combined_query.push((Occur::Must, Box::new(first_name_query)));
+                    
+                    let last_name_query = TermQuery::new(
+                        Term::from_field_text(self.fields.last_name, &rest),
+                        IndexRecordOption::Basic,
+                    );
+                    combined_query.push((Occur::Must, Box::new(last_name_query)));
+                    
+                    let bool_query = BooleanQuery::new(combined_query);
+                    name_queries.push((Occur::Should, Box::new(bool_query)));
+                    
+                    let full_name = name_parts.join(" ");
+                    
+                    let full_first_name_query = TermQuery::new(
+                        Term::from_field_text(self.fields.first_name, &full_name),
+                        IndexRecordOption::Basic,
+                    );
+                    name_queries.push((Occur::Should, Box::new(full_first_name_query)));
+                    
+                    let full_last_name_query = TermQuery::new(
+                        Term::from_field_text(self.fields.last_name, &full_name),
+                        IndexRecordOption::Basic,
+                    );
+                    name_queries.push((Occur::Should, Box::new(full_last_name_query)));
+                }
             }
 
             let bool_query = BooleanQuery::new(name_queries);

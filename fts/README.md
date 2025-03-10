@@ -55,13 +55,18 @@ Query parameters:
 - `partial_match` - Enable partial match
 - `kind` - Search kind. Required (comma-separated - auditor, badge, customer, project)
 
+Example:
+```
+GET /search?text=smart contract&tags=rust,solidity&price_from=100&price_to=500&sort=rating_desc&kind=auditor
+```
+
 #### Composite Search Query (`q` parameter)
 
 The `q` parameter allows you to combine multiple search criteria in a single parameter. It supports the following formats:
 
 - Simple text search: `q=blockchain security`
 - Field-specific filters:
-  - `name:value` - Filter by name
+  - `name:value` - Filter by name (If the name is separated by a space, use double quotes)
   - `company:value` - Filter by company
   - `tags:value1,value2` - Filter by tags (comma-separated)
   - `free_at:date` - Filter by availability date
@@ -78,10 +83,7 @@ For price and rating ranges, the following formats are supported:
 
 You can combine multiple criteria in a single query:
 
-Example:
-```
-GET /search?text=smart contract&tags=rust,solidity&price_from=100&price_to=500&sort=rating_desc&kind=auditor
-```
+GET /search?q=smart contract+name:"john smith"+company:auditdb+tags:solidity,rust+price:<200+rating:10..100&kind=auditor
 
 ### POST /sync
 
