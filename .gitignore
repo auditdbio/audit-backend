@@ -9,3 +9,9 @@
 /Dockerfile
 docker-compose.yml
 docker-compose.yml*
+
+.github
+.devcontainer
+
+/fts/data/storage
+/fts/data/index/*

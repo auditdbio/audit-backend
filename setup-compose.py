@@ -42,6 +42,7 @@ def get_services(config, api_prefix, proxy_network, expose, open_database):
         Service(config, "cloc", PortConfig(expose, "3013"), APIConfig(api_prefix, ["cloc", "notused1"]), ["binaries"], [("binaries", "/data/binaries"), ("repo", "/repositories")], [proxy_network, "database"], proxy_network),
         Service(config, "event", PortConfig(expose, "3010"), APIConfig(api_prefix, ["notification", "event"]), **default_service_settings),
         Service(config, "rating", PortConfig(expose, "3014"), APIConfig(api_prefix, ["rating", "notused1"]), **default_service_settings),
+        Service(config, "fts", PortConfig(expose, "3020"), APIConfig("api/v2", ["search", "cleanup", "sync", "notused1"]), **default_service_settings),
         Service(config, "database", PortConfig(open_database, "27017"), None, [], [("database", "/data/db"), ("backup", "/mongo_backup")], [proxy_network, "database"], proxy_network, [("MONGO_INITDB_ROOT_USERNAME", "\"${MONGO_LOGIN}\""), ("MONGO_INITDB_ROOT_PASSWORD", "\"${MONGO_PASSWORD}\"")])
     ]
 
@@ -175,6 +176,7 @@ x-common-variables: &common-variables
   LINKEDIN_CLIENT_ID: "${{LINKEDIN_CLIENT_ID}}"
   RUST_LOG: actix=info,reqwest=info,search=info,common=info,audits=trace
   TIMEOUT: "60"
+  FTS_SERVICE_URL: "${{FRONTEND}}"
 
 services:
 {services_str}
@@ -238,7 +240,8 @@ services = {
   "%RATING_SERVICE_URL%": "rating",
   "%NOTIFICATIONS_SERVICE_URL%": "notification",
   "%EVENTS_SERVICE_URL%": "event",
-  "%FRONTEND%": "frontend"
+  "%FRONTEND%": "frontend",
+  "%FTS_SERVICE_URL%": "fts",
 }
 
 # container_namespace, volume_namespace, network_namespace, load_database, open_database, with_proxy, export_database, import_database
@@ -317,7 +320,8 @@ preset = {
         "users": "0.0.0.0:3001",
         "frontend": "dev.auditdb.io",
         "api_prefix": "api",
-        "proxy_network": "nginx-proxy"
+        "proxy_network": "nginx-proxy",
+        "fts": "0.0.0.0:3020"
     },
     "prod": {
         "open_database": False,
@@ -348,6 +352,18 @@ preset = {
         "volume_namespace": "preprod",
         "network_namespace": "preprod",
         "proxy_address": "preprod.auditdb.io",
+        "api_prefix": "api",
+        "proxy_network": "nginx-proxy"
+    },
+    "branchtest": {
+        "open_database": False,
+        "with_proxy": True,
+        "is_test_server": True,
+        "container_namespace": "branchtest",
+        "volume_namespace": "branchtest",
+        "network_namespace": "branchtest",
+        "proxy_address": "test.auditdb.io",
+        "features": '"test_server"',
         "api_prefix": "api",
         "proxy_network": "nginx-proxy"
     }

@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 tokio = { version = "1.26.0" }
-actix-web-actors = "4.2.0"
+actix-web-actors = "4"
 actix-web = "4.2.1"
 actix-cors = "0.6.4"
 actix = "0.13.0"
