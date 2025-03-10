@@ -33,7 +33,7 @@ async fn main() -> ServiceResult<()> {
     dotenv().ok();
     // Initialize logging with debug level
     tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG)
+        .with_max_level(tracing::Level::INFO)
         .init();
 
     // Get configuration from environment

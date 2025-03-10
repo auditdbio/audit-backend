@@ -8,8 +8,8 @@ A Rust-based full-text search service for blockchain security auditors, using Ta
 - Custom filters:
   - Name-based (`name:"John Smith"`)
   - Company-based (`company:NewWorldAudits`)
-  - Availability-based (`free_from:<2024-01-01`)
-  - Tag-based (`#rust #smart_contract`)
+  - Availability-based (`free_at:2024-01-01`)
+  - Tag-based (`rust,smart_contract`)
   - Price range-based (`price_range:100..500`)
   - Rating range-based (`rating:3..5`)
 - Sorting by:
@@ -39,10 +39,11 @@ The service can be configured using environment variables:
 Search for auditors with various filters and sorting options.
 
 Query parameters:
+- `q` - Composite search query (see detailed explanation below)
 - `text` - Full-text search query
 - `name` - Filter by name
 - `company` - Filter by company name
-- `free_from` - Filter by availability date
+- `free_at` - Filter by availability date
 - `tags` - Filter by tags (comma-separated)
 - `price_from` - Minimum price
 - `price_to` - Maximum price
@@ -53,6 +54,29 @@ Query parameters:
 - `per_page` - Results per page (default: 10)
 - `partial_match` - Enable partial match
 - `kind` - Search kind. Required (comma-separated - auditor, badge, customer, project)
+
+#### Composite Search Query (`q` parameter)
+
+The `q` parameter allows you to combine multiple search criteria in a single parameter. It supports the following formats:
+
+- Simple text search: `q=blockchain security`
+- Field-specific filters:
+  - `name:value` - Filter by name
+  - `company:value` - Filter by company
+  - `tags:value1,value2` - Filter by tags (comma-separated)
+  - `free_at:date` - Filter by availability date
+  - `price:range` - Filter by price range
+  - `rating:range` - Filter by rating range
+
+For price and rating ranges, the following formats are supported:
+- Range notation: `price:100..200` (from 100 to 200)
+- Greater than: `price:>100` (more than 100)
+- Less than: `price:<200` (less than 200)
+- Single value:
+  - For price: `price:100` (interpreted as price_to=100)
+  - For rating: `rating:4` (interpreted as rating_from=4)
+
+You can combine multiple criteria in a single query:
 
 Example:
 ```

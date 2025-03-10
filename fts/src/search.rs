@@ -90,10 +90,11 @@ impl SearchService {
 
         for kind in &entity_kinds {
             let query = SearchQuery {
+                q: None,
                 text: None,
                 name: None,
                 company: None,
-                free_from: None,
+                free_at: None,
                 tags: None,
                 price_from: None,
                 price_to: None,

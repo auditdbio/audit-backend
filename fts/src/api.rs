@@ -39,8 +39,9 @@ pub async fn cleanup(service: Data<SearchService>) -> ServiceResult<HttpResponse
 #[get("/search")]
 pub async fn search(
     service: Data<SearchService>,
-    query: Query<SearchQuery>,
+    mut query: Query<SearchQuery>,
 ) -> ServiceResult<Json<SearchResponse>> {
+    query.parse_q();
     let response = service.search(query.into_inner()).await?;
     Ok(Json(response))
 }

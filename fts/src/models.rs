@@ -9,10 +9,11 @@ use common::entities::{
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct SearchQuery {
+    pub q: Option<String>,
     pub text: Option<String>,
     pub name: Option<String>,
     pub company: Option<String>,
-    pub free_from: Option<String>,
+    pub free_at: Option<String>,
     #[serde(default)]
     #[serde(deserialize_with = "deserialize_tags")]
     pub tags: Option<Vec<String>>,
@@ -79,6 +80,74 @@ where
 }
 
 impl SearchQuery {
+    pub fn parse_q(&mut self) {
+        if let Some(q_param) = &self.q {
+            let parts = split_query(q_param);
+            
+            let mut text_parts = Vec::new();
+            
+            for part in parts {
+                if part.contains(':') {
+                    let mut key_value = part.splitn(2, ':');
+                    if let (Some(key), Some(value)) = (key_value.next(), key_value.next()) {
+                        match key {
+                            "name" => {
+                                if self.name.is_none() {
+                                    self.name = Some(value.to_string());
+                                }
+                            },
+                            "company" => {
+                                if self.company.is_none() {
+                                    self.company = Some(value.to_string());
+                                }
+                            },
+                            "tags" => {
+                                if self.tags.is_none() {
+                                    self.tags = Some(value.split(',')
+                                        .map(|s| s.trim().to_string())
+                                        .filter(|s| !s.is_empty())
+                                        .collect());
+                                }
+                            },
+                            "free_at" => {
+                                if self.free_at.is_none() {
+                                    self.free_at = Some(value.to_string());
+                                }
+                            },
+                            "price" => {
+                                let (from, to) = parse_range_value(value);
+                                if from.is_some() && self.price_from.is_none() {
+                                    self.price_from = from;
+                                }
+                                if to.is_some() && self.price_to.is_none() {
+                                    self.price_to = to;
+                                }
+                            },
+                            "rating" => {
+                                let (from, to) = parse_range_value(value);
+                                if from.is_some() && self.rating_from.is_none() {
+                                    self.rating_from = from;
+                                }
+                                if to.is_some() && self.rating_to.is_none() {
+                                    self.rating_to = to;
+                                }
+                            },
+                            _ => {
+                                text_parts.push(part.to_string());
+                            }
+                        }
+                    }
+                } else {
+                    text_parts.push(part.to_string());
+                }
+            }
+            
+            if !text_parts.is_empty() && self.text.is_none() {
+                self.text = Some(text_parts.join(" "));
+            }
+        }
+    }
+    
     pub fn price_range(&self) -> Option<PriceRangeFilter> {
         let from = self.price_from.as_ref().and_then(|s| s.parse::<i64>().ok());
         let to = self.price_to.as_ref().and_then(|s| s.parse::<i64>().ok());
@@ -214,4 +283,73 @@ where
         }
         None => Err(serde::de::Error::custom("Entity kind is required")),
     }
+}
+
+fn split_query(query: &str) -> Vec<String> {
+    let mut result = Vec::new();
+    let mut current = String::new();
+    let mut in_quotes = false;
+    
+    for c in query.chars() {
+        match c {
+            '"' => {
+                in_quotes = !in_quotes;
+                current.push(c);
+            },
+            ' ' if !in_quotes => {
+                if !current.is_empty() {
+                    result.push(current);
+                    current = String::new();
+                }
+            },
+            _ => current.push(c),
+        }
+    }
+    
+    if !current.is_empty() {
+        result.push(current);
+    }
+    
+    result
+}
+
+fn parse_range_value(value: &str) -> (Option<String>, Option<String>) {
+    let mut from = None;
+    let mut to = None;
+    
+    if value.contains("..") {
+        let mut range = value.splitn(2, "..");
+        if let (Some(start), Some(end)) = (range.next(), range.next()) {
+            if !start.is_empty() {
+                from = Some(start.to_string());
+            }
+            if !end.is_empty() {
+                to = Some(end.to_string());
+            }
+        }
+    } else if value.starts_with('>') {
+        let val = value[1..].trim();
+        if !val.is_empty() {
+            from = Some(val.to_string());
+        }
+    } else if value.starts_with('<') {
+        let val = value[1..].trim();
+        if !val.is_empty() {
+            to = Some(val.to_string());
+        }
+    } else {
+        if value.parse::<f64>().is_ok() {
+            if value.contains("price") {
+                to = Some(value.to_string());
+            } 
+            else if value.contains("rating") {
+                from = Some(value.to_string());
+            }
+            else {
+                to = Some(value.to_string());
+            }
+        }
+    }
+    
+    (from, to)
 }

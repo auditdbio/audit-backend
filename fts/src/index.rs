@@ -274,7 +274,7 @@ impl SearchIndex {
         // Add filters
         self.add_name_filter(&mut subqueries, &query.name, query.partial_match.unwrap_or(false))?;
         self.add_company_filter(&mut subqueries, &query.company)?;
-        self.add_free_from_filter(&mut subqueries, &query.free_from)?;
+        self.add_free_at_filter(&mut subqueries, &query.free_at)?;
         self.add_tags_filter(&mut subqueries, &query.tags)?;
         self.add_price_range_filter(&mut subqueries, &query.price_range())?;
         self.add_rating_filter(&mut subqueries, &query.rating())?;
@@ -422,12 +422,12 @@ impl SearchIndex {
         Ok(())
     }
 
-    fn add_free_from_filter(
+    fn add_free_at_filter(
         &self,
         subqueries: &mut Vec<(Occur, Box<dyn tantivy::query::Query>)>,
-        free_from: &Option<String>,
+        free_at: &Option<String>,
     ) -> ServiceResult<()> {
-        if let Some(date) = free_from {
+        if let Some(date) = free_at {
             let term_query = TermQuery::new(
                 Term::from_field_text(self.fields.free_at, date),
                 IndexRecordOption::Basic,
