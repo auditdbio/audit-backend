@@ -39,9 +39,13 @@ impl ClocCount {
 
 fn process_link(link: &mut String) {
     if link.starts_with("https://github.com") || link.starts_with("http://github.com") {
-        *link = link
-            .replacen("github.com", "raw.githubusercontent.com", 1)
-            .replacen("blob/", "", 1);
+        let parts: Vec<&str> = link.split('/').collect();
+        
+        if parts.len() >= 7 && parts[5] == "blob" {
+            *link = link
+                .replacen("github.com", "raw.githubusercontent.com", 1)
+                .replacen("blob/", "", 1);
+        }
     }
 }
 
@@ -70,9 +74,17 @@ impl ClocService {
         }
 
         match repo.download(user_id, scope.clone(), auth).await {
-            Ok((id, skiped, errors)) => {
+            Ok((id, skipped, errors)) => {
+                if skipped.len() + errors.len() == scope.links.len() {
+                    return Ok(CountResult { 
+                        skipped, 
+                        errors, 
+                        result: serde_json::json!({}) 
+                    });
+                }
+                
                 match repo.count(id).await {
-                    Ok(result) => Ok(CountResult { skiped, errors, result }),
+                    Ok(result) => Ok(CountResult { skipped, errors, result }),
                     Err(e) => Err(
                         anyhow::anyhow!(format!("Error during count: {}", e)).code(502)
                     ),

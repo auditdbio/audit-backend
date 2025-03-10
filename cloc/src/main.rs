@@ -17,9 +17,13 @@ async fn main() -> std::io::Result<()> {
 
     let mut state = ServiceState::new(Service::Customers);
     let mongo_repo = MongoRepository::new(&mongo_uri, "cloc", "files").await;
+
+    let repo_path = std::env::current_dir()?.join("repositories");
+    std::fs::create_dir_all(&repo_path)?;
+
     state.insert_manual(Arc::new(FileRepo::new(
         mongo_repo,
-        "/repositories".parse().unwrap(),
+        repo_path,
     )));
     let state = Arc::new(state);
 

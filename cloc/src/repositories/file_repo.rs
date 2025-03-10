@@ -72,7 +72,7 @@ pub async fn run_command(command: &mut Command) -> Option<Output> {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CountResult {
-    pub skiped: Vec<String>,
+    pub skipped: Vec<String>,
     pub errors: Vec<String>,
     pub result: Value,
 }
@@ -100,23 +100,31 @@ impl FileRepo {
         self.meta_repo.insert(&entry).await?;
 
         // make directory
-        run_command(
-            Command::new("mkdir")
-                .arg(&id.to_hex())
-                .current_dir(&self.path),
-        ).await.context("Failed to create directory")?;
+        let dir_path = append_to_path(self.path.clone(), &id.to_hex());
+        std::fs::create_dir_all(&dir_path).context("Failed to create directory")?;
 
         let path = append_to_path(self.path.clone(), &id.to_hex());
         let mut errors = vec![];
-        let mut skiped = vec![];
+        let mut skipped = vec![];
 
         // download files
         for file_link in entry.links {
+            let is_github_raw = file_link.starts_with("https://raw.githubusercontent.com") 
+                || file_link.starts_with("http://raw.githubusercontent.com");
+
+            let file_name = file_link.split('/').last().unwrap_or("");
+
+            let is_html = file_name.ends_with(".html") || file_name.ends_with(".htm");
+
+            if is_html || !is_github_raw {
+                skipped.push(file_link.clone());
+                continue;
+            }
+            
             let mut command = Command::new("wget");
             command.current_dir(&path);
-            if file_link.starts_with("https://raw.githubusercontent.com")
-                || file_link.starts_with("http://raw.githubusercontent.com")
-            {
+            
+            if is_github_raw {
                 let idx = file_link.find("://").unwrap();
                 let link = file_link[(idx + 3)..].to_string();
                 let proxy_url = format!(
@@ -132,47 +140,53 @@ impl FileRepo {
                 command.arg(&file_link);
             };
 
-            if run_command(&mut command)
-                .await
-                .is_none()
-            {
+            if run_command(&mut command).await.is_none() {
                 errors.push(file_link.clone());
+                continue;
             }
 
-            let file_name = file_link.split('/').last().unwrap();
             let saved_file_path = path.join(file_name);
 
-            // let basename = String::from_utf8(
-            //     Command::new("file")
-            //         .arg("--mime")
-            //         .arg(saved_file_path)
-            //         .output()
-            //         .await
-            //         .context("Failed to get file mime type")?
-            //         .stdout,
-            // ).context("Failed to parse basename")?;
-            //
-            // let html_check_output = String::from_utf8(
-            //     Command::new("file")
-            //         .arg("--mime")
-            //         .arg(basename)
-            //         .current_dir(path.clone())
-            //         .output()
-            //         .await
-            //         .context("Failed to check file mime type")?
-            //         .stdout,
-            // ).context("Failed to parse HTML check output")?;
-            //
-            // if html_check_output.contains("html") {
-            //     skiped.push(file_link);
-            //     continue;
-            // }
+            if !saved_file_path.exists() {
+                errors.push(file_link.clone());
+                continue;
+            }
+
+            let mime_check = Command::new("file")
+                .arg("--mime")
+                .arg(&saved_file_path)
+                .output()
+                .await;
+                
+            if let Ok(output) = mime_check {
+                let mime_output = String::from_utf8_lossy(&output.stdout);
+
+                if mime_output.contains("html") {
+                    errors.push(file_link.clone());
+                    let _ = Command::new("rm")
+                        .arg(&saved_file_path)
+                        .output()
+                        .await;
+                    continue;
+                }
+            } else {
+                errors.push(file_link.clone());
+                continue;
+            }
         }
-        Ok((id, skiped, errors))
+        
+        Ok((id, skipped, errors))
     }
 
     pub async fn count(&self, id: ObjectId) -> error::Result<Value> {
         let path = append_to_path(self.path.clone(), &id.to_hex());
+
+        let entries = fs::read_dir(&path)?;
+        let files: Vec<_> = entries.filter_map(|e| e.ok()).collect();
+        
+        if files.is_empty() {
+            return Ok(serde_json::json!({}));
+        }
 
         let mut command = Command::new("cloc");
         command.arg("--json").current_dir(path.clone());
@@ -186,7 +200,12 @@ impl FileRepo {
             }
         }
 
-        let output = String::from_utf8(run_command(&mut command).await.unwrap().stdout)?;
-        Ok(serde_json::from_str(&output)?)
+        let output = match run_command(&mut command).await {
+            Some(output) => output,
+            None => return Err(anyhow::anyhow!("Failed to execute cloc command. Make sure cloc is installed on your system.").into()),
+        };
+
+        let output_str = String::from_utf8(output.stdout)?;
+        Ok(serde_json::from_str(&output_str)?)
     }
 }
