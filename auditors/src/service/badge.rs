@@ -305,7 +305,7 @@ impl BadgeService {
             // CreateRequest
             let new_request = CreateRequest {
                 customer_id: request.customer_id.clone(),
-                auditor_id: id_str.clone(),
+                auditor_id: Some(id_str.clone()),
                 project_id: request.project_id.clone(),
                 price: request.price.clone(),
                 total_cost: request.total_cost.clone(),
