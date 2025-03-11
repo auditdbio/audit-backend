@@ -195,7 +195,7 @@ pub async fn get_audit_requests(
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateRequest {
     pub customer_id: String,
-    pub auditor_id: String,
+    pub auditor_id: Option<String>,
     pub project_id: String,
 
     pub price: Option<i64>,

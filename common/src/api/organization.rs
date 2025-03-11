@@ -6,9 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     context::GeneralContext,
     error::{self, AddCode},
-    entities::{
-        organization::{PublicOrganization, OrgAccessLevel, PublicOrganizationMember, MyOrganizations},
-    },
+    entities::organization::{PublicOrganization, OrgAccessLevel, PublicOrganizationMember, MyOrganizations},
     services::{API_PREFIX, USERS_SERVICE, PROTOCOL},
 };
 

@@ -1,6 +1,4 @@
-use std::{
-    collections::HashMap,
-};
+use std::collections::HashMap;
 use serde_json::json;
 use actix_web::{
     delete, get, patch, post,
@@ -22,9 +20,7 @@ use common::{
     error,
 };
 
-use crate::service::{
-    audit::{AuditService},
-};
+use crate::service::audit::AuditService;
 
 #[post("/audit")]
 pub async fn post_audit(

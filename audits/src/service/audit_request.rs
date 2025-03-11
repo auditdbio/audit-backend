@@ -83,8 +83,46 @@ impl RequestService {
             );
         };
 
+        let auditor_organization = if request.auditor_organization.is_some() {
+            let org = get_organization(
+                &self.context,
+                request.auditor_organization.clone().unwrap().parse()?,
+                None,
+            ).await?;
+            if org.organization_type != Role::Auditor {
+                return Err(
+                    anyhow::anyhow!("The type for the auditor's organization does not match").code(400)
+                );
+            }
+            Some(org)
+        } else {
+            None
+        };
+
+        let customer_organization = if request.customer_organization.is_some() {
+            let org = get_organization(
+                &self.context,
+                request.customer_organization.clone().unwrap().parse()?,
+                None,
+            ).await?;
+            if org.organization_type != Role::Customer {
+                return Err(
+                    anyhow::anyhow!("The type for the customer's organization does not match").code(400)
+                );
+            }
+            Some(org)
+        } else {
+            None
+        };
+
         let customer_id = request.customer_id.parse()?;
-        let auditor_id = request.auditor_id.parse()?;
+        let auditor_id = if let Some(ref auditor_id) = request.auditor_id {
+            auditor_id.parse()?
+        } else if let Some(ref auditor_organization) = auditor_organization {
+            auditor_organization.owner.user_id.parse()?
+        } else {
+            return Err(anyhow::anyhow!("auditor_id or auditor_organization is required").code(400));
+        };
 
         if customer_id == auditor_id {
             return Err(anyhow::anyhow!("You can't create audit with yourself").code(400));
@@ -102,35 +140,16 @@ impl RequestService {
 
         let project = get_project(&self.context, request.project_id.parse()?).await?;
 
-        if request.auditor_organization.is_some() {
-            let org = get_organization(
-                &self.context,
-                request.auditor_organization.clone().unwrap().parse()?,
-                None,
-            ).await?;
-            if org.organization_type != Role::Auditor {
-                return Err(
-                    anyhow::anyhow!("The type for the auditor's organization does not match").code(400)
-                );
-            }
-
-            if let Some(members) = org.members {
-                check_editor_rights(members, user_id).await?;
+        if auditor_organization.is_some() {
+            if request.auditor_id.is_some() && user_id != customer_id {
+                if let Some(members) = auditor_organization.unwrap().members {
+                    check_editor_rights(members, user_id).await?;
+                }
             }
         }
 
-        if request.customer_organization.is_some() {
-            let org = get_organization(
-                &self.context,
-                request.customer_organization.clone().unwrap().parse()?,
-                None,
-            ).await?;
-            if org.organization_type != Role::Customer {
-                return Err(
-                    anyhow::anyhow!("The type for the customer's organization does not match").code(400)
-                );
-            }
-            if let Some(members) = org.members {
+        if customer_organization.is_some() {
+            if let Some(members) = customer_organization.unwrap().members {
                 check_editor_rights(members, user_id).await?;
             }
         }

@@ -160,6 +160,10 @@ impl AuditService {
             if let Some(chat_id) = request.chat_id {
                 delete_message(chat_id.chat_id, chat_id.message_id, auth.clone())?
             }
+        } else {
+            return Err(
+                anyhow::anyhow!(format!("Request with id {:?} not found", request.id)).code(400)
+            );
         }
 
         let public_audit = PublicAudit::new(&self.context, audit.clone(), false).await?;
