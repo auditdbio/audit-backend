@@ -30,11 +30,11 @@ pub async fn request_customer(
         let customer: PublicCustomer = response.json().await?;
 
         if customer.user_id.is_empty() {
-            return Err(anyhow::anyhow!("No customer found").code(400))
+            return Err(anyhow::anyhow!("No customer found").code(404))
         }
 
         Ok(customer)
     } else {
-        Err(anyhow::anyhow!("No customer found").code(400))
+        Err(anyhow::anyhow!("No customer found").code(404))
     }
 }

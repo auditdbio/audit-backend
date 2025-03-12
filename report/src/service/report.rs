@@ -9,6 +9,7 @@ use common::{
         issue::PublicIssue,
         file::PublicMetadata,
         report::{PublicReport, CreateReport},
+        organization::{get_organization, GetOrganizationQuery},
     },
     auth::{Auth, Service},
     context::GeneralContext,
@@ -318,6 +319,19 @@ pub async fn create_report(
         return Err(anyhow::anyhow!("Cannot generate report for resolved audit").code(400));
     }
 
+    let mut auditor_name = audit.auditor_first_name.clone() + " " + &audit.auditor_last_name.clone();
+    if audit.auditor_organization.is_some() {
+        let organization_query = GetOrganizationQuery {
+            with_members: Some(false),
+        };
+        let organization = get_organization(
+            &context,
+            audit.auditor_organization.clone().unwrap().id.parse()?,
+            Some(organization_query),
+        ).await.unwrap();
+        auditor_name = organization.name;
+    }
+
     let mut is_draft = data.is_draft.unwrap_or(false);
     if let Some(id) = auth.id() {
         if !audit.no_customer && audit.customer_id == id.to_hex() {
@@ -331,7 +345,7 @@ pub async fn create_report(
     } else { "".to_string() };
 
     let input = RendererInput {
-        auditor_name: audit.auditor_first_name + " " + &audit.auditor_last_name,
+        auditor_name,
         profile_link: format!(
             "{}://{}/a/{}",
             PROTOCOL.as_str(),

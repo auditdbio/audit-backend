@@ -305,12 +305,14 @@ impl BadgeService {
             // CreateRequest
             let new_request = CreateRequest {
                 customer_id: request.customer_id.clone(),
-                auditor_id: id_str.clone(),
+                auditor_id: Some(id_str.clone()),
                 project_id: request.project_id.clone(),
                 price: request.price.clone(),
                 total_cost: request.total_cost.clone(),
                 description: request.description.clone(),
                 time: request.time.clone(),
+                auditor_organization: request.auditor_organization.clone().map(|org| org.id),
+                customer_organization: request.customer_organization.clone().map(|org| org.id),
             };
 
             let auth = Auth::User(request.customer_id.parse()?);

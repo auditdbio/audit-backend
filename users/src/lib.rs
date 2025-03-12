@@ -2,20 +2,22 @@ pub mod handlers;
 pub mod service;
 
 use std::sync::Arc;
-
 use actix_cors::Cors;
-use actix_web::body::MessageBody;
-use actix_web::dev::ServiceFactory;
-use actix_web::dev::ServiceRequest;
-use actix_web::dev::ServiceResponse;
-use actix_web::middleware;
-use actix_web::web;
-use actix_web::App;
+use actix_web::{
+    App, middleware, web,
+    body::MessageBody,
+    dev::{ServiceFactory, ServiceResponse, ServiceRequest}
+};
 
-use common::context::effectfull_context::ServiceState;
-use common::services::API_PREFIX;
+use common::{
+    context::effectfull_context::ServiceState,
+    services::API_PREFIX
+};
+
 pub use handlers::auth::*;
 pub use handlers::user::*;
+pub use handlers::organization::*;
+use crate::handlers::indexer::{get_organization_data, provide_organization_data};
 
 pub fn create_app(
     state: Arc<ServiceState>,
@@ -55,7 +57,23 @@ pub fn create_app(
                 .service(find_user_by_email)
                 .service(proxy_github_api)
                 .service(proxy_github_files)
-                .service(find_user_by_email),
+                .service(find_user_by_email)
+                .service(create_organization)
+                .service(get_organization)
+                .service(get_organization_by_link_id)
+                .service(get_my_organizations)
+                .service(add_members)
+                .service(get_member)
+                .service(delete_member)
+                .service(change_organization)
+                .service(change_access)
+                .service(add_organization_linked_account)
+                .service(delete_organization_linked_account)
+                .service(get_invites)
+                .service(confirm_invite)
+                .service(cancel_invite)
+                .service(provide_organization_data)
+                .service(get_organization_data)
         );
     app
 }

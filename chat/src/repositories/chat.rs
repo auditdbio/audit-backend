@@ -20,6 +20,8 @@ pub struct Group {
     last_modified: i64,
     last_message: Message,
     unread: Vec<ReadId>,
+    avatar: Option<String>,
+    creator: Option<ChatId>,
 }
 
 impl_has_last_modified!(Group);
@@ -32,8 +34,9 @@ impl Group {
             members: self.members.into_iter().map(ChatId::publish).collect(),
             last_message: self.last_message.publish(),
             last_modified: self.last_modified,
-            avatar: None,
+            avatar: self.avatar,
             unread: self.unread.into_iter().map(ReadId::publish).collect(),
+            creator: self.creator.map(ChatId::publish),
         }
     }
 }
@@ -84,6 +87,7 @@ pub struct PrivateChat {
     pub last_modified: i64,
     pub last_message: Message,
     pub unread: Option<[ReadId; 2]>,
+    pub creator: Option<ChatId>,
 }
 
 impl_has_last_modified!(PrivateChat);
@@ -106,6 +110,7 @@ impl PrivateChat {
             unread: self.unread.map_or_else(Vec::new, |unread| {
                 unread.iter().map(|read_id| read_id.clone().publish()).collect()
             }),
+            creator: self.creator.map(ChatId::publish),
         }
     }
 }
@@ -262,6 +267,7 @@ impl ChatRepository {
                 ReadId { id: message.from.id, unread: 0 },
                 ReadId { id: other.id, unread: 0 },
             ]),
+            creator: Some(message.from),
         };
 
         let messages = Messages {
