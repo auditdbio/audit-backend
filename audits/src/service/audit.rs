@@ -89,8 +89,10 @@ impl AuditService {
                     anyhow::anyhow!("The type for the auditor's organization does not match").code(400)
                 );
             }
-            if let Some(members) = org.members {
-                check_editor_rights(members, user_id).await?;
+            if user_id != customer_id {
+                if let Some(members) = org.members {
+                    check_editor_rights(members, user_id).await?;
+                }
             }
         }
         if request.customer_organization.is_some() {
