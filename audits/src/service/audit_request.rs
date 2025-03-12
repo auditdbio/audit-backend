@@ -435,9 +435,20 @@ impl RequestService {
 
         let mut public_requests = Vec::new();
 
+        let organizations = get_my_organizations(&self.context).await?;
+        let mut org_ids = organizations
+            .owner
+            .iter()
+            .map(|o| o.id.parse::<ObjectId>().unwrap())
+            .collect::<Vec<_>>();
+        org_ids.extend(organizations.member.iter().map(|o| o.id.parse::<ObjectId>().unwrap()));
+
         for req in result {
             if req.auditor_organization.is_some() || req.customer_organization.is_some() {
-                continue
+                if org_ids.contains(&req.auditor_organization.unwrap())
+                    || org_ids.contains(&req.customer_organization.unwrap()) {
+                    continue;
+                }
             }
             let public_request = PublicRequest::new(&self.context, req).await;
             match public_request {
