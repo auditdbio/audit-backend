@@ -435,21 +435,24 @@ impl RequestService {
 
         let mut public_requests = Vec::new();
 
-        let organizations = get_my_organizations(&self.context).await?;
-        let mut org_ids = organizations
+        let my_organizations = get_my_organizations(&self.context).await?;
+        let mut my_org_ids = my_organizations
             .owner
             .iter()
             .map(|o| o.id.parse::<ObjectId>().unwrap())
             .collect::<Vec<_>>();
-        org_ids.extend(organizations.member.iter().map(|o| o.id.parse::<ObjectId>().unwrap()));
+        my_org_ids.extend(my_organizations.member.iter().map(|o| o.id.parse::<ObjectId>().unwrap()));
 
         for req in result {
-            if req.auditor_organization.is_some() || req.customer_organization.is_some() {
-                if org_ids.contains(&req.auditor_organization.unwrap())
-                    || org_ids.contains(&req.customer_organization.unwrap()) {
-                    continue;
-                }
+            let should_skip = req.auditor_organization
+                .map_or(false, |org| my_org_ids.contains(&org)) ||
+                req.customer_organization
+                .map_or(false, |org| my_org_ids.contains(&org));
+            
+            if should_skip {
+                continue;
             }
+            
             let public_request = PublicRequest::new(&self.context, req).await;
             match public_request {
                 Ok(req) => public_requests.push(req),
