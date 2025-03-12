@@ -398,10 +398,24 @@ impl AuditService {
 
         let mut public_audits = Vec::new();
 
+        let my_organizations = get_my_organizations(&self.context).await?;
+        let mut my_org_ids = my_organizations
+            .owner
+            .iter()
+            .map(|o| o.id.parse::<ObjectId>().unwrap())
+            .collect::<Vec<_>>();
+        my_org_ids.extend(my_organizations.member.iter().map(|o| o.id.parse::<ObjectId>().unwrap()));
+
         for audit in audits {
-            if audit.auditor_organization.is_some() || audit.customer_organization.is_some() {
-                continue
+            let should_skip = audit.auditor_organization
+                .map_or(false, |org| my_org_ids.contains(&org)) ||
+                audit.customer_organization
+                .map_or(false, |org| my_org_ids.contains(&org));
+            
+            if should_skip {
+                continue;
             }
+
             let public_audit = PublicAudit::new(&self.context, audit, false).await;
             match public_audit {
                 Ok(audit) => public_audits.push(audit),
